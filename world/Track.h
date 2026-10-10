@@ -265,6 +265,13 @@ public:
         return Segment->GetLength(); };
 	inline std::shared_ptr<TSegment> CurrentSegment() const {
         return Segment; };
+    // rail joints. a track with positive rail length (the 'sound distance' parameter) is jointed, any other is continuous welded rail.
+    // joints are spread evenly along the track, at ( index + 0.5 ) * joint_spacing() from its start,
+    // so the sounds, vehicle shake and visible joints all refer to the same places
+    int joint_count() const;
+    double joint_spacing() const;
+    // distance from the start of a switch to its frog, the place where rails of both routes cross. negative if there's none
+    double frog_distance() const;
     inline TTrack *CurrentNext() const {
         return trNext; };
     inline TTrack *CurrentPrev() const {
@@ -378,6 +385,9 @@ private:
     /// Safe to call multiple times; clears any previously cached transforms first.
     /// </summary>
     void build_sleeper_transforms();
+    mutable double m_frogdistance { -2.0 }; // cached result of frog_distance(); -2: not calculated yet
+    // generates fishplates, bolts and rail gap marks for the joints of a plain track
+    void create_rail_joints( gfx::vertex_array &Vertices, gfx::index_array &Indices );
 // members
     static profiles_array m_profiles; // shared database of path element profiles
     static profiles_map m_profilesmap;
