@@ -181,7 +181,7 @@ TTraction::create_geometry( gfx::geometrybank_handle const &Geometrybank ) {
         // przęsło z typem sieci: lina nośna, podwieszenie Y i wieszaki policzone, zamiast przybliżenia poniżej
         auto const elementcount = vertices.size() / 2;
         gfx::userdata_array empty_userdata{};
-        m_geometry = GfxRenderer->Insert( vertices, empty_userdata, Bank, GL_LINES );
+        m_geometry = GfxRenderer->Insert( vertices, empty_userdata, Geometrybank, GL_LINES );
         return elementcount;
     }
 
