@@ -35,7 +35,7 @@ Jan potwierdził: kompiluje się, widać linie i bryły. Niepotwierdzone po komp
 - **DamageFlag:** 0 nowa, 2 przejściowa, 1 zaśniedziała, 128 zerwana.
 - **Y** rysuje się tylko wtedy, gdy oba sąsiednie przęsła go mają (ten sam typ Y, końce lin w tym samym punkcie z tolerancją 5 cm).
 - **Dwie liny nośne** (typy 2C120-2C-3 i -4): liny jedna nad drugą co 4 cm, wieszaki na dolnej, łączniki między linami w każdym punkcie wieszaka poza strefą podpory. `y_junction_drop` 0,04 tylko dla -4.
-- **Rozstaw drutów jezdnych** 8 cm (potwierdzone przez Jana). Wyjątek: w złożeniach z ramionami 6207 i 6208 rozstaw 10 cm (Jan, 2026-10-17 00:48).
+- **Rozstaw drutów jezdnych** 8 cm (potwierdzone przez Jana). Wyjątek: w złożeniach z ramionami 6207 i 6208 rozstaw 10 cm (Jan, 2026-10-17 00:48). Karty tomu 5 (s. 137–140; 6201–6205 s. 132–136): wszystkie cztery ramiona kończą się płaskownikiem z dwoma otworami ø12 co 40 mm (20 mm od końca) pod uchwyt przewodu, przy słupie ucho ø14. Długości L wyk. 1/2/3: 6206 1240/1400/– („rozjazdowe”), 6207 1435/1535/1435 („łukowe”), 6208 1480/1580/1480 („rozjazdowe”), 6209 1200/1280/1200 („łukowe”). Różnica wyk. 1 i 2: 6207 i 6208 – 100 mm (zgadza się z 10 cm Jana), 6209 – 80 mm, 6206 – 160 mm. Wyk. 1/2 mają koniec przy uchu odgięty, wyk. 3 prosty.
 - **Typ wieszaka** (pojedynczy/podwójny, karty 0570–0579): nie wiadomo, który gdzie; zostaje pojedynczy naprzemienny, docelowo ustawienie w pliku typu.
 - **Plik podwieszeń:** w scenerii `catenary <plik> endcatenary`; w pliku wpisy
   `node <max> <min> <nazwa> suspension support <model> scheme <karta> <wyk> messenger <przęsła> contact <przęsła> insulators … override <rola> <część> skin <skórka> endsuspension`, plus domyślne `skin` na poziomie pliku.
