@@ -245,9 +245,26 @@ bool driver_mode::update()
 				}
 
 			// TODO: generic shake update pass for vehicles within view range
-			if (Camera.m_owner != nullptr)
+			// the vehicle the camera is attached to, or the one being driven if the camera is free
+			auto *watched{Camera.m_owner != nullptr ? Camera.m_owner : simulation::Train != nullptr ? simulation::Train->Dynamic() : nullptr};
+			if (watched != nullptr)
 			{
-				Camera.m_owner->update_shake(m_secondaryupdaterate);
+				if (Camera.m_owner != nullptr)
+					watched->update_shake(m_secondaryupdaterate, glm::dvec3{Camera.m_owneroffset});
+				else
+					watched->update_shake(m_secondaryupdaterate);
+			}
+			if (Global.PhysicalShake && Global.BodySway)
+			{
+				// bodies of other vehicles close enough to be seen move as well
+				for (auto *vehicle : simulation::Vehicles.sequence())
+				{
+					if (vehicle == nullptr || vehicle == watched)
+						continue;
+					if (glm::length2(vehicle->GetPosition() - Camera.Pos) > 200.0 * 200.0)
+						continue;
+					vehicle->update_shake(m_secondaryupdaterate);
+				}
 			}
 
 			m_secondaryupdateaccumulator -= m_secondaryupdaterate; // these should be inexpensive enough we have no cap
@@ -743,7 +760,7 @@ void driver_mode::update_camera(double const Deltatime)
 
 			float const shakescale{FreeFlyModeFlag ? 5.0f : 1.0f};
 			auto shakencamerapos{Camera.m_owneroffset +
-			                     shakescale * glm::vec3(1.5 * Camera.m_owner->ShakeState.offset.x, 2.0 * Camera.m_owner->ShakeState.offset.y, 1.5 * Camera.m_owner->ShakeState.offset.z)};
+			                     shakescale * glm::vec3(Camera.m_owner->shake_offset())};
 
 			Camera.Pos = Camera.m_owner->GetWorldPosition(FreeFlyModeFlag ? glm::dvec3(shakencamerapos) : // TODO: vehicle collision box for the external vehicle camera
 			                                                                simulation::Train->clamp_inside(shakencamerapos));

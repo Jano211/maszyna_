@@ -186,6 +186,8 @@ struct material_data {
     void assign( std::string const &Replacableskin );
 };
 
+namespace sway { class body; }
+
 class TDynamicObject { // klasa pojazdu
 
     friend opengl_renderer;
@@ -402,6 +404,10 @@ private:
         double distance; // distance to rail joint
         double offset; // axle offset from centre of the vehicle
         sound_source clatter; // clatter emitter
+        TTrack const *jointtrack { nullptr }; // track the axle was on during last joint check
+        int jointindex { 0 }; // number of joints of that track the axle had behind it
+        TTrack const *frogtrack { nullptr }; // switch the axle was on during last frog check
+        bool frogbehind { false }; // whether the axle was already past the frog of that switch
     };
 
     struct powertrain_sounds {
@@ -838,8 +844,22 @@ private:
 // TBD, TODO: make an object out of it
 public:
 // methods
-    void update_shake( double const Timedelta );
+    // Viewpoint: location of the observer in vehicle space, used by the physical model to work out how much the body movement is felt there
+    void update_shake( double const Timedelta, glm::dvec3 const &Viewpoint = glm::dvec3{ 0.0, 2.5, 0.0 } );
+    // camera roll and pitch
     std::pair<double, double> shake_angles() const;
+    // camera displacement in vehicle space
+    glm::dvec3 shake_offset() const;
+    // location of an axle in relation to rail joints of the track it's on
+    struct joint_probe {
+        TTrack const *track { nullptr };
+        double position { 0.0 }; // distance from the start of the track
+        double direction { 1.0 }; // 1 if the vehicle faces the end of the track, -1 otherwise
+        double spacing { 0.0 }; // distance between joints; 0 if the track has none
+        int count { 0 }; // number of joints of the track
+    };
+    // Offset: location of the axle along the vehicle, positive towards coupler 0
+    joint_probe axle_joint_probe( double const Offset ) const;
 // members
     struct baseshake_config {
         glm::vec3 angle_scale { 0.05, 0.0, 0.1 }; // roll, yaw, pitch
@@ -868,6 +888,22 @@ public:
     } ShakeState;
 
 	glm::dvec3 modelShake;
+
+    // physical shake model, used in place of the above if enabled in settings
+    void update_shake_physical( double const Timedelta, glm::dvec3 const &Viewpoint );
+    std::shared_ptr<sway::body> BodySway; // created on first use; defined in bodysway.h, included only by the implementation
+    double ShakeTravel { 0.0 }; // distance covered since last shake update, positive towards coupler 0
+    double ShakeOdometer { 0.0 }; // total distance covered, reference for continuous track unevenness
+    double ShakeLateralAcceleration { 0.0 }; // smoothed out
+    glm::dvec3 ShakeVibration {}; // engine vibration passed straight to the viewpoint
+    double ShakeRoughness[ 2 ][ 3 ] {}; // track unevenness under each end of the vehicle at the end of previous update: vertical, lateral, crosslevel
+    bool ShakeRoughnessValid { false };
+    // body movement applied to the displayed vehicle
+    void update_body_sway_matrix();
+    glm::dmat4 mMatrixBase { 1.0 }; // mMatrix without the body movement
+    glm::dmat4 mBodySway { 1.0 }; // movement of the body on its suspension, in vehicle space
+    bool BodySwayApplied { false }; // whether mBodySway holds anything
+    bool mMatrixBaseValid { false };
 };
 
 

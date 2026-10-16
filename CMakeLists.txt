@@ -712,7 +712,9 @@ endif()
 
 if(ENABLE_MCC AND MSVC)
     message(STATUS "Enabling multi-processor compilation for MSVC.")
-	add_compile_options(/MP)
+	# NOTE: the target already exists at this point, so the option has to be attached to it directly;
+	# add_compile_options() only affects targets created after the call
+	target_compile_options(${PROJECT_NAME} PRIVATE /MP)
 endif()
 
 if(ENABLE_AVX2)

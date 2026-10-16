@@ -126,6 +126,15 @@ public:
             r1 = fRoll1;
             r2 = fRoll2; }
 
+    // provides the frame RenderLoft() would use to place profile points at specified distance from the start of the segment:
+    // Position: world space point on the path, Parallel: horizontal vector across the path, Direction: unit vector along the path,
+    // Progress: location within the segment in range 0-1, in the same terms RenderLoft() uses to blend transition profiles
+    bool
+        LoftFrameGet( double const Distance, glm::dvec3 &Position, glm::vec3 &Parallel, glm::vec3 &Direction, float &Progress );
+    // variant of RenderLoft() which leaves gaps of specified width in the generated geometry, centered at specified distances
+    // from the start of the segment (sorted, ascending). faces closing the cut ends are provided separately, as indexed triangles
+    bool
+        RenderLoftGapped( gfx::vertex_array &Output, gfx::vertex_array &Capvertices, gfx::index_array &Capindices, glm::dvec3 const &Origin, gfx::vertex_array const &ShapePoints, bool const Transition, double const Texturelength, std::vector<double> const &Gaps, double const Gapwidth );
     bool
         RenderLoft( gfx::vertex_array &Output, glm::dvec3 const &Origin, gfx::vertex_array const &ShapePoints, bool const Transition, double fTextureLength, double Texturescale = 1.0, int iSkip = 0, int iEnd = 0, std::pair<float, float> fOffsetX = {0.f, 0.f}, glm::vec3 **p = nullptr, bool bRender = true );
 /*
