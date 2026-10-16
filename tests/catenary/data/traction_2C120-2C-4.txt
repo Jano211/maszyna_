@@ -1,0 +1,28 @@
+{
+traction_code: 35
+symbol: 2C120-2C-4
+
+// przewody jezdne (nazwa przewodu z pliku traction_tables.txt)
+contact_wire_num: 2
+contact_wire: Djp100
+contact_tension: 1906           // daN, lacznie wszystkie przewody jezdne (karta 0002)
+contact_wire_spacing: 0.08      // m; wartosc do potwierdzenia na karcie 5300
+
+// liny nosne; naciag laczny wszystkich lin w daN
+catenary_wire_num: 2
+catenary_wire: L120
+catenary_tension: 2860
+catenary_stack: 0.04            // m, odstep pionowy lin (dopasowany do tablic dlugosci wieszakow)
+
+// dolna lina nosna w strefie przy podwieszeniu liczona jak linka Y: naciag jednej liny
+y_wire: L120
+y_tension: 1430
+y_length: 45 14                 // pary: od rozpietosci [m], dlugosc Y [m]; krotsze przesla bez Y
+y_junction_drop: 0.04           // m, dolna lina w zacisku lezy pod gorna (zgodne z tablicami dlugosci wieszakow)
+
+// wieszaki
+hanger_table: 11                // tablica rozstawu z pliku traction_tables.txt
+hanger_mass: 0.5                // kg, z uchwytami (dopasowana do tablic dlugosci wieszakow)
+
+height: 1.70                    // m, wysokosc konstrukcyjna; w scenerii decyduja punkty przesla
+}

@@ -1,0 +1,13 @@
+// rejestr testowy
+support Siec_Trakcyjna\Slupy\1611-3.t3d {
+  type: mast
+  height: 8.2   // m
+  width_base: 0.385
+  width_top: 0.160
+}
+support zly.t3d {
+  type: mast
+  height: x
+}
+support niedomkniety.t3d {
+  type: mast

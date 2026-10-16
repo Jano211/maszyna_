@@ -1,0 +1,230 @@
+#include "world/catenary_suspension.h"
+
+#include <algorithm>
+#include <cctype>
+#include <fstream>
+#include <locale>
+#include <set>
+#include <sstream>
+
+namespace catenary {
+
+namespace {
+
+bool to_number( std::string const &Text, double &Value ) {
+    std::istringstream stream { Text };
+    stream.imbue( std::locale::classic() );
+    stream >> Value;
+    return false == stream.fail() && stream.eof();
+}
+
+std::string trim( std::string const &Text ) {
+    auto const first { Text.find_first_not_of( " \t\r\n" ) };
+    if( first == std::string::npos ) { return {}; }
+    auto const last { Text.find_last_not_of( " \t\r\n" ) };
+    return Text.substr( first, last - first + 1 );
+}
+
+// ścieżka modelu w postaci do porównań: małe litery, ukośniki w jedną stronę
+std::string normalize_path( std::string Path ) {
+    std::transform( Path.begin(), Path.end(), Path.begin(), []( unsigned char const Character ) { return static_cast<char>( Character == '\\' ? '/' : std::tolower( Character ) ); } );
+    return Path;
+}
+
+// słowa kluczowe wewnątrz wpisu podwieszenia
+bool is_keyword( std::string const &Token ) {
+    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "at", "attach", "rope", "pole", "umbrella", "endsuspension" };
+    return keywords.find( Token ) != keywords.end();
+}
+
+} // namespace
+
+void parse_suspensions( std::vector<std::string> const &Tokens, std::string const &Source, suspension_file &Output, std::vector<std::string> &Errors ) {
+
+    auto const count { Tokens.size() };
+    std::size_t index { 0 };
+    std::set<std::string> names;
+    auto const report = [ & ]( std::string const &Entry, std::string const &Reason ) {
+        Errors.push_back( "Bad catenary file \"" + Source + "\"" + ( Entry.empty() ? "" : ", suspension \"" + Entry + "\"" ) + ": " + Reason );
+    };
+    // wartości słowa kluczowego: kolejne słowa do następnego słowa kluczowego
+    auto const values = [ & ]() {
+        std::vector<std::string> list;
+        while( index < count && false == is_keyword( Tokens[ index ] ) && Tokens[ index ] != "node" ) { list.push_back( Tokens[ index++ ] ); }
+        return list;
+    };
+
+    while( index < count ) {
+        auto const &token { Tokens[ index++ ] };
+        if( token == "skin" ) {
+            // domyślna tekstura dla całego pliku
+            if( index < count ) { Output.skin = Tokens[ index++ ]; }
+            else { report( "", "\"skin\" without a texture name" ); }
+            continue;
+        }
+        if( token != "node" ) {
+            report( "", "unexpected token \"" + token + "\"" );
+            continue;
+        }
+        if( index + 4 > count ) { report( "", "incomplete \"node\" entry at the end of the file" ); break; }
+        suspension entry;
+        auto good { to_number( Tokens[ index ], entry.range_max ) && to_number( Tokens[ index + 1 ], entry.range_min ) };
+        entry.name = Tokens[ index + 2 ];
+        auto const type { Tokens[ index + 3 ] };
+        index += 4;
+        if( false == good ) { report( entry.name, "visibility range isn't a number" ); }
+        if( type != "suspension" ) {
+            // inny rodzaj wpisu: jeden komunikat i pominięcie całej jego treści, do następnego wpisu
+            report( entry.name, "node type \"" + type + "\" isn't supported in a catenary file, only \"suspension\" is" );
+            while( index < count && Tokens[ index ] != "node" ) { ++index; }
+            continue;
+        }
+        // treść wpisu do endsuspension
+        bool closed { false };
+        while( index < count ) {
+            auto const key { Tokens[ index++ ] };
+            if( key == "endsuspension" ) { closed = true; break; }
+            if( key == "node" ) {
+                // brak endsuspension: ten wpis przepada, a następny czytany jest normalnie
+                --index;
+                break;
+            }
+            if( false == is_keyword( key ) ) {
+                report( entry.name, "unexpected token \"" + key + "\"" );
+                good = false;
+                continue;
+            }
+            auto const list { values() };
+            if( key == "support" ) {
+                if( list.size() == 1 ) { entry.support = list.front(); }
+                else { report( entry.name, "\"support\" needs exactly one node name" ); good = false; }
+            }
+            else if( key == "scheme" ) {
+                double card { 0.0 }, execution { 0.0 };
+                if( list.size() == 2 && to_number( list[ 0 ], card ) && to_number( list[ 1 ], execution ) ) {
+                    entry.card = static_cast<int>( card );
+                    entry.execution = static_cast<int>( execution );
+                }
+                else { report( entry.name, "\"scheme\" needs two numbers: catalogue card and variant" ); good = false; }
+            }
+            else if( key == "messenger" ) {
+                entry.messenger.insert( entry.messenger.end(), list.begin(), list.end() );
+            }
+            else if( key == "contact" ) {
+                entry.contact.insert( entry.contact.end(), list.begin(), list.end() );
+            }
+            else if( key == "insulators" ) {
+                if( list.size() == 1 ) { entry.insulators = list.front(); }
+                else { report( entry.name, "\"insulators\" needs exactly one set name" ); good = false; }
+            }
+            else if( key == "override" ) {
+                if( list.size() == 2 ) { entry.overrides.emplace_back( list[ 0 ], list[ 1 ] ); }
+                else { report( entry.name, "\"override\" needs a role and a part" ); good = false; }
+            }
+            else if( key == "skin" ) {
+                if( list.size() == 1 ) { entry.skin = list.front(); }
+                else { report( entry.name, "\"skin\" needs exactly one texture name" ); good = false; }
+            }
+            else if( key == "at" || key == "attach" || key == "rope" ) {
+                auto *point { key == "at" ? entry.at : key == "attach" ? entry.attach : entry.rope };
+                if( list.size() == 3 && to_number( list[ 0 ], point[ 0 ] ) && to_number( list[ 1 ], point[ 1 ] ) && to_number( list[ 2 ], point[ 2 ] ) ) {
+                    ( key == "at" ? entry.has_at : key == "attach" ? entry.has_attach : entry.has_rope ) = true;
+                }
+                else { report( entry.name, "\"" + key + "\" needs three numbers: a point in scenery coordinates" ); good = false; }
+            }
+            else if( key == "umbrella" ) {
+                if( list.size() == 1 ) { entry.umbrella = list.front(); }
+                else { report( entry.name, "\"umbrella\" needs exactly one name" ); good = false; }
+            }
+            else if( key == "pole" ) {
+                if( list.size() == 4 && to_number( list[ 1 ], entry.pole[ 0 ] ) && to_number( list[ 2 ], entry.pole[ 1 ] ) && to_number( list[ 3 ], entry.pole[ 2 ] ) ) {
+                    entry.pole_type = list[ 0 ];
+                    entry.has_pole = true;
+                }
+                else { report( entry.name, "\"pole\" needs a pole type and three numbers: the pole axis at the rail head in scenery coordinates" ); good = false; }
+            }
+        }
+        if( false == closed ) { report( entry.name, "missing \"endsuspension\"" ); good = false; }
+        if( good ) {
+            if( entry.has_at || entry.has_attach || entry.has_rope || entry.has_pole ) {
+                // wpis z punktami podanymi wprost: konstrukcja i przęsła nie są potrzebne, ale punkty muszą być w komplecie
+                if( false == entry.has_at || false == ( entry.has_attach || entry.has_pole ) ) { report( entry.name, "explicit points need \"at\" and either \"attach\" or \"pole\"" ); good = false; }
+                if( entry.has_attach && entry.has_pole ) { report( entry.name, "\"attach\" and \"pole\" can't be used together" ); good = false; }
+                if( entry.card == 0 ) { report( entry.name, "explicit points need a \"scheme\"" ); good = false; }
+                if( false == entry.umbrella.empty() && false == entry.has_pole ) { report( entry.name, "\"umbrella\" needs a \"pole\"" ); good = false; }
+            }
+            else {
+                if( entry.support.empty() ) { report( entry.name, "missing \"support\"" ); good = false; }
+                if( entry.messenger.empty() && entry.contact.empty() ) { report( entry.name, "no spans listed under \"messenger\" or \"contact\"" ); good = false; }
+            }
+            if( entry.messenger.size() > 2 ) { report( entry.name, "more than two spans listed under \"messenger\"" ); good = false; }
+            if( entry.name.empty() || entry.name == "none" ) { entry.name.clear(); }
+            else if( false == names.insert( entry.name ).second ) { report( entry.name, "duplicate suspension name" ); good = false; }
+        }
+        if( good ) { Output.entries.push_back( entry ); }
+    }
+}
+
+double support_data::half_width( double const Height ) const {
+    if( height <= 0.0 ) { return 0.5 * width_base; }
+    auto const t { std::clamp( Height / height, 0.0, 1.0 ) };
+    return 0.5 * ( width_base + ( width_top - width_base ) * t );
+}
+
+bool support_registry::load( std::string const &Filename, std::vector<std::string> &Errors ) {
+
+    std::ifstream file { Filename };
+    if( !file ) { return false; }
+    std::string line, model;
+    support_data data;
+    bool inside { false };
+    int linenumber { 0 };
+    auto const report = [ & ]( std::string const &Reason ) {
+        Errors.push_back( "Bad support registry \"" + Filename + "\" (line " + std::to_string( linenumber ) + "): " + Reason );
+    };
+    while( std::getline( file, line ) ) {
+        ++linenumber;
+        auto const comment { line.find( "//" ) };
+        if( comment != std::string::npos ) { line.erase( comment ); }
+        line = trim( line );
+        if( line.empty() ) { continue; }
+        if( false == inside ) {
+            // support <ścieżka modelu> {
+            std::istringstream stream { line };
+            std::string keyword, brace;
+            stream >> keyword >> model >> brace;
+            if( keyword != "support" || model.empty() || brace != "{" ) { report( "expected: support <model path> {" ); continue; }
+            data = support_data();
+            inside = true;
+            continue;
+        }
+        if( line == "}" ) {
+            if( data.type.empty() ) { report( "support \"" + model + "\" has no \"type\"" ); }
+            else if( data.height <= 0.0 || data.width_base <= 0.0 || data.width_top <= 0.0 ) { report( "support \"" + model + "\" needs positive height, width_base and width_top" ); }
+            else { m_supports[ normalize_path( model ) ] = data; }
+            inside = false;
+            continue;
+        }
+        auto const colon { line.find( ':' ) };
+        if( colon == std::string::npos ) { report( "expected: <key>: <value>" ); continue; }
+        auto const key { trim( line.substr( 0, colon ) ) }, value { trim( line.substr( colon + 1 ) ) };
+        if( key == "type" ) { data.type = value; }
+        else if( key == "height" || key == "width_base" || key == "width_top" ) {
+            double number { 0.0 };
+            if( false == to_number( value, number ) ) { report( "\"" + key + "\" isn't a number" ); continue; }
+            if( key == "height" ) { data.height = number; }
+            else if( key == "width_base" ) { data.width_base = number; }
+            else { data.width_top = number; }
+        }
+        else { report( "unknown key \"" + key + "\"" ); }
+    }
+    if( inside ) { report( "support \"" + model + "\" isn't closed with \"}\"" ); }
+    return true;
+}
+
+support_data const *support_registry::find( std::string const &Model ) const {
+    auto const lookup { m_supports.find( normalize_path( Model ) ) };
+    return ( lookup != m_supports.end() ? &lookup->second : nullptr );
+}
+
+} // namespace catenary
