@@ -35,7 +35,7 @@ Jan potwierdził: kompiluje się, widać linie i bryły. Niepotwierdzone po komp
 - **DamageFlag:** 0 nowa, 2 przejściowa, 1 zaśniedziała, 128 zerwana.
 - **Y** rysuje się tylko wtedy, gdy oba sąsiednie przęsła go mają (ten sam typ Y, końce lin w tym samym punkcie z tolerancją 5 cm).
 - **Dwie liny nośne** (typy 2C120-2C-3 i -4): liny jedna nad drugą co 4 cm, wieszaki na dolnej, łączniki między linami w każdym punkcie wieszaka poza strefą podpory. `y_junction_drop` 0,04 tylko dla -4.
-- **Rozstaw drutów jezdnych** 8 cm (potwierdzone przez Jana).
+- **Rozstaw drutów jezdnych** 8 cm (potwierdzone przez Jana). Wyjątek: w złożeniach z ramionami 6207 i 6208 rozstaw 10 cm (Jan, 2026-10-17 00:48).
 - **Typ wieszaka** (pojedynczy/podwójny, karty 0570–0579): nie wiadomo, który gdzie; zostaje pojedynczy naprzemienny, docelowo ustawienie w pliku typu.
 - **Plik podwieszeń:** w scenerii `catenary <plik> endcatenary`; w pliku wpisy
   `node <max> <min> <nazwa> suspension support <model> scheme <karta> <wyk> messenger <przęsła> contact <przęsła> insulators … override <rola> <część> skin <skórka> endsuspension`, plus domyślne `skin` na poziomie pliku.
