@@ -24,3 +24,10 @@ vcpkg.json
 
 # Local Python (setup.bat / CMake) for embedding
 tools/python314/
+
+# testy sieci trakcyjnej (binarki z build.sh)
+tests/catenary/t
+tests/catenary/ts
+tests/catenary/sim
+tests/catenary/tsc
+tests/catenary/tc
