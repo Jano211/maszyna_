@@ -1,12 +1,35 @@
-# Sieć trakcyjna w exe MaSzyny: przekazanie (stan na 2026-10-11)
+# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-10-17)
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – stan na 2026-10-17 01:15 (koniec sesji)
+
+Nowy czat zaczyna od tej sekcji, potem „Git i edytor”, „Peronowe 103x/104x” i KONCEPCJA.md (rodziny, kolejność). Dalej tylko w miarę potrzeby.
+
+**Gdzie jest kod**
+- Prawda o kodzie sieci: gałąź `siec-trakcyjna` w `github.com/Jano211/maszyna_` (od mastera MaSzyna-EU07 c7f9796 z nowym edytorem). Ostatni commit 52947c3 (poprawka `Traction.cpp:184`: parametr banku w masterze nazywa się `Geometrybank`, nie `Bank`).
+- Gałęzie `bujanie` (885de9b) i `radio` (b4b1e6c) wypchnięte, jeszcze NIEKOMPILOWANE u Jana.
+- U Jana klon: `C:\MaszynaGit\maszyna_` (podpięty folder, GitHub Desktop, „For my own purposes”), build w `build\` (VS 2026 „Visual Studio 18 2026”, x64, Release, `eu07.slnx`). `siec-trakcyjna` ZBUDOWAŁA SIĘ 2026-10-17 01:13. Log kompilacji: `build\eu07.dir\Release\eu07.log` (UTF-8 z BOM) – czytać go samemu zamiast prosić Jana o wklejanie.
+- Uwaga: lokalna gałąź Jana stoi na 944674d + ręcznie wgrany poprawiony `Traction.cpp` (Pull się nie udał). Przed następnym Pull: w GitHub Desktop Discard changes na zmienionych plikach, potem Fetch/Pull. Sprawdzić `.git\refs\heads\siec-trakcyjna` u Jana.
+- `C:\Maszyna` = stare drzewo robocze Jana (bez commitów, baza 79bd0c8 + radio + bujanie + sieć). Pliki sieci w nim są identyczne z gałęzią (sprawdzone 2026-10-17 00:45); notatki .md są tam i na gałęzi takie same. Nowe zmiany kodu: commit + push na gałąź, Jan robi Pull; do `C:\Maszyna` już nie pisać kodu bez potrzeby.
+- Robocza kopia repo w chmurze: `/home/claude/up/master` (remotes: origin = maszyna_, upstream = MaSzyna-EU07). W nowym czacie jej nie będzie – sklonować `Jano211/maszyna_` (aplikacja Claude na GitHubie jest zainstalowana, push działa) i `git submodule` NIE jest potrzebny do testów z `tests/catenary/build.sh`.
+- Dane symulatora: `G:\Maszyna2510\data\traction_cantilevers.txt` (344721 B) i `scenery\td_katalog.scm` – aktualne z danymi peronowych.
+
+**Najbliższe kroki (po kolei)**
+1. Jan: nowy exe z `build\bin\...` do `G:\Maszyna2510`, `td_katalog` – porównać ze starym exe (scalone renderery i serializer scenerii). Potem zbudować `bujanie` i `radio`.
+2. Rozjazdowe: Jan modeluje zestawy 6206/6207/6208/6209 (+ 5270-3, 6301-3). „Trochę więcej roboty” niż myślał. Potem 106x, 109x, 126x/128x, 1267–1269/1287–1289, następnie 105x/125x/127x (lina z zaciskami), 102x (dwie sieci, „4ka”), teowniki, 4800, 4670, dobór karty, edytor wg KONCEPCJA_EDYTOR.md.
+3. Otwarte pytanie Jana (01:02, przerwane): z jakimi wspornikami (4240/4250/4260/4290) chodzą 6207 i 6208. Znane: 1061 – 6207-1 + 6207-2 (wyk. 1) i 6207-3 (wyk. 3/4) na 4290-5/-6. 6208 w odczytanych tabelach nie ma – szukać w tomie 3 (10xx s. 4–52, 12xx od s. 101) i tomie 2. Był pomysł OCR całego tomu 3 (`tesseract`, jest tylko `eng`) – Jan przerwał, bo przyszedł błąd kompilacji; wrócić, jeśli Jan dalej chce.
+4. Rozstaw drutów przy 6207/6208 = 10 cm tylko przy wysięgniku (założenie Jana), w przęśle 8 cm – szczegóły w „Ustalone zasady”. 6206 na karcie: L 1240/1400 (różnica 160 mm; Jan mówił 14 cm – nie wyjaśnione, w 126x/128x jest tylko 6206-1).
+
+**Czeka na potwierdzenie Jana:** 1036 → 6010-3; obrót 7020 o 90° w wiszącej kolumnie peronowych; 4500-01 jako obejma na rurze w 100x; drugi typ peronowych (Bobry) – brak danych.
+
+**Strony kart części (tom 5, `z- KATALOG 5 -z.pdf`, 226 s.):** 6160 s. 130, 6201–6209 s. 132–140 (6206 s. 137, 6207 s. 138, 6208 s. 139, 6209 s. 140), 6212 s. 141, 6301–6316 s. 142–152, 6401–6421 s. 164–170, 6503–6531 s. 171–179, 6601 s. 180. Numer karty w prawym dolnym rogu (skan, bez tekstu).
+
 ## Jak pracować z dyskiem Jana
 
-- Źródła exe: `C:\Maszyna` (gałąź git `radio`, nic nie jest zacommitowane; Jan nie umie Gita, przy PR trzeba mu pomóc wydzielić sieć do osobnej gałęzi).
+- Źródła exe: od 2026-10-17 gałąź `siec-trakcyjna` w `Jano211/maszyna_`, u Jana `C:\MaszynaGit\maszyna_` (patrz START TUTAJ). Stare `C:\Maszyna` bez commitów. Jan nie zna Gita – prowadzić krok po kroku przez GitHub Desktop.
 - Podpięte foldery: `C:\Maszyna`, `E:\maszyna-sim` (symulator), `C:\Users\jan_c\Desktop\scenery`, `E:\MaszynaProjekty\Siec\Nowe`.
-- Nie ma powłoki na komputerze Jana: nie da się u niego uruchomić gita ani kompilacji. Kompiluje Jan w Visual Studio i zgłasza wynik.
+- Nie ma powłoki na komputerze Jana: nie da się u niego uruchomić gita ani kompilacji. Kompiluje Jan w Visual Studio; wynik czytać z `build\eu07.dir\Release\eu07.log`. Podpięte foldery mogą się zmieniać – sprawdzić `get_device_info`.
 - Zapis plików: zawsze z NOWEGO folderu w `/mnt/user-data/outputs/` (np. `exe_v16/...`). Ponowne użycie tej samej ścieżki raz dostarczyło starą treść, a Jan kompilował 30 minut na darmo. Po każdym zapisie sprawdzić rozmiar lub treść pliku na dysku.
 - NIE zmieniać `world/Traction.h` ani `utilities/Globals.h` bez potrzeby: przebudowa trwa ok. 30 minut. Stan przęsła siedzi za `std::shared_ptr<catenary_span>`, ustawienia w `world/catenary_span.h`.
 - Nowy plik `.cpp` trzeba dopisać do `CMakeLists.txt` i Jan musi odświeżyć projekt.
