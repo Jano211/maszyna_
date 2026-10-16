@@ -9,6 +9,7 @@ Nowy czat zaczyna od tej sekcji, potem „Git i edytor”, „Peronowe 103x/104x
 **Gdzie jest kod**
 - Prawda o kodzie sieci: gałąź `siec-trakcyjna` w `github.com/Jano211/maszyna_` (od mastera MaSzyna-EU07 c7f9796 z nowym edytorem). Ostatni commit 52947c3 (poprawka `Traction.cpp:184`: parametr banku w masterze nazywa się `Geometrybank`, nie `Bank`).
 - Gałęzie `bujanie` (885de9b) i `radio` (b4b1e6c) wypchnięte, jeszcze NIEKOMPILOWANE u Jana.
+- Gałąź `wszystko` = `siec-trakcyjna` + merge `bujanie` + merge `radio` (bez konfliktów, 2026-10-17 01:20) – jeden exe ze wszystkim. Zmiany robić na gałęziach tematycznych, potem `git merge` ich do `wszystko` i push obu.
 - U Jana klon: `C:\MaszynaGit\maszyna_` (podpięty folder, GitHub Desktop, „For my own purposes”), build w `build\` (VS 2026 „Visual Studio 18 2026”, x64, Release, `eu07.slnx`). `siec-trakcyjna` ZBUDOWAŁA SIĘ 2026-10-17 01:13. Log kompilacji: `build\eu07.dir\Release\eu07.log` (UTF-8 z BOM) – czytać go samemu zamiast prosić Jana o wklejanie.
 - Uwaga: lokalna gałąź Jana stoi na 944674d + ręcznie wgrany poprawiony `Traction.cpp` (Pull się nie udał). Przed następnym Pull: w GitHub Desktop Discard changes na zmienionych plikach, potem Fetch/Pull. Sprawdzić `.git\refs\heads\siec-trakcyjna` u Jana.
 - `C:\Maszyna` = stare drzewo robocze Jana (bez commitów, baza 79bd0c8 + radio + bujanie + sieć). Pliki sieci w nim są identyczne z gałęzią (sprawdzone 2026-10-17 00:45); notatki .md są tam i na gałęzi takie same. Nowe zmiany kodu: commit + push na gałąź, Jan robi Pull; do `C:\Maszyna` już nie pisać kodu bez potrzeby.
