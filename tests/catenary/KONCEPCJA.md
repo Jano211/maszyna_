@@ -60,7 +60,7 @@ Każdy krok kończy się rzędem w `td_katalog` i ostrzeżeniami w kluczu, a pot
 - Przykład 23-0111 (przelotowe, prosta, odsuw do słupa, przechylne; wykonania 2/3/4 = A 1,75–2,20 / 2,20–2,65 / 2,65–3,10): ukośnik 6101-2/3/4 (teownik) z dolnego izolatora 7110-1, u góry poziomy pręt 4310-2/3/4 z izolatorem 7120-1 i siodłem liny 4160-1 na końcu nad drutem (lina LEŻY na wysięgniku, nie wisi na 4140); wysięg 6111-1/2/3 na węźle 4350-1 na ukośniku, ramiona 6201-1/-2 na 4240-1; pionowe cięgno 9812-1 (1,60 m) od 4230-1 + 6301 + 6311 na ukośniku do 4210-2 na końcu wysięgu. Inne części niż w rurowych: 4160, 4230, 4310, 4350, 6101, 7110, 7120, 9812.
 - s. 257–koniec (od karty 0931): jeszcze nieprzejrzane.
 - Wniosek: teowniki to osobny zestaw części i 2–3 nowe składanki (lina na siodle zamiast wiszącej, wysięg na węźle ukośnika, cięgno pionowe). Klocki solvera w większości są (`tangent`/`line`, `stretch`, `hangarms`); nowe: siodło liny (część stawiana pod liną, ukośnik/pręt przechodzi przez jej punkt).
-- Zastrzał 4800: modelu jeszcze nie ma (Jan).
+- Zastrzał 4800: wyrzucony z listy do zrobienia (Jan, 2026-10-17).
 
 ## 7. Rodziny G i I – karty przeczytane 2026-10-15 23:00 (bez kodu)
 
