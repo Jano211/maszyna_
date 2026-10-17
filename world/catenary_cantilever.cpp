@@ -546,7 +546,7 @@ std::map<std::string, std::string> const step_arguments {
     { "tangent", "nppen" }, { "level", "lnpe" }, { "project", "lnpee" }, { "limit", "lnee" }, { "window", "lnEE" },
     { "chain", "lnpeernEEE" }, { "place", "rpda" }, { "roll", "rR" }, { "stretch", "rppa" }, { "registration", "" },
     { "repeat", "ip" }, { "endrepeat", "" }, { "vee", "rppea" }, { "hangarms", "rrrlp" }, { "anchor", "nper" },
-    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" } };
+    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" } };
 
 bool valid_argument( char const Kind, std::string const &Word ) {
     std::vector<term> terms;
@@ -1248,6 +1248,85 @@ private:
                 auto const axis { ( w[ 4 ][ 1 ] == 'y' ? 1 : 2 ) };
                 if( stretched.length > 1e-6 ) { placement.scale[ axis ] = legs / stretched.length; }
                 put( placement );
+            }
+            return;
+        }
+
+        if( op == "armcords" ) {
+            // linki ramion odciągowych do liny nośnej (106x, 1054): na każdym postawionym ramieniu (rola arms albo arms.N) z punktem
+            // "cord_nom" obejma Clamp w tym punkcie (obrócona jak ramię, rura wzdłuż Y ramienia), z jej ucha linka Cord do punktu To
+            // (lina nośna). Jedno ramię: linka w V do dwóch punktów rozsuniętych wzdłuż toru o +-Spread; kilka ramion: każde
+            // pionowo do punktu To przesuniętego wzdłuż toru o +-Spread po stronie ramienia. Bez ramion z punktem cord_nom nic nie robi.
+            auto cordrole { w[ 0 ] };
+            if( cordrole[ 0 ] == '?' ) { cordrole.erase( 0, 1 ); }
+            auto clamprole { w[ 1 ] };
+            if( clamprole[ 0 ] == '?' ) { clamprole.erase( 0, 1 ); }
+            if( false == has_role( cordrole ) || false == has_role( clamprole ) ) { return; }
+            auto const &cord { part( cordrole ) };
+            auto const &clamp { part( clamprole ) };
+            auto const to { point( w[ 2 ] ) };
+            auto const spread { number( w[ 3 ] ) };
+            std::vector<cantilever_placement> arms;
+            for( auto const &placed : m_result.parts ) {
+                if( placed.role != "arms" && placed.role.rfind( "arms.", 0 ) != 0 ) { continue; }
+                auto const *armpart { m_catalog.part( placed.part ) };
+                if( armpart == nullptr || armpart->points.find( "cord_nom" ) == armpart->points.end() ) { continue; }
+                arms.push_back( placed );
+            }
+            if( arms.empty() ) { return; }
+            auto const transform = []( cantilever_placement const &Placement, double const X, double const Y, double const Z, double ( &Out )[ 3 ] ) {
+                for( int row = 0; row < 3; ++row ) {
+                    Out[ row ] = Placement.position[ row ] + Placement.rotation[ row * 3 + 0 ] * X + Placement.rotation[ row * 3 + 1 ] * Y + Placement.rotation[ row * 3 + 2 ] * Z;
+                }
+            };
+            auto const stretch = [ & ]( std::string const &Role, double const ( &From )[ 3 ], double const ( &To )[ 3 ] ) {
+                double d[ 3 ] { To[ 0 ] - From[ 0 ], To[ 1 ] - From[ 1 ], To[ 2 ] - From[ 2 ] };
+                auto const span { std::sqrt( d[ 0 ] * d[ 0 ] + d[ 1 ] * d[ 1 ] + d[ 2 ] * d[ 2 ] ) };
+                if( span < 1e-6 ) { return; }
+                for( auto &value : d ) { value /= span; }
+                // Z części wzdłuż linki, X części: oś toru bez składowej wzdłuż linki
+                double x[ 3 ] { 1.0 - d[ 0 ] * d[ 0 ], -d[ 0 ] * d[ 1 ], -d[ 0 ] * d[ 2 ] };
+                auto const size { std::sqrt( x[ 0 ] * x[ 0 ] + x[ 1 ] * x[ 1 ] + x[ 2 ] * x[ 2 ] ) };
+                for( auto &value : x ) { value /= size; }
+                double const y[ 3 ] { d[ 1 ] * x[ 2 ] - d[ 2 ] * x[ 1 ], d[ 2 ] * x[ 0 ] - d[ 0 ] * x[ 2 ], d[ 0 ] * x[ 1 ] - d[ 1 ] * x[ 0 ] };
+                cantilever_placement placement;
+                placement.role = Role;
+                placement.part = cord.name;
+                for( int row = 0; row < 3; ++row ) {
+                    placement.position[ row ] = From[ row ];
+                    placement.rotation[ row * 3 + 0 ] = x[ row ];
+                    placement.rotation[ row * 3 + 1 ] = y[ row ];
+                    placement.rotation[ row * 3 + 2 ] = d[ row ];
+                }
+                if( cord.length > 1e-6 ) { placement.scale[ 2 ] = span / cord.length; }
+                m_result.values[ Role + ".span" ] = span;
+                put( placement );
+            };
+            for( std::size_t index = 0; index < arms.size(); ++index ) {
+                auto const &arm { arms[ index ] };
+                auto const &nominal { m_catalog.part( arm.part )->points.at( "cord_nom" ) };
+                double at[ 3 ];
+                transform( arm, 0.0, nominal.first, nominal.second, at );
+                auto clampplacement { arm };
+                clampplacement.role = clamprole + "." + std::to_string( index + 1 );
+                clampplacement.part = clamp.name;
+                clampplacement.model.clear();
+                std::fill( std::begin( clampplacement.scale ), std::end( clampplacement.scale ), 1.0 );
+                std::copy( std::begin( at ), std::end( at ), std::begin( clampplacement.position ) );
+                put( clampplacement );
+                double eye[ 3 ];
+                transform( clampplacement, 0.0, 0.0, clamp.eye, eye );
+                auto const suffix { "." + std::to_string( index + 1 ) };
+                if( arms.size() == 1 ) {
+                    for( auto const side : { -1.0, 1.0 } ) {
+                        double const target[ 3 ] { side * spread, to.y, to.z };
+                        stretch( cordrole + suffix + ( side < 0.0 ? "" : "_2" ), eye, target );
+                    }
+                }
+                else {
+                    double const target[ 3 ] { ( eye[ 0 ] < 0.0 ? -spread : spread ), to.y, to.z };
+                    stretch( cordrole + suffix, eye, target );
+                }
             }
             return;
         }
