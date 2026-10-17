@@ -286,6 +286,36 @@ ROPE_ARMS += ("\n// jak rope_arms, ale lina z wlasnego zaczepu na slupie (mocowa
                '  line rope_line steady_mount toward arms_holder\n  place rope_insulator steady_mount rope_line -y\n  point rope_eye rope_line@rope_insulator.length\n  stretch rope rope_eye arms_holder +z\n')
     + "endassembly\n")
 ASSEMBLIES += ROPE_ARMS
+# 102x (tom 3 s. 12-16, dwie sieci w przesle naprezenia, nieprzechylne): jak swing_vee bez ramion; na wysiegu 6011 dwa uchwyty 4120-3
+# dla przewodow obu sieci 0,08 m od siebie (+-0,04 wokol A, odczyt z rysunku 1022); drugi uchwyt liny 4140 na drugim 4050 na ukosniku,
+# drugi 4050 na ukosniku 0,08 m dalej od slupa, 4140 wisi z niego pionowo - lina drugiej sieci wypada wyzej, jak na rysunku 1022
+# (punkt w wyniku: messenger_clamp_b.y/.z); wysieg podparty
+# plaskownikiem 6506 (0,15 m miedzy otworami) od uchwytu 4760 na ukosniku do obejmy 4210 na wysiegu, pionowo.
+ASSEMBLIES += '\n// dwie sieci (102x): swing_vee + drugi przewod i druga lina nosna, wysieg podparty plaskownikiem 6506 do 4760 na ukosniku\nassembly double_net\n' + \
+    re.search(r'assembly swing_vee\n(.*?)endassembly\n', ASSEMBLIES, re.S).group(1).replace('  hangarms ?arms arms_bracket ?arms_head steady registration\n', '').replace('  registration\n', '') + \
+    """  shift wire_a wire 0.04 0
+  shift wire_b wire -0.04 0
+  place contact_clamp_a wire_a steady -y
+  place contact_clamp_b wire_b steady -y
+  export wire_a
+  export wire_b
+  shift messenger_b_ref messenger_clamp.hook -0.08 0
+  across strut head_clamp_b messenger_b_ref -head_clamp_b.eye
+  side head_b_eye strut strut.head_clamp_b -head_clamp_b.eye
+  place head_clamp_b strut@strut.head_clamp_b strut.down -z
+  hangat messenger_clamp_b head_b_eye
+  export messenger_clamp_b
+  shift link_top registration 0 link_cord_clamp.eye+link.length
+  level strut link_clamp link_top -link_clamp.eye
+  side link_high strut strut.link_clamp -link_clamp.eye
+  shift link_low link_high 0 -link.length
+  project steady link_cord_clamp link_low steady.length 0
+  place link_cord_clamp steady@steady.link_cord_clamp steady.up +z
+  line link_line link_low toward link_high
+  place link link_low link_line +y
+  place link_clamp strut@strut.link_clamp strut.down -z
+endassembly
+"""
 # 109x (tom 3 s. 44-51, rozjazdowe jednej sieci, przechylne): jak swing_vee, ramiona z dwoch stron do jednego przewodu - pierwsze
 # (6202-1) do slupa na 4250-3, drugie (6212-1, model 6202 - Jan) na drugim 4250-3 przy koncu wysiegu, obroconym o 180 st.
 ASSEMBLIES += '\n// jak swing_vee, z drugim zestawem ramion od slupa do tego samego przewodu (109x)\nassembly swing_vee_pair\n' + \
@@ -440,6 +470,14 @@ ASSEMBLIES += ('\n// 07xx niskie (tom 2): 071x/072x jedna pozioma rura z ramiona
     + INNER_PUSH.replace('assembly inner_push', 'assembly inner_push_cords').replace('endassembly', '  armcords ?arms_cord ?arms_cord_clamp messenger 0.125\nendassembly')
     + PLATFORM
     + _top_head('top_head_contact', 1, True) + _top_head('top_head_in', 1, False) + _top_head('top_head_out', -1, False) + LEVEL_CONTACT)
+# 1099 (tom 3 s. 52): jak inner_push (wysieg 6001 od ukosnika, 4500 na koncu), linka w V od 4500 do liny nosnej, ramiona z dwoch
+# stron do jednego przewodu na dwoch 4280-3 (6202-1 do slupa, 6212-1 = 6202 od slupa)
+ASSEMBLIES += ('\n// jak inner_push, linka V od glowicy do liny, dwa zestawy ramion z dwoch stron (1099)\nassembly inner_push_pair\n' +
+    re.search(r'assembly inner_push\n(.*?)endassembly\n', ASSEMBLIES, re.S).group(1)
+      .replace('  stretch ?cord tip_eye messenger_clamp.end +z\n', '  vee cord tip_eye messenger 0.125 +z\n')
+      .replace('  shift arms_side wire -1 0\n  hangarms ?arms arms_bracket ?arms_head steady arms_side\n',
+               '  shift arms_side wire 1 0\n  hangarms ?arms arms_bracket ?arms_head steady arms_side\n  shift arms_b_side wire -1 0\n  hangarms ?arms_b arms_b_bracket ?arms_b_head steady arms_b_side\n') +
+    'endassembly\n')
 for l in ASSEMBLIES.splitlines(): w(l)
 w()
 
@@ -808,6 +846,35 @@ for n in range(1, 7):
                            ('arms', arms), ('arms_bracket', '4290-06'), ('arms_head', head), ('arms_cord', '4490-00'), ('arms_cord_clamp', '4210-02')]:
             line += ' role %s %s' % (role, part)
         w(line + ' endscheme')
+# 102x: 1022-1026 wyk. 1 (hk 1,30, izolatory ~2,00) i 2 (hk 1,50, ~1,60); ZALOZENIE: gorny zaczep wyk. 1 na wysokosci hk (odciag 22
+# poziomo przy linie na rysunku), wyk. 2 1,40 - inaczej dolny zaczep (-0,10) wypada za wysoko i 4050 wysiegu siada na izolatorze; ukosnik 6001-(n+2), odciag 6002-(n+1), wysieg 6011-(n+1) / 6011-(n+2); obejma linki V 0,16 m za A (rysunek).
+w('part 4760-01 kind clamp eye 0.0462 endpart   // uchwyt plaskownika na ukosniku (model Jana 2026-10-17), ucho 46 mm pod osia rury')
+w('part 6506-01 kind link length 0.1500 endpart   // plaskownik 6506 (model Jana; plik 6505-01!), 0,15 m miedzy otworami, zero w dolnym otworze')
+w('registration 102x tube 0.0519 clamp -0.1600 endregistration   // rura wysiegu 4120-3 nad przewodami, obejma linki V za przewodami')
+for n in range(2, 7):
+    for wyk, hk, span, top in ((1, 1.30, 2.00, 1.30), (2, 1.50, 1.60, 1.40)):
+        line = 'scheme %d %d reach %s %s height %s registration 102x mount stay %s mount strut %s assembly double_net' % (
+            1020 + n, wyk, f(1.45 + 0.3 * n), f(1.75 + 0.3 * n), f(hk), f(top), f(top - span))
+        for role, part in [('stay_insulator', '7100-01'), ('stay', '6002-%02d' % (n + 1)), ('stay_end', '4400-01'), ('stay_clamp', '4070-01'),
+                           ('strut_insulator', '7100-01'), ('strut', '6001-%02d' % (n + 2)), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01'),
+                           ('cord', '4490-00'), ('cord_clamp', '4210-02'), ('steady', '6011-%02d' % (n + wyk)), ('steady_clamp', '4050-01'),
+                           ('contact_clamp_a', '4120-03'), ('contact_clamp_b', '4120-03'), ('head_clamp_b', '4050-01'), ('messenger_clamp_b', '4140-01'),
+                           ('link', '6506-01'), ('link_clamp', '4760-01'), ('link_cord_clamp', '4210-02')]:
+            line += ' role %s %s' % (role, part)
+        w(line + ' endscheme')
+# 1099 wyk. 3 (hk 1,70, ukosnik i wysieg 6001-14) i 4 (hk 1,30, 6001-11), odciag 6002-9; 4500-1 na koncu (karta: 4500-2 z odreczna
+# uwaga "nie moze byc do 6001, powinno byc 4500-1"); uchwyty 4280-3: zero na spodzie rury, ucho 0,196 m nizej (model Jana)
+for n in (1, 3):
+    w('part 4280-%02d kind arm_holder point eye 0.0000 -0.1960 endpart   // model Jana: zero na spodzie rury, ucho 196 mm nizej' % n)
+w('registration 1099 tube %s clamp 0.0000 endregistration   // os wysiegu 6001: ucho 4280-3 w punkcie zawieszenia 6202-01' % f(0.17914 + 0.196 + 0.03))
+for wyk, hk, stay_mount, pipe in ((3, 1.70, 1.90, '6001-14'), (4, 1.30, 1.50, '6001-11')):
+    line = 'scheme 1099 %d reach 4.1500 4.4500 height %s registration 1099 mount stay %s mount strut -0.1000 assembly inner_push_pair' % (wyk, f(hk), f(stay_mount))
+    for role, part in [('stay_insulator', '7100-01'), ('stay', '6002-09'), ('stay_end', '4400-01'), ('stay_clamp', '4070-01'),
+                       ('strut_insulator', '7100-01'), ('strut', pipe), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01'),
+                       ('steady_clamp', '4070-01'), ('steady_end', '4400-01'), ('steady', pipe), ('steady_head', '4500-01'), ('cord', '4490-00'),
+                       ('arms', '6202-01'), ('arms_bracket', '4280-03'), ('arms_b', '6202-01'), ('arms_b_bracket', '4280-03')]:
+        line += ' role %s %s' % (role, part)
+    w(line + ' endscheme')
 # 109x: 1091-1098 wyk. 3 i 4 (1099 to inna mechanika - osobno). Ukosnik 6001-(n+2) (wyk. 4: n+1), odciag linowy 6007-(n+1) na 4700 + 7020,
 # wysieg 6011-(n+6); ramiona 6202-01 (zestaw z 4110) dwa razy na 4250-03; obejma linki przy koncu wysiegu (jak 112x), linka V.
 w('registration 109x tube 0.2284 clamp -1.1450 endregistration   // rura jak 111x-3 (6202 na 4250-3), obejma linki przy koncu wysiegu')
