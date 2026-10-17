@@ -146,20 +146,26 @@ assemble( scene_suspension const &Suspension, catenary::cantilever_catalog const
             return 0;
         }
     }
-    auto const solve = [ & ]( std::map<std::string, std::string> const &Overrides, catenary::cantilever_result &Result ) {
+    // Drop: obniżenie dolnego zaczepu ukośnika (dobór przy innym zestawie izolatorów, niżej)
+    auto const solve = [ & ]( std::map<std::string, std::string> const &Overrides, double const Drop, catenary::cantilever_result &Result ) {
         if( pole != nullptr ) {
             // słup z katalogu: zaczepy, mocowania i słup liczy solver; Attach to oś słupa na wysokości główki szyny
-            return catenary::solve_cantilever_on_pole( Catalog, *scheme, *pole, reach, Attach.y - Wire.y, input.messenger, Overrides,
+            auto lowered { *scheme };
+            lowered.mount_strut -= Drop;
+            return catenary::solve_cantilever_on_pole( Catalog, lowered, *pole, reach, Attach.y - Wire.y, input.messenger, Overrides,
                 ( Umbrella != nullptr ? *Umbrella : catenary::cantilever_umbrella() ), Result );
         }
         auto attempt { input };
         attempt.overrides = Overrides;
+        attempt.strut_mount.z -= Drop;
         return catenary::solve_cantilever( Catalog, *scheme, attempt, Result );
     };
     // inny zestaw izolatorów (25 kV) bez kart katalogowych (Jan 2026-10-17: „lepić na oko”): rury ukośnika, odciągu i wysięgu
     // z izolatorem dobierane z tej samej rodziny części - długość bliska pierwotnej minus przyrost izolatora i po jednym
     // kroku w obie strony; wygrywa złożenie z najmniejszą liczbą uwag solvera, przy równej - najbliższe tej długości.
-    // Rury podane w scenerii przez override nie są ruszane.
+    // Rury podane w scenerii przez override nie są ruszane. Gdy mimo to zostają uwagi (zwykle uchwyt wysięgu 4050 wchodzi na
+    // dłuższy izolator ukośnika - Jan 2026-10-17, 1232), dolny zaczep ukośnika schodzi co 0,1 m (najwyżej 0,5 m), aż uwag
+    // nie będzie; zostaje najmniejsze obniżenie z najmniejszą liczbą uwag.
     std::vector<std::pair<std::string, std::vector<std::string>>> fits;
     if( false == data.insulators.empty() ) {
         for( auto const *tube : { "strut", "stay", "steady" } ) {
@@ -191,27 +197,34 @@ assemble( scene_suspension const &Suspension, catenary::cantilever_catalog const
     }
     catenary::cantilever_result result;
     auto solved { false };
-    if( fits.empty() ) {
-        solved = solve( input.overrides, result );
+    if( data.insulators.empty() ) {
+        solved = solve( input.overrides, 0.0, result );
     }
     else {
         auto best { std::numeric_limits<std::size_t>::max() };
-        std::vector<std::size_t> choice( fits.size(), 0 );
-        while( true ) {
-            auto overrides { input.overrides };
-            for( std::size_t index = 0; index < fits.size(); ++index ) { overrides[ fits[ index ].first ] = fits[ index ].second[ choice[ index ] ]; }
-            catenary::cantilever_result attempt;
-            if( solve( overrides, attempt ) && attempt.warnings.size() < best ) {
-                best = attempt.warnings.size();
-                result = attempt;
-                solved = true;
+        std::size_t baseline { 0 };     // uwagi niezależne od doboru (np. mocowanie odciągu ścięte do mount_max)
+        { catenary::cantilever_result plain; solve( input.overrides, 0.0, plain );
+          for( auto const &warning : plain.warnings ) { if( warning.find( "highest mount position" ) != std::string::npos ) { ++baseline; } } }
+        for( int step = 0; step <= 5 && best > baseline; ++step ) {
+            auto const drop { 0.1 * step };
+            std::vector<std::size_t> choice( fits.size(), 0 );
+            while( true ) {
+                auto overrides { input.overrides };
+                for( std::size_t index = 0; index < fits.size(); ++index ) { overrides[ fits[ index ].first ] = fits[ index ].second[ choice[ index ] ]; }
+                catenary::cantilever_result attempt;
+                if( solve( overrides, drop, attempt ) && attempt.warnings.size() < best ) {
+                    best = attempt.warnings.size();
+                    result = attempt;
+                    result.values[ "strut_mount.drop" ] = drop;
+                    solved = true;
+                }
+                // następna kombinacja (kolejność: najbliższe długości najpierw, więc przy równej liczbie uwag zostaje pierwsza)
+                std::size_t index { 0 };
+                while( index < fits.size() && ++choice[ index ] == fits[ index ].second.size() ) { choice[ index ] = 0; ++index; }
+                if( index == fits.size() ) { break; }
             }
-            // następna kombinacja (kolejność: najbliższe długości najpierw, więc przy równej liczbie uwag zostaje pierwsza)
-            std::size_t index { 0 };
-            while( index < fits.size() && ++choice[ index ] == fits[ index ].second.size() ) { choice[ index ] = 0; ++index; }
-            if( index == fits.size() ) { break; }
         }
-        if( false == solved ) { solved = solve( input.overrides, result ); }
+        if( false == solved ) { solved = solve( input.overrides, 0.0, result ); }
     }
     if( Probe != nullptr ) { *Probe = result; return ( solved ? 1 : 0 ); }
     // uwagi solvera to informacja o dopasowaniu części, nie błąd scenerii; błędem jest dopiero wysięgnik, którego nie da się złożyć
