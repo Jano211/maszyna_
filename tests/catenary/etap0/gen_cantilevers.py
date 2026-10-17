@@ -378,7 +378,11 @@ ASSEMBLIES += ('\n// 07xx niskie (tom 2): 071x/072x jedna pozioma rura z ramiona
     + _level_arms('level_arms_out', -1, '0.05 0.20 0.30')
     + '\n// 100x (tom 3): pozioma rura z 4050 + 4140, rozpora 6002 z dolu do uchwytu 4500-01 na rurze (ucho w dol)\n'
     + _level_arms('level_push_in', 1, 'rules.stay_gap_min rules.stay_gap rules.stay_gap_max', below=True)
-    + INNER_PUSH + PLATFORM
+    + INNER_PUSH
+    + '\n// 106x (tom 3 s. 32-37): jak inner_push, do tego obejmy 4210 na lukach ramion 6207 (cord_nom) i linki z nich do liny nosnej:\n'
+    + '// para - kazde ramie pionowo do liny, przesuniete wzdluz toru o +-0,125 m (~0,25 m na karcie); pojedyncze - linka w V\n'
+    + INNER_PUSH.replace('assembly inner_push', 'assembly inner_push_cords').replace('endassembly', '  armcords ?arms_cord ?arms_cord_clamp messenger 0.125\nendassembly')
+    + PLATFORM
     + _top_head('top_head_contact', 1, True) + _top_head('top_head_in', 1, False) + _top_head('top_head_out', -1, False) + LEVEL_CONTACT)
 for l in ASSEMBLIES.splitlines(): w(l)
 w()
@@ -734,16 +738,20 @@ w('registration 106x tube %s clamp 0.0000 endregistration   // os wysiegu 6001: 
 w('part 6207-03 kind arms point holder 1.4000 -0.0060 point cord_nom 0.0000 0.4451 point cord_min 0.8258 0.4451 point cord_max -0.1323 0.4451 endpart   // pojedyncze, komplet z 4110')
 # 1061: wyk. 1 para 6207-1 + 6207-2 na 4290-6 (glowica podwojna 4290-22); wyk. 3, 4 pojedyncze 6207-3 na 4290-5 (= 4290-06 + glowica 4290-21,
 # jak w 108x); wyk. 4 niskie: hk 1,30, ukosnik 6001-2, wysieg 6001-3, zaczepy 1,50 / -0,10 (jak 11xx)
-for wyk, hk, stay_mount, strut, steady, arms, head in ((1, 1.70, 1.90, '6001-03', '6001-04', '6207-12', '4290-22'),
-                                                       (3, 1.70, 1.90, '6001-03', '6001-04', '6207-03', '4290-21'),
-                                                       (4, 1.30, 1.50, '6001-02', '6001-03', '6207-03', '4290-21')):
-    line = 'scheme 1061 %d reach 1.7500 2.0500 height %s registration 106x mount stay %s mount strut -0.1000 assembly inner_push' % (wyk, f(hk), f(stay_mount))
-    for role, part in [('stay_insulator', '7100-01'), ('stay', '6002-02'), ('stay_end', '4400-01'), ('stay_clamp', '4070-01'),
-                       ('strut_insulator', '7100-01'), ('strut', strut), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01'),
-                       ('steady_clamp', '4070-01'), ('steady_end', '4400-01'), ('steady', steady), ('steady_head', '4500-01'), ('cord', '4490-00'),
-                       ('arms', arms), ('arms_bracket', '4290-06'), ('arms_head', head)]:
-        line += ' role %s %s' % (role, part)
-    w(line + ' endscheme')
+# 1061-1066 (tabele s. 32-37): wyk. 1, 3 ukosnik 6001-(n+2), wysieg 6001-(n+3); wyk. 4 o numer nizej; odciag 6002-(n+1); n = karta - 1060
+for n in range(1, 7):
+    card = 1060 + n
+    for wyk, hk, stay_mount, arms, head in ((1, 1.70, 1.90, '6207-12', '4290-22'), (3, 1.70, 1.90, '6207-03', '4290-21'), (4, 1.30, 1.50, '6207-03', '4290-21')):
+        low = 1 if wyk == 4 else 0
+        strut, steady = '6001-%02d' % (n + 2 - low), '6001-%02d' % (n + 3 - low)
+        line = 'scheme %d %d reach %s %s height %s registration 106x mount stay %s mount strut -0.1000 assembly inner_push_cords' % (
+            card, wyk, f(1.45 + 0.3 * n), f(1.75 + 0.3 * n), f(hk), f(stay_mount))
+        for role, part in [('stay_insulator', '7100-01'), ('stay', '6002-%02d' % (n + 1)), ('stay_end', '4400-01'), ('stay_clamp', '4070-01'),
+                           ('strut_insulator', '7100-01'), ('strut', strut), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01'),
+                           ('steady_clamp', '4070-01'), ('steady_end', '4400-01'), ('steady', steady), ('steady_head', '4500-01'), ('cord', '4490-00'),
+                           ('arms', arms), ('arms_bracket', '4290-06'), ('arms_head', head), ('arms_cord', '4490-00'), ('arms_cord_clamp', '4210-02')]:
+            line += ' role %s %s' % (role, part)
+        w(line + ' endscheme')
 # peronowe 103x/104x: czesci (modele Jana 2026-10-15, karta 23-6010 z UZUPELNIENIA nr 2)
 L6010 = {1: 5.350, 2: 5.600, 3: 5.900, 4: 6.150}
 A6010 = {1: 1.950, 2: 2.050, 3: 2.150, 4: 2.250}   # wymiar a z karty (od oka na dole) - tylko punkt informacyjny, opaske ustawia wysokosc wysiegu
