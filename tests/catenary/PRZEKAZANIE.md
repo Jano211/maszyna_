@@ -1,10 +1,12 @@
-# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-10-17 20:55)
+# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-10-17 21:55)
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – stan na 2026-10-17 20:55 (koniec sesji)
+## START TUTAJ – stan na 2026-10-17 21:55 (koniec sesji)
 
-**Stan w skrócie (20:55)**
+**Następny czat: TEOWNIKI** (Jan, 21:51). Źródło i strony w KONCEPCJA.md (rodzina K, „Teowniki: …kolprojekt1.pdf”, s. 62–119 i od 257; skan bez tekstu, tabele czytać okiem, po jednej karcie na rodzinę). Zacząć od zapytania Jana, czy zakres stron aktualny i jakie modele teowników/części już ma.
+
+**Stan w skrócie (21:55)**
 - WSZYSTKIE karty tomu 3 są w danych: 10xx (100x–109x, 1099), 11xx (z 117x/118x), 12xx (120x–129x, 1267–1269, 1287–1289), z ramionami rozjazdowymi 6206/6207/6208/6209/6212/6203-11 – szczegóły w punktach 3a–3d niżej. Wszystkie schematy (681) w `td_katalog` na 1701.
 - Parasole: działa wspólne mocowanie tej samej roli (4640/4650/4660) i od dziś 4670 (ukośnik jednej strony 4610-NN ze śrubami + odciąg drugiej 4650-NN z nakrętkami; Jan poprawił: NIE 4660). Wspólna wysokość = średnia, ale nie ponad `mount_max` słupa. W `td_katalog` ostatni rząd (x = −314): 10 parasoli + 4 z 4670 (u11 0770-2/0790-1, u12 1002-1/0738-1, u13 1002-1/1112-1, u14 0781-3/0748-2 – ta ma też wspólne 4630/4660). Szczegóły w „Wysięgnik na słupie”.
 - Izolatory 25 kV (Jan 20:56, modele `7010-25`, `7020-25`, `7100-25`; punkt `end` 0,6401 / 0,636 / 0,636 m – dwa razy 3 kV; w plikach submodele nazywają się jeszcze `7010-11_LOD*` itd.): w danych części `-25`; w scenerii słowo `insulators 25` (było parsowane, teraz działa w `catenary_scene.cpp`): każdy izolator schematu NNNN-xx podmieniany na NNNN-25, brak części → błąd w logu i stary izolator. Rury 3 kV z dłuższymi izolatorami się nie mieszczą (4400 bez pasującego otworu), więc próba z `override strut/stay`: ukośnik 2 kroki krócej (0,5 m), odciąg 1 krok (0,3 m), dobrane solverem na 1701. Zostaje ostrzeżenie „steady_clamp too close to the start of the strut” (oprócz 1116-1) – wysięg wypada przy długim izolatorze. Rząd x = −326 w `td_katalog`: 1116-1, 1114-2, 1112-1, 1212-1, każdy na 3 kV i obok na 25 kV. Prawdziwych kart 25 kV nie ma – do ustalenia z Janem, czy to ma zostać próbą.
@@ -13,7 +15,7 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 - 21:36 (Jan): izolator wysięgu z rurą (rola `steady_insulator`, 7010) i jego rura (rola `steady`, 6111/6011) – ćwierć obrotu wokół własnej osi, jak izolator odciągu na szekli; „każdy izolator jest tak samo mocowany”. Generator dopisuje `roll steady_insulator -` i `roll steady -` na końcu każdej składanki z `place steady_insulator` (swing_steady, swing_steady_vee, top_head_contact, top_head_in, top_head_out). Peronowe (`platform`) BEZ obrotu – Jan 21:44: „tam ma być tak jak było”; 07xx po obrocie dobrze.
 - 21:46 (Jan): 1110 (wysięgnik z trzema zaczepami, A 1,45–1,75) nie istnieje w wersji 25 kV – uchwyt łapek 4240 wchodzi na izolator wysięgu 7010-25; zamiast niego 1111. W rzędzie prób 25 kV `td_katalog` 1110-1 zamienione na 1111-1 (na 1701: ukośnik 6001-02, odciąg 6007-01, zaczep ukośnika 0,2 m niżej, bez uwag). 4050 wysięgu na 25 kV po obniżeniu zaczepu – Jan: OK.
 - Odłożone decyzją Jana (17.10): zastrzał 4800 (wyrzucony z listy), wysuw pręta 4620-00 (zostaje 180 mm, nic nie zmienia w składaniu), obracanie zawiasu 4610-00 (może kiedyś do wysięgników „niegotowych” przy przebudowach).
-- Ostatni commit z tym stanem: 38490d88 na `siec-trakcyjna`, zmergowany do `wszystko`, oba wypchnięte. Zmiany od ostatniego builda Jana są tylko w `world/catenary_*` (bez Traction.h/Globals.h) – Jan ma przebudować exe i obejrzeć parasole 4670 w `td_katalog`.
+- Ostatni commit z tym stanem: zob. `git log` na `siec-trakcyjna` (sesja 17.10 kończy się commitem „Notatki: zrzut stanu 21:55”), zmergowany do `wszystko`, oba wypchnięte. Kod zmieniony od builda Jana z ~21:20 tylko w `world/catenary_scene.cpp` (obniżanie zaczepu ukośnika przy 25 kV) – Jan przebudował i obejrzał (4050 OK); dane i sceneria na G: aktualne (md5 niżej).
 - Do zrobienia dalej: teowniki (stary `kolprojekt1.pdf`, zakres stron od Jana), kotwy (źródło nieznane – zapytać Jana), inne słupy niż 1701, dobór karty z odległości, edytor (w tym przeniesienie wyeksportowanych punktów drugiego przewodu/liny `<rola>.wire.*` do danych przęseł). Ewentualnie: prawdziwe przesunięcia/kąty pary 6203-11 w 127x (teraz próbne ±0,13 m / ±5°), 105x wyk. 2 na ruchome ramiona na linkach (gdy Jan poda liczby).
 
 
