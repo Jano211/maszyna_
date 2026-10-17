@@ -546,7 +546,7 @@ std::map<std::string, std::string> const step_arguments {
     { "tangent", "nppen" }, { "level", "lnpe" }, { "project", "lnpee" }, { "limit", "lnee" }, { "window", "lnEE" },
     { "chain", "lnpeernEEE" }, { "place", "rpda" }, { "roll", "rR" }, { "stretch", "rppa" }, { "registration", "" },
     { "repeat", "ip" }, { "endrepeat", "" }, { "vee", "rppea" }, { "hangarms", "rrrlp" }, { "anchor", "nper" },
-    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" } };
+    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" }, { "setarms", "rp" }, { "atleast", "lne" } };
 
 bool valid_argument( char const Kind, std::string const &Word ) {
     std::vector<term> terms;
@@ -792,6 +792,40 @@ private:
         made.stations.clear();
         return made;
     }
+    // zestaw ramion stawiany zerem w punkcie przewodu "wire"; Flip: zestaw od słupa (obrót o 180 stopni wokół pionu).
+    // Zestaw ze składnikami (member) stawia składniki zamiast siebie
+    void put_arm_set( std::string const &setrole, cantilever_part const &set, bool const flip ) {
+        auto const side { flip ? -1.0 : 1.0 };
+        auto const turn = [ & ]( cantilever_placement &Placement ) {
+            if( flip ) { for( int column : { 0, 1 } ) { for( int row = 0; row < 3; ++row ) { Placement.rotation[ row * 3 + column ] = -Placement.rotation[ row * 3 + column ]; } } }
+        };
+        if( set.members.empty() ) {
+            auto placement { place( setrole, set.name, m_points[ "wire" ], toward_support, toward_support ) };
+            turn( placement );
+            put( placement );
+        }
+        else {
+            // zestaw z osobnych modeli: każdy składnik w swoim położeniu i obrocie wokół pionu, cały zestaw obracany jak zwykły
+            auto const &wire { m_points[ "wire" ] };
+            for( std::size_t index = 0; index < set.members.size(); ++index ) {
+                auto const &member { set.members[ index ] };
+                cantilever_placement placement;
+                placement.role = setrole + "." + std::to_string( index + 1 );
+                placement.part = member.part;
+                placement.position[ 0 ] = side * member.position[ 0 ];
+                placement.position[ 1 ] = wire.y + side * member.position[ 1 ];
+                placement.position[ 2 ] = wire.z + member.position[ 2 ];
+                auto const angle { member.yaw * 3.14159265358979323846 / 180.0 };
+                auto const cosine { std::cos( angle ) };
+                auto const sine { std::sin( angle ) };
+                double const rotation[ 9 ] { cosine, -sine, 0.0,  sine, cosine, 0.0,  0.0, 0.0, 1.0 };
+                std::copy( std::begin( rotation ), std::end( rotation ), std::begin( placement.rotation ) );
+                turn( placement );
+                put( placement );
+            }
+        }
+    }
+
     // część ustawiona drugi raz (w kolejnym przebiegu "repeat") zastępuje poprzednie ustawienie
     void put( cantilever_placement const &Placement ) {
         for( auto &placed : m_result.parts ) {
@@ -938,6 +972,14 @@ private:
             auto const margin { number( w[ 3 ] ) };
             m_result.values[ w[ 0 ] + ".overhang" ] = overhang;
             if( overhang < margin ) { warn( described( w[ 0 ] ) + " is " + to_text( margin - overhang ) + " m too short for the " + w[ 1 ] ); }
+            return;
+        }
+
+        if( op == "atleast" ) {
+            // położenie na członie nie bliżej początku niż Min (uchwyt liny ramion za izolatorem ukośnika, 105x/125x)
+            auto &found { line_named( w[ 0 ] ) };
+            auto const at { station( w[ 0 ], w[ 1 ] ) };
+            found.stations[ w[ 1 ] ] = std::max( at, number( w[ 2 ] ) );
             return;
         }
 
@@ -1253,7 +1295,7 @@ private:
         }
 
         if( op == "armcords" ) {
-            // linki ramion odciągowych do liny nośnej (106x, 1054): na każdym postawionym ramieniu (rola arms albo arms.N) z punktem
+            // linki ramion odciągowych do liny nośnej (106x, 1054): na każdym postawionym ramieniu (rola zaczynająca się od arms) z punktem
             // "cord_nom" obejma Clamp w tym punkcie (obrócona jak ramię, rura wzdłuż Y ramienia), z jej ucha linka Cord do punktu To
             // (lina nośna). Jedno ramię: linka w V do dwóch punktów rozsuniętych wzdłuż toru o +-Spread; kilka ramion: każde
             // pionowo do punktu To przesuniętego wzdłuż toru o +-Spread po stronie ramienia. Bez ramion z punktem cord_nom nic nie robi.
@@ -1268,7 +1310,7 @@ private:
             auto const spread { number( w[ 3 ] ) };
             std::vector<cantilever_placement> arms;
             for( auto const &placed : m_result.parts ) {
-                if( placed.role != "arms" && placed.role.rfind( "arms.", 0 ) != 0 ) { continue; }
+                if( placed.role.rfind( "arms", 0 ) != 0 ) { continue; }
                 auto const *armpart { m_catalog.part( placed.part ) };
                 if( armpart == nullptr || armpart->points.find( "cord_nom" ) == armpart->points.end() ) { continue; }
                 arms.push_back( placed );
@@ -1331,6 +1373,21 @@ private:
             return;
         }
 
+        if( op == "setarms" ) {
+            // zestaw ramion bez wspornika na rurze (ramiona na linie, 105x, 125x): zestaw zerem w punkcie przewodu, Side jak w hangarms;
+            // punkt zawieszenia (holder) zestawu trafia do punktu <rola>_holder. Bez roli zestawu nic nie robi
+            auto setrole { w[ 0 ] };
+            if( setrole[ 0 ] == '?' ) { setrole.erase( 0, 1 ); }
+            if( false == has_role( setrole ) ) { return; }
+            auto const &set { part( setrole ) };
+            auto const flip { point( w[ 1 ] ).y < 0.0 };
+            auto const found { set.points.find( "holder" ) };
+            if( found == set.points.end() ) { fail( "part \"" + set.name + "\" has no \"holder\" point" ); }
+            put_arm_set( setrole, set, flip );
+            m_points[ setrole + "_holder" ] = m_points[ "wire" ] + vec2 { ( flip ? -1.0 : 1.0 ) * found->second.first, found->second.second };
+            return;
+        }
+
         if( op == "hangarms" ) {
             // zestaw ramion odciągowych: gotowy model z zerem w osi przewodu jezdnego i punktem "holder" (zawieszenie na wsporniku);
             // wspornik na rurze członu Line: zero na spodzie rury, wprost nad punktem zawieszenia. Wspornik z punktami
@@ -1371,31 +1428,7 @@ private:
             auto const turn = [ & ]( cantilever_placement &Placement ) {
                 if( flip ) { for( int column : { 0, 1 } ) { for( int row = 0; row < 3; ++row ) { Placement.rotation[ row * 3 + column ] = -Placement.rotation[ row * 3 + column ]; } } }
             };
-            if( set.members.empty() ) {
-                auto placement { place( "arms", set.name, m_points[ "wire" ], toward_support, toward_support ) };
-                turn( placement );
-                put( placement );
-            }
-            else {
-                // zestaw z osobnych modeli: każdy składnik w swoim położeniu i obrocie wokół pionu, cały zestaw obracany jak zwykły
-                auto const &wire { m_points[ "wire" ] };
-                for( std::size_t index = 0; index < set.members.size(); ++index ) {
-                    auto const &member { set.members[ index ] };
-                    cantilever_placement placement;
-                    placement.role = "arms." + std::to_string( index + 1 );
-                    placement.part = member.part;
-                    placement.position[ 0 ] = side * member.position[ 0 ];
-                    placement.position[ 1 ] = wire.y + side * member.position[ 1 ];
-                    placement.position[ 2 ] = wire.z + member.position[ 2 ];
-                    auto const angle { member.yaw * 3.14159265358979323846 / 180.0 };
-                    auto const cosine { std::cos( angle ) };
-                    auto const sine { std::sin( angle ) };
-                    double const rotation[ 9 ] { cosine, -sine, 0.0,  sine, cosine, 0.0,  0.0, 0.0, 1.0 };
-                    std::copy( std::begin( rotation ), std::end( rotation ), std::begin( placement.rotation ) );
-                    turn( placement );
-                    put( placement );
-                }
-            }
+            put_arm_set( setrole, set, flip );
             auto const *slide_min { lookup( bracket, "slide_min" ) };
             auto const *slide_max { lookup( bracket, "slide_max" ) };
             auto const drop { zero.z - hang.z };
@@ -1405,9 +1438,9 @@ private:
                 if( drop < low - 1e-3 || drop > high + 1e-3 ) {
                     warn( "arm holder \"" + bracket.name + "\" would need " + to_text( drop ) + " m between the tube and the arms, its range is " + to_text( low ) + "-" + to_text( high ) + " m" );
                 }
-                m_result.values[ "arms.slide" ] = drop;
+                m_result.values[ setrole + ".slide" ] = drop;
                 if( head != nullptr ) {
-                    auto headplacement { place( "arms_head", head->name, vec2 { bracket_y, hang.z }, toward_support, toward_support ) };
+                    auto headplacement { place( headrole, head->name, vec2 { bracket_y, hang.z }, toward_support, toward_support ) };
                     turn( headplacement );
                     put( headplacement );
                 }
@@ -1425,9 +1458,9 @@ private:
                 if( std::abs( drop + best->second ) > 0.01 ) {
                     warn( "no hole of arm holder \"" + bracket.name + "\" fits the arms, " + bestname + " is " + to_text( drop + best->second ) + " m off their hanging point" );
                 }
-                m_result.values[ "arms.hole" ] = std::stod( bestname.substr( 5 ) );
+                m_result.values[ setrole + ".hole" ] = std::stod( bestname.substr( 5 ) );
                 if( head != nullptr ) {
-                    auto headplacement { place( "arms_head", head->name, vec2 { bracket_y, zero.z + best->second }, toward_support, toward_support ) };
+                    auto headplacement { place( headrole, head->name, vec2 { bracket_y, zero.z + best->second }, toward_support, toward_support ) };
                     turn( headplacement );
                     put( headplacement );
                 }
@@ -1438,7 +1471,7 @@ private:
                     warn( "arm holder \"" + bracket.name + "\" holds the arms " + to_text( drop + eye->second ) + " m off their hanging point" );
                 }
             }
-            auto bracketplacement { place( "arms_bracket", bracket.name, zero, toward_support, toward_support ) };
+            auto bracketplacement { place( w[ 1 ], bracket.name, zero, toward_support, toward_support ) };
             turn( bracketplacement );
             put( bracketplacement );
             // wspornik musi siedzieć na rurze
