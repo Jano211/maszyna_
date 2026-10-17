@@ -149,7 +149,28 @@ int main( int, char *argv[] ) {
     std::printf( "parasol: czesci %zu (ma byc 64), slupow %zu (2), tylow %zu (2), polowek z nakretkami %zu (2), bledow %zu (1)  %s\n", umbrellaparts, poles, backs, nuts, errors.size(), umbrellagood ? "OK" : "BLAD" );
     catenary_scene_clear();
 
-    auto const good { loaded && resolved && bad && cleared && assembled && latedone && polegood && umbrellagood };
+    // zestaw izolatorów 25 kV: 1116-1 z krótszymi rurami (jak w td_katalog); izolatory 7020-25 i 7100-25, zestaw "99" nie istnieje
+    errors.clear(); logs.clear();
+    auto const kvbefore { created.size() };
+    { std::ofstream out { "tests/catenary/Siec_Test.scm" };
+      out << "node 1000 0 k1 suspension scheme 1116 1 at 0 5.8 100 pole 1701 -3.512 0.2 100 insulators 25 override strut 6001-06 override stay 6007-06 endsuspension\n"
+             "node 1000 0 k2 suspension scheme 1116 1 at 0 5.8 110 pole 1701 -3.512 0.2 110 insulators 99 endsuspension\n"; }
+    cParser kvfile( "Siec_Test.scm endcatenary" );
+    catenary_scene_load( kvfile );
+    catenary_scene_resolve();
+    std::size_t kv { 0 }, kvold { 0 };
+    for( auto index { kvbefore }; index < created.size(); ++index ) {
+        auto const &entry { created[ index ].entry };
+        if( entry.find( "7020-25.t3d" ) != std::string::npos || entry.find( "7100-25.t3d" ) != std::string::npos ) { ++kv; }
+        if( entry.find( "7020-01.t3d" ) != std::string::npos || entry.find( "7100-01.t3d" ) != std::string::npos ) { ++kvold; }
+    }
+    std::size_t kvmissing { 0 };
+    for( auto const &line : errors ) { if( line.find( "insulator set \"99\"" ) != std::string::npos ) { ++kvmissing; } }
+    auto const kvgood { kv == 2 && kvold == 2 && kvmissing == 2 };
+    std::printf( "izolatory 25 kV: podmienionych %zu (2), starych w zestawie bez czesci %zu (2), komunikatow o braku %zu (2)  %s\n", kv, kvold, kvmissing, kvgood ? "OK" : "BLAD" );
+    catenary_scene_clear();
+
+    auto const good { loaded && resolved && bad && cleared && assembled && latedone && polegood && umbrellagood && kvgood };
     std::printf( "podwieszenia w scenerii: wczytanie %s, powiazanie %s, bledne dyrektywy %s, czyszczenie %s\n", loaded ? "OK" : "BLAD", resolved ? "OK" : "BLAD", bad ? "OK" : "BLAD", cleared ? "OK" : "BLAD" );
     return good ? 0 : 1;
 }
