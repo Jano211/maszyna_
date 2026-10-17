@@ -717,7 +717,7 @@ node 1000 0 none suspension scheme 1112 1 at -323.688 5.800 164.000 rope -323.68
 node 1000 0 none suspension scheme 1112 1 at -323.688 5.800 167.500 rope -323.688 7.500 167.500 pole 1701 -326.000 0.200 167.500 insulators 25 endsuspension
 node 1000 0 none suspension scheme 1212 1 at -323.688 5.800 171.000 rope -323.688 7.500 171.000 pole 1701 -326.000 0.200 171.000 endsuspension
 node 1000 0 none suspension scheme 1212 1 at -323.688 5.800 174.500 rope -323.688 7.500 174.500 pole 1701 -326.000 0.200 174.500 insulators 25 endsuspension
-node 1000 0 none suspension scheme 1110 1 at -324.288 5.800 178.000 rope -324.288 7.500 178.000 pole 1701 -326.000 0.200 178.000 endsuspension
-node 1000 0 none suspension scheme 1110 1 at -324.288 5.800 181.500 rope -324.288 7.500 181.500 pole 1701 -326.000 0.200 181.500 insulators 25 endsuspension
+node 1000 0 none suspension scheme 1111 1 at -323.988 5.800 178.000 rope -323.988 7.500 178.000 pole 1701 -326.000 0.200 178.000 endsuspension
+node 1000 0 none suspension scheme 1111 1 at -323.988 5.800 181.500 rope -323.988 7.500 181.500 pole 1701 -326.000 0.200 181.500 insulators 25 endsuspension
 node 1000 0 none suspension scheme 1232 1 at -323.688 5.800 185.000 rope -323.688 7.500 185.000 pole 1701 -326.000 0.200 185.000 endsuspension
 node 1000 0 none suspension scheme 1232 1 at -323.688 5.800 188.500 rope -323.688 7.500 188.500 pole 1701 -326.000 0.200 188.500 insulators 25 endsuspension
