@@ -23,7 +23,7 @@ Nowy czat zaczyna od tej sekcji, potem „Git i edytor”, „Peronowe 103x/104x
 - Uwaga: lokalna gałąź Jana stoi na 944674d + ręcznie wgrany poprawiony `Traction.cpp` (Pull się nie udał). Przed następnym Pull: w GitHub Desktop Discard changes na zmienionych plikach, potem Fetch/Pull. Sprawdzić `.git\refs\heads\siec-trakcyjna` u Jana.
 - `C:\Maszyna` = stare drzewo robocze Jana (bez commitów, baza 79bd0c8 + radio + bujanie + sieć). Pliki sieci w nim są identyczne z gałęzią (sprawdzone 2026-10-17 00:45); notatki .md są tam i na gałęzi takie same. Nowe zmiany kodu: commit + push na gałąź, Jan robi Pull; do `C:\Maszyna` już nie pisać kodu bez potrzeby.
 - Robocza kopia repo w chmurze: `/home/claude/up/master` (remotes: origin = maszyna_, upstream = MaSzyna-EU07). W nowym czacie jej nie będzie – sklonować `Jano211/maszyna_` (aplikacja Claude na GitHubie jest zainstalowana, push działa) i `git submodule` NIE jest potrzebny do testów z `tests/catenary/build.sh`.
-- Dane symulatora: `G:\Maszyna2510\data\traction_cantilevers.txt` (md5 76d8f06444cbddbd986a7a8bed386059, CRLF) i `scenery\td_katalog.scm` (md5 2ffeb8fc0eb8d3d73b071b3274a676fb, z parasolami 4670) – aktualne na 2026-10-17 20:50.
+- Dane symulatora: `G:\Maszyna2510\data\traction_cantilevers.txt` (md5 7f3fcc4acd586638c57f26c4e51e827e, CRLF) i `scenery\td_katalog.scm` (md5 838438be2fbd27df5d55806b6de74012, z parasolami 4670 i próbą 25 kV) – aktualne na 2026-10-17 21:10.
 
 **Najbliższe kroki (po kolei)**
 1. Jan: przebudować `wszystko`, exe do `G:\Maszyna2510`, obejrzeć `td_katalog` (rozjazdowe 10xx–12xx, parasole 4670 w ostatnim rzędzie). [stare, z 01:15: porównać ze starym exe scalone renderery i serializer scenerii; `bujanie` i `radio` są w `wszystko`.]
