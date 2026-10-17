@@ -490,7 +490,16 @@ ASSEMBLIES += ('\n// jak inner_push, linka V od glowicy do liny, dwa zestawy ram
 ASSEMBLIES += ('\n// jak inner_push, linka V od glowicy do liny (1267-1269)\nassembly inner_push_vee\n' +
     re.search(r'assembly inner_push\n(.*?)endassembly\n', ASSEMBLIES, re.S).group(1)
       .replace('  stretch ?cord tip_eye messenger_clamp.end +z\n', '  vee cord tip_eye messenger 0.125 +z\n') + 'endassembly\n')
-for l in ASSEMBLIES.splitlines(): w(l)
+# izolator wysiegu z rura (7010) i jego rura (6111/6011) przy uchwycie 4630: cwierc obrotu wokol wlasnej osi, jak izolator
+# odciagu na szekli (Jan 2026-10-17: kazdy izolator mocowany tak samo); na koncu skladanki, po wszystkich krokach
+_steady_insulated = False
+for l in ASSEMBLIES.splitlines():
+    if l.startswith('assembly '): _steady_insulated = False
+    if l.strip().startswith('place steady_insulator '): _steady_insulated = True
+    if l.strip() == 'endassembly' and _steady_insulated:
+        w('  roll steady_insulator -')
+        w('  roll steady -')
+    w(l)
 w()
 
 # zestawy ramion odciagowych i wsporniki (modele Jana 2026-10-14, punkty odczytane z plikow t3d)
