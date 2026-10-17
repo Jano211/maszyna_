@@ -514,7 +514,7 @@ def arms_for(card, wyk):
     curve = group in (113, 114, 123, 124)
     if group == 126:
         # 126x (tom 3 s. 145-151, Jan 20:04): wyk. 3, 4 6206-1 na 4260-1, wyk. 2 para 6209-1 + 6209-2 na 4260-2 (czeka na modele 6209)
-        return [('arms', '6206-01'), ('arms_bracket', '4260-01')] if int(wyk) in (3, 4) else []
+        return [('arms', '6206-01'), ('arms_bracket', '4260-01')] if int(wyk) in (3, 4) else [('arms', '6209-02'), ('arms_bracket', '4260-02')]
     if not (straight or curve): return []
     table = {1: ('6201-02' if straight else '6201-04', '4240-02', '4240-22'),
              2: ('6204-02' if straight else '6205-02', '4250-04' if straight else '4260-02', None),
@@ -618,18 +618,22 @@ C12 = {   # (karta, wykonanie): (ukosnik 21, rura odciagu 22, wysieg pomocniczy 
 }
 # 126x wyk. 3, 4: rura wysiegu tak, zeby ucho 4260-1 (0,1898 pod spodem rury) trafilo w ucho 6206-01; obejma linki za wspornikiem
 TUBE126 = 0.0792 + 0.1898 + 0.019
+TUBE126_2 = 0.03 + 0.1898 + 0.019   # wyk. 2: 6209-02 (sztywna para, komplet z 4110; holder 1,23 / 0,03) na 4260-02
+w('part 6209-02 kind arms point holder 1.2300 0.0300 endpart   // para sztywna 6209-1 + 6209-2, komplet z 4110 (model Jana 2026-10-17)')
+w('part 6209-03 kind arms point holder 1.2000 0.0400 endpart   // pojedyncze 6209-3, komplet z 4110 (model Jana 2026-10-17)')
+w('registration 126x-2 tube %s clamp -1.3500 endregistration   // 6209-02 od slupa na 4260-02' % f(TUBE126_2))
 w('registration 126x tube %s clamp -1.3500 endregistration   // 6206-01 od slupa na 4260-01, obejma linki za wspornikiem' % f(TUBE126))
 REG12 = {121: '111x', 122: '112x', 123: '113x', 124: '114x', 126: '112x'}   # zestawy ramion: karty 11xx z tym samym odsuwem
 w('// 12xx nieprzechylne: odciag sztywny z rury 6002 (izolator 7100, koncowka 4400-01, bez szekli); zaczepy jak w 11xx')
 for (card, wyk), (strut, stay, steady) in sorted(C12.items()):
     digit = card % 10
     low = wyk == 4
-    reg126 = card // 10 == 126 and wyk in (3, 4)
-    regname = '126x' if reg126 else '%s-%d' % (REG12[card // 10], wyk)
+    reg126 = card // 10 == 126
+    regname = ('126x' if wyk in (3, 4) else '126x-2') if reg126 else '%s-%d' % (REG12[card // 10], wyk)
     line = 'scheme %d %d reach %s %s height %s registration %s' % (card, wyk, f(1.45 + 0.3 * digit), f(1.75 + 0.3 * digit), f(1.30 if low else 1.70), regname)
     three = steady.startswith('6111')
     if three:   # jak 1110: trzy zaczepy (wartosci ze zlozenia 1110)
-        line += ' mount stay %s mount strut %s mount steady %s' % (f(1.3784 if low else 1.7784), f(0.3784 if low else 0.7784), f(TUBE126 if reg126 else (0.2297 if wyk in (2, 3, 4) else 0.2200)))
+        line += ' mount stay %s mount strut %s mount steady %s' % (f(1.3784 if low else 1.7784), f(0.3784 if low else 0.7784), f((TUBE126 if wyk in (3, 4) else TUBE126_2) if reg126 else (0.2297 if wyk in (2, 3, 4) else 0.2200)))
     else:
         line += ' mount stay %s mount strut %s' % (f(1.50 if low else 1.90), f(-0.10))
     if wyk in (1, 5) and card // 10 in (121, 122, 123, 124): line += TUBE_4240   # 4240-1 / 4240-2 w tabelach
@@ -922,17 +926,19 @@ for card, pipes, stay in ((1287, ((9, 10), (8, 9)), 8), (1288, ((10, 11), (9, 10
         w(line + ' endscheme')
 # 1267-1269 wyk. 3, 4: 6206-1 od slupa na 4280-3, wysieg 6001 od ukosnika (4070 + 4400), 4500-1, linka V; wyk. 2 (para 6209) - czeka na modele.
 # Rury z tabel: 1267 ukosnik/wysieg 6001-9/-10 (wyk. 4: -8/-9), odciag 6002-8; 1268: -10/-11 (-9/-10), 6002-11; 1269: -14/-14 (-11/-11), 6002-9
+w('registration 1267-2 tube %s clamp 0.0000 endregistration   // wyk. 2: ucho 4280-4 w punkcie zawieszenia 6209-02' % f(0.03 + 0.196 + 0.03))
 w('registration 1267 tube %s clamp 0.0000 endregistration   // os wysiegu 6001: ucho 4280-3 w punkcie zawieszenia 6206-01' % f(0.0792 + 0.196 + 0.03))
 for card, pipes, stay in ((1267, ((9, 10), (8, 9)), 8), (1268, ((10, 11), (9, 10)), 11), (1269, ((14, 14), (11, 11)), 9)):
     n = card % 10
-    for wyk, hk, stay_mount in ((3, 1.70, 1.90), (4, 1.30, 1.50)):
-        strut, steady = pipes[0] if wyk == 3 else pipes[1]
-        line = 'scheme %d %d reach %s %s height %s registration 1267 mount stay %s mount strut -0.1000 assembly inner_push_vee' % (
-            card, wyk, f(1.45 + 0.3 * n), f(1.75 + 0.3 * n), f(hk), f(stay_mount))
+    for wyk, hk, stay_mount in ((2, 1.70, 1.90), (3, 1.70, 1.90), (4, 1.30, 1.50)):
+        strut, steady = pipes[0] if wyk in (2, 3) else pipes[1]
+        line = 'scheme %d %d reach %s %s height %s registration %s mount stay %s mount strut -0.1000 assembly inner_push_vee' % (
+            card, wyk, f(1.45 + 0.3 * n), f(1.75 + 0.3 * n), f(hk), '1267-2' if wyk == 2 else '1267', f(stay_mount))
+        arms = [('arms', '6209-02'), ('arms_bracket', '4280-04')] if wyk == 2 else [('arms', '6206-01'), ('arms_bracket', '4280-03')]
         for role, part in [('stay_insulator', '7100-01'), ('stay', '6002-%02d' % stay), ('stay_end', '4400-01'), ('stay_clamp', '4070-01'),
                            ('strut_insulator', '7100-01'), ('strut', '6001-%02d' % strut), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01'),
                            ('steady_clamp', '4070-01'), ('steady_end', '4400-01'), ('steady', '6001-%02d' % steady), ('steady_head', '4500-01'),
-                           ('cord', '4490-00'), ('arms', '6206-01'), ('arms_bracket', '4280-03')]:
+                           ('cord', '4490-00')] + arms:
             line += ' role %s %s' % (role, part)
         w(line + ' endscheme')
 # 1099 wyk. 3 (hk 1,70, ukosnik i wysieg 6001-14) i 4 (hk 1,30, 6001-11), odciag 6002-9; 4500-1 na koncu (karta: 4500-2 z odreczna
