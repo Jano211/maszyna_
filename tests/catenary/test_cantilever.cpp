@@ -224,6 +224,24 @@ int main( int argc, char *argv[] ) {
         failed = failed || !good;
     }
 
+    {
+        // parasol: ta sama rola po obu stronach (4640/4650) i ukośnik jednej strony z odciągiem drugiej (4670: śruby 4610 przy
+        // ukośniku, nakrętki 4650 przy odciągu)
+        auto const *pole { catalog.pole( "1701" ) };
+        catenary::cantilever_result a, b;
+        a.values = { { "mount.stay", 7.30 }, { "mount.strut", 6.20 } };
+        b.values = { { "mount.stay", 6.25 }, { "mount.strut", 5.50 } };
+        catenary::cantilever_umbrella sa, sb;
+        if( pole != nullptr ) { catenary::umbrella_mounts( catalog, *pole, a, b, sa, sb ); }
+        auto const cross { pole != nullptr && sa.shared.size() == 1 && sb.shared.size() == 1 && std::abs( sa.shared[ "strut" ] - 6.225 ) < 1e-9
+            && std::abs( sb.shared[ "stay" ] - 6.225 ) < 1e-9 && sa.nuts.empty() && sb.nuts.size() == 1 && sb.nuts.count( "stay" ) };
+        b.values = { { "mount.stay", 7.25 }, { "mount.strut", 6.15 } };
+        if( pole != nullptr ) { catenary::umbrella_mounts( catalog, *pole, a, b, sa, sb ); }
+        auto const same { sa.shared.size() == 2 && sb.shared.size() == 2 && sa.nuts.empty() && sb.nuts.size() == 2 };
+        std::printf( "parasol: mocowanie 4670 %s, mocowania 4640/4650 %s\n", cross ? "OK" : "BLAD", same ? "OK" : "BLAD" );
+        failed = failed || !cross || !same;
+    }
+
     std::printf( failed ? "TEST NIE PRZESZEDL\n" : "wszystko OK\n" );
     return failed ? 1 : 0;
 }

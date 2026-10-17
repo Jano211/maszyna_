@@ -26,6 +26,7 @@
 // Części zestawu ramion odciągowych mają położenie i obrót przeniesione wprost z pliku danych.
 #pragma once
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -231,19 +232,23 @@ bool solve_cantilever_on_pole( cantilever_catalog const &Catalog, cantilever_sch
     double Distance, double RailHead, cantilever_point const &Messenger, std::map<std::string, std::string> const &Overrides, cantilever_result &Result );
 
 // parasol: drugi wysięgnik na tym samym słupie, po przeciwnej stronie. Wysokości mocowań (stay, strut, steady) liczone od główki
-// szyny; mocowanie z listy Shared idzie na podaną wysokość jako połówka mocowania dwustronnego (bez tyłu; strona Nuts dostaje
+// szyny; mocowanie z listy Shared idzie na podaną wysokość jako połówka mocowania dwustronnego (bez tyłu; role z Nuts dostają
 // połówkę z nakrętkami, czyli "twin" mocowania). Wysokości wyliczone przez solver trafiają do Result.values jako "mount.<rola>".
 struct cantilever_umbrella {
     std::map<std::string, double> shared;   // rola mocowania -> wspólna wysokość osi śrub nad główką szyny
-    bool nuts { false };                    // ta strona dostaje połówki z nakrętkami
+    std::set<std::string> nuts;             // role mocowań, które po tej stronie są połówką z nakrętkami
     bool pole { true };                     // czy stawiać słup (stawia go tylko jedna strona)
 };
 bool solve_cantilever_on_pole( cantilever_catalog const &Catalog, cantilever_scheme const &Scheme, cantilever_pole const &Pole,
     double Distance, double RailHead, cantilever_point const &Messenger, std::map<std::string, std::string> const &Overrides,
     cantilever_umbrella const &Umbrella, cantilever_result &Result );
-// wspólne wysokości mocowań parasola z wysokości wyliczonych osobno dla obu stron (wartości "mount.<rola>" z wyników):
-// średnia tam, gdzie obie strony mają mocowanie z połówką z nakrętkami, a różnica nie przekracza rules.umbrella_spread
-std::map<std::string, double> umbrella_mounts( cantilever_catalog const &Catalog, cantilever_pole const &Pole, cantilever_result const &First, cantilever_result const &Second );
+// wspólne mocowania parasola z wysokości wyliczonych osobno dla obu stron (wartości "mount.<rola>" z wyników): pary mocowań
+// z połówką z nakrętkami, których wysokości różnią się najwyżej o rules.umbrella_spread, idą na średnią wysokość. Ta sama rola
+// po obu stronach (4640/4650/4660): nakrętki po stronie Second. Ukośnik jednej strony z odciągiem drugiej (4670, Jan
+// 2026-10-17): śruby po stronie ukośnika (4610-NN), nakrętki po stronie odciągu (4650-NN). Pary brane od najmniejszej różnicy,
+// każde mocowanie najwyżej raz. Wypełnia shared i nuts obu stron.
+void umbrella_mounts( cantilever_catalog const &Catalog, cantilever_pole const &Pole, cantilever_result const &First, cantilever_result const &Second,
+    cantilever_umbrella &FirstSide, cantilever_umbrella &SecondSide );
 
 // część ustawiona w układzie scenerii symulatora (X, Y w górę, Z), względem punktu osi przewodów jezdnych
 struct cantilever_scene_part {

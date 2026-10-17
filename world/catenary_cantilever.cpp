@@ -1792,18 +1792,42 @@ bool solve_cantilever_on_pole( cantilever_catalog const &Catalog, cantilever_sch
     return solve_cantilever_on_pole( Catalog, Scheme, Pole, Distance, RailHead, Messenger, Overrides, cantilever_umbrella(), Result );
 }
 
-std::map<std::string, double> umbrella_mounts( cantilever_catalog const &Catalog, cantilever_pole const &Pole, cantilever_result const &First, cantilever_result const &Second ) {
-    std::map<std::string, double> shared;
-    for( auto const &use : { std::make_pair( "stay", &Pole.stay ), std::make_pair( "strut", &Pole.strut ), std::make_pair( "steady", &Pole.steady ) } ) {
-        auto const *mount { Catalog.mount( *use.second ) };
-        if( mount == nullptr || mount->twin.empty() ) { continue; }
-        auto const key { std::string( "mount." ) + use.first };
-        auto const first { First.values.find( key ) }, second { Second.values.find( key ) };
-        if( first == First.values.end() || second == Second.values.end() ) { continue; }
-        if( std::abs( first->second - second->second ) > Catalog.rules.umbrella_spread + 1e-9 ) { continue; }
-        shared[ use.first ] = 0.5 * ( first->second + second->second );
+void umbrella_mounts( cantilever_catalog const &Catalog, cantilever_pole const &Pole, cantilever_result const &First, cantilever_result const &Second,
+    cantilever_umbrella &FirstSide, cantilever_umbrella &SecondSide ) {
+
+    FirstSide.shared.clear(); FirstSide.nuts.clear();
+    SecondSide.shared.clear(); SecondSide.nuts.clear();
+    std::map<std::string, std::string const *> const roles { { "stay", &Pole.stay }, { "strut", &Pole.strut }, { "steady", &Pole.steady } };
+    auto const height = [ & ]( cantilever_result const &Result, std::string const &Role, double &Height ) {
+        auto const *mount { Catalog.mount( *roles.at( Role ) ) };
+        if( mount == nullptr || mount->twin.empty() ) { return false; }
+        auto const found { Result.values.find( "mount." + Role ) };
+        if( found == Result.values.end() ) { return false; }
+        Height = found->second;
+        return true;
+    };
+    struct candidate { double gap; std::string first; std::string second; int nutside; };   // nutside: 0 - First, 1 - Second
+    std::vector<candidate> candidates;
+    auto const consider = [ & ]( std::string const &A, std::string const &B, int const Nutside ) {
+        double a, b;
+        if( false == height( First, A, a ) || false == height( Second, B, b ) ) { return; }
+        auto const gap { std::abs( a - b ) };
+        if( gap > Catalog.rules.umbrella_spread + 1e-9 ) { return; }
+        candidates.push_back( { gap, A, B, Nutside } );
+    };
+    for( auto const *role : { "stay", "strut", "steady" } ) { consider( role, role, 1 ); }
+    consider( "strut", "stay", 1 );     // 4670: śruby po stronie ukośnika
+    consider( "stay", "strut", 0 );
+    std::stable_sort( candidates.begin(), candidates.end(), []( candidate const &L, candidate const &R ) { return L.gap < R.gap; } );
+    for( auto const &pair : candidates ) {
+        if( FirstSide.shared.count( pair.first ) || SecondSide.shared.count( pair.second ) ) { continue; }
+        double a, b;
+        height( First, pair.first, a );
+        height( Second, pair.second, b );
+        FirstSide.shared[ pair.first ] = SecondSide.shared[ pair.second ] = 0.5 * ( a + b );
+        if( pair.nutside == 0 ) { FirstSide.nuts.insert( pair.first ); }
+        else { SecondSide.nuts.insert( pair.second ); }
     }
-    return shared;
 }
 
 bool solve_cantilever_on_pole( cantilever_catalog const &Catalog, cantilever_scheme const &Scheme, cantilever_pole const &Pole,
@@ -1864,7 +1888,7 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
         if( height > Pole.top ) { notes.push_back( Role + " mount " + to_text( height - Pole.top ) + " m above the top of the pole" ); }
         auto const depth { Pole.depth( height ) };
         auto const face { Distance - 0.5 * depth };
-        add( Role + "_mount", ( twin && Umbrella.nuts ) ? Mount.twin : Mount.name, "", face, Bolts );
+        add( Role + "_mount", ( twin && Umbrella.nuts.count( Role ) ) ? Mount.twin : Mount.name, "", face, Bolts );
         if( false == twin && false == Mount.back.empty() ) { add( Role + "_back", Mount.back, "", face + depth, Bolts ); }
         if( false == Mount.hinge.empty() ) { add( Role + "_hinge", Mount.hinge, "", face + Mount.point[ 0 ], Bolts + Mount.point[ 1 ] ); }
         if( false == Mount.rod.empty() ) { add( Role + "_rod", Mount.rod, "", face + Mount.point[ 0 ], Bolts + Mount.point[ 1 ] ); }
