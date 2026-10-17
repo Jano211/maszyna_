@@ -512,6 +512,9 @@ def arms_for(card, wyk):
     group = card // 10
     straight = group in (111, 112, 121, 122)
     curve = group in (113, 114, 123, 124)
+    if group == 126:
+        # 126x (tom 3 s. 145-151, Jan 20:04): wyk. 3, 4 6206-1 na 4260-1, wyk. 2 para 6209-1 + 6209-2 na 4260-2 (czeka na modele 6209)
+        return [('arms', '6206-01'), ('arms_bracket', '4260-01')] if int(wyk) in (3, 4) else []
     if not (straight or curve): return []
     table = {1: ('6201-02' if straight else '6201-04', '4240-02', '4240-22'),
              2: ('6204-02' if straight else '6205-02', '4250-04' if straight else '4260-02', None),
@@ -613,15 +616,20 @@ C12 = {   # (karta, wykonanie): (ukosnik 21, rura odciagu 22, wysieg pomocniczy 
     (1265, 2): ('6001-07', '6002-06', '6011-12'), (1265, 3): ('6001-07', '6002-06', '6011-12'), (1265, 4): ('6001-06', '6002-06', '6011-12'),
     (1266, 2): ('6001-08', '6002-07', '6011-13'), (1266, 3): ('6001-08', '6002-07', '6011-13'), (1266, 4): ('6001-07', '6002-07', '6011-13'),
 }
+# 126x wyk. 3, 4: rura wysiegu tak, zeby ucho 4260-1 (0,1898 pod spodem rury) trafilo w ucho 6206-01; obejma linki za wspornikiem
+TUBE126 = 0.0792 + 0.1898 + 0.019
+w('registration 126x tube %s clamp -1.3500 endregistration   // 6206-01 od slupa na 4260-01, obejma linki za wspornikiem' % f(TUBE126))
 REG12 = {121: '111x', 122: '112x', 123: '113x', 124: '114x', 126: '112x'}   # zestawy ramion: karty 11xx z tym samym odsuwem
 w('// 12xx nieprzechylne: odciag sztywny z rury 6002 (izolator 7100, koncowka 4400-01, bez szekli); zaczepy jak w 11xx')
 for (card, wyk), (strut, stay, steady) in sorted(C12.items()):
     digit = card % 10
     low = wyk == 4
-    line = 'scheme %d %d reach %s %s height %s registration %s-%d' % (card, wyk, f(1.45 + 0.3 * digit), f(1.75 + 0.3 * digit), f(1.30 if low else 1.70), REG12[card // 10], wyk)
+    reg126 = card // 10 == 126 and wyk in (3, 4)
+    regname = '126x' if reg126 else '%s-%d' % (REG12[card // 10], wyk)
+    line = 'scheme %d %d reach %s %s height %s registration %s' % (card, wyk, f(1.45 + 0.3 * digit), f(1.75 + 0.3 * digit), f(1.30 if low else 1.70), regname)
     three = steady.startswith('6111')
     if three:   # jak 1110: trzy zaczepy (wartosci ze zlozenia 1110)
-        line += ' mount stay %s mount strut %s mount steady %s' % (f(1.3784 if low else 1.7784), f(0.3784 if low else 0.7784), f(0.2297 if wyk in (2, 3, 4) else 0.2200))
+        line += ' mount stay %s mount strut %s mount steady %s' % (f(1.3784 if low else 1.7784), f(0.3784 if low else 0.7784), f(TUBE126 if reg126 else (0.2297 if wyk in (2, 3, 4) else 0.2200)))
     else:
         line += ' mount stay %s mount strut %s' % (f(1.50 if low else 1.90), f(-0.10))
     if wyk in (1, 5) and card // 10 in (121, 122, 123, 124): line += TUBE_4240   # 4240-1 / 4240-2 w tabelach
