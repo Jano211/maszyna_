@@ -494,9 +494,9 @@ ASSEMBLIES += ('\n// jak inner_push, linka V od glowicy do liny (1267-1269)\nass
 # odciagu na szekli (Jan 2026-10-17: kazdy izolator mocowany tak samo); na koncu skladanki, po wszystkich krokach
 _steady_insulated = False
 for l in ASSEMBLIES.splitlines():
-    if l.startswith('assembly '): _steady_insulated = False
+    if l.startswith('assembly '): _steady_insulated = False; _platform = l.split()[1] == 'platform'   # peronowe bez obrotu (Jan 21:44)
     if l.strip().startswith('place steady_insulator '): _steady_insulated = True
-    if l.strip() == 'endassembly' and _steady_insulated:
+    if l.strip() == 'endassembly' and _steady_insulated and not _platform:
         w('  roll steady_insulator -')
         w('  roll steady -')
     w(l)
