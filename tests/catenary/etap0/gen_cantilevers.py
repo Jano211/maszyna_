@@ -711,6 +711,33 @@ for n in range(6):
         roles += [('arms', '6205-02'), ('arms_bracket', '4290-06'), ('arms_head', '4290-22')] if wyk == 2 else [('arms', '6203-01'), ('arms_bracket', '4290-06'), ('arms_head', '4290-21')]
         for role, part in roles: line += ' role %s %s' % (role, part)
         w(line + ' endscheme')
+# 106x (tom 3 s. 32-37) - NA PROBE tylko 1061 wyk. 1: mechanika 108x (inner_push), ramiona 6207-1 + 6207-2 na 4290-6.
+# Ramiona 6207 to osobne modele Jana (2026-10-17): zero w osi drutu (z 4110 osobno, w tym samym punkcie), holder = ucho, cord_* = obejma 4210.
+# Para sztywna (Jan 15:28): 6207-01 (krotsze) -0,13 m w X i -4,75 st. wokol Z, 6207-02 (dluzsze) +0,15 m w X i +4,75 st.;
+# w Y dluzsze o 0,1*cos(4,75) dalej od ucha, zeby oba ucha wisialy na jednym sworzniu 4290-22 (rozstaw drutow ~10 cm).
+# Zero zestawu w polowie miedzy drutami. Wysieg tak wysoko, zeby hole_6 4290 trafil w ucho (rura nad lukiem 6207, gora luku 0,464).
+import math
+YAW6207 = 4.75
+c6207 = math.cos(math.radians(YAW6207))
+h1, h2 = 1.4 * c6207, 1.5 * c6207          # Y ucha po obrocie
+y1, y2 = 0.0, h1 - h2                        # 6207-02 dalej od ucha
+mid = 0.5 * (y1 + y2)
+w('// 6207: ramiona odciagowe specjalne lukowe, osobne modele (zero w osi drutu, 4110-01 osobno w tym samym punkcie); cord_* - zakres obejmy 4210')
+w('part 4110-01 kind clamp endpart   // uchwyt przewodu jezdnego, zero w osi drutu')
+w('part 6207-01 kind arms point holder 1.4000 -0.0060 point cord_nom 0.0000 0.4451 point cord_min 0.8258 0.4451 point cord_max -0.1323 0.4451 endpart')
+w('part 6207-02 kind arms point holder 1.5000 -0.0060 point cord_nom 0.0000 0.4451 point cord_min 0.9287 0.4451 point cord_max -0.1323 0.4451 endpart')
+w('part 6207-12 kind arms point holder %s -0.0060%s endpart   // para sztywna 6207-1 + 6207-2 (Jan 2026-10-17), zero w polowie miedzy drutami' % (
+    f(h1 - mid), ''.join(' member %s %s %s 0.0000 %s' % (pp, f(x), f(y - mid), f(a)) for pp, x, y, a in
+                         (('6207-01', -0.13, y1, -YAW6207), ('4110-01', -0.13, y1, -YAW6207), ('6207-02', 0.15, y2, YAW6207), ('4110-01', 0.15, y2, YAW6207)))))
+TUBE106 = -0.006 + 0.5434 + 0.03
+w('registration 106x tube %s clamp 0.0000 endregistration   // os wysiegu 6001: hole_6 4290 w uchu 6207' % f(TUBE106))
+line = 'scheme 1061 1 reach 1.7500 2.0500 height 1.7000 registration 106x mount stay 1.9000 mount strut -0.1000 assembly inner_push'
+for role, part in [('stay_insulator', '7100-01'), ('stay', '6002-02'), ('stay_end', '4400-01'), ('stay_clamp', '4070-01'),
+                   ('strut_insulator', '7100-01'), ('strut', '6001-03'), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01'),
+                   ('steady_clamp', '4070-01'), ('steady_end', '4400-01'), ('steady', '6001-04'), ('steady_head', '4500-01'), ('cord', '4490-00'),
+                   ('arms', '6207-12'), ('arms_bracket', '4290-06'), ('arms_head', '4290-22')]:
+    line += ' role %s %s' % (role, part)
+w(line + ' endscheme')
 # peronowe 103x/104x: czesci (modele Jana 2026-10-15, karta 23-6010 z UZUPELNIENIA nr 2)
 L6010 = {1: 5.350, 2: 5.600, 3: 5.900, 4: 6.150}
 A6010 = {1: 1.950, 2: 2.050, 3: 2.150, 4: 2.250}   # wymiar a z karty (od oka na dole) - tylko punkt informacyjny, opaske ustawia wysokosc wysiegu

@@ -142,6 +142,13 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     }
                     else { good = false; }
                 }
+                else if( key == "member" ) {
+                    cantilever_member member;
+                    if( index < count ) { member.part = Tokens[ index++ ]; } else { good = false; }
+                    for( auto &value : member.position ) { number( value, good ); }
+                    number( member.yaw, good );
+                    if( good ) { part.members.push_back( member ); }
+                }
                 else if( key == "holes" ) {
                     double value { 0.0 };
                     while( index < count && to_number( Tokens[ index ], value ) ) { part.holes.push_back( value ); ++index; }
@@ -384,6 +391,11 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
         if( m_assemblies.find( scheme.second.assembly ) == m_assemblies.end() ) { report( entry, "unknown assembly \"" + scheme.second.assembly + "\"" ); }
         for( auto const &role : scheme.second.roles ) {
             if( m_parts.find( role.second ) == m_parts.end() ) { report( entry, "role \"" + role.first + "\" uses unknown part \"" + role.second + "\"" ); }
+        }
+    }
+    for( auto const &part : m_parts ) {
+        for( auto const &member : part.second.members ) {
+            if( m_parts.find( member.part ) == m_parts.end() ) { report( "part \"" + part.first + "\"", "member uses unknown part \"" + member.part + "\"" ); }
         }
     }
 }
@@ -1280,9 +1292,31 @@ private:
             auto const turn = [ & ]( cantilever_placement &Placement ) {
                 if( flip ) { for( int column : { 0, 1 } ) { for( int row = 0; row < 3; ++row ) { Placement.rotation[ row * 3 + column ] = -Placement.rotation[ row * 3 + column ]; } } }
             };
-            auto placement { place( "arms", set.name, m_points[ "wire" ], toward_support, toward_support ) };
-            turn( placement );
-            put( placement );
+            if( set.members.empty() ) {
+                auto placement { place( "arms", set.name, m_points[ "wire" ], toward_support, toward_support ) };
+                turn( placement );
+                put( placement );
+            }
+            else {
+                // zestaw z osobnych modeli: każdy składnik w swoim położeniu i obrocie wokół pionu, cały zestaw obracany jak zwykły
+                auto const &wire { m_points[ "wire" ] };
+                for( std::size_t index = 0; index < set.members.size(); ++index ) {
+                    auto const &member { set.members[ index ] };
+                    cantilever_placement placement;
+                    placement.role = "arms." + std::to_string( index + 1 );
+                    placement.part = member.part;
+                    placement.position[ 0 ] = side * member.position[ 0 ];
+                    placement.position[ 1 ] = wire.y + side * member.position[ 1 ];
+                    placement.position[ 2 ] = wire.z + member.position[ 2 ];
+                    auto const angle { member.yaw * 3.14159265358979323846 / 180.0 };
+                    auto const cosine { std::cos( angle ) };
+                    auto const sine { std::sin( angle ) };
+                    double const rotation[ 9 ] { cosine, -sine, 0.0,  sine, cosine, 0.0,  0.0, 0.0, 1.0 };
+                    std::copy( std::begin( rotation ), std::end( rotation ), std::begin( placement.rotation ) );
+                    turn( placement );
+                    put( placement );
+                }
+            }
             auto const *slide_min { lookup( bracket, "slide_min" ) };
             auto const *slide_max { lookup( bracket, "slide_max" ) };
             auto const drop { zero.z - hang.z };
