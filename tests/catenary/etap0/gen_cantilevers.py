@@ -681,6 +681,8 @@ w()
 # Pozioma rura 6002 (poz. 21) z 4050 + 4140 nad lina, drugi izolator ~1,20 m nizej (100x, rozpora 6002 z dolu do 4500-01)
 # albo wyzej (101x, odciag 6002 z gory do 4070); 4500/4070 najwyzej 0,30 m przed 4050. Pasmo A do osi liny, jak 129x.
 # Wysokosc rury: lina 1,70 + hak 4140 + ucho 4050, zeby rura od izolatora byla pozioma. 1005: w tabeli 7100-2 - tu 7100-01.
+# Pozioma rura (poz. 21) jako 6003 zamiast 6002 (Jan 2026-10-17, probnie): tu nie laczy sie z 4400, a 6002 ma w modelu sworzen
+# do 4400; 6003 ma te same wymiary i punkty (jeden wiecej). Rozpora/odciag zostaje 6002, bo idzie do 4400-01.
 w('// 100x/101x: samo podwieszenie liny nosnej w przesle naprezenia (tom 3 s. 4-11)')
 w('registration 10xx tube 0.0000 clamp 0.0000 endregistration   // brak ramion i wysiegu')
 TUBE10 = 1.70 + 0.0751 + 0.0800
@@ -691,7 +693,7 @@ for n in range(4):
         line = 'scheme %d 1 reach %s %s height 1.7000 registration 10xx mount stay %s mount strut %s assembly %s' % (
             card, f(1.45 + 0.3 * digit), f(1.75 + 0.3 * digit), f(TUBE10 + dz), f(TUBE10), asm)
         for role, part in [('stay_insulator', '7100-01'), ('stay', '6002-%02d' % (n + 4)), ('stay_end', '4400-01'), ('stay_clamp', clamp),
-                           ('strut_insulator', '7100-01'), ('strut', '6002-%02d' % (n + 5)), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01')]:
+                           ('strut_insulator', '7100-01'), ('strut', '6003-%02d' % (n + 5)), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01')]:
             line += ' role %s %s' % (role, part)
         w(line + ' endscheme')
 # 108x: hk 1,20 (Jan), izolatory ~1,60 m (gorny 0,20 m nad lina), wysieg na wysokosci, przy ktorej trzeci otwor 4290-06 trafia
