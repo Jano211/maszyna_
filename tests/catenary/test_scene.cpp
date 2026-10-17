@@ -172,7 +172,7 @@ int main( int, char *argv[] ) {
 
     // zestaw 25 kV bez podanych rur: exe dobiera ukośnik, odciąg i wysięg z izolatorem (jak w td_katalog)
     std::size_t kvauto { 0 };
-    for( auto const &trial : { "1116 1 -3.512", "1114 2 -2.912", "1112 1 -2.312", "1212 1 -2.312", "1110 1 -1.712", "1232 1 -2.312" } ) {   // oś słupa: środek pasma A + pół słupa
+    for( auto const &trial : { "1116 1 -3.512", "1114 2 -2.912", "1112 1 -2.312", "1212 1 -2.312", "1111 1 -2.012", "1232 1 -2.312" } ) {   // oś słupa: środek pasma A + pół słupa
         errors.clear();
         auto const before { created.size() };
         { std::ofstream out { "tests/catenary/Siec_Test.scm" };

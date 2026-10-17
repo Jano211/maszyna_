@@ -50,7 +50,7 @@ for i,pair in enumerate(UMBRELLAS):
         K.append('%d;parasol u%d;%d;%d;%d;%.3f;%.1f;%.3f;%.2f-%.2f;%.3f;%s'%(len(groups)+1,i+1,i+1,card,wyk,px,z,a,amin,amax,hk,'strona +X' if side>0 else 'strona -X'))
 # proba izolatorow 25 kV (Jan 2026-10-17, modele 7010/7020/7100-25; kart 25 kV nie ma, "na oko"): slowo insulators 25,
 # rury z izolatorem dobiera exe (catenary_scene.cpp); obok ten sam schemat na 3 kV dla porownania
-TRIAL25=[(1116,1),(1114,2),(1112,1),(1212,1),(1110,1),(1232,1)]
+TRIAL25=[(1116,1),(1114,2),(1112,1),(1212,1),(1111,1),(1232,1)]
 px=ROW0_X-ROW_DX*len(groups)-16.0
 for i,(card,wyk) in enumerate(TRIAL25):
     amin,amax,hk=byid[(card,wyk)]; a=0.5*(amin+amax); wx=px+a+POLE_HALF
