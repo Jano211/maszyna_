@@ -29,7 +29,7 @@ int main( int argc, char *argv[] ) {
     auto const loaded { catalog.load( data + "/traction_cantilevers.txt", errors ) };
     {
         int swing { 0 }; for( auto const &entry : catalog.schemes() ) { swing += ( entry.first.first / 100 == 11 ); }
-        auto const good { loaded && errors.empty() && swing == 163 && catalog.registration_count() >= 20 && catalog.part_count() > 50 && catalog.models() == "siec_trakcyjna/components/" };
+        auto const good { loaded && errors.empty() && swing == 174 && /* 111x-114x: 163, 117x/118x: 11 */  catalog.registration_count() >= 20 && catalog.part_count() > 50 && catalog.models() == "siec_trakcyjna/components/" };
         std::printf( "katalog wysiegnikow: czesci %zu, zestawow ramion %zu, schematow %zu, bledow %zu  %s\n",
             catalog.part_count(), catalog.registration_count(), catalog.scheme_count(), errors.size(), good ? "OK" : "BLAD" );
         for( auto const &e : errors ) { std::printf( "  %s\n", e.c_str() ); }
