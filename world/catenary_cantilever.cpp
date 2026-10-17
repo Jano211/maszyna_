@@ -142,6 +142,16 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     }
                     else { good = false; }
                 }
+                else if( key == "pointx" ) {
+                    // składowa X punktu (wzdłuż toru): pointx <nazwa> <x>
+                    if( index < count ) {
+                        auto const name { Tokens[ index++ ] };
+                        double x { 0.0 };
+                        number( x, good );
+                        part.points_x[ name ] = x;
+                    }
+                    else { good = false; }
+                }
                 else if( key == "member" ) {
                     cantilever_member member;
                     if( index < count ) { member.part = Tokens[ index++ ]; } else { good = false; }
@@ -1393,10 +1403,13 @@ private:
             }
             for( std::size_t index = 0; index < arms.size(); ++index ) {
                 auto const &arm { arms[ index ] };
-                auto const &hold { m_catalog.part( arm.part )->points.at( "holder" ) };
+                auto const *armpart { m_catalog.part( arm.part ) };
+                auto const &hold { armpart->points.at( "holder" ) };
+                auto const foundx { armpart->points_x.find( "holder" ) };
+                auto const holdx { foundx != armpart->points_x.end() ? foundx->second : 0.0 };
                 double to[ 3 ];
                 for( int row = 0; row < 3; ++row ) {
-                    to[ row ] = arm.position[ row ] + arm.rotation[ row * 3 + 1 ] * hold.first + arm.rotation[ row * 3 + 2 ] * hold.second;
+                    to[ row ] = arm.position[ row ] + arm.rotation[ row * 3 + 0 ] * holdx + arm.rotation[ row * 3 + 1 ] * hold.first + arm.rotation[ row * 3 + 2 ] * hold.second;
                 }
                 double d[ 3 ] { to[ 0 ] - from[ 0 ], to[ 1 ] - from[ 1 ], to[ 2 ] - from[ 2 ] };
                 auto const span { std::sqrt( d[ 0 ] * d[ 0 ] + d[ 1 ] * d[ 1 ] + d[ 2 ] * d[ 2 ] ) };
@@ -1475,9 +1488,11 @@ private:
             };
             for( std::size_t index = 0; index < arms.size(); ++index ) {
                 auto const &arm { arms[ index ] };
-                auto const &nominal { m_catalog.part( arm.part )->points.at( "cord_nom" ) };
+                auto const *armpart { m_catalog.part( arm.part ) };
+                auto const &nominal { armpart->points.at( "cord_nom" ) };
+                auto const foundx { armpart->points_x.find( "cord_nom" ) };
                 double at[ 3 ];
-                transform( arm, 0.0, nominal.first, nominal.second, at );
+                transform( arm, ( foundx != armpart->points_x.end() ? foundx->second : 0.0 ), nominal.first, nominal.second, at );
                 auto clampplacement { arm };
                 clampplacement.role = clamprole + "." + std::to_string( index + 1 );
                 clampplacement.part = clamp.name;

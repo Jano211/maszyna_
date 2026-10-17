@@ -826,8 +826,8 @@ y1, y2 = 0.0, h1 - h2                        # 6207-02 dalej od ucha
 mid = 0.5 * (y1 + y2)
 w('// 6207: ramiona odciagowe specjalne lukowe, osobne modele (zero w osi drutu, 4110-01 osobno w tym samym punkcie); cord_* - zakres obejmy 4210')
 w('part 4110-01 kind clamp endpart   // uchwyt przewodu jezdnego, zero w osi drutu')
-w('part 6207-01 kind arms point holder 1.4000 -0.0060 point cord_nom 0.0000 0.4451 point cord_min 0.8258 0.4451 point cord_max -0.1323 0.4451 endpart')
-w('part 6207-02 kind arms point holder 1.5000 -0.0060 point cord_nom 0.0000 0.4451 point cord_min 0.9287 0.4451 point cord_max -0.1323 0.4451 endpart')
+w('part 6207-01 kind arms point holder 1.4000 -0.0060 point cord_nom 0.0000 0.4451 point cord_min 0.8258 0.4451 point cord_max -0.1323 0.4451 pointx holder -0.0093 pointx cord_nom -0.0099 pointx cord_min -0.0059 pointx cord_max -0.0068 endpart   // punkty X po poprawce Jana 19:25')
+w('part 6207-02 kind arms point holder 1.5000 -0.0060 point cord_nom 0.0000 0.4451 point cord_min 0.9287 0.4451 point cord_max -0.1323 0.4451 pointx holder -0.0046 pointx cord_nom -0.0074 pointx cord_min -0.0119 pointx cord_max -0.0074 endpart')
 w('part 6207-12 kind arms point holder %s -0.0060%s endpart   // para sztywna 6207-1 + 6207-2 (Jan 2026-10-17), zero w polowie miedzy drutami' % (
     f(h1 - mid), ''.join(' member %s %s %s 0.0000 %s' % (pp, f(x), f(y - mid), f(a)) for pp, x, y, a in
                          (('6207-01', -0.13, y1, -YAW6207), ('4110-01', -0.13, y1, -YAW6207), ('6207-02', 0.15, y2, YAW6207), ('4110-01', 0.15, y2, YAW6207)))))
@@ -836,8 +836,8 @@ w('part 6207-12 kind arms point holder %s -0.0060%s endpart   // para sztywna 62
 c6208 = math.cos(math.radians(4.0))
 g1, g2 = 1.45883 * c6208, 1.55883 * c6208
 gm = 0.5 * (g1 - g2)
-w('part 6208-01 kind arms point holder 1.4588 0.0000 point cord_nom 0.0000 0.2283 point cord_min 1.3380 0.2283 point cord_max -0.1232 0.2283 endpart')
-w('part 6208-02 kind arms point holder 1.5588 0.0000 point cord_nom 0.0000 0.2283 point cord_min 1.4406 0.2283 point cord_max -0.1218 0.2283 endpart')
+w('part 6208-01 kind arms point holder 1.4588 0.0000 point cord_nom 0.0000 0.2283 point cord_min 1.3380 0.2283 point cord_max -0.1232 0.2283 pointx cord_nom -0.0074 pointx cord_min -0.0074 pointx cord_max -0.0074 endpart')
+w('part 6208-02 kind arms point holder 1.5588 0.0000 point cord_nom 0.0000 0.2283 point cord_min 1.4406 0.2283 point cord_max -0.1218 0.2283 pointx cord_nom -0.0074 pointx cord_min -0.0074 pointx cord_max -0.0074 endpart')
 w('part 6208-03 kind arms point holder 1.4588 0.0000 point cord_nom 0.0000 0.2283 point cord_min 1.3380 0.2283 point cord_max -0.1244 0.2283 endpart   // pojedyncze, komplet z 4110')
 w('part 6208-12 kind arms point holder %s 0.0000%s endpart   // para sztywna 6208-1 + 6208-2 (Jan 2026-10-17), zero w polowie miedzy drutami' % (
     f(g1 - gm), ''.join(' member %s %s %s 0.0000 %s' % (pp, f(x), f(y), f(a)) for pp, x, y, a in

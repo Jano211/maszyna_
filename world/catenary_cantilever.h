@@ -52,6 +52,7 @@ struct cantilever_part {
     std::vector<double> holes;      // końcówka odciągu: odległości otworów od osi ucha
     std::map<std::string, std::pair<double, double>> points; // nazwane punkty modelu (Y, Z w układzie części), np. holder, eye, slide_min
     std::vector<cantilever_member> members; // zestaw ramion z osobnych modeli: składniki stawiane zamiast samego zestawu
+    std::map<std::string, double> points_x; // składowa X (wzdłuż toru) nazwanych punktów, gdy model ją ma (ramiona 6207/6208: obejma 4210, ucho)
 };
 
 // część o stałym położeniu względem przewodów jezdnych
