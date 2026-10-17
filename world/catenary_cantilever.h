@@ -31,6 +31,14 @@
 
 namespace catenary {
 
+// składnik zestawu ramion złożonego z osobnych modeli (np. para 6207-1 + 6207-2 z dwoma 4110): położenie zera modelu
+// względem zera zestawu (osi przewodu odniesienia) i obrót wokół pionu, jak w złożeniu z Blendera
+struct cantilever_member {
+    std::string part;
+    double position[ 3 ] { 0.0, 0.0, 0.0 };  // X wzdłuż toru, Y w stronę konstrukcji, Z w górę
+    double yaw { 0.0 };                       // stopnie, wokół Z, dodatni przeciwnie do wskazówek zegara patrząc z góry
+};
+
 // wymiary części potrzebne mechanice
 struct cantilever_part {
     std::string name;               // numer katalogowy, zarazem nazwa modelu
@@ -43,6 +51,7 @@ struct cantilever_part {
     double end[ 2 ] { 0.0, 0.0 };   // uchwyt liny: punkt mocowania linki (Y, Z w układzie części)
     std::vector<double> holes;      // końcówka odciągu: odległości otworów od osi ucha
     std::map<std::string, std::pair<double, double>> points; // nazwane punkty modelu (Y, Z w układzie części), np. holder, eye, slide_min
+    std::vector<cantilever_member> members; // zestaw ramion z osobnych modeli: składniki stawiane zamiast samego zestawu
 };
 
 // część o stałym położeniu względem przewodów jezdnych
