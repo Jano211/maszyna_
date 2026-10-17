@@ -546,7 +546,7 @@ std::map<std::string, std::string> const step_arguments {
     { "tangent", "nppen" }, { "level", "lnpe" }, { "project", "lnpee" }, { "limit", "lnee" }, { "window", "lnEE" },
     { "chain", "lnpeernEEE" }, { "place", "rpda" }, { "roll", "rR" }, { "stretch", "rppa" }, { "registration", "" },
     { "repeat", "ip" }, { "endrepeat", "" }, { "vee", "rppea" }, { "hangarms", "rrrlp" }, { "anchor", "nper" },
-    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" }, { "setarms", "rp" }, { "atleast", "lne" }, { "export", "p" } };
+    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" }, { "setarms", "rp" }, { "atleast", "lne" }, { "export", "p" }, { "hangat", "rp" }, { "across", "lnpe" }, { "hangto", "rplne" } };
 
 bool valid_argument( char const Kind, std::string const &Word ) {
     std::vector<term> terms;
@@ -923,6 +923,62 @@ private:
             return;
         }
 
+        if( op == "hangat" ) {
+            // uchwyt liny wiszący pionowo hakiem w punkcie Hook (drugi uchwyt liny na ukośniku, 102x); zero (oś liny) trafia
+            // do punktu <rola>, haczyk i koniec do <rola>.hook, <rola>.end
+            auto const &role { w[ 0 ] };
+            auto const &hung { part( role ) };
+            vec2 const hook { hung.hook[ 0 ], hung.hook[ 1 ] };
+            vec2 const end { hung.end[ 0 ], hung.end[ 1 ] };
+            if( length( hook - end ) < 1e-4 ) { fail( "part \"" + hung.name + "\" has no \"hook\" and \"end\" points" ); }
+            auto const axis { unit( hook - end ) };
+            auto const turn { std::atan2( 1.0, 0.0 ) - std::atan2( axis.z, axis.y ) };
+            auto const origin { point( w[ 1 ] ) - rotate( hook, turn ) };
+            m_points[ role ] = origin;
+            m_points[ role + ".hook" ] = origin + rotate( hook, turn );
+            m_points[ role + ".end" ] = origin + rotate( end, turn );
+            make_line( role, origin, upward );
+            put( place( role, hung.name, origin, upward, axis ) );
+            return;
+        }
+
+        if( op == "hangto" ) {
+            // uchwyt liny z zerem w punkcie Rope, zawieszony hakiem na uchu uchwytu stawianego na członie Line (ucho odsunięte o Side
+            // wzdłuż prostopadłej): ucho tam, gdzie jego odległość od liny równa się odległości haka od zera uchwytu (wyżej z dwóch
+            // rozwiązań); położenie ucha na członie trafia do stacji Station. Drugi uchwyt liny na ukośniku (102x)
+            auto const &role { w[ 0 ] };
+            auto const &hung { part( role ) };
+            vec2 const hook { hung.hook[ 0 ], hung.hook[ 1 ] };
+            vec2 const end { hung.end[ 0 ], hung.end[ 1 ] };
+            if( length( hook - end ) < 1e-4 ) { fail( "part \"" + hung.name + "\" has no \"hook\" and \"end\" points" ); }
+            auto const rope { point( w[ 1 ] ) };
+            auto &found { line_named( w[ 2 ] ) };
+            auto const side { number( w[ 4 ] ) };
+            auto const base { found.origin + found.normal * side - rope };
+            auto const radius { length( hook ) };
+            // |base + dir*s|^2 = r^2
+            auto const b { dot( base, found.direction ) };
+            auto const c { dot( base, base ) - radius * radius };
+            auto const delta { b * b - c };
+            if( delta < 0.0 ) { fail( "the " + role + " can't reach the " + w[ 2 ] + " from the rope" ); }
+            auto const s1 { -b - std::sqrt( delta ) };
+            auto const s2 { -b + std::sqrt( delta ) };
+            auto const e1 { found.at( s1 ) + found.normal * side };
+            auto const e2 { found.at( s2 ) + found.normal * side };
+            auto const pick { e1.z >= e2.z ? s1 : s2 };
+            auto const eye { e1.z >= e2.z ? e1 : e2 };
+            found.stations[ w[ 3 ] ] = pick;
+            auto const turn { std::atan2( ( eye - rope ).z, ( eye - rope ).y ) - std::atan2( hook.z, hook.y ) };
+            auto const axis { unit( hook - end ) };
+            auto const pull { rotate( axis, turn ) };
+            m_points[ role ] = rope;
+            m_points[ role + ".hook" ] = eye;
+            m_points[ role + ".end" ] = rope + rotate( end, turn );
+            make_line( role, rope, pull );
+            put( place( role, hung.name, rope, pull, axis ) );
+            return;
+        }
+
         if( op == "tangent" ) {
             // człon z punktu, styczny do okręgu o promieniu Radius wokół punktu Center; okrąg leży pod członem.
             // położenie Station to punkt styczności (rzut środka okręgu na oś członu)
@@ -952,6 +1008,15 @@ private:
             if( std::abs( found.direction.z ) < 1e-6 ) { fail( "line \"" + w[ 0 ] + "\" is level, nothing on it can be set to a height" ); }
             auto const side { number( w[ 3 ] ) };
             found.stations[ w[ 1 ] ] = ( point( w[ 2 ] ).z - found.origin.z - side * found.normal.z ) / found.direction.z;
+            return;
+        }
+
+        if( op == "across" ) {
+            // położenie na członie, w którym punkt odsunięty o Side wzdłuż prostopadłej wypada w poziomie (Y) punktu Target
+            auto &found { line_named( w[ 0 ] ) };
+            if( std::abs( found.direction.y ) < 1e-6 ) { fail( "line \"" + w[ 0 ] + "\" is vertical, nothing on it can be set across" ); }
+            auto const side { number( w[ 3 ] ) };
+            found.stations[ w[ 1 ] ] = ( point( w[ 2 ] ).y - found.origin.y - side * found.normal.y ) / found.direction.y;
             return;
         }
 
