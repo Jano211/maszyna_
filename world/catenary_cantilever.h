@@ -246,7 +246,8 @@ bool solve_cantilever_on_pole( cantilever_catalog const &Catalog, cantilever_sch
 // z połówką z nakrętkami, których wysokości różnią się najwyżej o rules.umbrella_spread, idą na średnią wysokość. Ta sama rola
 // po obu stronach (4640/4650/4660): nakrętki po stronie Second. Ukośnik jednej strony z odciągiem drugiej (4670, Jan
 // 2026-10-17): śruby po stronie ukośnika (4610-NN), nakrętki po stronie odciągu (4650-NN). Pary brane od najmniejszej różnicy,
-// każde mocowanie najwyżej raz. Wypełnia shared i nuts obu stron.
+// każde mocowanie najwyżej raz. Średnia nie wychodzi ponad mount_max słupa (chyba że obie strony są wyżej - wtedy niższa).
+// Wypełnia shared i nuts obu stron.
 void umbrella_mounts( cantilever_catalog const &Catalog, cantilever_pole const &Pole, cantilever_result const &First, cantilever_result const &Second,
     cantilever_umbrella &FirstSide, cantilever_umbrella &SecondSide );
 

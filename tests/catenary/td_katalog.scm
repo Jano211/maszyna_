@@ -701,3 +701,11 @@ node 1000 0 none suspension scheme 752 2 at -311.688 5.800 178.000 rope -311.688
 node 1000 0 none suspension scheme 752 3 at -316.312 5.800 178.000 rope -316.312 7.300 178.000 pole 1701 -314.000 0.200 178.000 umbrella u9 endsuspension
 node 1000 0 none suspension scheme 1116 1 at -310.488 5.800 181.500 rope -310.488 7.500 181.500 pole 1701 -314.000 0.200 181.500 umbrella u10 endsuspension
 node 1000 0 none suspension scheme 1126 4 at -317.512 5.800 181.500 rope -317.512 7.100 181.500 pole 1701 -314.000 0.200 181.500 umbrella u10 endsuspension
+node 1000 0 none suspension scheme 770 2 at -312.288 5.800 185.000 rope -312.288 7.700 185.000 pole 1701 -314.000 0.200 185.000 umbrella u11 endsuspension
+node 1000 0 none suspension scheme 790 1 at -315.712 5.800 185.000 rope -315.712 6.800 185.000 pole 1701 -314.000 0.200 185.000 umbrella u11 endsuspension
+node 1000 0 none suspension scheme 1002 1 at -311.688 5.800 188.500 rope -311.688 7.500 188.500 pole 1701 -314.000 0.200 188.500 umbrella u12 endsuspension
+node 1000 0 none suspension scheme 738 1 at -318.112 5.800 188.500 rope -318.112 6.400 188.500 pole 1701 -314.000 0.200 188.500 umbrella u12 endsuspension
+node 1000 0 none suspension scheme 1002 1 at -311.688 5.800 192.000 rope -311.688 7.500 192.000 pole 1701 -314.000 0.200 192.000 umbrella u13 endsuspension
+node 1000 0 none suspension scheme 1112 1 at -316.312 5.800 192.000 rope -316.312 7.500 192.000 pole 1701 -314.000 0.200 192.000 umbrella u13 endsuspension
+node 1000 0 none suspension scheme 781 3 at -311.988 5.800 195.500 rope -311.988 7.700 195.500 pole 1701 -314.000 0.200 195.500 umbrella u14 endsuspension
+node 1000 0 none suspension scheme 748 2 at -318.112 5.800 195.500 rope -318.112 6.400 195.500 pole 1701 -314.000 0.200 195.500 umbrella u14 endsuspension
