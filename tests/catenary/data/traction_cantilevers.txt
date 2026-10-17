@@ -240,6 +240,8 @@ assembly swing_steady
   stretch ?cord cord_anchor messenger_clamp.end +z
   hangarms ?arms arms_bracket ?arms_head steady registration
   registration
+  roll steady_insulator -
+  roll steady -
 endassembly
 // samo podwieszenie liny nosnej (129x): ukosnik i odciag sztywny jak w 12xx, bez wysiegu pomocniczego i linki;
 // bez linki nic nie odciaga liny w dol; uchwyt liny 4140 przechylony hakiem w strone slupa, 60 st. od pionu (Jan 2026-10-14: ok. 120 st. od ulozenia wzdluz ukosnika)
@@ -333,6 +335,8 @@ assembly swing_steady_vee
   vee cord cord_anchor messenger 0.125 +z
   hangarms ?arms arms_bracket ?arms_head steady registration
   registration
+  roll steady_insulator -
+  roll steady -
 endassembly
 
 // jak swing_vee, z uchwytami przewodow 4120 wprost na wysiegu (120x)
@@ -798,6 +802,8 @@ assembly platform
   place cord_clamp cord_clamp_at steady.up +z
   vee cord cord_anchor messenger 0.125 +z
   hangarms ?arms arms_bracket ?arms_head steady registration
+  roll steady_insulator -
+  roll steady -
 endassembly
 assembly top_head_contact
   shift clamp_eye wire contact_eye.eye.y contact_eye.eye.z
@@ -834,6 +840,8 @@ assembly top_head_contact
   place ?contact_clamp wire steady -y
   place ?contact_clamp_a wire_a steady -y
   place ?contact_clamp_b wire_b steady -y
+  roll steady_insulator -
+  roll steady -
 endassembly
 assembly top_head_in
   point cord_clamp_at registration
@@ -866,6 +874,8 @@ assembly top_head_in
   vee cord cord_anchor messenger 0.125 +z
   shift arms_side wire 1 0
   hangarms ?arms arms_bracket ?arms_head steady arms_side
+  roll steady_insulator -
+  roll steady -
 endassembly
 assembly top_head_out
   point cord_clamp_at registration
@@ -898,6 +908,8 @@ assembly top_head_out
   vee cord cord_anchor messenger 0.125 +z
   shift arms_side wire -1 0
   hangarms ?arms arms_bracket ?arms_head steady arms_side
+  roll steady_insulator -
+  roll steady -
 endassembly
 assembly level_contact
   shift clamp_eye wire contact_eye.eye.y contact_eye.eye.z
