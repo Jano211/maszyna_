@@ -166,9 +166,36 @@ int main( int, char *argv[] ) {
     }
     std::size_t kvmissing { 0 };
     for( auto const &line : errors ) { if( line.find( "insulator set \"99\"" ) != std::string::npos ) { ++kvmissing; } }
-    auto const kvgood { kv == 2 && kvold == 2 && kvmissing == 2 };
+    auto kvgood { kv == 2 && kvold == 2 && kvmissing == 2 };
     std::printf( "izolatory 25 kV: podmienionych %zu (2), starych w zestawie bez czesci %zu (2), komunikatow o braku %zu (2)  %s\n", kv, kvold, kvmissing, kvgood ? "OK" : "BLAD" );
     catenary_scene_clear();
+
+    // zestaw 25 kV bez podanych rur: exe dobiera ukośnik, odciąg i wysięg z izolatorem (jak w td_katalog)
+    std::size_t kvauto { 0 };
+    for( auto const &trial : { "1116 1 -3.512", "1114 2 -2.912", "1112 1 -2.312", "1212 1 -2.312", "1110 1 -1.712", "1232 1 -2.312" } ) {   // oś słupa: środek pasma A + pół słupa
+        errors.clear();
+        auto const before { created.size() };
+        { std::ofstream out { "tests/catenary/Siec_Test.scm" };
+          std::string const text { trial };
+          auto const space { text.rfind( ' ' ) };
+          out << "node 1000 0 a1 suspension scheme " << text.substr( 0, space ) << " at 0 5.8 100 pole 1701 " << text.substr( space + 1 ) << " 0.2 100 insulators 25 endsuspension\n"; }
+        cParser autofile( "Siec_Test.scm endcatenary" );
+        catenary_scene_load( autofile );
+        catenary_scene_resolve();
+        std::string tubes;
+        for( auto index { before }; index < created.size(); ++index ) {
+            auto const &entry { created[ index ].entry };
+            for( auto const *family : { "/6001-", "/6002-", "/6007-", "/6011-", "/6111-" } ) {
+                auto const at { entry.find( family ) };
+                if( at != std::string::npos ) { tubes += " " + entry.substr( at + 1, 7 ); }
+            }
+        }
+        if( created.size() > before && errors.empty() ) { ++kvauto; }
+        std::printf( "  25 kV %s: czesci %zu, rury%s\n", trial, created.size() - before, tubes.c_str() );
+        catenary_scene_clear();
+    }
+    kvgood = kvgood && kvauto == 6;
+    std::printf( "izolatory 25 kV z doborem rur: zlozonych %zu (6)  %s\n", kvauto, kvauto == 6 ? "OK" : "BLAD" );
 
     auto const good { loaded && resolved && bad && cleared && assembled && latedone && polegood && umbrellagood && kvgood };
     std::printf( "podwieszenia w scenerii: wczytanie %s, powiazanie %s, bledne dyrektywy %s, czyszczenie %s\n", loaded ? "OK" : "BLAD", resolved ? "OK" : "BLAD", bad ? "OK" : "BLAD", cleared ? "OK" : "BLAD" );

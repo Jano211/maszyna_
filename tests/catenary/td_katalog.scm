@@ -710,10 +710,14 @@ node 1000 0 none suspension scheme 1112 1 at -316.312 5.800 192.000 rope -316.31
 node 1000 0 none suspension scheme 781 3 at -311.988 5.800 195.500 rope -311.988 7.700 195.500 pole 1701 -314.000 0.200 195.500 umbrella u14 endsuspension
 node 1000 0 none suspension scheme 748 2 at -318.112 5.800 195.500 rope -318.112 6.400 195.500 pole 1701 -314.000 0.200 195.500 umbrella u14 endsuspension
 node 1000 0 none suspension scheme 1116 1 at -322.488 5.800 150.000 rope -322.488 7.500 150.000 pole 1701 -326.000 0.200 150.000 endsuspension
-node 1000 0 none suspension scheme 1116 1 at -322.488 5.800 153.500 rope -322.488 7.500 153.500 pole 1701 -326.000 0.200 153.500 insulators 25 override strut 6001-06 override stay 6007-06 endsuspension
+node 1000 0 none suspension scheme 1116 1 at -322.488 5.800 153.500 rope -322.488 7.500 153.500 pole 1701 -326.000 0.200 153.500 insulators 25 endsuspension
 node 1000 0 none suspension scheme 1114 2 at -323.088 5.800 157.000 rope -323.088 7.500 157.000 pole 1701 -326.000 0.200 157.000 endsuspension
-node 1000 0 none suspension scheme 1114 2 at -323.088 5.800 160.500 rope -323.088 7.500 160.500 pole 1701 -326.000 0.200 160.500 insulators 25 override strut 6001-04 override stay 6007-04 endsuspension
+node 1000 0 none suspension scheme 1114 2 at -323.088 5.800 160.500 rope -323.088 7.500 160.500 pole 1701 -326.000 0.200 160.500 insulators 25 endsuspension
 node 1000 0 none suspension scheme 1112 1 at -323.688 5.800 164.000 rope -323.688 7.500 164.000 pole 1701 -326.000 0.200 164.000 endsuspension
-node 1000 0 none suspension scheme 1112 1 at -323.688 5.800 167.500 rope -323.688 7.500 167.500 pole 1701 -326.000 0.200 167.500 insulators 25 override strut 6001-02 override stay 6007-02 endsuspension
+node 1000 0 none suspension scheme 1112 1 at -323.688 5.800 167.500 rope -323.688 7.500 167.500 pole 1701 -326.000 0.200 167.500 insulators 25 endsuspension
 node 1000 0 none suspension scheme 1212 1 at -323.688 5.800 171.000 rope -323.688 7.500 171.000 pole 1701 -326.000 0.200 171.000 endsuspension
-node 1000 0 none suspension scheme 1212 1 at -323.688 5.800 174.500 rope -323.688 7.500 174.500 pole 1701 -326.000 0.200 174.500 insulators 25 override strut 6001-02 override stay 6002-02 endsuspension
+node 1000 0 none suspension scheme 1212 1 at -323.688 5.800 174.500 rope -323.688 7.500 174.500 pole 1701 -326.000 0.200 174.500 insulators 25 endsuspension
+node 1000 0 none suspension scheme 1110 1 at -324.288 5.800 178.000 rope -324.288 7.500 178.000 pole 1701 -326.000 0.200 178.000 endsuspension
+node 1000 0 none suspension scheme 1110 1 at -324.288 5.800 181.500 rope -324.288 7.500 181.500 pole 1701 -326.000 0.200 181.500 insulators 25 endsuspension
+node 1000 0 none suspension scheme 1232 1 at -323.688 5.800 185.000 rope -323.688 7.500 185.000 pole 1701 -326.000 0.200 185.000 endsuspension
+node 1000 0 none suspension scheme 1232 1 at -323.688 5.800 188.500 rope -323.688 7.500 188.500 pole 1701 -326.000 0.200 188.500 insulators 25 endsuspension

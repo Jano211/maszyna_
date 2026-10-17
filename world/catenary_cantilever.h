@@ -167,6 +167,7 @@ public:
     std::size_t scheme_count() const { return m_schemes.size(); }
     std::size_t registration_count() const { return m_registrations.size(); }
     std::map<std::pair<int, int>, cantilever_scheme> const &schemes() const { return m_schemes; }
+    std::map<std::string, cantilever_part> const &parts() const { return m_parts; }
     cantilever_rules rules;
 
 private:
