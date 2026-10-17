@@ -946,9 +946,15 @@ for n in range(1, 9):
 # 125x: 1251-1254, 1257 wyk. 2, 3, 4 (do slupa), wyk. 2 para 6205-02, wyk. 3, 4 6203-01, bez linek; hk wyk. 2, 3 1,70, wyk. 4 1,30 (jak 12xx);
 # ukosnik 6001-(n+2), wyk. 4 6001-(n+1); odciag 6007-(n+1). 1250: lina z wlasnego zaczepu (rope_arms_mount). 127x - czeka na modele.
 w('registration ropex tube 0.0000 clamp 0.0000 endregistration   // ramiona na linie: bez wysiegu')
-for card in list(range(1052, 1057)) + [1250, 1251, 1252, 1253, 1254, 1257]:
+# 127x (tom 3 s. 155-160, ramiona podwojne): para ruchomych 6203-11 pod osobne 4110 na jednej linie - na probe (Jan 18:05) +-5 st.
+# i symetrycznie +-0,13 m w X; tylko wyk. 3, 4; rury i hk jak 125x (1270 jak 1250: lina z wlasnego zaczepu)
+w('part 6203-11 kind arms point holder 0.8817 0.0219 endpart   // ruchome 6203-1 bez 4110 (model Jana 2026-10-17)')
+w('part 6203-1111 kind arms point holder %s 0.0219 member 6203-11 0.1300 0.0000 0.0000 5.0000 member 4110-01 0.1300 0.0000 0.0000 5.0000 '
+  'member 6203-11 -0.1300 0.0000 0.0000 -5.0000 member 4110-01 -0.1300 0.0000 0.0000 -5.0000 endpart   // para 2x 6203-1 (127x), na probe' % f(0.88169 * math.cos(math.radians(5.0))))
+for card in list(range(1052, 1057)) + [1250, 1251, 1252, 1253, 1254, 1257] + [1270, 1271, 1272, 1273, 1274, 1277]:
     n = card % 10
     for wyk in (2, 3, 4):
+        if card >= 1270 and wyk == 2: continue
         if card < 1100:
             hk, stay_mount, strut_mount = ((1.70, 1.90, -0.10) if wyk == 3 else (1.20, 1.40, -0.20))
             strut = '6001-%02d' % (n + (2 if wyk == 3 else 1))
@@ -957,10 +963,10 @@ for card in list(range(1052, 1057)) + [1250, 1251, 1252, 1253, 1254, 1257]:
         else:
             hk, stay_mount, strut_mount = ((1.30, 1.50, -0.10) if wyk == 4 else (1.70, 1.90, -0.10))
             strut = '6001-%02d' % (n + (1 if wyk == 4 else 2))
-            arms = '6205-02' if wyk == 2 else '6203-01'
+            arms = '6205-02' if wyk == 2 else ('6203-1111' if card >= 1270 else '6203-01')
             extra = []
         own = ''
-        if card == 1250:
+        if card in (1250, 1270):
             # 1250 (Jan): gorny - dolny izolator (lina) 1,60 m (wyk. 2, 3) / 1,20 m (wyk. 4), gorny - srodkowy (ukosnik) ~1,00 m; stara hk z 12xx
             span = 1.20 if wyk == 4 else 1.60
             stay_mount, strut_mount = hk + 0.20, hk + 0.20 - 1.00
