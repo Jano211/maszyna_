@@ -17,7 +17,7 @@ Schematy (karta + wykonanie) powstają z tabel kart. Punkty łączeń biorę z m
 | G | Sieć wewnętrzna: wysięg 23 odpychany od ukośnika przez 4070 + 4400 (rozpórka), wystaje za drut, na końcu 4290/4250 z ramionami do słupa, ukośna linka 33 od uchwytu liny do końca wysięgu | 1061–1066, 1081–1086 | — | klocek „wysięg na łańcuchu z ukośnika”, linka ukośna (jak `stretch`) |
 | H | Rozjazdowe jednej sieci: wysięg od 4050 przy nasadzie ukośnika, dwa uchwyty ramion (poz. 13 obrócony o 180°), ramię 25 pchane, ramię 26 ciągnięte (otwór owalny), spotykają się na drucie | 1091–1099 | — | para ramion z dwóch stron jednego punktu drutu; zestawy jak 6206/6209 |
 | I | Jak G: wysięg 6001 rozpierany od ukośnika, 4500-01 na jego końcu, linka 9811-3 w V do liny | 1267–1269, 1287–1289 | — | patrz punkt 7; ramiona 6206/6209 na 4280, zaciski 5270-3/6301-3 (w 1267 ręcznie poprawione na 5440-7) |
-| J | Parasole | wszystkie z mocowaniem na opasce | zrobione | mieszaniec 4670 |
+| J | Parasole | wszystkie z mocowaniem na opasce | zrobione (z 4670) | – |
 | K | Teowniki | `kolprojekt1.pdf` (skan bez tekstu) | — | czytanie automatem drogie: najpierw spis/objaśnienia, potem po jednej karcie na rodzinę, tabele tylko wybranych kart; najlepiej, gdy Jan wskaże zakres stron |
 
 ## 2. Klocki solvera do dopisania
@@ -44,7 +44,7 @@ Schematy (karta + wykonanie) powstają z tabel kart. Punkty łączeń biorę z m
 4. F (105x, 125x, 127x): lina z zaciskami.
 5. D (102x): dwie liny nośne.
 6. E (peronowe).
-7. Teowniki, 4670, dobór karty.
+7. Teowniki, dobór karty.
 
 Każdy krok kończy się rzędem w `td_katalog` i ostrzeżeniami w kluczu, a potem przeglądem w symulatorze.
 

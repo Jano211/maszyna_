@@ -318,8 +318,7 @@ catenary_scene_resolve() {
         }
         if( false == probed ) { for( auto const index : list ) { alone( index ); } continue; }
         catenary::cantilever_umbrella sides[ 2 ];
-        sides[ 0 ].shared = sides[ 1 ].shared = catenary::umbrella_mounts( *catalog, *pole, probes[ 0 ], probes[ 1 ] );
-        sides[ 1 ].nuts = true;
+        catenary::umbrella_mounts( *catalog, *pole, probes[ 0 ], probes[ 1 ], sides[ 0 ], sides[ 1 ] );
         sides[ 1 ].pole = false;
         for( int side = 0; side < 2; ++side ) {
             auto const count { assemble( Suspensions[ list[ side ] ], *catalog, wires[ side ], ( hasropes[ side ] ? &ropes[ side ] : nullptr ), poles[ 0 ], &sides[ side ] ) };
