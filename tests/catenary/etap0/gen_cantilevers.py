@@ -878,7 +878,7 @@ for n in range(2, 7):
             line += ' role %s %s' % (role, part)
         w(line + ' endscheme')
 w('part 6212-01 kind arms point holder 0.7656 0.1791 endpart   // ramie 6212-1 bez uchwytu przewodu (model Jana 2026-10-17), zawieszenie jak 6202')
-w('part 6206-01 kind arms point holder 1.2100 0.0551 endpart   // pojedyncze stale, komplet z 4110 (model Jana 2026-10-17)')
+w('part 6206-01 kind arms point holder 1.2100 0.0792 endpart   // pojedyncze stale, komplet z 4110 (model Jana 2026-10-17)')
 w('part 6206-02 kind arms point holder 1.3700 0.1192 endpart   // pojedyncze stale, komplet z 4110 (model Jana 2026-10-17)')
 # 6206-11/-12 (Jan 17:59): ruchome ramiona (6206-1 / 6206-2) pod osobne 4110, zero w osi drutu. Para w 1287-1289 to dwa 6206-1 (tabela):
 # jedno +0,13 m w X i +5 st., drugie -0,14 m i -5 st. (Jan) - ucha schodza sie ok. 6 cm od siebie na 4280-4, druty w tej samej linii Y.
@@ -901,7 +901,7 @@ for card, pipes, stay in ((1287, ((9, 10), (8, 9)), 8), (1288, ((10, 11), (9, 10
         w(line + ' endscheme')
 # 1267-1269 wyk. 3, 4: 6206-1 od slupa na 4280-3, wysieg 6001 od ukosnika (4070 + 4400), 4500-1, linka V; wyk. 2 (para 6209) - czeka na modele.
 # Rury z tabel: 1267 ukosnik/wysieg 6001-9/-10 (wyk. 4: -8/-9), odciag 6002-8; 1268: -10/-11 (-9/-10), 6002-11; 1269: -14/-14 (-11/-11), 6002-9
-w('registration 1267 tube %s clamp 0.0000 endregistration   // os wysiegu 6001: ucho 4280-3 w punkcie zawieszenia 6206-01' % f(0.0551 + 0.196 + 0.03))
+w('registration 1267 tube %s clamp 0.0000 endregistration   // os wysiegu 6001: ucho 4280-3 w punkcie zawieszenia 6206-01' % f(0.0792 + 0.196 + 0.03))
 for card, pipes, stay in ((1267, ((9, 10), (8, 9)), 8), (1268, ((10, 11), (9, 10)), 11), (1269, ((14, 14), (11, 11)), 9)):
     n = card % 10
     for wyk, hk, stay_mount in ((3, 1.70, 1.90), (4, 1.30, 1.50)):
