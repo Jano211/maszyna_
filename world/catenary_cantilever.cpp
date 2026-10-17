@@ -546,7 +546,7 @@ std::map<std::string, std::string> const step_arguments {
     { "tangent", "nppen" }, { "level", "lnpe" }, { "project", "lnpee" }, { "limit", "lnee" }, { "window", "lnEE" },
     { "chain", "lnpeernEEE" }, { "place", "rpda" }, { "roll", "rR" }, { "stretch", "rppa" }, { "registration", "" },
     { "repeat", "ip" }, { "endrepeat", "" }, { "vee", "rppea" }, { "hangarms", "rrrlp" }, { "anchor", "nper" },
-    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" }, { "setarms", "rp" }, { "atleast", "lne" }, { "export", "p" }, { "hangat", "rp" }, { "across", "lnpe" }, { "hangto", "rplne" } };
+    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" }, { "setarms", "rp" }, { "atleast", "lne" }, { "export", "p" }, { "hangat", "rp" }, { "across", "lnpe" }, { "hangto", "rplne" }, { "armropes", "rp" } };
 
 bool valid_argument( char const Kind, std::string const &Word ) {
     std::vector<term> terms;
@@ -1369,6 +1369,55 @@ private:
                 auto placement { place_3d( side < 0.0 ? role : role + "_2", stretched.name, from, direction, w[ 4 ] ) };
                 auto const axis { ( w[ 4 ][ 1 ] == 'y' ? 1 : 2 ) };
                 if( stretched.length > 1e-6 ) { placement.scale[ axis ] = legs / stretched.length; }
+                put( placement );
+            }
+            return;
+        }
+
+        if( op == "armropes" ) {
+            // liny ramion (105x, 125x, 127x): od punktu From do ucha (holder) każdego postawionego ramienia (rola zaczynająca się od arms,
+            // część z punktem holder) - przy parze dwie osobne liny. Linka obrócona o 90 stopni wokół własnej osi względem stretch
+            // (płaska strona pionowo). Role: Rope, Rope.2, ...
+            auto rope { w[ 0 ] };
+            if( rope[ 0 ] == '?' ) { rope.erase( 0, 1 ); }
+            if( false == has_role( rope ) ) { return; }
+            auto const &cord { part( rope ) };
+            auto const from2 { point( w[ 1 ] ) };
+            double const from[ 3 ] { 0.0, from2.y, from2.z };
+            std::vector<cantilever_placement> arms;
+            for( auto const &placed : m_result.parts ) {
+                if( placed.role.rfind( "arms", 0 ) != 0 ) { continue; }
+                auto const *armpart { m_catalog.part( placed.part ) };
+                if( armpart == nullptr || armpart->kind != "arms" || armpart->points.find( "holder" ) == armpart->points.end() ) { continue; }
+                arms.push_back( placed );
+            }
+            for( std::size_t index = 0; index < arms.size(); ++index ) {
+                auto const &arm { arms[ index ] };
+                auto const &hold { m_catalog.part( arm.part )->points.at( "holder" ) };
+                double to[ 3 ];
+                for( int row = 0; row < 3; ++row ) {
+                    to[ row ] = arm.position[ row ] + arm.rotation[ row * 3 + 1 ] * hold.first + arm.rotation[ row * 3 + 2 ] * hold.second;
+                }
+                double d[ 3 ] { to[ 0 ] - from[ 0 ], to[ 1 ] - from[ 1 ], to[ 2 ] - from[ 2 ] };
+                auto const span { std::sqrt( d[ 0 ] * d[ 0 ] + d[ 1 ] * d[ 1 ] + d[ 2 ] * d[ 2 ] ) };
+                if( span < 1e-6 ) { continue; }
+                for( auto &value : d ) { value /= span; }
+                double x[ 3 ] { 1.0 - d[ 0 ] * d[ 0 ], -d[ 0 ] * d[ 1 ], -d[ 0 ] * d[ 2 ] };
+                auto const size { std::sqrt( x[ 0 ] * x[ 0 ] + x[ 1 ] * x[ 1 ] + x[ 2 ] * x[ 2 ] ) };
+                for( auto &value : x ) { value /= size; }
+                double const y[ 3 ] { d[ 1 ] * x[ 2 ] - d[ 2 ] * x[ 1 ], d[ 2 ] * x[ 0 ] - d[ 0 ] * x[ 2 ], d[ 0 ] * x[ 1 ] - d[ 1 ] * x[ 0 ] };
+                cantilever_placement placement;
+                placement.role = ( index == 0 ? rope : rope + "." + std::to_string( index + 1 ) );
+                placement.part = cord.name;
+                for( int row = 0; row < 3; ++row ) {
+                    placement.position[ row ] = from[ row ];
+                    // obrót o 90 stopni wokół osi linki: X części = dawne Y, Y części = -dawne X
+                    placement.rotation[ row * 3 + 0 ] = y[ row ];
+                    placement.rotation[ row * 3 + 1 ] = -x[ row ];
+                    placement.rotation[ row * 3 + 2 ] = d[ row ];
+                }
+                if( cord.length > 1e-6 ) { placement.scale[ 2 ] = span / cord.length; }
+                m_result.values[ placement.role + ".span" ] = span;
                 put( placement );
             }
             return;

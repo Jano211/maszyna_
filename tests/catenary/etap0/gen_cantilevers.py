@@ -274,7 +274,7 @@ assembly rope_arms
   place strut strut@strut_insulator.length strut -y
   place head_clamp strut@strut.head_clamp strut.down -z
   place rope_clamp strut@strut.rope_clamp strut.down -z
-  stretch rope rope_eye arms_holder +z
+  armropes rope rope_eye
   armcords ?arms_cord ?arms_cord_clamp messenger 0.125
 endassembly
 """
@@ -282,8 +282,8 @@ ROPE_ARMS += ("\n// jak rope_arms, ale lina z wlasnego zaczepu na slupie (mocowa
     + re.search(r'assembly rope_arms\n(.*?)endassembly\n', ROPE_ARMS, re.S).group(1)
       .replace('  level strut rope_clamp arms_holder -rope_clamp.eye\n  atleast strut rope_clamp strut_insulator.length+rules.clamp_margin\n  side rope_eye strut strut.rope_clamp -rope_clamp.eye\n', '')
       .replace('  window strut rope_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min\n', '')
-      .replace('  place rope_clamp strut@strut.rope_clamp strut.down -z\n  stretch rope rope_eye arms_holder +z\n',
-               '  line rope_line steady_mount toward arms_holder\n  place rope_insulator steady_mount rope_line -y\n  point rope_eye rope_line@rope_insulator.length\n  stretch rope rope_eye arms_holder +z\n')
+      .replace('  place rope_clamp strut@strut.rope_clamp strut.down -z\n  armropes rope rope_eye\n',
+               '  line rope_line steady_mount toward arms_holder\n  place rope_insulator steady_mount rope_line -y\n  point rope_eye rope_line@rope_insulator.length\n  armropes rope rope_eye\n')
     + "endassembly\n")
 ASSEMBLIES += ROPE_ARMS
 # 102x (tom 3 s. 12-16, dwie sieci w przesle naprezenia, nieprzechylne): jak swing_vee bez ramion; na wysiegu 6011 dwa uchwyty 4120-3
