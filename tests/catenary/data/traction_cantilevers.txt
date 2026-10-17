@@ -446,7 +446,7 @@ assembly rope_arms
   place strut strut@strut_insulator.length strut -y
   place head_clamp strut@strut.head_clamp strut.down -z
   place rope_clamp strut@strut.rope_clamp strut.down -z
-  stretch rope rope_eye arms_holder +z
+  armropes rope rope_eye
   armcords ?arms_cord ?arms_cord_clamp messenger 0.125
 endassembly
 
@@ -473,7 +473,7 @@ assembly rope_arms_mount
   line rope_line steady_mount toward arms_holder
   place rope_insulator steady_mount rope_line -y
   point rope_eye rope_line@rope_insulator.length
-  stretch rope rope_eye arms_holder +z
+  armropes rope rope_eye
   armcords ?arms_cord ?arms_cord_clamp messenger 0.125
 endassembly
 
