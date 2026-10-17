@@ -802,8 +802,6 @@ assembly platform
   place cord_clamp cord_clamp_at steady.up +z
   vee cord cord_anchor messenger 0.125 +z
   hangarms ?arms arms_bracket ?arms_head steady registration
-  roll steady_insulator -
-  roll steady -
 endassembly
 assembly top_head_contact
   shift clamp_eye wire contact_eye.eye.y contact_eye.eye.z
