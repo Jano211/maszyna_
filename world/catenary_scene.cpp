@@ -120,6 +120,17 @@ assemble( scene_suspension const &Suspension, catenary::cantilever_catalog const
     input.stay_mount = { reach, scheme->mount_stay + raise };
     input.strut_mount = { reach, scheme->mount_strut + ( scheme->steady_mounted ? raise : 0.0 ) };
     input.steady_mount = { reach, scheme->mount_steady };
+    // zestaw izolatorów (np. "25" - 25 kV): każdy izolator schematu NNNN-xx podmieniony na NNNN-<zestaw>, jeśli taka część jest
+    if( false == data.insulators.empty() ) {
+        for( auto const &role : scheme->roles ) {
+            auto const *part { Catalog.part( role.second ) };
+            if( part == nullptr || part->kind != "insulator" ) { continue; }
+            auto const dash { role.second.find( '-' ) };
+            auto const variant { role.second.substr( 0, dash == std::string::npos ? role.second.size() : dash ) + "-" + data.insulators };
+            if( Catalog.part( variant ) != nullptr ) { input.overrides[ role.first ] = variant; }
+            else { ErrorLog( label + "asks for insulator set \"" + data.insulators + "\", but part \"" + variant + "\" isn't in the cantilever catalogue; \"" + role.second + "\" kept" ); }
+        }
+    }
     for( auto const &replacement : data.overrides ) {
         input.overrides[ replacement.first ] = replacement.second;
     }
