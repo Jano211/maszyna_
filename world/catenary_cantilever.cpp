@@ -1824,7 +1824,10 @@ void umbrella_mounts( cantilever_catalog const &Catalog, cantilever_pole const &
         double a, b;
         height( First, pair.first, a );
         height( Second, pair.second, b );
-        FirstSide.shared[ pair.first ] = SecondSide.shared[ pair.second ] = 0.5 * ( a + b );
+        // średnia nie wychodzi ponad najwyższe położenie mocowania na słupie (odciąg ścięty do mount_max po jednej stronie)
+        auto shared { 0.5 * ( a + b ) };
+        if( Pole.mount_max > 0.0 ) { shared = std::min( shared, std::max( Pole.mount_max, std::min( a, b ) ) ); }
+        FirstSide.shared[ pair.first ] = SecondSide.shared[ pair.second ] = shared;
         if( pair.nutside == 0 ) { FirstSide.nuts.insert( pair.first ); }
         else { SecondSide.nuts.insert( pair.second ); }
     }

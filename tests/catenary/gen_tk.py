@@ -36,7 +36,9 @@ for r,g in enumerate(groups):
         K.append('%d;%dx;%d;%d;%d;%.3f;%.1f;%.3f;%.2f-%.2f;%.3f;%s'%(r+1,g,i+1,card,wyk,px,z,a,amin,amax,hk,warn.get((card,wyk),'')))
 # ostatni rzad: parasole (dwa wysiegniki na jednym slupie, slowo umbrella), po obu stronach slupa
 UMBRELLAS=[((1112,1),(1112,1)),((1112,1),(1122,1)),((1114,2),(1124,3)),((1212,1),(1222,1)),((1232,1),(1242,5)),
-           ((1203,1),(1283,3)),((1292,1),(1112,1)),((772,2),(1112,1)),((752,2),(752,3)),((1116,1),(1126,4))]
+           ((1203,1),(1283,3)),((1292,1),(1112,1)),((772,2),(1112,1)),((752,2),(752,3)),((1116,1),(1126,4)),
+           # 4670 (ukosnik jednej strony + odciag drugiej na wspolnej wysokosci, wysokosci z solvera na 1701)
+           ((770,2),(790,1)),((1002,1),(738,1)),((1002,1),(1112,1)),((781,3),(748,2))]
 byid={(c,e):(amin,amax,hk) for c,e,amin,amax,hk in schemes}
 px=ROW0_X-ROW_DX*len(groups)-4.0
 for i,pair in enumerate(UMBRELLAS):
