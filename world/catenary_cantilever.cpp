@@ -546,7 +546,7 @@ std::map<std::string, std::string> const step_arguments {
     { "tangent", "nppen" }, { "level", "lnpe" }, { "project", "lnpee" }, { "limit", "lnee" }, { "window", "lnEE" },
     { "chain", "lnpeernEEE" }, { "place", "rpda" }, { "roll", "rR" }, { "stretch", "rppa" }, { "registration", "" },
     { "repeat", "ip" }, { "endrepeat", "" }, { "vee", "rppea" }, { "hangarms", "rrrlp" }, { "anchor", "nper" },
-    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" }, { "setarms", "rp" }, { "atleast", "lne" } };
+    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" }, { "setarms", "rp" }, { "atleast", "lne" }, { "export", "p" } };
 
 bool valid_argument( char const Kind, std::string const &Word ) {
     std::vector<term> terms;
@@ -822,6 +822,13 @@ private:
                 std::copy( std::begin( rotation ), std::end( rotation ), std::begin( placement.rotation ) );
                 turn( placement );
                 put( placement );
+                // zaczep przewodu każdego ramienia zestawu (zero modelu ramienia) - dane dla edytora
+                auto const *memberpart { m_catalog.part( member.part ) };
+                if( memberpart != nullptr && memberpart->kind == "arms" ) {
+                    m_result.values[ placement.role + ".wire.x" ] = placement.position[ 0 ];
+                    m_result.values[ placement.role + ".wire.y" ] = placement.position[ 1 ];
+                    m_result.values[ placement.role + ".wire.z" ] = placement.position[ 2 ];
+                }
             }
         }
     }
@@ -972,6 +979,14 @@ private:
             auto const margin { number( w[ 3 ] ) };
             m_result.values[ w[ 0 ] + ".overhang" ] = overhang;
             if( overhang < margin ) { warn( described( w[ 0 ] ) + " is " + to_text( margin - overhang ) + " m too short for the " + w[ 1 ] ); }
+            return;
+        }
+
+        if( op == "export" ) {
+            // punkt do wyniku (values <punkt>.y, <punkt>.z) - dane dla edytora, np. zaczep drugiego przewodu na 4120 (117x/118x)
+            auto const at { point( w[ 0 ] ) };
+            m_result.values[ w[ 0 ] + ".y" ] = at.y;
+            m_result.values[ w[ 0 ] + ".z" ] = at.z;
             return;
         }
 
