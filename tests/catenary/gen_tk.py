@@ -48,18 +48,18 @@ for i,pair in enumerate(UMBRELLAS):
         L.append('node 1000 0 none suspension scheme %d %d at %.3f %.3f %.3f rope %.3f %.3f %.3f pole 1701 %.3f %.3f %.3f umbrella u%d endsuspension'
                  %(card,wyk,wx,WIRE_Y,z,wx,WIRE_Y+hk,z,px,RAIL_Y,z,i+1))
         K.append('%d;parasol u%d;%d;%d;%d;%.3f;%.1f;%.3f;%.2f-%.2f;%.3f;%s'%(len(groups)+1,i+1,i+1,card,wyk,px,z,a,amin,amax,hk,'strona +X' if side>0 else 'strona -X'))
-# proba izolatorow 25 kV (Jan 2026-10-17, modele 7010/7020/7100-25): slowo insulators 25, rury ukosnika i odciagu krotsze
-# (dobrane solverem na 1701 tak, zeby bylo najmniej ostrzezen); obok ten sam schemat na 3 kV dla porownania
-TRIAL25=[((1116,1),'6001-06','6007-06'),((1114,2),'6001-04','6007-04'),((1112,1),'6001-02','6007-02'),((1212,1),'6001-02','6002-02')]
+# proba izolatorow 25 kV (Jan 2026-10-17, modele 7010/7020/7100-25; kart 25 kV nie ma, "na oko"): slowo insulators 25,
+# rury z izolatorem dobiera exe (catenary_scene.cpp); obok ten sam schemat na 3 kV dla porownania
+TRIAL25=[(1116,1),(1114,2),(1112,1),(1212,1),(1110,1),(1232,1)]
 px=ROW0_X-ROW_DX*len(groups)-16.0
-for i,((card,wyk),strut,stay) in enumerate(TRIAL25):
+for i,(card,wyk) in enumerate(TRIAL25):
     amin,amax,hk=byid[(card,wyk)]; a=0.5*(amin+amax); wx=px+a+POLE_HALF
-    for j,extra in enumerate(('',' insulators 25 override strut %s override stay %s'%(strut,stay))):
+    for j,extra in enumerate(('',' insulators 25')):
         z=Z0+COL_DZ*(2*i+j)
         L.append('node 1000 0 none suspension scheme %d %d at %.3f %.3f %.3f rope %.3f %.3f %.3f pole 1701 %.3f %.3f %.3f%s endsuspension'
                  %(card,wyk,wx,WIRE_Y,z,wx,WIRE_Y+hk,z,px,RAIL_Y,z,extra))
         K.append('%d;proba 25 kV;%d;%d;%d;%.3f;%.1f;%.3f;%.2f-%.2f;%.3f;%s'%(len(groups)+2,2*i+j+1,card,wyk,px,z,a,amin,amax,hk,
-                 '3 kV (porownanie)' if j==0 else '25 kV: izolatory -25, ukosnik %s, odciag %s'%(strut,stay)))
+                 '3 kV (porownanie)' if j==0 else '25 kV: izolatory -25, rury dobiera exe'))
 open('td_katalog.scm','w',newline='').write('\r\n'.join(L)+'\r\n')
 open('td_katalog_klucz.csv','w',encoding='utf-8-sig',newline='').write('\r\n'.join(K)+'\r\n')
 src=open('td.scn',encoding='utf-8',errors='replace',newline='').read()

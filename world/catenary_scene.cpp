@@ -17,6 +17,9 @@ http://mozilla.org/MPL/2.0/.
 #include "model/AnimModel.h"
 #include "simulation/simulation.h"
 #include "utilities/Globals.h"
+
+#include <algorithm>
+#include <limits>
 #include "utilities/Logs.h"
 #include "utilities/parser.h"
 
@@ -135,20 +138,80 @@ assemble( scene_suspension const &Suspension, catenary::cantilever_catalog const
         input.overrides[ replacement.first ] = replacement.second;
     }
 
-    catenary::cantilever_result result;
-    auto solved { false };
+    catenary::cantilever_pole const *pole { nullptr };
     if( data.has_pole ) {
-        // słup z katalogu: zaczepy, mocowania i słup liczy solver; Attach to oś słupa na wysokości główki szyny
-        auto const *pole { Catalog.pole( data.pole_type ) };
+        pole = Catalog.pole( data.pole_type );
         if( pole == nullptr ) {
             ErrorLog( label + "uses pole \"" + data.pole_type + "\" which isn't in the cantilever catalogue" );
             return 0;
         }
-        solved = catenary::solve_cantilever_on_pole( Catalog, *scheme, *pole, reach, Attach.y - Wire.y, input.messenger, input.overrides,
-            ( Umbrella != nullptr ? *Umbrella : catenary::cantilever_umbrella() ), result );
+    }
+    auto const solve = [ & ]( std::map<std::string, std::string> const &Overrides, catenary::cantilever_result &Result ) {
+        if( pole != nullptr ) {
+            // słup z katalogu: zaczepy, mocowania i słup liczy solver; Attach to oś słupa na wysokości główki szyny
+            return catenary::solve_cantilever_on_pole( Catalog, *scheme, *pole, reach, Attach.y - Wire.y, input.messenger, Overrides,
+                ( Umbrella != nullptr ? *Umbrella : catenary::cantilever_umbrella() ), Result );
+        }
+        auto attempt { input };
+        attempt.overrides = Overrides;
+        return catenary::solve_cantilever( Catalog, *scheme, attempt, Result );
+    };
+    // inny zestaw izolatorów (25 kV) bez kart katalogowych (Jan 2026-10-17: „lepić na oko”): rury ukośnika, odciągu i wysięgu
+    // z izolatorem dobierane z tej samej rodziny części - długość bliska pierwotnej minus przyrost izolatora i po jednym
+    // kroku w obie strony; wygrywa złożenie z najmniejszą liczbą uwag solvera, przy równej - najbliższe tej długości.
+    // Rury podane w scenerii przez override nie są ruszane.
+    std::vector<std::pair<std::string, std::vector<std::string>>> fits;
+    if( false == data.insulators.empty() ) {
+        for( auto const *tube : { "strut", "stay", "steady" } ) {
+            auto const role { scheme->roles.find( tube ) }, insulator { scheme->roles.find( std::string( tube ) + "_insulator" ) };
+            auto const replaced { input.overrides.find( std::string( tube ) + "_insulator" ) };
+            if( role == scheme->roles.end() || insulator == scheme->roles.end() || replaced == input.overrides.end() ) { continue; }
+            if( std::any_of( data.overrides.begin(), data.overrides.end(), [ & ]( std::pair<std::string, std::string> const &O ) { return O.first == tube; } ) ) { continue; }
+            auto const *original { Catalog.part( role->second ) };
+            auto const *oldins { Catalog.part( insulator->second ) }, *newins { Catalog.part( replaced->second ) };
+            auto const dash { role->second.find( '-' ) };
+            if( original == nullptr || oldins == nullptr || newins == nullptr || dash == std::string::npos ) { continue; }
+            auto const family { role->second.substr( 0, dash + 1 ) };
+            auto const target { original->length - ( newins->length - oldins->length ) };
+            std::vector<std::pair<double, std::string>> sorted;
+            for( auto const &part : Catalog.parts() ) {
+                if( part.first.compare( 0, family.size(), family ) == 0 && part.second.kind == original->kind ) { sorted.emplace_back( part.second.length, part.first ); }
+            }
+            std::sort( sorted.begin(), sorted.end() );
+            if( sorted.empty() ) { continue; }
+            std::size_t nearest { 0 };
+            for( std::size_t index = 1; index < sorted.size(); ++index ) {
+                if( std::abs( sorted[ index ].first - target ) < std::abs( sorted[ nearest ].first - target ) ) { nearest = index; }
+            }
+            std::vector<std::string> candidates { sorted[ nearest ].second };   // pierwszy = najbliższy
+            if( nearest > 0 ) { candidates.push_back( sorted[ nearest - 1 ].second ); }
+            if( nearest + 1 < sorted.size() ) { candidates.push_back( sorted[ nearest + 1 ].second ); }
+            fits.emplace_back( tube, candidates );
+        }
+    }
+    catenary::cantilever_result result;
+    auto solved { false };
+    if( fits.empty() ) {
+        solved = solve( input.overrides, result );
     }
     else {
-        solved = catenary::solve_cantilever( Catalog, *scheme, input, result );
+        auto best { std::numeric_limits<std::size_t>::max() };
+        std::vector<std::size_t> choice( fits.size(), 0 );
+        while( true ) {
+            auto overrides { input.overrides };
+            for( std::size_t index = 0; index < fits.size(); ++index ) { overrides[ fits[ index ].first ] = fits[ index ].second[ choice[ index ] ]; }
+            catenary::cantilever_result attempt;
+            if( solve( overrides, attempt ) && attempt.warnings.size() < best ) {
+                best = attempt.warnings.size();
+                result = attempt;
+                solved = true;
+            }
+            // następna kombinacja (kolejność: najbliższe długości najpierw, więc przy równej liczbie uwag zostaje pierwsza)
+            std::size_t index { 0 };
+            while( index < fits.size() && ++choice[ index ] == fits[ index ].second.size() ) { choice[ index ] = 0; ++index; }
+            if( index == fits.size() ) { break; }
+        }
+        if( false == solved ) { solved = solve( input.overrides, result ); }
     }
     if( Probe != nullptr ) { *Probe = result; return ( solved ? 1 : 0 ); }
     // uwagi solvera to informacja o dopasowaniu części, nie błąd scenerii; błędem jest dopiero wysięgnik, którego nie da się złożyć
