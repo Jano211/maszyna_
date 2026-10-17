@@ -236,6 +236,11 @@ def _vee(name, new):
     body = body.replace('  stretch ?cord cord_anchor messenger_clamp.end +z\n', '  vee cord cord_anchor messenger 0.125 +z\n')
     return '\n// jak %s, ale z linka V do liny nosnej\nassembly %s\n%sendassembly\n' % (name, new, body)
 ASSEMBLIES += _vee('swing', 'swing_vee') + _vee('swing_steady', 'swing_steady_vee')
+# 120x (karta 1201): uchwyty 4120-3 wprost na wysiegu - wyk. 1, 2 dwa (+-0,04 m wokol A), wyk. 3, 4 jeden w A; punkty przewodow w wyniku
+ASSEMBLIES += ('\n// jak swing_vee, z uchwytami przewodow 4120 wprost na wysiegu (120x)\nassembly swing_vee_contacts\n' +
+    re.search(r'assembly swing_vee\n(.*?)endassembly\n', ASSEMBLIES, re.S).group(1) +
+    '  shift wire_a wire 0.04 0\n  shift wire_b wire -0.04 0\n  place ?contact_clamp wire steady -y\n'
+    '  place ?contact_clamp_a wire_a steady -y\n  place ?contact_clamp_b wire_b steady -y\n  export wire_a\n  export wire_b\nendassembly\n')
 # 117x/118x (tom 3 s. 88-98, nieprzechylne w przesle naprezenia): jak swing_vee (z ramionami), do tego uchwyt 4120-3 wprost na
 # wysiegu dla drugiego (podniesionego) przewodu 0,08 m od przewodu ramion: 117x dalej od slupa, 118x blizej slupa
 def _second_wire(new, dy):
@@ -644,8 +649,9 @@ for n in range(8):
 w()
 # 120x przesla naprezenia (s. 101-106), wykonania 1-4: wyk. 1, 3 izolatory ~2,00 m w pionie, wyk. 2, 4 ~1,60 m (karta 1201);
 # 128x rozjazdowe podwojne od slupa (s. 161-167), wykonania 3 i 4. Obie z linka V. 1287-1289 (glowica 4500) jeszcze nie.
-# ZALOZENIE: przy 120x obejma 4210 w osi przewodu jezdnego (na rysunku tuz za osia), wysokosc rury 0,22 m.
-w('registration 120x tube 0.2200 clamp 0.0000 endregistration   // zalozenie, do sprawdzenia z modelami ramion')
+# 120x: przewody wisza na 4120-3 wprost na wysiegu (Jan 19:35, karta 1201) - rura 0,0519 nad przewodem; obejma 4210 linki V
+# 0,14 m za A (odczyt z rysunku 1201).
+w('registration 120x tube 0.0519 clamp -0.1400 endregistration   // rura wysiegu nad przewodami na 4120-3, obejma linki V za nimi')
 CV = {}
 for n in range(6):   # 1201-1206: ukosnik 6001-(n+3) dla wyk. 1, 3, 6001-(n+2) dla 2, 4; 6002-(n+2); 6011-(n+4)
     for wyk in range(1, 5):
@@ -663,13 +669,20 @@ for (card, wyk), (strut, stay, steady, reg) in sorted(CV.items()):
     if three:
         line += ' mount stay %s mount strut %s mount steady %s' % (f(1.3784 if low else 1.7784), f(0.3784 if low else 0.7784), f(0.2297))
     else:
-        line += ' mount stay %s mount strut %s' % (f(1.50 if low else 1.90), f(-0.10))
-    line += ' assembly %s' % ('swing_steady_vee' if three else 'swing_vee')
+        if reg == '120x':
+            # 120x z 4120 na wysiegu (rura 0,05 nad drutem): odstep izolatorow z karty (~2,00 / ~1,60), gorny zaczep na hk - ZALOZENIE
+            # jak 102x; z dolnym -0,10 uchwyt 4050 wysiegu siadal na izolatorze ukosnika
+            line += ' mount stay %s mount strut %s' % (f(1.30 if low else 1.70), f(-0.30))
+        else:
+            line += ' mount stay %s mount strut %s' % (f(1.50 if low else 1.90), f(-0.10))
+    line += ' assembly %s' % ('swing_steady_vee' if three else ('swing_vee_contacts' if reg == '120x' else 'swing_vee'))
     roles = [('stay_insulator', '7100-01'), ('stay', stay), ('stay_end', '4400-01'), ('stay_clamp', '4070-01'),
              ('strut_insulator', '7100-01'), ('strut', strut), ('head_clamp', '4050-01'),
              ('messenger_clamp', '4140-01'), ('cord', '4490-00'), ('cord_clamp', '4210-02'), ('steady', steady)]
     roles.append(('steady_insulator', '7010-01') if three else ('steady_clamp', '4050-01'))
     roles += arms_for(card, wyk)
+    if reg == '120x':
+        roles += [('contact_clamp_a', '4120-03'), ('contact_clamp_b', '4120-03')] if wyk in (1, 2) else [('contact_clamp', '4120-03')]
     for role, part in roles: line += ' role %s %s' % (role, part)
     w(line + ' endscheme')
 w()
@@ -968,9 +981,11 @@ for card in list(range(1052, 1057)) + [1250, 1251, 1252, 1253, 1254, 1257] + [12
         own = ''
         if card in (1250, 1270):
             # 1250 (Jan): gorny - dolny izolator (lina) 1,60 m (wyk. 2, 3) / 1,20 m (wyk. 4), gorny - srodkowy (ukosnik) ~1,00 m; stara hk z 12xx
+            # zaczep liny minimalnie nad uchem ramion (Jan 19:35: wczesniej 0,30 nad drutem - izolator za bardzo przechylony)
             span = 1.20 if wyk == 4 else 1.60
-            stay_mount, strut_mount = hk + 0.20, hk + 0.20 - 1.00
-            own = ' mount steady %s' % f(hk + 0.20 - span)
+            rope_mount = 0.0219 + 0.05
+            stay_mount, strut_mount = rope_mount + span, rope_mount + span - 1.00
+            own = ' mount steady %s' % f(rope_mount)
             strut = '6001-01'
         line = 'scheme %d %d reach %s %s height %s registration ropex mount stay %s mount strut %s%s assembly %s' % (
             card, wyk, f(1.45 + 0.3 * n), f(1.75 + 0.3 * n), f(hk), f(stay_mount), f(strut_mount), own, 'rope_arms_mount' if own else 'rope_arms')
