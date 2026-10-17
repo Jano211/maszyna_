@@ -478,6 +478,10 @@ ASSEMBLIES += ('\n// jak inner_push, linka V od glowicy do liny, dwa zestawy ram
       .replace('  shift arms_side wire -1 0\n  hangarms ?arms arms_bracket ?arms_head steady arms_side\n',
                '  shift arms_side wire 1 0\n  hangarms ?arms arms_bracket ?arms_head steady arms_side\n  shift arms_b_side wire -1 0\n  hangarms ?arms_b arms_b_bracket ?arms_b_head steady arms_b_side\n') +
     'endassembly\n')
+# 1267-1269 (tom 3 s. 152-154): jak inner_push, linka V od glowicy 4500 do liny nosnej, jedno ramie od slupa
+ASSEMBLIES += ('\n// jak inner_push, linka V od glowicy do liny (1267-1269)\nassembly inner_push_vee\n' +
+    re.search(r'assembly inner_push\n(.*?)endassembly\n', ASSEMBLIES, re.S).group(1)
+      .replace('  stretch ?cord tip_eye messenger_clamp.end +z\n', '  vee cord tip_eye messenger 0.125 +z\n') + 'endassembly\n')
 for l in ASSEMBLIES.splitlines(): w(l)
 w()
 
@@ -873,6 +877,24 @@ for n in range(2, 7):
                            ('link', '6506-01'), ('link_clamp', '4760-01'), ('link_cord_clamp', '4210-02')]:
             line += ' role %s %s' % (role, part)
         w(line + ' endscheme')
+w('part 6212-01 kind arms point holder 0.7656 0.1791 endpart   // ramie 6212-1 bez uchwytu przewodu (model Jana 2026-10-17), zawieszenie jak 6202')
+w('part 6206-01 kind arms point holder 1.2100 0.0551 endpart   // pojedyncze stale, komplet z 4110 (model Jana 2026-10-17)')
+w('part 6206-02 kind arms point holder 1.3700 0.1192 endpart   // pojedyncze stale, komplet z 4110 (model Jana 2026-10-17)')
+# 1267-1269 wyk. 3, 4: 6206-1 od slupa na 4280-3, wysieg 6001 od ukosnika (4070 + 4400), 4500-1, linka V; wyk. 2 (para 6209) - czeka na modele.
+# Rury z tabel: 1267 ukosnik/wysieg 6001-9/-10 (wyk. 4: -8/-9), odciag 6002-8; 1268: -10/-11 (-9/-10), 6002-11; 1269: -14/-14 (-11/-11), 6002-9
+w('registration 1267 tube %s clamp 0.0000 endregistration   // os wysiegu 6001: ucho 4280-3 w punkcie zawieszenia 6206-01' % f(0.0551 + 0.196 + 0.03))
+for card, pipes, stay in ((1267, ((9, 10), (8, 9)), 8), (1268, ((10, 11), (9, 10)), 11), (1269, ((14, 14), (11, 11)), 9)):
+    n = card % 10
+    for wyk, hk, stay_mount in ((3, 1.70, 1.90), (4, 1.30, 1.50)):
+        strut, steady = pipes[0] if wyk == 3 else pipes[1]
+        line = 'scheme %d %d reach %s %s height %s registration 1267 mount stay %s mount strut -0.1000 assembly inner_push_vee' % (
+            card, wyk, f(1.45 + 0.3 * n), f(1.75 + 0.3 * n), f(hk), f(stay_mount))
+        for role, part in [('stay_insulator', '7100-01'), ('stay', '6002-%02d' % stay), ('stay_end', '4400-01'), ('stay_clamp', '4070-01'),
+                           ('strut_insulator', '7100-01'), ('strut', '6001-%02d' % strut), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01'),
+                           ('steady_clamp', '4070-01'), ('steady_end', '4400-01'), ('steady', '6001-%02d' % steady), ('steady_head', '4500-01'),
+                           ('cord', '4490-00'), ('arms', '6206-01'), ('arms_bracket', '4280-03')]:
+            line += ' role %s %s' % (role, part)
+        w(line + ' endscheme')
 # 1099 wyk. 3 (hk 1,70, ukosnik i wysieg 6001-14) i 4 (hk 1,30, 6001-11), odciag 6002-9; 4500-1 na koncu (karta: 4500-2 z odreczna
 # uwaga "nie moze byc do 6001, powinno byc 4500-1"); uchwyty 4280-3: zero na spodzie rury, ucho 0,196 m nizej (model Jana)
 for n in (1, 3):
@@ -883,7 +905,7 @@ for wyk, hk, stay_mount, pipe in ((3, 1.70, 1.90, '6001-14'), (4, 1.30, 1.50, '6
     for role, part in [('stay_insulator', '7100-01'), ('stay', '6002-09'), ('stay_end', '4400-01'), ('stay_clamp', '4070-01'),
                        ('strut_insulator', '7100-01'), ('strut', pipe), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01'),
                        ('steady_clamp', '4070-01'), ('steady_end', '4400-01'), ('steady', pipe), ('steady_head', '4500-01'), ('cord', '4490-00'),
-                       ('arms', '6202-01'), ('arms_bracket', '4280-03'), ('arms_b', '6202-01'), ('arms_b_bracket', '4280-03')]:
+                       ('arms', '6202-01'), ('arms_bracket', '4280-03'), ('arms_b', '6212-01'), ('arms_b_bracket', '4280-03')]:
         line += ' role %s %s' % (role, part)
     w(line + ' endscheme')
 # 109x: 1091-1098 wyk. 3 i 4 (1099 to inna mechanika - osobno). Ukosnik 6001-(n+2) (wyk. 4: n+1), odciag linowy 6007-(n+1) na 4700 + 7020,
@@ -897,7 +919,7 @@ for n in range(1, 9):
                            ('stay_clamp', '4070-01'), ('strut_insulator', '7100-01'), ('strut', '6001-%02d' % (n + (2 if wyk == 3 else 1))),
                            ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01'), ('cord', '4490-00'), ('cord_clamp', '4210-02'),
                            ('steady', '6011-%02d' % (n + 6)), ('steady_clamp', '4050-01'),
-                           ('arms', '6202-01'), ('arms_bracket', '4250-03'), ('arms_b', '6202-01'), ('arms_b_bracket', '4250-03')]:
+                           ('arms', '6202-01'), ('arms_bracket', '4250-03'), ('arms_b', '6212-01'), ('arms_b_bracket', '4250-03')]:
             line += ' role %s %s' % (role, part)
         w(line + ' endscheme')
 # 105x: 1052-1056 wyk. 2, 3, 4 (sieci zewnetrzne, do slupa): wyk. 2 para 6207-1 + 6207-2 (zestaw 6207-12), wyk. 3, 4 pojedyncze 6207-3;
