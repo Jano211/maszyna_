@@ -637,16 +637,16 @@ T = lambda a, b: [int(x) for x in b]
 LOW = []
 for n in range(6):      # 070x: 6003-(3..8), 6002-(3..8), 6111-(3,4,5,5,6,6); 4120-3 x2 (wyk. 2) / x1 (wyk. 3)
     for wyk in (2, 3): LOW.append((700 + n, wyk, 'top_head_contact', '6003-%02d' % (n + 3), '6002-%02d' % (n + 3), '6111-%02d' % [3, 4, 5, 5, 6, 6][n], '0700-%02d' % wyk))
-for n in range(6):      # 071x: 6002-(3..8) poziomo, odciag 6002-(2..7); 072x: 6001-(3,5,6,7,8,9), odciag 6002-(5,6,7,8,9,9)
+for n in range(6):      # 071x: 6003-(3..8) poziomo (Jan 2026-10-17: 6002 ma sworzen do 4400, tu niepotrzebny), odciag 6002-(2..7); 072x: 6001-(3,5,6,7,8,9), odciag 6002-(5,6,7,8,9,9)
     for wyk in (2, 3):
-        LOW.append((710 + n, wyk, 'level_arms_in', '6002-%02d' % (n + 3), '6002-%02d' % (n + 2), None, '%04d-%02d' % (710 + n, wyk)))
+        LOW.append((710 + n, wyk, 'level_arms_in', '6003-%02d' % (n + 3), '6002-%02d' % (n + 2), None, '%04d-%02d' % (710 + n, wyk)))
         LOW.append((720 + n, wyk, 'level_arms_out', '6001-%02d' % [3, 5, 6, 7, 8, 9][n], '6002-%02d' % [5, 6, 7, 8, 9, 9][n], None, '%04d-%02d' % (720 + n, wyk)))
 for i, n in enumerate([0, 1, 2, 3, 4, 5, 8]):   # 073x/074x: 6003-(3..8,10), 6002-(3..8,9); 6111 073x (2..6,6,7), 074x (5,6,7,7,8,8,8)
     for wyk in (1, 2, 3):
         LOW.append((730 + n, wyk, 'top_head_in', '6003-%02d' % [3, 4, 5, 6, 7, 8, 10][i], '6002-%02d' % [3, 4, 5, 6, 7, 8, 9][i], '6111-%02d' % [2, 3, 4, 5, 6, 6, 7][i], '%04d-%03d' % (730 + n, wyk)))
         LOW.append((740 + n, wyk, 'top_head_out', '6003-%02d' % [3, 4, 5, 6, 7, 8, 10][i], '6002-%02d' % [3, 4, 5, 6, 7, 8, 9][i], '6111-%02d' % [5, 6, 7, 7, 8, 8, 14][i], '%04d-%03d' % (740 + n, wyk)))
-for n in range(6):      # 079x: pozioma 6002-(3..8) na wysokosci drutu, odciag 6002-(2..7); 4120-4 x2 (wyk. 1) / x1 (wyk. 3)
-    for wyk in (1, 3): LOW.append((790 + n, wyk, 'level_contact', '6002-%02d' % (n + 3), '6002-%02d' % (n + 2), None, '0790-%02d' % wyk))
+for n in range(6):      # 079x: pozioma 6003-(3..8) (jak 071x) na wysokosci drutu, odciag 6002-(2..7); 4120-4 x2 (wyk. 1) / x1 (wyk. 3)
+    for wyk in (1, 3): LOW.append((790 + n, wyk, 'level_contact', '6003-%02d' % (n + 3), '6002-%02d' % (n + 2), None, '0790-%02d' % wyk))
 w('// 07xx niskie: wysokosci zaczepow i hk ze zlozen z Blendera (079x wszystkie z 0790); registration = os wysiegu i obejma 4210')
 for card, wyk, asm, strut, stay, steady, key in sorted(LOW):
     b_ = _blend(key)
