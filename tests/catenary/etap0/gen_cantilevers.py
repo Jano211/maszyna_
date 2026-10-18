@@ -656,6 +656,90 @@ ASSEMBLIES += ('\n// teownik w przesle naprezenia (0120, 0160, wyk. 2-4): bez ra
     + _tension(_tee_body('tee_swing'), 'strut.hole_1', 'tee') + 'endassembly\n')
 ASSEMBLIES += ('\n// jak tee_tension, wyk. 1: siodlo/uchwyt liny na precie 4330-01, wysieg na wlasnym izolatorze, linka pionowo z hole_1 preta\nassembly tee_bar_tension\n'
     + _tension(TEE_BAR_STEADY.lstrip('\n'), 'stay.hole_1', 'stay') + 'endassembly\n')
+# 09xx niskie (hk 0,25-0,45, karty 0931-0934, 0961-0964): pozioma teowa 6107 (polka na dole) na izolatorze 7110 z dolnego zaczepu, na
+# wysokosci liny; siodlo 4160 odwrocone (poz. 3: szczeki w zmienionej kolejnosci) pod polka w miejscu liny; wezel 4380 (obejma 4380-02,
+# tez odwrocona, zero na spodzie polki; glowica 4380-01 obrocona w strone gornego zaczepu) 0,6 m od liny w strone slupa (karta: max 0,6 m);
+# odciag linowy 9832-2 (model linki 4490-00, grubszy) od 7130-02 na gornym zaczepie do ucha glowicy; ramiona na 4290 wprost na teowniku
+TEE_LOW = """
+  line strut_insulator strut_mount dir -1 0
+  point strut_start strut_insulator@strut_insulator.length
+  line strut strut_start dir -1 0
+  across strut saddle_at messenger 0
+  window strut saddle_at -strut.slide_horizontal_min.y -strut.slide_horizontal_max.y
+  point saddle_axis strut@strut.saddle_at
+  shift saddle saddle_axis 0 strut.slide_horizontal_min.z
+  point node_axis strut@strut.saddle_at-0.6
+  shift node node_axis 0 strut.slide_horizontal_min.z
+  shift node_pivot node 0 -stay_clamp.eye.z
+  line stay_head_dir node_pivot toward stay_mount
+  point stay_eye stay_head_dir@-stay_head.eye.y
+  line stay_insulator stay_mount toward stay_eye
+  point stay_start stay_insulator@stay_insulator.length
+  place strut_insulator strut_mount strut_insulator -y
+  place strut strut_start strut -y
+  place messenger_clamp saddle strut -y
+  flip messenger_clamp
+  place stay_clamp node strut -y
+  flip stay_clamp
+  place stay_head node_pivot stay_head_dir -y
+  place stay_insulator stay_mount stay_insulator -y
+  stretch stay stay_start stay_eye +z
+"""
+ASSEMBLIES += ('\n// 09xx niskie: pozioma teowa na wysokosci liny, odciag linowy do wezla 4380, ramiona na 4290 wprost na teowniku\nassembly tee_low\n'
+    + TEE_LOW.lstrip('\n') + '  hangarms ?arms arms_bracket ?arms_head strut registration\nendassembly\n')
+# 09xx srednie (hk 0,45-1,30, 0935-0938, 0965-0968) i przeslo naprezenia 0940: jak tee_low, do tego wysieg 6111 na wlasnym izolatorze
+# 7110 (trzeci zaczep, mocowanie 4630) na wysokosci zestawu ramion, ramiona na 4250/4260 na wysiegu; linka 9812: do slupa - V od liny
+# (zaczepy 0,2 m od siebie) do obejmy 4210, od slupa - z uchwytu 4230 na koncu teownika (hole_1) do obejmy przy koncu wysiegu
+TEE_LOW_STEADY = TEE_LOW + """
+  line steady_insulator steady_mount toward registration
+  point steady_start steady_insulator@steady_insulator.length
+  line steady steady_start along steady_insulator
+  project steady cord_clamp registration steady.length rules.cord_clamp_inset
+  point cord_clamp_at steady@steady.cord_clamp
+  shift cord_anchor cord_clamp_at 0 cord_clamp.eye
+  place steady_insulator steady_mount steady_insulator -y
+  place steady steady_start steady -y
+  place cord_clamp cord_clamp_at steady.up +z
+"""
+ASSEMBLIES += ('\n// 09xx srednie do slupa: tee_low + wysieg na izolatorze, linka V od liny (0,2 m) do obejmy 4210\nassembly tee_low_steady\n'
+    + TEE_LOW_STEADY.lstrip('\n') + '  vee cord cord_anchor messenger 0.1 +z\n  hangarms ?arms arms_bracket ?arms_head steady registration\nendassembly\n')
+ASSEMBLIES += ('\n// 09xx srednie od slupa: linka z uchwytu 4230 na koncu teownika (hole_1)\nassembly tee_low_steady_out\n'
+    + TEE_LOW_STEADY.lstrip('\n') + '  point tee_end strut@-strut.hole_1.y\n  line cord_line tee_end toward cord_anchor\n'
+    '  point cord_top cord_line@-cord_holder.eye.z\n  place cord_holder tee_end cord_line -z\n  stretch ?cord cord_anchor cord_top +z\n'
+    '  hangarms ?arms arms_bracket ?arms_head steady registration\nendassembly\n')
+ASSEMBLIES += ('\n// 0940: przeslo naprezenia, jak tee_low_steady bez ramion, dwa przewody na 4120 na wysiegu\nassembly tee_low_tension\n'
+    + TEE_LOW_STEADY.lstrip('\n') + '  vee cord cord_anchor messenger 0.1 +z\n'
+    '  project steady contact_c wire steady.length 0\n  point contact_c_at steady@steady.contact_c\n  shift wire_c contact_c_at 0 -0.0519\n'
+    '  shift wire_a wire_c 0.04 0\n  shift wire_b wire_c -0.04 0\n  place ?contact_clamp_a wire_a steady -y\n  place ?contact_clamp_b wire_b steady -y\n'
+    '  export wire_a\n  export wire_b\nendassembly\n')
+# 09xx wysokie hk >= 2,10 (0945-0948, 0985-0988): teownik jak 011x, wysieg 6111 na osobnym dolnym izolatorze 7110 (mocowanie 4630),
+# nie na wezle ukosnika; linka 9812 do slupa pionowo z uchwytu 4230 w hole_2 ukosnika, od slupa z konca poziomego ramienia (hole_1)
+TEE_SWING_STEADY = """
+  tee strut_mount stay_mount messenger
+  line steady_insulator steady_mount toward registration
+  point steady_start steady_insulator@steady_insulator.length
+  line steady steady_start along steady_insulator
+  project steady cord_clamp CORDREF steady.length rules.cord_clamp_inset
+  point cord_clamp_at steady@steady.cord_clamp
+  shift cord_anchor cord_clamp_at 0 cord_clamp.eye
+  line cord_line CORDTOP toward cord_anchor
+  point cord_top cord_line@-cord_holder.eye.z
+  place strut_insulator strut_pin strut_insulator -y
+  place strut strut_start tee -y
+  place stay_insulator stay_pin stay -y
+  place stay stay_start stay -y
+  place messenger_clamp saddle tee -y
+  place steady_insulator steady_mount steady_insulator -y
+  place steady steady_start steady -y
+  place cord_clamp cord_clamp_at steady.up +z
+  place cord_holder CORDTOP cord_line -z
+  stretch ?cord cord_anchor cord_top +z
+  hangarms ?arms arms_bracket ?arms_head steady registration
+"""
+ASSEMBLIES += ('\n// teownik, wysieg na osobnym izolatorze (09xx hk >= 2,10) do slupa: linka pionowo z hole_2 ukosnika\nassembly tee_swing_steady\n'
+    + TEE_SWING_STEADY.replace('CORDREF', 'strut.hole_2').replace('CORDTOP', 'strut.hole_2').lstrip('\n') + 'endassembly\n')
+ASSEMBLIES += ('\n// jak tee_swing_steady, od slupa: linka z konca poziomego ramienia (hole_1)\nassembly tee_swing_steady_out\n'
+    + TEE_SWING_STEADY.replace('CORDREF', 'registration').replace('CORDTOP', 'strut.hole_1').lstrip('\n') + 'endassembly\n')
 # izolator wysiegu z rura (7010) i jego rura (6111/6011) przy uchwycie 4630: cwierc obrotu wokol wlasnej osi, jak izolator
 # odciagu na szekli (Jan 2026-10-17: kazdy izolator mocowany tak samo); na koncu skladanki, po wszystkich krokach
 _steady_insulated = False
@@ -1277,7 +1361,7 @@ w('part 4160-01 kind messenger_clamp point rope 0.0000 0.0106 endpart   // siodl
 w('part 4230-01 kind clamp point eye 0.0000 -0.0781 endpart   // uchwyt linki na teowniku (sruba w hole_2), wisi w linii linki; eye = zaczep linki')
 # teowniki - czesci na kolejne karty (modele Jana 2026-10-18 16:15-17:30, punkty z plikow t3d), jeszcze bez schematow
 for n, L in zip(range(1, 7), (1.385, 1.835, 2.285, 2.735, 3.185, 3.635)):
-    w('part 6107-%02d kind tee_bar point hole_1 %s 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max %s -0.0450 endpart   // pozioma teowa 09xx, polka NA DOLE (siodlo 4160 odwrocone - flip), slide na spodzie polki' % (n, f(-L), f(-(L - 0.05))))
+    w('part 6107-%02d kind tee_bar length %s radius 0.0450 point hole_1 %s 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max %s -0.0450 endpart   // pozioma teowa 09xx, polka NA DOLE (siodlo 4160 odwrocone - flip), slide na spodzie polki; length = koniec modelu' % (n, f(L + 0.03), f(-L), f(-(L - 0.05))))
 for n, L in zip(range(1, 5), (2.9452, 3.4452, 3.8452, 4.2452)):
     w('part 6113-%02d kind tee_bar point hole_1 %s 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max %s -0.0450 endpart   // wysieg teowy (przesla naprezenia na luku, rozjazdowe)' % (n, f(-L), f(-(L - 0.05))))
 for n, kat, L in ((1, 3, 3.8504), (2, 4, 4.2504)):
@@ -1291,6 +1375,10 @@ w('part 4170-02 kind messenger_clamp point rope -0.0027 0.0507 endpart   // glow
 w('part 4370-02 kind clamp point eye -0.0883 -0.0060 endpart   // glowica 4370 na obejmie 4350-02 (Jan): zero w eye obejmy = os obrotu, eye = sworzen wysiegu/poprzeczki')
 w('part 4370-05 kind clamp point eye 0.0000 -0.0785 endpart   // obejma 4370 na belke: eye = os zawiasu 4370-04')
 w('part 4370-04 kind clamp point eye -0.0883 -0.0060 endpart   // zawias do 4370-05: zero w eye 4370-05 = os obrotu, eye = sworzen')
+w('part 4380-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na 6107 (jak 4350-02), eye = os obrotu glowicy 4380-01')
+w('part 4380-01 kind clamp point eye -0.1012 0.0001 endpart   // glowica wezla 4380: zero w osi obrotu, eye = zaczep odciagu linowego')
+w('part 9832-02 kind cord length 1.0000 model 4490-00 girth 2.5000 endpart   // odciag linowy 09xx (stal 6x24x7 Ro-Zn, ~10 mm): model linki 4490-00 (4 mm) pogrubiony 2,5 raza (Jan)')
+w('part 9814-03 kind cord length 1.0000 model 4490-00 girth 1.9000 endpart   // lina KB35 (~7,5 mm): model linki 4490-00 pogrubiony 1,9 raza (Jan)')
 w('part 4350-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na teowniku, eye = os obrotu glowicy')
 w('part 4350-01 kind clamp point eye -0.0515 0.0004 point mount -0.0514 -0.0359 endpart   // glowica wezla: eye = rura/teownik wysiegu, mount = lina (nazwy poprawione przez Jana 2026-10-18 14:48)')
 # 0111 (s. 64): wyk. 2/3/4 = A 1,75-2,20 / 2,20-2,65 / 2,65-3,10, hk 1,70 (sieci 1-4, karta 13-0002); 6101-2/3/4, 4310-2/3/4,
@@ -1348,7 +1436,7 @@ def tee_points(wyk):
 # jeden schemat teownika: wyk. 1 - 6102 + 4330-01 (siodlo na precie, wysieg na wlasnym izolatorze), 2-4 - 6101 (przechylne: pret 4310
 # na 7120, nieprzechylne: 4320 na 7110), 5 - 6103 + 4330-05 + wezel 4360 (tylko nieprzechylne). base = nazwa skladanki dla wyk. 2-4
 # (tee_swing...), suffix dopisywany do skladanek wyk. 1 i 5 (np. '_wire_out'); outward - od slupa (linka z konca preta)
-def tee_scheme(card, wyk, hk, reg, arms_roles, steady_n, outward, tilting, base=None, suffix='', extra_roles=(), base1=None, rope=0.0106, saddle=(('messenger_clamp', '4160-01'),), steady_mount=0.22):
+def tee_scheme(card, wyk, hk, reg, arms_roles, steady_n, outward, tilting, base=None, suffix='', extra_roles=(), base1=None, rope=0.0106, saddle=(('messenger_clamp', '4160-01'),), steady_mount=0.22, own_steady=None):
     amin, amax = A_TEE[wyk]
     common = list(saddle) + [ ('steady', '6111-%02d' % steady_n), ('cord', '4490-00'), ('cord_clamp', '4210-02'),
               ('cord_holder', '4230-01')] + list(arms_roles) + list(extra_roles)
@@ -1371,10 +1459,11 @@ def tee_scheme(card, wyk, hk, reg, arms_roles, steady_n, outward, tilting, base=
         strut_z = hk - (0.20 * sn + pts['slide_horizontal_min'][1] + rope)
         stay_z = strut_z + 0.20 * sn + pts['eye'][1] + (0.0 if tilting else 0.04)
         assembly = base or ('tee_swing_out' if outward else 'tee_swing')
-        line = 'scheme %d %d reach %s %s height %s registration %s mount stay %s mount strut %s assembly %s' % (
-            card, wyk, f(amin), f(amax), f(hk), reg, f(stay_z), f(strut_z), assembly)
+        line = 'scheme %d %d reach %s %s height %s registration %s mount stay %s mount strut %s%s assembly %s' % (
+            card, wyk, f(amin), f(amax), f(hk), reg, f(stay_z), f(strut_z), '' if own_steady is None else ' mount steady %s' % f(own_steady), assembly)
+        node = [('steady_clamp', '4350-02'), ('steady_head', '4350-01')] if own_steady is None else [('steady_insulator', '7110-01')]
         roles = [('strut_insulator', '7110-01'), ('strut', '6101-%02d' % wyk), ('stay_insulator', '7120-01' if tilting else '7110-01'),
-                 ('stay', ('4310-%02d' if tilting else '4320-%02d') % wyk), ('steady_clamp', '4350-02'), ('steady_head', '4350-01')] + common
+                 ('stay', ('4310-%02d' if tilting else '4320-%02d') % wyk)] + node + common
     for role, part in roles: line += ' role %s %s' % (role, part)
     w(line + ' endscheme')
 w('// teowniki 0121-0124 (nieprzechylne): wyk. 1 tee_bar_steady (siodlo na precie, wysieg na izolatorze), wyk. 2-4 tee_swing z pretem 4320')
@@ -1405,6 +1494,100 @@ for card, (steadies, hk, clamps) in sorted(TEE06.items()):
   for wyk in sorted(steadies):
       tee_scheme(card, wyk, hk, '120x', (), steadies[wyk], False, False, base='tee_tension', base1='tee_bar_tension', extra_roles=clamps,
                  rope=0.0507, saddle=(('messenger_base', '4170-01'), ('messenger_clamp', '4170-02')), steady_mount=0.0519)
+# 09xx (kolprojekt1 s. 257-281): niskie hk 0,25-0,45 (przyjete 0,35 - lina w srodku zakresu, glowica 4290 trafia w otwor) i srednie
+# hk 0,45-1,30 (przyjete 0,90). Gorny zaczep (7130) 1,00 m nad dolnym (karta: min 0,9 m). Tabele: 6107 i 6111 dla wyk. 1-4,
+# ramiona/wsporniki. 4290-3 (teownik, jedna lapka) = korpus 4290-04 + glowica 4290-21, 4290-4 (dwie lapki) = 4290-04 + 4290-22.
+LOW_ARMS = {'6204': (('arms', '6204-02'), ('arms_bracket', '4290-04'), ('arms_head', '4290-22')),
+            '6205': (('arms', '6205-02'), ('arms_bracket', '4290-04'), ('arms_head', '4290-22')),
+            '6202': (('arms', '6202-01'), ('arms_bracket', '4290-04'), ('arms_head', '4290-21')),
+            '6203': (('arms', '6203-01'), ('arms_bracket', '4290-04'), ('arms_head', '4290-21'))}
+# karta: (rejestracja, ramiona, 6107 wyk. 1-4)
+T09_LOW = {931: ('111x-2', '6204', (1, 2, 3, 4)), 932: ('112x-2', '6204', (3, 4, 5, 6)),
+           933: ('113x-2', '6205', (1, 2, 3, 4)), 934: ('114x-2', '6205', (3, 4, 5, 6)),
+           961: ('111x-3', '6202', (1, 2, 3, 4)), 962: ('112x-3', '6202', (3, 4, 5, 6)),
+           963: ('113x-3', '6203', (1, 2, 3, 4)), 964: ('114x-3', '6203', (3, 4, 5, 6))}
+# karta: (rejestracja, ramiona + wspornik, 6111 wyk. 1-4, od slupa)
+T09_MID = {935: ('111x-2', (('arms', '6204-02'), ('arms_bracket', '4250-04')), (2, 3, 5, 6), False),
+           936: ('112x-2', (('arms', '6204-02'), ('arms_bracket', '4250-04')), (5, 6, 7, 8), True),
+           937: ('113x-2', (('arms', '6205-02'), ('arms_bracket', '4260-02')), (2, 3, 5, 6), False),
+           938: ('114x-2', (('arms', '6205-02'), ('arms_bracket', '4260-02')), (5, 6, 7, 8), True),
+           965: ('111x-3', (('arms', '6202-01'), ('arms_bracket', '4250-03')), (2, 3, 5, 6), False),
+           966: ('112x-3', (('arms', '6202-01'), ('arms_bracket', '4250-03')), (5, 6, 7, 8), True),
+           967: ('113x-3', (('arms', '6203-01'), ('arms_bracket', '4260-01')), (2, 3, 5, 6), False),
+           968: ('114x-3', (('arms', '6203-01'), ('arms_bracket', '4260-01')), (5, 6, 7, 8), True)}
+REG_TUBE = {}
+for m in re.finditer(r'^registration (\S+) tube (\S+)', out.getvalue(), re.M): REG_TUBE[m.group(1)] = float(m.group(2))
+def low_scheme(card, wyk, hk, reg, roles, assembly, steady_z=None):
+    amin, amax = A_TEE[wyk]
+    strut_z = hk + 0.0106 + 0.045
+    line = 'scheme %d %d reach %s %s height %s registration %s mount stay %s mount strut %s' % (card, wyk, f(amin), f(amax), f(hk), reg, f(strut_z + 1.0), f(strut_z))
+    if steady_z is not None: line += ' mount steady %s' % f(steady_z)
+    line += ' assembly ' + assembly
+    for role, part in [('strut_insulator', '7110-01'), ('messenger_clamp', '4160-01'), ('stay_clamp', '4380-02'), ('stay_head', '4380-01'),
+                       ('stay_insulator', '7130-02'), ('stay', '9832-02')] + list(roles):
+        line += ' role %s %s' % (role, part)
+    w(line + ' endscheme')
+w('// teowniki 09xx niskie (hk 0,25-0,45): pozioma teowa 6107, odciag linowy, ramiona na 4290 na teowniku')
+for card, (reg, arms, bars) in sorted(T09_LOW.items()):
+    for wyk in range(1, 5):
+        # hk tak, zeby glowica 4290 trafila w otwor: 6204/6202 (ucho 0,18 nad drutem) - 0,35, 6205/6203 (ucho 0,02) - 0,375
+        low_scheme(card, wyk, 0.35 if arms in ('6204', '6202') else 0.375, reg, [('strut', '6107-%02d' % bars[wyk - 1])] + list(LOW_ARMS[arms]), 'tee_low')
+w('// teowniki 09xx srednie (hk 0,45-1,30): jak niskie + wysieg 6111 na wlasnym izolatorze 7110, ramiona na wysiegu')
+for card, (reg, arms_roles, steadies, outward) in sorted(T09_MID.items()):
+    for wyk in range(1, 5):
+        roles = [('strut', '6107-%02d' % wyk), ('steady_insulator', '7110-01'), ('steady', '6111-%02d' % steadies[wyk - 1]),
+                 ('cord', '4490-00'), ('cord_clamp', '4210-02')] + list(arms_roles)
+        if outward: roles.append(('cord_holder', '4230-01'))
+        low_scheme(card, wyk, 0.90, reg, roles, 'tee_low_steady_out' if outward else 'tee_low_steady', REG_TUBE[reg])
+w('// teownik 0940: przeslo naprezenia hk 0,45-1,30, dwa przewody na 4120-3 na wysiegu, linka V')
+for wyk, st in zip(range(1, 5), (3, 4, 5, 6)):
+    low_scheme(940, wyk, 0.90, '120x', [('strut', '6107-%02d' % wyk), ('steady_insulator', '7110-01'), ('steady', '6111-%02d' % st),
+               ('cord', '4490-00'), ('cord_clamp', '4210-02'), ('contact_clamp_a', '4120-03'), ('contact_clamp_b', '4120-03')], 'tee_low_tension', 0.0519)
+# 09xx wysokie: 0941-0944 / 0981-0984 (hk 1,70-2,10, przyjete 1,70 - przy 1,90 wezel 4350 schodzi ponizej skosnego ramienia): jak 011x, ramiona na 4290 na wysiegu 6111 (4290-1 jedna lapka =
+# korpus 4290-02 + glowica 4290-21, 4290-2 dwie = 4290-02 + 4290-22); 0945-0948 / 0985-0988 (hk >= 2,10, przyjete 2,20): wysieg na
+# osobnym izolatorze 7110, ramiona na 4250/4260. 0944, 0948, 0984, 0988 nieprzechylne (4320, 7110 u gory). Rejestracje 4290: rura
+# wysiegu tak, zeby glowica trafila w otwor (6204/6202 - hole_1, 6205/6203 - hole_2)
+w('registration 094x-a tube 0.2918 clamp 0.1689 endregistration   // 4290 na 6111, ramiona 6204/6202 (ucho 0,18) w hole_1, do slupa')
+w('registration 094x-b tube 0.2918 clamp -1.1450 endregistration   // jak 094x-a, od slupa')
+w('registration 094x-c tube 0.2243 clamp 0.1689 endregistration   // 4290 na 6111, ramiona 6205/6203 (ucho 0,02) w hole_2, do slupa')
+w('registration 094x-d tube 0.2243 clamp -1.1450 endregistration   // jak 094x-c, od slupa')
+H4290 = lambda arms, pair: (('arms', arms), ('arms_bracket', '4290-02'), ('arms_head', '4290-22' if pair else '4290-21'))
+# karta: (rejestracja, ramiona, 6111 wyk. 2-4, od slupa, przechylne)
+T09_HIGH = {941: ('094x-a', H4290('6204-02', True), (2, 2, 3), False, True), 942: ('094x-b', H4290('6204-02', True), (6, 7, 8), True, True),
+            943: ('094x-c', H4290('6205-02', True), (2, 2, 3), False, True), 944: ('094x-d', H4290('6205-02', True), (6, 7, 8), True, False),
+            981: ('094x-a', H4290('6202-01', False), (2, 2, 3), False, True), 982: ('094x-b', H4290('6202-01', False), (6, 7, 8), True, True),
+            983: ('094x-c', H4290('6203-01', False), (2, 2, 3), False, True), 984: ('094x-d', H4290('6203-01', False), (6, 7, 8), True, False)}
+T09_TOP = {945: ('111x-2', (('arms', '6204-02'), ('arms_bracket', '4250-04')), (2, 3, 4), False, True),
+           946: ('112x-2', (('arms', '6204-02'), ('arms_bracket', '4250-04')), (6, 7, 8), True, True),
+           947: ('113x-2', (('arms', '6205-02'), ('arms_bracket', '4260-02')), (2, 3, 4), False, True),
+           948: ('114x-2', (('arms', '6205-02'), ('arms_bracket', '4260-02')), (6, 7, 8), True, False),
+           985: ('111x-3', (('arms', '6202-01'), ('arms_bracket', '4250-03')), (2, 3, 4), False, True),
+           986: ('112x-3', (('arms', '6202-01'), ('arms_bracket', '4250-03')), (6, 7, 8), True, True),
+           987: ('113x-3', (('arms', '6203-01'), ('arms_bracket', '4260-01')), (2, 3, 4), False, True),
+           988: ('114x-3', (('arms', '6203-01'), ('arms_bracket', '4260-01')), (6, 7, 8), True, False)}
+w('// teowniki 09xx wysokie hk 1,70-2,10 (przyjete 1,70): ramiona na 4290 na wysiegu z wezla 4350')
+for card, (reg, arms_roles, steadies, outward, tilting) in sorted(T09_HIGH.items()):
+    for wyk in (2, 3, 4):
+        tee_scheme(card, wyk, 1.70, reg, arms_roles, steadies[wyk - 2], outward, tilting)
+w('// teowniki 09xx wysokie hk >= 2,10 (przyjete 2,20): wysieg na osobnym izolatorze 7110')
+for card, (reg, arms_roles, steadies, outward, tilting) in sorted(T09_TOP.items()):
+    for wyk in (2, 3, 4):
+        tee_scheme(card, wyk, 2.20, reg, arms_roles, steadies[wyk - 2], outward, tilting,
+                   base='tee_swing_steady_out' if outward else 'tee_swing_steady', own_steady=REG_TUBE[reg])
+# 097x (siec 5, hk 1,70, s. 282-290): jak 015x/016x przy hk 1,70; 0970 jak 0160
+w('// teowniki 097x (siec 5, hk 1,70): 0971-0974 przechylne wyk. 2-4, 0975-0978 nieprzechylne wyk. 1-5, 0970 przeslo naprezenia')
+T097 = {971: ('111x-3', '6202-01', '4250-03', {2: 1, 3: 2, 4: 3}, False, True), 972: ('112x-3', '6202-01', '4250-03', {2: 6, 3: 6, 4: 7}, True, True),
+        973: ('113x-3', '6203-01', '4260-01', {2: 1, 3: 2, 4: 3}, False, True), 974: ('114x-3', '6203-01', '4260-01', {2: 6, 3: 6, 4: 7}, True, True),
+        975: ('111x-3', '6202-01', '4250-03', {1: 1, 2: 1, 3: 2, 4: 3, 5: 4}, False, False),
+        976: ('112x-3', '6202-01', '4250-03', {1: 5, 2: 6, 3: 6, 4: 7, 5: 8}, True, False),
+        977: ('113x-3', '6203-01', '4260-01', {1: 1, 2: 1, 3: 2, 4: 3, 5: 4}, False, False),
+        978: ('114x-3', '6203-01', '4260-01', {1: 5, 2: 6, 3: 6, 4: 7, 5: 8}, True, False)}
+for card, (reg, arms, bracket, steadies, outward, tilting) in sorted(T097.items()):
+    for wyk in sorted(steadies):
+        tee_scheme(card, wyk, 1.70, reg, (('arms', arms), ('arms_bracket', bracket)), steadies[wyk], outward, tilting)
+for wyk, st in zip(range(1, 5), (3, 4, 5, 5)):
+    tee_scheme(970, wyk, 1.70, '120x', (), st, False, False, base='tee_tension', base1='tee_bar_tension', extra_roles=(('contact_clamp', '4120-03'),),
+               rope=0.0507, saddle=(('messenger_base', '4170-01'), ('messenger_clamp', '4170-02')), steady_mount=0.0519)
 w('// teowniki 0141-0144 (sieci 3, 4) i 0161-0164 (siec 5, hk 1,30): nieprzechylne, wyk. 1-5')
 for card, (reg, arms_roles, steadies, outward, hk) in sorted(TEE04.items()):
   for wyk in sorted(steadies):
