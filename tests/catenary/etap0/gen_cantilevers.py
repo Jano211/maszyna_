@@ -1853,7 +1853,9 @@ for card, arms in ((177, '6203-01'), (179, '6203-1111')):
 tee_scheme(197, 4, 1.30, 'ropex', (('arms', '6206-1212'), ('rope', '9814-03')), 0, False, True, no_steady=True, base='tee_rope')
 w('registration 0180 tube 0.3202 clamp -1.3500 endregistration   // 6113 nad przewodem: ucho 4280-2 w punkcie zawieszenia 6206-1111 (od slupa: clamp ujemny)')
 w('// teownik 0180 - rozjazdowe, ramiona podwojne 6206-1 na 4280-2 na wysiegu teowym 6113, od slupa, nieprzechylne')
-for wyk, st in ((1, 1), (2, 1), (3, 2), (4, 2), (5, 3)):
+# wyk. 1 wyrzucone (Jan 18.10): izolator wysiegu 6113 na mocowaniu 4630 wbijal sie w mocowanie ukosnika (przy hk 1,30 za blisko), mocowanie
+# wyk. 1 do slupa nieznane - do wyjasnienia, jesli bedzie potrzebne
+for wyk, st in ((2, 1), (3, 2), (4, 2), (5, 3)):
     roles = [('steady', '6113-%02d' % st), ('cord', '4490-00'), ('cord_holder', '4230-01'), ('cord_holder_b', '4230-01'),
              ('arms', '6206-1111'), ('arms_bracket', '4280-02')]
     tee_scheme(180, wyk, 1.30, '0180', roles, 0, True, False, no_steady=True, base='tee_tbar', base1='tee_bar_tbar', base5='tee_node_tbar', steady_mount=0.3202)
