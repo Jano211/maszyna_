@@ -1737,7 +1737,8 @@ private:
             };
             auto const *hold { lookup( set, "holder" ) };
             if( hold == nullptr ) { fail( "part \"" + set.name + "\" has no \"holder\" point" ); }
-            vec2 const hang { side * hold->first, hold->second };
+            // punkt zawieszenia względem przewodu, przy którym stoi zestaw (dwie sieci: przewód sieci B przestawiony na "wire")
+            vec2 const hang { m_points[ "wire" ].y + side * hold->first, m_points[ "wire" ].z + hold->second };
             // zero wspornika: przesunięte od punktu zawieszenia o ucho głowicy (w głowicy ucho w -Y, po obróceniu w +Y)
             auto offset { 0.0 };
             if( head != nullptr ) {
