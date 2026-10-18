@@ -886,6 +886,16 @@ ASSEMBLIES += ('\n// jak tee_two_nets, wysieg teowy 6115 (0184, 0194) bez obrotu
 # wyk. 5: obejma 4370-5 na 6103 (eye = os zawiasu), zawias 4370-4 (zero w eye obejmy) - jak wezel 4360: polozenie na ramieniu przesuniete
 TWO5 = (TWO_NETS.replace('NET_GAP', f(NET_GAP)).replace('TOPEND', 'stay.hole_1').replace('SADDLEAXIS', 'stay')
         .replace('XBARCLAMP', 'leg@leg.xbar_clamp').replace('STEADYCLAMP', 'leg@leg.steady_clamp'))
+# wyk. 5 (Jan 18.10): obejma 4370-5 poprzeczki wypadala na wystepie 6103 pod linke (eye) - bez obejmy, zawias 4370-4 wpiety wprost w eye
+# 6103; wysokosc poprzeczki (i liny sieci B) wynika z ukosnika, lina B w wyniku (messenger_b_at)
+_old = ('  level leg xbar_clamp xbar_ref xbar_clamp.eye.z\n  window leg xbar_clamp 0 leg.end\n'
+        '  side xbar_pivot leg leg.xbar_clamp xbar_clamp.eye.z\n')
+assert _old in TWO5
+TWO5 = (TWO5.replace(_old, '  point xbar_pivot strut.eye\n')
+        .replace('  place xbar_clamp leg@leg.xbar_clamp leg -y\n', '')
+        .replace('  shift saddle_b messenger_b 0 -messenger_clamp_b.rope.z\n', '  point saddle_b xbar@xbar.saddle_b_at\n  shift messenger_b_at saddle_b 0 messenger_clamp_b.rope.z\n')
+        + '  export messenger_b_at\n')
+assert 'xbar_clamp' not in TWO5.replace('xbar_clamp_unused', '')
 ASSEMBLIES += ('\n// jak tee_two_nets, wyk. 5 (6103 + 4330-5, siodlo sieci A na precie, obejmy 4370-5 + zawiasy 4370-4)\nassembly tee_two_nets_bar\n'
     + '  tee_bar strut_mount stay_mount messenger hole_1\n' + TWO5 + '  roll steady -\nendassembly\n')
 ASSEMBLIES += ('\n// jak tee_two_nets_bar, wysieg teowy 6115 bez obrotu\nassembly tee_two_nets_bar_tee\n'
@@ -1800,7 +1810,7 @@ for card, (reg, arms_a, arms_b) in sorted(T2N.items()):
             stay_z = 1.70 - 0.0106 - 0.0445
             strut_z = stay_z - math.sqrt(max(0.0, (4.125 + 0.20) ** 2 - (0.20 + 3.545) ** 2))
             roles = [('strut_insulator', '7110-01'), ('strut', '6103-01'), ('stay_insulator', '7110-01'), ('stay', '4330-05'),
-                     ('xbar_clamp', '4370-05'), ('xbar_head', '4370-04'), ('steady_clamp', '4370-05'), ('steady_head', '4370-04'), ('xbar', '6124-02')]
+                     ('xbar_head', '4370-04'), ('steady_clamp', '4370-05'), ('steady_head', '4370-04'), ('xbar', '6124-02')]
             assembly = 'tee_two_nets_bar'
         if card in TEE_STEADY_2N: assembly += '_tee'
         roles += [('messenger_clamp', '4160-01'), ('messenger_clamp_b', '4160-01'), ('steady', TEE_STEADY_2N[card][wyk - 4] if card in TEE_STEADY_2N else '6111-08'), ('cord', '4490-00'), ('cord_clamp', '4210-02'),
