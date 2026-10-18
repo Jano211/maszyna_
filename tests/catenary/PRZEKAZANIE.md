@@ -2,7 +2,7 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – stan na 2026-10-18 19:55 (TEOWNIKI w toku)
+## START TUTAJ – stan na 2026-10-18 20:20 (TEOWNIKI w toku)
 
 **Teowniki 18.10 wieczór (nowy czat):** w danych doszły (generator: funkcja `tee_scheme`, tablice TEE04/TEE05/TEE06):
 - 0141–0144 (sieci 3,4: 6204-02 na 4250-04 / 6205-02 na 4260-02) i 0161–0164 (sieć 5, hk 1,30: 6202-01 na 4250-03 / 6203-01 na 4260-01), nieprzechylne wyk. 1–5 jak 012x; wysięgi z tabel s. 86–89, 99–102.
@@ -19,12 +19,15 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 - C++ (19:40): część może mieć `model <plik>` (inny plik modelu niż numer) i `girth <skala>` (skala w poprzek przy `stretch`) – `9832-02` = model 4490-00 × 2,5, `9814-03` = 4490-00 × 1,9. Zmiana w `catenary_cantilever.h` (pola `model`, `girth`) – przebudowa catenary_cantilever.cpp i catenary_scene.cpp. Testy z build.sh przechodzą. Klucz: 287 teowników bez uwag.
 - td_katalog: nowe rzędy teowników 93x (słup +0,30), 94x (+0,60), 96x (+0,30), 97x (+0,10), 98x (+0,60) – położenia niżej.
 - Rozjazdowe 0178 (sieć 5, od słupa, nieprzechylne wyk. 1–5, 6206-01 na 4260-01, rejestracja 126x; hk 1,30 – ZAŁOŻENIE) i 0196 (wyk. 4, przechylne, 6206-02 na 4260-02, 6111-3, hk 1,70 z karty, nowa rejestracja `0196` rura 0,328) w danych, bez uwag. Rzędy 17x −394, 19x −402 (słup +0,10); rzędy 09xx przesunięte: 93x −410, 94x −418, 96x −426, 97x −434, 98x −442. G (19:55): traction_cantilevers.txt md5 0d479e02955cf7a402e45d8df1e74e2d, td_katalog.scm 6d086f5063ecb5e5915ec460a780ed92. Klucz: 293 teowniki bez uwag.
-- ZOSTAŁY (nowa mechanika, do omówienia z Janem):
-  - 0177, 0179, 0197: ramiona 6203-1 / 6206-2 wiszą na linie 9814-3 (KB35) z zaciskami 5270-3 + 6301-3 rozpiętej od dolnego izolatora do końca... (jak 105x/125x `rope_arms`, tylko z teownika); 0179 para 6203-1.
-  - 0180: wysięg teowy 6113 zamiast 6111, 6206-1 na 4280-2 na 6113 – nie wiadomo, jak 4280 siedzi na teowniku (4280 ma zero na spodzie rury).
-  - 0181, 0182, 0184, 0192–0194 (dwie sieci): druga lina na poprzeczce 6124 z głowicą 4370-2/-5 (hk 1,70 i 1,30 na jednym wysięgniku), lina 9814-3, wysięg 6111/6115 na 4280.
-  - 0167 (dwa wysięgi 6111 na 7110, 4260-1, cięgna do 5420-5 na linie), 0169 (lina 9814-3 z 2× 6207-3).
-  - Przęsła naprężenia na łuku 0137–0140, 0158/0159, 0172–0174 (6113 + 4290 + 6207 na linkach, dwa przewody 0,15 m).
+- 20:20 (Jan 18:22–18:26):
+  - 0115/0116 (i 0135/0136, 0155/0156): lina nośna idzie MIĘDZY przewodem ramion a drugim przewodem – drugi przewód lustrzanie względem liny (`shift second_ref wire messenger.y+messenger.y 0`). W td_katalog/kluczu lina 0,04 m od przewodu ramion (słownik MID w gen_tk.py i klucz_uwag.cpp), A do liny. Odstęp przewodów 0,08 – ZAŁOŻENIE, dopytać Jana. 0115-1: 4240 1 cm poza wysięgiem (6201-04 przy samym słupie).
+  - 4380 na 6107/6113/6115: 4,5 cm w +Z przed obrotem o 180° (Jan) – węzeł w osi teownika, potem `flip`.
+  - 4280 na teowniku siedzi jak na rurze (Jan). 0180 w danych (`tee_tbar`, `tee_bar_tbar`, `tee_node_tbar`): 6113 z 4280-02 i parą 6206-1111 od słupa, linka między dwoma 4230 (hole_1 ukośnika/pręta – hole_1 6113), rejestracja `0180` (rura 0,2942, clamp ujemny = od słupa). 6113/6115 dostały `length` (= hole_1).
+  - 0177, 0179, 0197 jak 105x (Jan): `tee_rope` (lina 9814-03 z punktu mount głowicy 4350-01 na wysokości ucha ramion), `tee_bar_rope` (wyk. 1: lina z własnego 7110 na mocowaniu steady 0,10), `tee_node_rope` (wyk. 5: z eye 4360); 0179 para 6203-1111, 0197 nowa para 6206-1212. hk 1,30.
+  - Dwie sieci „analogicznie” (Jan): 0181, 0182, 0192, 0193 wyk. 4/5 – `tee_two_nets` / `_bar`: sieć B 0,30 m dalej od słupa (NET_GAP, ZAŁOŻENIE z rysunku 0181), lina B hk 1,30 w 4160 na poprzeczce 6124 (głowica 4370-2 na 4350-02; wyk. 5 4370-5 + 4370-4) na skośnym ramieniu, koniec poprzeczki na linie 9814-3 do hole_1 ramienia/pręta, wysięg 6111-8 na drugiej głowicy 4370, ramiona A do słupa i B od słupa (hangarms przy `point wire wire_b`), linka 9812 z hole_2 poprzeczki do 4210 na końcu wysięgu; `wire_b`, `messenger_b` w wyniku. Wyk. 5: obejma poprzeczki wychodzi minimalnie za koniec zakresu na 6103 (uwaga solvera).
+  - C++: `girth` też w `vee`, `armcords`/`armropes`.
+  - td_katalog: rzędy teowników 10x −338 … 19x −410 co 8 m (17x −394, 18x −402 nowy, 19x −410), 09xx 93x −418, 94x −426, 96x −434, 97x −442, 98x −450. G (20:20): traction_cantilevers.txt md5 83959ec1375eee6d2eb183f8477b433a, td_katalog.scm 0928a88ba2b21840153eb81a59d26051. Klucz: 317 teowników, uwagi: 0115-1 i 018x/0192/0193 wyk. 5 (obejma 4370-5).
+- ZOSTAŁY: 0184, 0194 (wysięg 6115 z 4280-1/-2 i 6206-1, dwie sieci), 0167, 0169, przęsła naprężenia na łuku 0137–0140, 0158/0159, 0172–0174.
 
 ## Stan poprzedni – 2026-10-18 16:45
 
