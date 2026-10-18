@@ -1299,6 +1299,26 @@ for card, (reg, arms, steadies, outward) in sorted(TEE02.items()):
                    ('steady_clamp', '4350-02'), ('steady_head', '4350-01')] + common
       for role, part in roles: line += ' role %s %s' % (role, part)
       w(line + ' endscheme')
+# 0131-0134 (sieci 3, 4, s. 75-78) i 0151-0154 (siec 5, hk 1,30, s. 90-93): przechylne jak 011x, wyk. 2-4; ramiona i wsporniki z tabel:
+# 013x prosta 6204-1 + 6204-2 na 4250-4, luk 6205-1 + 6205-2 na 4260-2; 015x prosta 6202-1 na 4250-3, luk 6203-1 na 4260-1
+TEE03 = {131: ('tee_swing', '111x-2', '6204-02', '4250-04', (1, 2, 3), 1.70), 132: ('tee_swing_out', '112x-2', '6204-02', '4250-04', (6, 6, 7), 1.70),
+         133: ('tee_swing', '113x-2', '6205-02', '4260-02', (1, 2, 3), 1.70), 134: ('tee_swing_out', '114x-2', '6205-02', '4260-02', (6, 6, 7), 1.70),
+         151: ('tee_swing', '111x-3', '6202-01', '4250-03', (1, 1, 2), 1.30), 152: ('tee_swing_out', '112x-3', '6202-01', '4250-03', (5, 6, 6), 1.30),
+         153: ('tee_swing', '113x-3', '6203-01', '4260-01', (1, 1, 2), 1.30), 154: ('tee_swing_out', '114x-3', '6203-01', '4260-01', (5, 6, 6), 1.30)}
+w('// teowniki 0131-0134 (sieci 3, 4) i 0151-0154 (siec 5, hk 1,30): przechylne')
+for card, (assembly, reg, arms, bracket, steadies, hk) in sorted(TEE03.items()):
+  for wyk, (amin, amax) in ((2, (1.75, 2.20)), (3, (2.20, 2.65)), (4, (2.65, 3.10))):
+      pts = dict((m.group(1), (float(m.group(2)), float(m.group(3)))) for m in re.finditer(r'point (\S+) (\S+) (\S+)', TEE6101[wyk]))
+      dy_, dz_ = pts['slide_max'][0] - pts['slide_min'][0], pts['slide_max'][1] - pts['slide_min'][1]
+      sn = dz_ / math.hypot(dy_, dz_)
+      strut_z = hk - (0.20 * sn + pts['slide_horizontal_min'][1] + 0.0106)
+      stay_z = strut_z + 0.20 * sn + pts['eye'][1]
+      line = 'scheme %d %d reach %s %s height %s registration %s mount stay %s mount strut %s assembly %s' % (card, wyk, f(amin), f(amax), f(hk), reg, f(stay_z), f(strut_z), assembly)
+      roles = [('strut_insulator', '7110-01'), ('strut', '6101-%02d' % wyk), ('stay_insulator', '7120-01'), ('stay', '4310-%02d' % wyk),
+               ('messenger_clamp', '4160-01'), ('steady_clamp', '4350-02'), ('steady_head', '4350-01'), ('steady', '6111-%02d' % steadies[wyk - 2]),
+               ('cord', '4490-00'), ('cord_clamp', '4210-02'), ('cord_holder', '4230-01'), ('arms', arms), ('arms_bracket', bracket)]
+      for role, part in roles: line += ' role %s %s' % (role, part)
+      w(line + ' endscheme')
 w('// teowniki 0111-0114 (przechylne): zaczepy z geometrii modeli, pret gorny poziomy; lina w siodle na wysokosci hk')
 for card, (assembly, reg, arms, steadies) in sorted(TEE01.items()):
   for wyk, (amin, amax) in ((2, (1.75, 2.20)), (3, (2.20, 2.65)), (4, (2.65, 3.10))):

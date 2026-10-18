@@ -2,9 +2,25 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – stan na 2026-10-17 21:55 (koniec sesji)
+## START TUTAJ – stan na 2026-10-18 16:45 (koniec sesji, TEOWNIKI w toku)
 
-**Teowniki w toku** (sesja 17/18.10, patrz niżej). Wcześniej: **Następny czat: TEOWNIKI** (Jan, 21:51). Źródło i strony w KONCEPCJA.md (rodzina K, „Teowniki: …kolprojekt1.pdf”, s. 62–119 i od 257; skan bez tekstu, tabele czytać okiem, po jednej karcie na rodzinę). Zacząć od zapytania Jana, czy zakres stron aktualny i jakie modele teowników/części już ma.
+**Zasady pracy (Jan 18.10):** notatki commitować RAZEM ze zmianami kodu/danych – jeden krok = jeden commit (było >100 commitów). Pliki na G: zawsze z NOWEGO folderu w outputs + sprawdzenie md5 po zapisie.
+
+**Teowniki – co jest (stary katalog Kolprojekt, `kolprojekt1.pdf`; przegląd kart i mapa stron: KONCEPCJA.md pkt 8):**
+- W danych 63 schematy teownikowe, wszystkie składają się na 1701 bez uwag (td_katalog rzędy „teowniki 10x/11x/12x/13x/15x” x = −338…−370, słupy +0,10 m – mocowanie 4620 na wysokości liny jest 1–2 cm nad mount_max 1701): 0108, 0109 (wyk. 1–5), 0111–0114 (wyk. 2–4), 0121–0124 (wyk. 1–5; 0123 bez wyk. 1), 0131–0134 i 0151–0154 (wyk. 2–4; sieć 5 hk 1,30).
+- Klocki C++ (catenary_cantilever.cpp): `tee` (bryła 7110+6101 na zawiasie, pręt 4310 albo 4320 z hole_1…3 poziomo, siodło na poziomym ramieniu 6101; człon `leg` = slide_min..max skosu), `tee_bar` (siodło na pręcie 4330, ukośnik 6102/6103 punktem `hole_1` w `eye` pręta; eksport punktów `strut.*`, `stay.*`, człon `leg` gdy ukośnik ma slide_min/max). Parser: schemat może nie mieć registration.
+- Składanki (gen_cantilevers.py): tee_swing/_out (011x, 013x, 015x, 012x wyk. 2–4), tee_messenger (0108, 0109 wyk. 2–4), tee_bar_messenger (0109 wyk. 1, 5), tee_bar_steady/_out (012x wyk. 1: wysięg na własnym 7110 z 4630), tee_bar_node/_out (012x wyk. 5: węzeł 4360 na 6103). Tablice TEE6101, TEE01, TEE02, TEE03 w generatorze.
+- Linka 9812 (4490-00) z uchwytu 4230 (wisi swobodnie, sworzeń z zawleczką): do słupa z `hole_2` 6101 / `hole_2` 6102 / `eye` 6103 (potwierdzone), od słupa z `hole_1` (koniec ramienia 6101 albo pręta 4330). Obejma 4210 może być cofnięta (Jan).
+- Klucz uwag liczy `etap0/klucz_uwag.cpp` (g++ z world/catenary_cantilever.cpp, argument: katalog data; wynik do `gen_tk.py <plik>`); RAISE w gen_tk i w klucz_uwag.cpp muszą być zgodne.
+- Pliki na G: 2026-10-18 16:45: traction_cantilevers.txt md5 0194bbc268e4b26f40c2bd1887f3af64, td_katalog.scm 9f04ea7b707ebd665c6eb5264aa5ef40. Jan obejrzał 0111 („bajka”); reszty jeszcze nie.
+
+**Teowniki – dalej (kolejność):**
+1. Przerwy izolacyjne 0115/0116, 0135/0136, 0155/0156 (drugi przewód na 4120-3 na wysięgu, jak `_second_wire` w rurowych) – części są.
+2. Nieprzechylne sieci 3–4 i 5: 0141–0144, 0161–0164 (jak 012x; ramiona 6204/6205/6202/6203) – części są; tabele s. 86–89, 99–102.
+3. Przęsła naprężenia 0120, 0160, 0170 (4170: podstawa 4170-01 na górze półki = oś obrotu, głowica obrotowa 4170-02 z `rope` 50,7 mm nad półką i zamierzonym mimośrodem Y −2,7 mm; na razie wzdłuż toru, obrót w kierunek liny – edytor), dwa 4120-3, bez ramion.
+4. Brakujące modele: 6107-01…06 (09xx niskie; potrzebne slide_min/max pod 4380 – 4380-01/-02 są), 6113-1…4, 6115-3/-4, 6124-1/-2, 4370-2/-5, 7130-01, 5420-05; odciąg linowy 9832-2 (pewnie 4490-00 skalowana – do ustalenia).
+5. 09xx (s. 257–298), rozjazdowe 0177–0197, łuki przęseł naprężenia 0137–0140/0158/0159/0172–0174, 0167, 0169.
+- 4340-01 nie występuje w żadnej tabeli (Jan nie wie, do czego) – pominięty.
 
 **Teowniki – stan 2026-10-18 00:20 (koniec sesji)**
 - Przegląd kart: KONCEPCJA.md pkt 8 (wszystkie karty 01xx i 09xx, części z tabel, mapa stron).
