@@ -2,7 +2,7 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – stan na 2026-10-18 20:55 (TEOWNIKI w toku)
+## START TUTAJ – stan na 2026-10-18 21:10 (TEOWNIKI w toku)
 
 **Teowniki 18.10 wieczór (nowy czat):** w danych doszły (generator: funkcja `tee_scheme`, tablice TEE04/TEE05/TEE06):
 - 0141–0144 (sieci 3,4: 6204-02 na 4250-04 / 6205-02 na 4260-02) i 0161–0164 (sieć 5, hk 1,30: 6202-01 na 4250-03 / 6203-01 na 4260-01), nieprzechylne wyk. 1–5 jak 012x; wysięgi z tabel s. 86–89, 99–102.
@@ -28,8 +28,8 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   - C++: `girth` też w `vee`, `armcords`/`armropes`.
   - td_katalog: rzędy teowników 10x −338 … 19x −410 co 8 m (17x −394, 18x −402 nowy, 19x −410), 09xx 93x −418, 94x −426, 96x −434, 97x −442, 98x −450. G (20:20): traction_cantilevers.txt md5 83959ec1375eee6d2eb183f8477b433a, td_katalog.scm 0928a88ba2b21840153eb81a59d26051. Klucz: 317 teowników, uwagi: 0115-1 i 018x/0192/0193 wyk. 5 (obejma 4370-5).
 - 20:55 (Jan 18:54): 0115/0116 to prosta – w tabelach ramiona łukowe 6201-3/-4 to błąd katalogu (wyk. 1 0115 z 6201-04 wbijał 4240 w izolator); przyjęte 6201-02 (rejestracje 111x-1 / 112x-1). 6111 na głowicy 4370 obrócone o 90° (`roll steady -` w `tee_two_nets`, `_bar`); teowe 6115 bez obrotu (`tee_two_nets_tee`, `_bar_tee`). 0184 w danych: 6115-01/-02, sieć A para ruchomych 6206-1111 (z 4110) na 4280-02, sieć B sztywne 6206-01 na 4280-01 (przydział 4280-1/-2 – ZAŁOŻENIE), rejestracja `0184` rura 0,2942. G: traction_cantilevers.txt md5 6f0c6b267089802ae9796d60375128f3, td_katalog.scm 24ee6e49fac7ce59770d8bec498f3203. Klucz: 319 teowników, uwagi tylko 018x/0192/0193/0184 wyk. 5 (obejma 4370-5 ok. 8 cm za slide_max 6103).
-- 0194 (Jan): bliżej słupa 6205-02, dalej para regulowanych 6204 (-11) – CZEKA: brak modelu 6204-11 i wysokości jego ucha; przy wspólnym 4280-2 ucha 6205-02 (Z 0,022) i 6204 (Z 0,179) nie dadzą tej samej rury.
-- ZOSTAŁY: 0194, 0167, 0169, przęsła naprężenia na łuku 0137–0140, 0158/0159, 0172–0174.
+- 21:10: 0194 w danych NA PRÓBĘ (Jan: bliżej słupa 6205-02, dalej para ruchomych 6206-11 = 6206-1111, oba na 4280-2 na 6115; rura pod 6206 → 6205-02 wisi 5,7 cm za nisko – czeka na decyzję Jana). 4370-02/-04 przeeksportowane przez Jana: `eye` Z +0,006 (było −0,006). Obejma 4370-5 poprzeczki w wyk. 5 dwóch sieci na 3,591 m od zera 6103 (slide_max 3,505) – Jan: wypada w zakresie występu „eye”, może przesunąć slide_max (nic innego nie siedzi dalej niż 2,49 m). Podglądy PNG 0181-5 i 0194-4 renderowane skryptem poza repo (t3d LOD0 + dump wyniku solvera, matplotlib). G: traction_cantilevers.txt md5 edd33355f112d65e1db1e842980c3ee6, td_katalog.scm b654dac18b50fd7f325a10ad7d676b7d.
+- ZOSTAŁY: 0194 (decyzja), 0167, 0169, przęsła naprężenia na łuku 0137–0140, 0158/0159, 0172–0174.
 
 ## Stan poprzedni – 2026-10-18 16:45
 
