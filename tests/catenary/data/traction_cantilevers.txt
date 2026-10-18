@@ -1002,6 +1002,32 @@ assembly inner_push_vee
   hangarms ?arms arms_bracket ?arms_head steady arms_side
 endassembly
 
+// teownik przechylny (01xx stary katalog): bryla 7110 + 6101 na dolnym zaczepie, pret 4310 + 7120 poziomo od gornego, siodlo 4160
+// na poziomym ramieniu (tee <zaczep ukosnika> <zaczep preta> <lina>), wysieg 6111 na wezle 4350 na skosnym ramieniu
+assembly tee_swing
+  tee strut_mount stay_mount messenger
+  shift tube_ref registration 0 -steady_head.eye.z
+  level leg steady_clamp tube_ref steady_clamp.eye.z
+  window leg steady_clamp 0 leg.end
+  side steady_pivot leg leg.steady_clamp steady_clamp.eye.z
+  shift steady_start steady_pivot steady_head.eye.y steady_head.eye.z
+  line steady steady_start dir -1 0
+  project steady cord_clamp strut.hole_2 steady.length rules.cord_clamp_inset
+  point cord_clamp_at steady@steady.cord_clamp
+  shift cord_anchor cord_clamp_at 0 cord_clamp.eye
+  place strut_insulator strut_pin strut_insulator -y
+  place strut strut_start tee -y
+  place stay_insulator stay_pin stay -y
+  place stay stay_start stay -y
+  place messenger_clamp saddle tee -y
+  place steady_clamp leg@leg.steady_clamp leg -y
+  place steady_head steady_pivot steady -y
+  place steady steady_start steady -y
+  place cord_clamp cord_clamp_at steady.up +z
+  stretch ?cord cord_anchor strut.hole_2 +z
+  hangarms ?arms arms_bracket ?arms_head steady registration
+endassembly
+
 // zestawy ramion: gotowy model, zero w osi przewodu jezdnego, holder = punkt zawieszenia na wsporniku
 part 6201-01 kind arms point holder 0.8210 0.0000 endpart
 part 6201-02 kind arms point holder 0.8590 0.0000 endpart
@@ -1907,6 +1933,24 @@ scheme 1046 1 reach 5.0000 5.0000 height 1.7000 registration 103y-1 mount stay 1
 scheme 1046 2 reach 5.0000 5.0000 height 1.7000 registration 103y-2 mount stay 1.5903 mount strut -1.0097 assembly platform role stay_shackle 4700-01 role stay 6007-13 role stay_end 4400-02 role strut 6010-03 role steady_clamp 6010-21 role hanger_mount 6710-01 role plate 6710-21 role hanger_insulator 7020-01 role hanger 6720-01 role messenger_clamp 4140-01 role steady_insulator 7010-01 role steady 6111-08 role cord 4490-00 role cord_clamp 4210-02 role arms 6204-02 role arms_bracket 4250-04 endscheme
 scheme 1047 1 reach 5.3000 5.3000 height 1.7000 registration 103y-1 mount stay 1.5913 mount strut -1.0087 assembly platform role stay_shackle 4700-01 role stay 6007-14 role stay_end 4400-02 role strut 6010-04 role steady_clamp 6010-21 role hanger_mount 6710-01 role plate 6710-21 role hanger_insulator 7020-01 role hanger 6720-01 role messenger_clamp 4140-01 role steady_insulator 7010-01 role steady 6111-08 role cord 4490-00 role cord_clamp 4210-02 role arms 6201-04 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
 scheme 1047 2 reach 5.3000 5.3000 height 1.7000 registration 103y-2 mount stay 1.5913 mount strut -1.0087 assembly platform role stay_shackle 4700-01 role stay 6007-14 role stay_end 4400-02 role strut 6010-04 role steady_clamp 6010-21 role hanger_mount 6710-01 role plate 6710-21 role hanger_insulator 7020-01 role hanger 6720-01 role messenger_clamp 4140-01 role steady_insulator 7010-01 role steady 6111-08 role cord 4490-00 role cord_clamp 4210-02 role arms 6204-02 role arms_bracket 4250-04 endscheme
+
+// teowniki (stary katalog Kolprojekt): ukosnik teowy 6101 - zero w zaczepie izolatora 7110, eye = laczenie z pretem gornym,
+// slide_min/max - zakres wezla 4350 na skosnym ramieniu, slide_horizontal_min/max - zakres siodla 4160 na poziomym ramieniu (gora polki)
+part 6101-02 kind tee_strut point eye -1.2127 1.5735 point hole_1 -1.9227 1.5128 point hole_2 -1.2562 1.4537 point slide_min -0.0566 0.0651 point slide_max -1.2244 1.4085 point slide_horizontal_min -1.3877 1.5578 point slide_horizontal_max -1.8727 1.5578 endpart
+part 6101-03 kind tee_strut point eye -1.6475 1.6068 point hole_1 -2.3525 1.5461 point hole_2 -1.6823 1.4973 point slide_min -0.0631 0.0561 point slide_max -1.6426 1.4584 point slide_horizontal_min -1.8224 1.5911 point slide_horizontal_max -2.3024 1.5911 endpart
+part 6101-04 kind tee_strut point eye -2.0727 1.6346 point hole_1 -2.7827 1.5739 point hole_2 -2.1075 1.5314 point slide_min -0.0689 0.0499 point slide_max -2.0654 1.4951 point slide_horizontal_min -2.2477 1.6189 point slide_horizontal_max -2.7327 1.6189 endpart
+part 4310-02 kind stay length 1.2700 point eye -1.2700 0.0000 endpart   // pret gorny przechylny, eye = laczenie z ukosnikiem
+part 4310-03 kind stay length 1.7200 point eye -1.7200 0.0000 endpart   // pret gorny przechylny, eye = laczenie z ukosnikiem
+part 4310-04 kind stay length 2.1700 point eye -2.1700 0.0000 endpart   // pret gorny przechylny, eye = laczenie z ukosnikiem
+part 7110-01 kind insulator length 0.2000 endpart   // punkt "eye" modelu
+part 7120-01 kind insulator length 0.1700 endpart   // punkt "eye" modelu
+part 4160-01 kind messenger_clamp point rope 0.0000 0.0106 endpart   // siodlo liny: zero na gorze polki teownika, rope = os liny
+part 4350-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na teowniku, eye = os obrotu glowicy
+part 4350-01 kind clamp point eye -0.0514 -0.0359 point mount -0.0515 0.0004 endpart   // glowica wezla: eye = rura/teownik wysiegu, mount = lina
+// teowniki 0111 (przechylne, prosta, odsuw do slupa): zaczepy z geometrii modeli, pret gorny poziomy; lina w siodle na wysokosci hk
+scheme 111 2 reach 1.7500 2.2000 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0193 assembly tee_swing role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-01 role cord 4490-00 role cord_clamp 4210-02 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
+scheme 111 3 reach 2.2000 2.6500 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0345 assembly tee_swing role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-02 role cord 4490-00 role cord_clamp 4210-02 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
+scheme 111 4 reach 2.6500 3.1000 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0468 assembly tee_swing role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-03 role cord 4490-00 role cord_clamp 4210-02 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
 
 
 // mocowania do slupa (karty 40-4610, 30-4620, 40-4630): axis = pionowa os obrotu wspornika ukosnika, eye = ucho zaczepu izolatora,

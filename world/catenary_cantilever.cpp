@@ -556,7 +556,7 @@ std::map<std::string, std::string> const step_arguments {
     { "tangent", "nppen" }, { "level", "lnpe" }, { "project", "lnpee" }, { "limit", "lnee" }, { "window", "lnEE" },
     { "chain", "lnpeernEEE" }, { "place", "rpda" }, { "roll", "rR" }, { "stretch", "rppa" }, { "registration", "" },
     { "repeat", "ip" }, { "endrepeat", "" }, { "vee", "rppea" }, { "hangarms", "rrrlp" }, { "anchor", "nper" },
-    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" }, { "setarms", "rp" }, { "atleast", "lne" }, { "export", "p" }, { "hangat", "rp" }, { "across", "lnpe" }, { "hangto", "rplne" }, { "armropes", "rp" } };
+    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" }, { "setarms", "rp" }, { "atleast", "lne" }, { "export", "p" }, { "hangat", "rp" }, { "across", "lnpe" }, { "hangto", "rplne" }, { "armropes", "rp" }, { "tee", "ppp" } };
 
 bool valid_argument( char const Kind, std::string const &Word ) {
     std::vector<term> terms;
@@ -1340,6 +1340,87 @@ private:
             m_result.values[ "stay_end.hole" ] = besthole;
             m_result.values[ "column.tilt" ] = std::atan2( hanging.y, -hanging.z ) * 180.0 / 3.14159265358979323846;
             // obniżenie zaczepu nie jest ostrzeżeniem: rura peronowa jest z polimeru, mocowanie może zejść nawet metr nad ziemię (Jan)
+            return;
+        }
+
+        if( op == "tee" ) {
+            // wysięgnik z teownika (stary katalog Kolprojekt, 01xx, 09xx): izolator 7110 (rola strut_insulator) na zaczepie
+            // StrutMount i ukośnik teowy 6101 (rola strut) to jedna sztywna bryła obracająca się wokół zaczepu; pręt górny
+            // (rola stay, długość do punktu "eye") z izolatorem 7120 (rola stay_insulator) od zaczepu StayMount leży poziomo i łączy
+            // się z punktem "eye" ukośnika; lina nośna leży w siodle (rola messenger_clamp, punkt "rope") na poziomym ramieniu
+            // ukośnika, w zakresie slide_horizontal_min..max. Pozycja bryły: kąt z warunku poziomego pręta przy danym położeniu
+            // zaczepu górnego w poziomie, wysokość zaczepu dolnego z wysokości liny (wartość strut.drop), wysokość zaczepu górnego
+            // z wysokości ucha ukośnika (stay_mount.shift). Człony: strut_insulator, tee (oś poziomego ramienia, obrót bryły),
+            // stay (pręt), leg (linia slide_min..slide_max skośnego ramienia, położenie "end" na jej końcu).
+            auto const mount { point( w[ 0 ] ) };
+            auto const upper { point( w[ 1 ] ) };
+            auto const rope { point( w[ 2 ] ) };
+            auto const pointof = [&]( cantilever_part const &Part, std::string const &Name ) {
+                auto const found { Part.points.find( Name ) };
+                if( found == Part.points.end() ) { fail( "part \"" + Part.name + "\" has no point \"" + Name + "\"" ); }
+                return vec2 { found->second.first, found->second.second };
+            };
+            auto const &strutpart { part( "strut" ) };
+            auto const slidemin { pointof( strutpart, "slide_min" ) };
+            auto const slidemax { pointof( strutpart, "slide_max" ) };
+            auto const flatmin { pointof( strutpart, "slide_horizontal_min" ) };
+            auto const flatmax { pointof( strutpart, "slide_horizontal_max" ) };
+            auto const eye { pointof( strutpart, "eye" ) };
+            auto const ropez { pointof( part( "messenger_clamp" ), "rope" ).z };
+            auto const legdir { unit( slidemax - slidemin ) };                 // skośne ramię w układzie części (w -Y i w górę)
+            auto const insulator { part( "strut_insulator" ).length };
+            auto const topinsulator { part( "stay_insulator" ).length };
+            auto const top { topinsulator + part( "stay" ).length };
+            auto const base { legdir * insulator };                             // od zaczepu do zera ukośnika, bryła w spoczynku
+            auto const body { base + eye };                                     // od zaczepu do ucha ukośnika
+            // pręt poziomy: ucho ukośnika o długość pręta przed zaczepem górnym; obrót bryły wokół zaczepu dolnego
+            auto const need { upper.y - top - mount.y };
+            auto const reach { length( body ) };
+            if( std::abs( need ) > reach ) { fail( "the strut \"" + strutpart.name + "\" can't reach the top bar from its mount (" + to_text( std::abs( need ) - reach ) + " m short)" ); }
+            auto const alpha { std::atan2( body.z, body.y ) };
+            auto const turn0 { std::acos( need / reach ) };
+            auto const normalized = []( double Angle ) {
+                auto const pi { 3.14159265358979323846 };
+                while( Angle > pi ) { Angle -= 2.0 * pi; }
+                while( Angle < -pi ) { Angle += 2.0 * pi; }
+                return Angle;
+            };
+            auto const first { normalized( turn0 - alpha ) };
+            auto const second { normalized( -turn0 - alpha ) };
+            auto const tilt { std::abs( first ) < std::abs( second ) ? first : second };
+            if( std::abs( tilt ) > 5.0 * 3.14159265358979323846 / 180.0 ) {
+                warn( "the strut \"" + strutpart.name + "\" is tilted by " + to_text( tilt * 180.0 / 3.14159265358979323846 ) + " degrees to meet the top bar" );
+            }
+            // lina w siodle: położenie siodła na ramieniu i wysokość zaczepu dolnego
+            auto const along { rotate( toward_track, tilt ) };
+            auto const offset { rotate( base + flatmin, tilt ) + rotate( vec2 { 0.0, ropez }, tilt ) };
+            if( std::abs( along.y ) < 1e-6 ) { fail( "the strut \"" + strutpart.name + "\" stands vertical" ); }
+            auto const slide { ( rope.y - mount.y - offset.y ) / along.y };
+            vec2 const strutpin { mount.y, rope.z - offset.z - along.z * slide };
+            auto const flatlength { length( flatmax - flatmin ) };
+            if( slide < -1e-3 ) { warn( "the messenger is " + to_text( -slide ) + " m short of the saddle slide on the strut \"" + strutpart.name + "\"" ); }
+            if( slide > flatlength + 1e-3 ) { warn( "the messenger is " + to_text( slide - flatlength ) + " m beyond the saddle slide on the strut \"" + strutpart.name + "\"" ); }
+            auto const lug { strutpin + rotate( body, tilt ) };
+            vec2 const stay { upper.y, lug.z };
+            auto const barline { unit( lug - stay ) };
+            m_points[ "strut_pin" ] = strutpin;
+            m_points[ "strut_start" ] = strutpin + rotate( base, tilt );
+            m_points[ "stay_pin" ] = stay;
+            m_points[ "stay_start" ] = stay + barline * topinsulator;
+            m_points[ "strut_eye" ] = lug;
+            m_points[ "saddle" ] = strutpin + rotate( base + flatmin, tilt ) + along * slide;
+            // wszystkie nazwane punkty ukośnika w układzie wysięgnika: strut.<punkt> (np. strut.hole_2 - uchwyt linki 4230)
+            for( auto const &named : strutpart.points ) {
+                m_points[ "strut." + named.first ] = strutpin + rotate( base + vec2 { named.second.first, named.second.second }, tilt );
+            }
+            make_line( "strut_insulator", strutpin, rotate( legdir, tilt ) );
+            make_line( "tee", strutpin + rotate( base, tilt ), along );
+            make_line( "stay", stay, barline );
+            make_line( "leg", strutpin + rotate( base + slidemin, tilt ), rotate( legdir, tilt ) ).stations[ "end" ] = length( slidemax - slidemin );
+            m_result.values[ "strut.drop" ] = mount.z - strutpin.z;
+            m_result.values[ "stay_mount.shift" ] = stay.z - upper.z;
+            m_result.values[ "strut.tilt" ] = tilt * 180.0 / 3.14159265358979323846;
+            m_result.values[ "messenger_clamp.slide" ] = slide;
             return;
         }
 
