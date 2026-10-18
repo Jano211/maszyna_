@@ -1493,6 +1493,10 @@ private:
             for( auto const &named : strutpart.points ) {
                 m_points[ "strut." + named.first ] = strutpin + rotate( base + vec2 { named.second.first, named.second.second }, tilt );
             }
+            // nazwane punkty pręta w układzie wysięgnika: stay.<punkt> (np. stay.hole_1 - uchwyt linki 4230 na końcu pręta)
+            for( auto const &named : barpart.points ) {
+                m_points[ "stay." + named.first ] = barzero + vec2 { named.second.first, named.second.second };
+            }
             make_line( "strut_insulator", strutpin, rotate( axis, tilt ) );
             make_line( "tee", strutpin + rotate( base, tilt ), rotate( toward_track, tilt ) );
             make_line( "stay", stay, toward_track );
