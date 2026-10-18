@@ -900,6 +900,24 @@ ASSEMBLIES += ('\n// jak tee_two_nets, wyk. 5 (6103 + 4330-5, siodlo sieci A na 
     + '  tee_bar strut_mount stay_mount messenger hole_1\n' + TWO5 + '  roll steady -\nendassembly\n')
 ASSEMBLIES += ('\n// jak tee_two_nets_bar, wysieg teowy 6115 bez obrotu\nassembly tee_two_nets_bar_tee\n'
     + '  tee_bar strut_mount stay_mount messenger hole_1\n' + TWO5 + 'endassembly\n')
+# 0194 (Jan 18.10): ucha 6205-02 (siec A) i 6206-11 (siec B) na roznych wysokosciach, oba na sztywnym 4280-2 - wysieg 6115 lekko
+# pochylony (w gore w strone toru), tak zeby przechodzil przez os rury nad obydwoma punktami zawieszenia; wezel na skosnym ramieniu
+# dobierany iteracyjnie (sworzen glowicy na tej prostej)
+_TILT_OLD = ('  shift tube_ref registration 0 -steady_head.eye.z\n  level leg steady_clamp tube_ref steady_clamp.eye.z\n'
+             '  window leg steady_clamp 0 leg.end\n  side steady_pivot leg leg.steady_clamp steady_clamp.eye.z\n'
+             '  shift steady_start steady_pivot steady_head.eye.y steady_head.eye.z\n  line steady steady_start dir -1 0\n')
+_TILT_NEW = ('  shift tilt_a wire arms.holder.y arms.holder.z-arms_bracket.eye.z+steady.radius\n'
+             '  shift tilt_b wire_b -arms_b.holder.y arms_b.holder.z-arms_bracket_b.eye.z+steady.radius\n'
+             '  line tilt tilt_b toward tilt_a\n  point steady_start registration\n  repeat 30 steady_start\n'
+             '  across tilt tilt_at steady_start 0\n  point tube_ref0 tilt@tilt.tilt_at\n  shift tube_ref tube_ref0 0 -steady_head.eye.z\n'
+             '  level leg steady_clamp tube_ref steady_clamp.eye.z\n  side steady_pivot leg leg.steady_clamp steady_clamp.eye.z\n'
+             '  shift steady_start steady_pivot steady_head.eye.y steady_head.eye.z\n  endrepeat\n'
+             '  window leg steady_clamp 0 leg.end\n  line steady steady_start toward tilt_b\n')
+for name in ('tee_two_nets_tee', 'tee_two_nets_bar_tee'):
+    body = re.search(r'assembly %s\n(.*?)endassembly\n' % name, ASSEMBLIES, re.S).group(1)
+    assert _TILT_OLD in body
+    ASSEMBLIES += ('\n// jak %s, wysieg 6115 pochylony pod dwa rozne zestawy ramion na sztywnych 4280 (0194)\nassembly %s_tilt\n' % (name, name)
+                   + body.replace(_TILT_OLD, _TILT_NEW) + 'endassembly\n')
 # izolator wysiegu z rura (7010) i jego rura (6111/6011) przy uchwycie 4630: cwierc obrotu wokol wlasnej osi, jak izolator
 # odciagu na szekli (Jan 2026-10-17: kazdy izolator mocowany tak samo); na koncu skladanki, po wszystkich krokach
 _steady_insulated = False
@@ -1791,7 +1809,7 @@ T2N = {181: ('018x', (('arms', '6202-01'), ('arms_bracket', '4250-03')), (('arms
 w('registration 0184 tube 0.2942 clamp 0.1689 endregistration   // 6115 nad przewodem: ucho 4280 w punkcie zawieszenia 6206 (0,0792 + 0,196 + 0,019)')
 T2N[184] = ('0184', (('arms', '6206-1111'), ('arms_bracket', '4280-02')), (('arms_b', '6206-01'), ('arms_bracket_b', '4280-01')))
 # 0194 (s. 117, Jan 18.10): blizej slupa 6205-02, dalej para ruchomych 6206-1 z osobnymi 4110 (6206-1111), oba na 4280-2 na 6115.
-# Ucha zestawow na roznych wysokosciach (6205-02 0,022, 6206-11 0,079) - rura pod 6206, 6205-02 wychodzi 5,7 cm nizej (DO USTALENIA z Janem)
+# Ucha zestawow na roznych wysokosciach (6205-02 0,022, 6206-11 0,079) - wysieg 6115 pochylony (Jan 18.10), skladanka *_tilt
 T2N[194] = ('0184', (('arms', '6205-02'), ('arms_bracket', '4280-02')), (('arms_b', '6206-1111'), ('arms_bracket_b', '4280-02')))
 TEE_STEADY_2N = {184: ('6115-01', '6115-02'), 194: ('6115-01', '6115-02')}
 for card, (reg, arms_a, arms_b) in sorted(T2N.items()):
@@ -1812,7 +1830,7 @@ for card, (reg, arms_a, arms_b) in sorted(T2N.items()):
             roles = [('strut_insulator', '7110-01'), ('strut', '6103-01'), ('stay_insulator', '7110-01'), ('stay', '4330-05'),
                      ('xbar_head', '4370-04'), ('steady_clamp', '4370-05'), ('steady_head', '4370-04'), ('xbar', '6124-02')]
             assembly = 'tee_two_nets_bar'
-        if card in TEE_STEADY_2N: assembly += '_tee'
+        if card in TEE_STEADY_2N: assembly += '_tee' + ('_tilt' if card == 194 else '')
         roles += [('messenger_clamp', '4160-01'), ('messenger_clamp_b', '4160-01'), ('steady', TEE_STEADY_2N[card][wyk - 4] if card in TEE_STEADY_2N else '6111-08'), ('cord', '4490-00'), ('cord_clamp', '4210-02'),
                   ('cord_holder', '4230-01'), ('rope', '9814-03'), ('rope_holder', '4230-01')] + list(arms_a) + list(arms_b)
         line = 'scheme %d %d reach %s %s height 1.7000 registration %s mount stay %s mount strut %s assembly %s' % (card, wyk, f(amin), f(amax), reg, f(stay_z), f(strut_z), assembly)
