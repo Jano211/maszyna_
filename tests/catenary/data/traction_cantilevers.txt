@@ -1031,6 +1031,16 @@ assembly tee_swing
   hangarms ?arms arms_bracket ?arms_head steady registration
 endassembly
 
+// teownik - samo podwieszenie liny nosnej (0108, 0109): ukosnik z izolatorem, pret gorny z izolatorem, siodlo
+assembly tee_messenger
+  tee strut_mount stay_mount messenger
+  place strut_insulator strut_pin strut_insulator -y
+  place strut strut_start tee -y
+  place stay_insulator stay_pin stay -y
+  place stay stay_start stay -y
+  place messenger_clamp saddle tee -y
+endassembly
+
 // jak tee_swing, odsuw od slupa: linka z konca poziomego ramienia (hole_1) do obejmy 4210 w miejscu z zestawu ramion
 assembly tee_swing_out
   tee strut_mount stay_mount messenger
@@ -1973,12 +1983,22 @@ part 6101-04 kind tee_strut point eye -2.0727 1.6346 point hole_1 -2.7827 1.5739
 part 4310-02 kind stay length 1.2700 point eye -1.2700 0.0000 endpart   // pret gorny przechylny, eye = laczenie z ukosnikiem
 part 4310-03 kind stay length 1.7200 point eye -1.7200 0.0000 endpart   // pret gorny przechylny, eye = laczenie z ukosnikiem
 part 4310-04 kind stay length 2.1700 point eye -2.1700 0.0000 endpart   // pret gorny przechylny, eye = laczenie z ukosnikiem
+part 4320-02 kind stay point hole_1 -1.2100 -0.0400 point hole_2 -1.1600 -0.0400 point hole_3 -1.1100 -0.0400 endpart   // pret gorny nieprzechylny: hole_1..3 co 50 mm, 40 mm pod osia; ucho 6101 w jednym z nich (solver bierze otwor z najmniejszym obrotem)
+part 4320-03 kind stay point hole_1 -1.6600 -0.0400 point hole_2 -1.6100 -0.0400 point hole_3 -1.5600 -0.0400 endpart   // pret gorny nieprzechylny: hole_1..3 co 50 mm, 40 mm pod osia; ucho 6101 w jednym z nich (solver bierze otwor z najmniejszym obrotem)
+part 4320-04 kind stay point hole_1 -2.1100 -0.0400 point hole_2 -2.0600 -0.0400 point hole_3 -2.0100 -0.0400 endpart   // pret gorny nieprzechylny: hole_1..3 co 50 mm, 40 mm pod osia; ucho 6101 w jednym z nich (solver bierze otwor z najmniejszym obrotem)
 part 7110-01 kind insulator length 0.2000 endpart   // punkt "eye" modelu
 part 7120-01 kind insulator length 0.1700 endpart   // punkt "eye" modelu
 part 4160-01 kind messenger_clamp point rope 0.0000 0.0106 endpart   // siodlo liny: zero na gorze polki teownika, rope = os liny
 part 4230-01 kind clamp point eye 0.0000 -0.0781 endpart   // uchwyt linki na teowniku (sruba w hole_2), wisi w linii linki; eye = zaczep linki
 part 4350-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na teowniku, eye = os obrotu glowicy
 part 4350-01 kind clamp point eye -0.0515 0.0004 point mount -0.0514 -0.0359 endpart   // glowica wezla: eye = rura/teownik wysiegu, mount = lina (nazwy poprawione przez Jana 2026-10-18 14:48)
+// teowniki 0108, 0109: samo podwieszenie liny nosnej
+scheme 108 2 reach 1.7500 2.2000 height 1.7000 mount stay 1.7051 mount strut -0.0193 assembly tee_messenger role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role messenger_clamp 4160-01 endscheme
+scheme 108 3 reach 2.2000 2.6500 height 1.7000 mount stay 1.7051 mount strut -0.0345 assembly tee_messenger role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role messenger_clamp 4160-01 endscheme
+scheme 108 4 reach 2.6500 3.1000 height 1.7000 mount stay 1.7051 mount strut -0.0468 assembly tee_messenger role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role messenger_clamp 4160-01 endscheme
+scheme 109 2 reach 1.7500 2.2000 height 1.7000 mount stay 1.7451 mount strut -0.0193 assembly tee_messenger role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7110-01 role stay 4320-02 role messenger_clamp 4160-01 endscheme
+scheme 109 3 reach 2.2000 2.6500 height 1.7000 mount stay 1.7451 mount strut -0.0345 assembly tee_messenger role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7110-01 role stay 4320-03 role messenger_clamp 4160-01 endscheme
+scheme 109 4 reach 2.6500 3.1000 height 1.7000 mount stay 1.7451 mount strut -0.0468 assembly tee_messenger role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7110-01 role stay 4320-04 role messenger_clamp 4160-01 endscheme
 // teowniki 0111-0114 (przechylne): zaczepy z geometrii modeli, pret gorny poziomy; lina w siodle na wysokosci hk
 scheme 111 2 reach 1.7500 2.2000 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0193 assembly tee_swing role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-01 role cord 4490-00 role cord_clamp 4210-02 role cord_holder 4230-01 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
 scheme 111 3 reach 2.2000 2.6500 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0345 assembly tee_swing role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-02 role cord 4490-00 role cord_clamp 4210-02 role cord_holder 4230-01 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme

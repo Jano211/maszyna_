@@ -525,6 +525,18 @@ assembly tee_swing
   hangarms ?arms arms_bracket ?arms_head steady registration
 endassembly
 """
+# samo podwieszenie liny (0108 przechylne, 0109 nieprzechylne, s. 62-63): tylko ukosnik, pret gorny i siodlo
+ASSEMBLIES += """
+// teownik - samo podwieszenie liny nosnej (0108, 0109): ukosnik z izolatorem, pret gorny z izolatorem, siodlo
+assembly tee_messenger
+  tee strut_mount stay_mount messenger
+  place strut_insulator strut_pin strut_insulator -y
+  place strut strut_start tee -y
+  place stay_insulator stay_pin stay -y
+  place stay stay_start stay -y
+  place messenger_clamp saddle tee -y
+endassembly
+"""
 # od slupa (0112, 0114): linka skosnie z hole_1 (koniec poziomego ramienia, Jan 2026-10-18) do obejmy 4210 w miejscu z zestawu ramion
 ASSEMBLIES += ('\n// jak tee_swing, odsuw od slupa: linka z konca poziomego ramienia (hole_1) do obejmy 4210 w miejscu z zestawu ramion\nassembly tee_swing_out\n' +
     re.search(r'assembly tee_swing\n(.*?)endassembly\n', ASSEMBLIES, re.S).group(1)
@@ -1139,6 +1151,8 @@ for n, pts in sorted(TEE6101.items()):
     w('part 6101-%02d kind tee_strut %s endpart' % (n, pts))
 for n, L in ((2, 1.27), (3, 1.72), (4, 2.17)):
     w('part 4310-%02d kind stay length %s point eye %s 0.0000 endpart   // pret gorny przechylny, eye = laczenie z ukosnikiem' % (n, f(L), f(-L)))
+for n, L in ((2, 1.21), (3, 1.66), (4, 2.11)):
+    w('part 4320-%02d kind stay %s endpart   // pret gorny nieprzechylny: hole_1..3 co 50 mm, 40 mm pod osia; ucho 6101 w jednym z nich (solver bierze otwor z najmniejszym obrotem)' % (n, ' '.join('point hole_%d %s -0.0400' % (k + 1, f(-(L - 0.05 * k))) for k in range(3))))
 w('part 7110-01 kind insulator length 0.2000 endpart   // punkt "eye" modelu')
 w('part 7120-01 kind insulator length 0.1700 endpart   // punkt "eye" modelu')
 w('part 4160-01 kind messenger_clamp point rope 0.0000 0.0106 endpart   // siodlo liny: zero na gorze polki teownika, rope = os liny')
@@ -1152,6 +1166,20 @@ w('part 4350-01 kind clamp point eye -0.0515 0.0004 point mount -0.0514 -0.0359 
 # linka 1,60; 0114 luk od slupa - 6111-6/7/8, 6201-3 + 6201-4, linka 1,90. Ramiona na 4240-1 jak 11xx wyk. 1.
 TEE01 = {111: ('tee_swing', '111x-1', '6201-02', (1, 2, 3)), 112: ('tee_swing_out', '112x-1', '6201-02', (6, 6, 7)),
          113: ('tee_swing', '113x-1', '6201-04', (1, 2, 3)), 114: ('tee_swing_out', '114x-1', '6201-04', (6, 7, 8))}
+# 0108 (wyk. 2-4, przechylne: 7110 + 6101, 7120 + 4310, 4160) i 0109 wyk. 2-4 (nieprzechylne: 7110 + 6101, 7110 + 4320, 4160);
+# 0109 wyk. 1 (6102 + 4330-01) i 5 (6103 + 4330-05) czekaja na punkty slide_horizontal w 4330
+w('// teowniki 0108, 0109: samo podwieszenie liny nosnej')
+for card, top_ins, bar, dz in ((108, '7120-01', '4310', 0.0), (109, '7110-01', '4320', 0.04)):
+  for wyk, (amin, amax) in ((2, (1.75, 2.20)), (3, (2.20, 2.65)), (4, (2.65, 3.10))):
+      pts = dict((m.group(1), (float(m.group(2)), float(m.group(3)))) for m in re.finditer(r'point (\S+) (\S+) (\S+)', TEE6101[wyk]))
+      dy_, dz_ = pts['slide_max'][0] - pts['slide_min'][0], pts['slide_max'][1] - pts['slide_min'][1]
+      sn = dz_ / math.hypot(dy_, dz_)
+      strut_z = 1.70 - (0.20 * sn + pts['slide_horizontal_min'][1] + 0.0106)
+      stay_z = strut_z + 0.20 * sn + pts['eye'][1] + dz
+      line = 'scheme %d %d reach %s %s height 1.7000 mount stay %s mount strut %s assembly tee_messenger' % (card, wyk, f(amin), f(amax), f(stay_z), f(strut_z))
+      for role, part in (('strut_insulator', '7110-01'), ('strut', '6101-%02d' % wyk), ('stay_insulator', top_ins), ('stay', '%s-%02d' % (bar, wyk)), ('messenger_clamp', '4160-01')):
+          line += ' role %s %s' % (role, part)
+      w(line + ' endscheme')
 w('// teowniki 0111-0114 (przechylne): zaczepy z geometrii modeli, pret gorny poziomy; lina w siodle na wysokosci hk')
 for card, (assembly, reg, arms, steadies) in sorted(TEE01.items()):
   for wyk, (amin, amax) in ((2, (1.75, 2.20)), (3, (2.20, 2.65)), (4, (2.65, 3.10))):
