@@ -963,6 +963,14 @@ assembly aux_rope
   armcords ?arms_cord ?arms_cord_clamp messenger 0.125
 endassembly
 """
+# podstawa obrotowego uchwytu liny 4170-01 (Jan 18.10: w 0172/0173 byla sama glowica 4170-02): w kazdej skladance teownikowej, ktora
+# stawia uchwyt liny w siodle, opcjonalna podstawa w tym samym miejscu (stawiana tylko, gdy schemat ma role messenger_base)
+ASSEMBLIES = re.sub(r'(?m)^(?!  place messenger_base)(  place messenger_clamp saddle (\S+) -y\n)',
+                    lambda m: m.group(1) + '  place ?messenger_base saddle %s -y\n' % m.group(2), ASSEMBLIES)
+ASSEMBLIES = ASSEMBLIES.replace('  place messenger_base saddle tee -y\n  place messenger_clamp saddle tee -y\n  place ?messenger_base saddle tee -y\n',
+                                '  place messenger_base saddle tee -y\n  place messenger_clamp saddle tee -y\n')
+ASSEMBLIES = ASSEMBLIES.replace('  place messenger_base saddle stay -y\n  place messenger_clamp saddle stay -y\n  place ?messenger_base saddle stay -y\n',
+                                '  place messenger_base saddle stay -y\n  place messenger_clamp saddle stay -y\n')
 # izolator wysiegu z rura (7010) i jego rura (6111/6011) przy uchwycie 4630: cwierc obrotu wokol wlasnej osi, jak izolator
 # odciagu na szekli (Jan 2026-10-17: kazdy izolator mocowany tak samo); na koncu skladanki, po wszystkich krokach
 _steady_insulated = False
