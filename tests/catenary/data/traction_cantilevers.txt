@@ -1946,7 +1946,7 @@ part 7110-01 kind insulator length 0.2000 endpart   // punkt "eye" modelu
 part 7120-01 kind insulator length 0.1700 endpart   // punkt "eye" modelu
 part 4160-01 kind messenger_clamp point rope 0.0000 0.0106 endpart   // siodlo liny: zero na gorze polki teownika, rope = os liny
 part 4350-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na teowniku, eye = os obrotu glowicy
-part 4350-01 kind clamp point eye -0.0514 -0.0359 point mount -0.0515 0.0004 endpart   // glowica wezla: eye = rura/teownik wysiegu, mount = lina
+part 4350-01 kind clamp point eye -0.0515 0.0004 point mount -0.0514 -0.0359 endpart   // glowica wezla: eye = rura/teownik wysiegu, mount = lina (nazwy poprawione przez Jana 2026-10-18 14:48)
 // teowniki 0111 (przechylne, prosta, odsuw do slupa): zaczepy z geometrii modeli, pret gorny poziomy; lina w siodle na wysokosci hk
 scheme 111 2 reach 1.7500 2.2000 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0193 assembly tee_swing role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-01 role cord 4490-00 role cord_clamp 4210-02 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
 scheme 111 3 reach 2.2000 2.6500 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0345 assembly tee_swing role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-02 role cord 4490-00 role cord_clamp 4210-02 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme

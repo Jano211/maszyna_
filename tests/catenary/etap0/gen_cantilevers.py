@@ -1134,7 +1134,7 @@ w('part 7110-01 kind insulator length 0.2000 endpart   // punkt "eye" modelu')
 w('part 7120-01 kind insulator length 0.1700 endpart   // punkt "eye" modelu')
 w('part 4160-01 kind messenger_clamp point rope 0.0000 0.0106 endpart   // siodlo liny: zero na gorze polki teownika, rope = os liny')
 w('part 4350-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na teowniku, eye = os obrotu glowicy')
-w('part 4350-01 kind clamp point eye -0.0514 -0.0359 point mount -0.0515 0.0004 endpart   // glowica wezla: eye = rura/teownik wysiegu, mount = lina')
+w('part 4350-01 kind clamp point eye -0.0515 0.0004 point mount -0.0514 -0.0359 endpart   // glowica wezla: eye = rura/teownik wysiegu, mount = lina (nazwy poprawione przez Jana 2026-10-18 14:48)')
 # 0111 (s. 64): wyk. 2/3/4 = A 1,75-2,20 / 2,20-2,65 / 2,65-3,10, hk 1,70 (sieci 1-4, karta 13-0002); 6101-2/3/4, 4310-2/3/4,
 # 6111-1/2/3, ramiona 6201-1 + 6201-2 na 4240-1, linka 9812-1 1,60 m. Zaczepy nominalne z geometrii modeli (bryla bez obrotu):
 # dolny = lina - (7110 wzdluz ramienia + gora polki + os liny w siodle), gorny = wysokosc ucha 6101 (pret poziomy)
