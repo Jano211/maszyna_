@@ -556,7 +556,7 @@ std::map<std::string, std::string> const step_arguments {
     { "tangent", "nppen" }, { "level", "lnpe" }, { "project", "lnpee" }, { "limit", "lnee" }, { "window", "lnEE" },
     { "chain", "lnpeernEEE" }, { "place", "rpda" }, { "roll", "rR" }, { "stretch", "rppa" }, { "registration", "" },
     { "repeat", "ip" }, { "endrepeat", "" }, { "vee", "rppea" }, { "hangarms", "rrrlp" }, { "anchor", "nper" },
-    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" }, { "setarms", "rp" }, { "atleast", "lne" }, { "export", "p" }, { "hangat", "rp" }, { "across", "lnpe" }, { "hangto", "rplne" }, { "armropes", "rp" }, { "tee", "ppp" } };
+    { "flip", "r" }, { "snap", "lnrn" }, { "platform", "ppp" }, { "armcords", "rrpe" }, { "setarms", "rp" }, { "atleast", "lne" }, { "export", "p" }, { "hangat", "rp" }, { "across", "lnpe" }, { "hangto", "rplne" }, { "armropes", "rp" }, { "tee", "ppp" }, { "tee_bar", "pppn" } };
 
 bool valid_argument( char const Kind, std::string const &Word ) {
     std::vector<term> terms;
@@ -1437,6 +1437,67 @@ private:
             make_line( "leg", strutpin + rotate( base + slidemin, tilt ), rotate( legdir, tilt ) ).stations[ "end" ] = length( slidemax - slidemin );
             m_result.values[ "strut.drop" ] = mount.z - strutpin.z;
             m_result.values[ "stay_mount.shift" ] = stay.z - upper.z;
+            m_result.values[ "strut.tilt" ] = tilt * 180.0 / 3.14159265358979323846;
+            m_result.values[ "messenger_clamp.slide" ] = slide;
+            return;
+        }
+
+        if( op == "tee_bar" ) {
+            // teownik nieprzechylny z siodłem na pręcie górnym (0109 wyk. 1 i 5): pręt (rola stay) z izolatorem (stay_insulator)
+            // poziomo od zaczepu StayMount, siodło (messenger_clamp, punkt "rope") na pręcie w zakresie slide_horizontal_min..max,
+            // ukośnik (strut) z izolatorem (strut_insulator) jako sztywna bryła z zaczepu StrutMount, punkt ukośnika Point w punkcie
+            // "eye" pręta. Wysokość pręta z liny (stay_mount.shift), obrót bryły z odległości w poziomie, wysokość zaczepu dolnego
+            // z wysokości ucha pręta (strut.drop). Oś izolatora: slide_min..slide_max ukośnika albo prosta od zera do Point.
+            auto const mount { point( w[ 0 ] ) };
+            auto const upper { point( w[ 1 ] ) };
+            auto const rope { point( w[ 2 ] ) };
+            auto const pointof = [&]( cantilever_part const &Part, std::string const &Name ) {
+                auto const found { Part.points.find( Name ) };
+                if( found == Part.points.end() ) { fail( "part \"" + Part.name + "\" has no point \"" + Name + "\"" ); }
+                return vec2 { found->second.first, found->second.second };
+            };
+            auto const &strutpart { part( "strut" ) };
+            auto const &barpart { part( "stay" ) };
+            auto const joint { pointof( strutpart, w[ 3 ] ) };
+            auto const axis { ( strutpart.points.count( "slide_min" ) && strutpart.points.count( "slide_max" ) )
+                ? unit( pointof( strutpart, "slide_max" ) - pointof( strutpart, "slide_min" ) ) : unit( joint ) };
+            auto const bareye { pointof( barpart, "eye" ) };
+            auto const flatmin { pointof( barpart, "slide_horizontal_min" ) };
+            auto const flatmax { pointof( barpart, "slide_horizontal_max" ) };
+            auto const ropez { pointof( part( "messenger_clamp" ), "rope" ).z };
+            auto const insulator { part( "strut_insulator" ).length };
+            auto const topinsulator { part( "stay_insulator" ).length };
+            // pręt: oś na wysokości liny minus siodło
+            auto const barz { rope.z - ropez - flatmin.z };
+            vec2 const stay { upper.y, barz };
+            vec2 const barzero { upper.y - topinsulator, barz };
+            auto const eye { barzero + bareye };
+            // ukośnik: obrót bryły tak, żeby punkt Point wypadł w poziomie ucha pręta
+            auto const base { axis * insulator };
+            auto const body { base + joint };
+            auto const reach { length( body ) };
+            auto const dy { eye.y - mount.y };
+            if( std::abs( dy ) > reach ) { fail( "the strut \"" + strutpart.name + "\" can't reach the eye of the top bar \"" + barpart.name + "\"" ); }
+            auto const angle { std::acos( dy / reach ) };                       // kierunek bryły nad poziomem, w górę
+            auto const tilt { std::remainder( angle - std::atan2( body.z, body.y ), 2.0 * 3.14159265358979323846 ) };
+            vec2 const strutpin { mount.y, eye.z - reach * std::sin( angle ) };
+            auto const slide { barzero.y + flatmin.y - rope.y };
+            auto const flatlength { length( flatmax - flatmin ) };
+            if( slide < -1e-3 ) { warn( "the messenger is " + to_text( -slide ) + " m short of the saddle slide on the bar \"" + barpart.name + "\"" ); }
+            if( slide > flatlength + 1e-3 ) { warn( "the messenger is " + to_text( slide - flatlength ) + " m beyond the saddle slide on the bar \"" + barpart.name + "\"" ); }
+            m_points[ "strut_pin" ] = strutpin;
+            m_points[ "strut_start" ] = strutpin + rotate( base, tilt );
+            m_points[ "stay_pin" ] = stay;
+            m_points[ "stay_start" ] = barzero;
+            m_points[ "saddle" ] = vec2 { rope.y, barz + flatmin.z };
+            for( auto const &named : strutpart.points ) {
+                m_points[ "strut." + named.first ] = strutpin + rotate( base + vec2 { named.second.first, named.second.second }, tilt );
+            }
+            make_line( "strut_insulator", strutpin, rotate( axis, tilt ) );
+            make_line( "tee", strutpin + rotate( base, tilt ), rotate( toward_track, tilt ) );
+            make_line( "stay", stay, toward_track );
+            m_result.values[ "strut.drop" ] = mount.z - strutpin.z;
+            m_result.values[ "stay_mount.shift" ] = barz - upper.z;
             m_result.values[ "strut.tilt" ] = tilt * 180.0 / 3.14159265358979323846;
             m_result.values[ "messenger_clamp.slide" ] = slide;
             return;
