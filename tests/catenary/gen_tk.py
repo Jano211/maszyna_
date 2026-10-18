@@ -10,7 +10,7 @@ COL_DZ=3.5        # odstep wysiegnikow w rzedzie
 Z0=150.0          # poczatek rzedow wzdluz toru
 WIRE_Y=5.8; RAIL_Y=0.2
 PLATFORM=0.76     # peronowe (103x, 104x): slup stoi na peronie, 0,76 m nad glowka szyny
-RAISE={103:PLATFORM,104:PLATFORM,101:1.40,10:0.10,11:0.10,12:0.10,13:0.10}   # 101x: odciag 8,66 m nad glowka, 1701 pozwala na 7,30 (tylko na probe);
+RAISE={103:PLATFORM,104:PLATFORM,101:1.40,10:0.10,11:0.10,12:0.10,13:0.10,14:0.10}   # 101x: odciag 8,66 m nad glowka, 1701 pozwala na 7,30 (tylko na probe);
 # 011x (teowniki): mocowanie 4620 na wysokosci liny, 1-2 cm nad mount_max 1701 - slup 0,10 m wyzej
 POLE_HALF=0.112   # pol glebokosci slupa 1701 na wysokosci mocowania (jak w gen_td.py)
 data=open('data/traction_cantilevers.txt',encoding='utf-8').read()

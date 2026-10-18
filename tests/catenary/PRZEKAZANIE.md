@@ -2,7 +2,16 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – stan na 2026-10-18 16:45 (koniec sesji, TEOWNIKI w toku)
+## START TUTAJ – stan na 2026-10-18 19:00 (TEOWNIKI w toku)
+
+**Teowniki 18.10 wieczór (nowy czat):** w danych doszły (generator: funkcja `tee_scheme`, tablice TEE04/TEE05/TEE06):
+- 0141–0144 (sieci 3,4: 6204-02 na 4250-04 / 6205-02 na 4260-02) i 0161–0164 (sieć 5, hk 1,30: 6202-01 na 4250-03 / 6203-01 na 4260-01), nieprzechylne wyk. 1–5 jak 012x; wysięgi z tabel s. 86–89, 99–102.
+- Sekcyjne przerwy izolacyjne 0115/0116, 0135/0136, 0155/0156 (wyk. 1–4; wyk. 1 = 6102 + 4330-01 + wysięg na własnym 7110): składanki `tee_swing_wire_out/_in`, `tee_bar_steady_wire_out/_in` – 4120-03 drugiego przewodu na wysięgu 0,08 m od przewodu ramion (do słupa – dalej od słupa, od słupa – bliżej; z rysunków 0115/0116), linka z `hole_1` (koniec ramienia/pręta) ukośnie do obejmy 4210 przy końcu wysięgu; `second_wire.y/.z` w wyniku. 0115/0116 ramiona 6201-3 + 6201-4 = model 6201-04 (rejestracja 113x-1/114x-1). 4130-1 (0115/0116) i 4110-1 traktowane jako uchwyty przewodu w zestawach ramion – ZAŁOŻENIE.
+- Przęsła naprężenia 0120 (dwa 4120-03 ±0,04 m wokół A) i 0160 (jeden 4120-03, hk 1,30): `tee_tension` / `tee_bar_tension` – bez ramion, 4170-01 + 4170-02 w miejscu siodła, linka pionowo z `hole_1`, rejestracja `120x`; węzeł 4350 nie schodzi poniżej początku skośnego ramienia (`atleast`), przewody liczone od rury (`wire_c`, `wire_a/b` w wyniku). 0120 wyk. 2 wychodzi wtedy przewód 7 cm nad nominałem (wysięg nie zejdzie niżej na 6101-2), reszta w nominale. Wyk. 1: `mount steady` 0,0519 (wysięg poziomo na wysokości 4120).
+- Klucz: 135 teowników, wszystkie bez uwag. td_katalog: rzędy teowników 10x −338, 11x −346, 12x −354, 13x −362, 14x −370 (NOWY, słup +0,10), 15x −378 (PRZESUNIĘTY z −370), 16x −386 (nowy). G: traction_cantilevers.txt md5 8567995ab1a52c841788c0539c3f681e, td_katalog.scm 9f17f71f5a8744b9ba6d21070ab99656 (19:00). Bez zmian w C++.
+- Zostały: przęsła naprężenia na łuku 0137–0140, 0158/0159, 0172–0174 (6113 + 4290 + 6207 na linkach, dwa przewody 0,15 m) – wymagają nowej mechaniki; 0167/0169 (wysięgniki pomocnicze); rozjazdowe 0177–0197; 09xx.
+
+## Stan poprzedni – 2026-10-18 16:45
 
 **Zasady pracy (Jan 18.10):** notatki commitować RAZEM ze zmianami kodu/danych – jeden krok = jeden commit (było >100 commitów). Pliki na G: zawsze z NOWEGO folderu w outputs + sprawdzenie md5 po zapisie.
 
@@ -25,7 +34,6 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 1. Przerwy izolacyjne 0115/0116, 0135/0136, 0155/0156 (drugi przewód na 4120-3 na wysięgu, jak `_second_wire` w rurowych) – części są.
 2. Nieprzechylne sieci 3–4 i 5: 0141–0144, 0161–0164 (jak 012x; ramiona 6204/6205/6202/6203) – części są; tabele s. 86–89, 99–102.
 3. Przęsła naprężenia 0120, 0160, 0170 (4170: podstawa 4170-01 na górze półki = oś obrotu, głowica obrotowa 4170-02 z `rope` 50,7 mm nad półką i zamierzonym mimośrodem Y −2,7 mm; na razie wzdłuż toru, obrót w kierunek liny – edytor), dwa 4120-3, bez ramion.
-4. Brakujące modele: 6107-01…06 (09xx niskie; potrzebne slide_min/max pod 4380 – 4380-01/-02 są), 6113-1…4, 6115-3/-4, 6124-1/-2, 4370-2/-5, 7130-01, 5420-05; odciąg linowy 9832-2 (pewnie 4490-00 skalowana – do ustalenia).
 5. 09xx (s. 257–298), rozjazdowe 0177–0197, łuki przęseł naprężenia 0137–0140/0158/0159/0172–0174, 0167, 0169.
 - 4340-01 nie występuje w żadnej tabeli (Jan nie wie, do czego) – pominięty.
 
