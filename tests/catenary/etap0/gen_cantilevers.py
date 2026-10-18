@@ -1244,6 +1244,9 @@ w('part 7130-01 kind insulator length 0.1778 endpart   // izolator odciagu linow
 w('part 7130-02 kind insulator length 0.3183 endpart   // 7130 z dwoma uszami 6509 (wykonanie nasze, nie katalogowe; 09xx), eye = zaczep liny 9832-2')
 w('part 4170-01 kind clamp endpart   // podstawa uchwytu liny obrotowego: zero na gorze polki = os obrotu glowicy')
 w('part 4170-02 kind messenger_clamp point rope -0.0027 0.0507 endpart   // glowica obrotowa 4170, mimosrod Y -2,7 mm zamierzony (Jan)')
+w('part 4370-02 kind clamp point eye -0.0883 -0.0060 endpart   // glowica 4370 na obejmie 4350-02 (Jan): zero w eye obejmy = os obrotu, eye = sworzen wysiegu/poprzeczki')
+w('part 4370-05 kind clamp point eye 0.0000 -0.0785 endpart   // obejma 4370 na belke: eye = os zawiasu 4370-04')
+w('part 4370-04 kind clamp point eye -0.0883 -0.0060 endpart   // zawias do 4370-05: zero w eye 4370-05 = os obrotu, eye = sworzen')
 w('part 4350-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na teowniku, eye = os obrotu glowicy')
 w('part 4350-01 kind clamp point eye -0.0515 0.0004 point mount -0.0514 -0.0359 endpart   // glowica wezla: eye = rura/teownik wysiegu, mount = lina (nazwy poprawione przez Jana 2026-10-18 14:48)')
 # 0111 (s. 64): wyk. 2/3/4 = A 1,75-2,20 / 2,20-2,65 / 2,65-3,10, hk 1,70 (sieci 1-4, karta 13-0002); 6101-2/3/4, 4310-2/3/4,
