@@ -130,6 +130,8 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 else if( key == "length" ) { number( part.length, good ); }
                 else if( key == "pin" ) { number( part.pin, good ); }
                 else if( key == "radius" ) { number( part.radius, good ); }
+                else if( key == "model" ) { if( index < count ) { part.model = Tokens[ index++ ]; } else { good = false; } }
+                else if( key == "girth" ) { number( part.girth, good ); }
                 else if( key == "eye" ) { number( part.eye, good ); }
                 else if( key == "hook" ) { number( part.hook[ 0 ], good ); number( part.hook[ 1 ], good ); }
                 else if( key == "end" ) { number( part.end[ 0 ], good ); number( part.end[ 1 ], good ); }
@@ -844,7 +846,13 @@ private:
     }
 
     // część ustawiona drugi raz (w kolejnym przebiegu "repeat") zastępuje poprzednie ustawienie
-    void put( cantilever_placement const &Placement ) {
+    void put( cantilever_placement const &Input ) {
+        auto Placement { Input };
+        // część z innym plikiem modelu (lina 9832-2 z modelu linki 4490-00)
+        if( Placement.model.empty() ) {
+            auto const *known { m_catalog.part( Placement.part ) };
+            if( known != nullptr && false == known->model.empty() ) { Placement.model = m_catalog.models() + known->model; }
+        }
         for( auto &placed : m_result.parts ) {
             if( placed.role == Placement.role && Placement.role != "registration" ) { placed = Placement; return; }
         }
@@ -1527,6 +1535,7 @@ private:
             auto placement { place( role, stretched.name, from, unit( to - from ), rest_axis( w[ 3 ] ) ) };
             auto const axis { ( w[ 3 ][ 1 ] == 'y' ? 1 : 2 ) };
             if( stretched.length > 1e-6 ) { placement.scale[ axis ] = span / stretched.length; }
+            for( int across = 0; across < 3; ++across ) { if( across != axis ) { placement.scale[ across ] *= stretched.girth; } }
             put( placement );
             return;
         }

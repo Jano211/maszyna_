@@ -54,6 +54,8 @@ struct cantilever_part {
     std::map<std::string, std::pair<double, double>> points; // nazwane punkty modelu (Y, Z w układzie części), np. holder, eye, slide_min
     std::vector<cantilever_member> members; // zestaw ramion z osobnych modeli: składniki stawiane zamiast samego zestawu
     std::map<std::string, double> points_x; // składowa X (wzdłuż toru) nazwanych punktów, gdy model ją ma (ramiona 6207/6208: obejma 4210, ucho)
+    std::string model;              // inny plik modelu niż numer katalogowy (lina 9832-2 = model linki 4490-00), pusty - jak name
+    double girth { 1.0 };           // część rozciągana (linka): skala w poprzek osi (grubsza lina z modelu cieńszej linki)
 };
 
 // część o stałym położeniu względem przewodów jezdnych
