@@ -397,7 +397,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
     // spójność: schemat ma wskazywać istniejące części i zestaw ramion
     for( auto const &scheme : m_schemes ) {
         auto const entry { "scheme \"" + std::to_string( scheme.second.card ) + " " + std::to_string( scheme.second.execution ) + "\"" };
-        if( m_registrations.find( scheme.second.registration ) == m_registrations.end() ) { report( entry, "unknown registration \"" + scheme.second.registration + "\"" ); }
+        if( false == scheme.second.registration.empty() && m_registrations.find( scheme.second.registration ) == m_registrations.end() ) { report( entry, "unknown registration \"" + scheme.second.registration + "\"" ); }
         if( m_assemblies.find( scheme.second.assembly ) == m_assemblies.end() ) { report( entry, "unknown assembly \"" + scheme.second.assembly + "\"" ); }
         for( auto const &role : scheme.second.roles ) {
             if( m_parts.find( role.second ) == m_parts.end() ) { report( entry, "role \"" + role.first + "\" uses unknown part \"" + role.second + "\"" ); }
@@ -1370,24 +1370,42 @@ private:
             auto const legdir { unit( slidemax - slidemin ) };                 // skośne ramię w układzie części (w -Y i w górę)
             auto const insulator { part( "strut_insulator" ).length };
             auto const topinsulator { part( "stay_insulator" ).length };
-            auto const top { topinsulator + part( "stay" ).length };
             auto const base { legdir * insulator };                             // od zaczepu do zera ukośnika, bryła w spoczynku
             auto const body { base + eye };                                     // od zaczepu do ucha ukośnika
-            // pręt poziomy: ucho ukośnika o długość pręta przed zaczepem górnym; obrót bryły wokół zaczepu dolnego
-            auto const need { upper.y - top - mount.y };
+            // pręt poziomy łączy się z uchem ukośnika swoim punktem "eye" (przechylne, 4310) albo jednym z otworów hole_N
+            // (nieprzechylne, 4320; otwór z najmniejszym obrotem bryły, bez preferencji - Jan 2026-10-18); punkt pręta leży
+            // o -z pod jego osią. Obrót bryły wokół zaczepu dolnego tak, żeby ucho wypadło o długość pręta przed zaczepem górnym
+            auto const &barpart { part( "stay" ) };
+            std::vector<std::pair<std::string, vec2>> joints;
+            if( barpart.points.count( "eye" ) ) { joints.push_back( { "eye", pointof( barpart, "eye" ) } ); }
+            for( int index = 1; index < 20; ++index ) {
+                auto const name { "hole_" + std::to_string( index ) };
+                if( barpart.points.count( name ) == 0 ) { break; }
+                joints.push_back( { name, pointof( barpart, name ) } );
+            }
+            if( joints.empty() ) { joints.push_back( { "length", vec2 { -barpart.length, 0.0 } } ); }
             auto const reach { length( body ) };
-            if( std::abs( need ) > reach ) { fail( "the strut \"" + strutpart.name + "\" can't reach the top bar from its mount (" + to_text( std::abs( need ) - reach ) + " m short)" ); }
             auto const alpha { std::atan2( body.z, body.y ) };
-            auto const turn0 { std::acos( need / reach ) };
             auto const normalized = []( double Angle ) {
                 auto const pi { 3.14159265358979323846 };
                 while( Angle > pi ) { Angle -= 2.0 * pi; }
                 while( Angle < -pi ) { Angle += 2.0 * pi; }
                 return Angle;
             };
-            auto const first { normalized( turn0 - alpha ) };
-            auto const second { normalized( -turn0 - alpha ) };
-            auto const tilt { std::abs( first ) < std::abs( second ) ? first : second };
+            auto tilt { 0.0 };
+            auto best { -1 };
+            vec2 joint;
+            for( std::size_t index = 0; index < joints.size(); ++index ) {
+                auto const need { upper.y - ( topinsulator - joints[ index ].second.y ) - mount.y };
+                if( std::abs( need ) > reach ) { continue; }
+                auto const turn0 { std::acos( need / reach ) };
+                auto const first { normalized( turn0 - alpha ) };
+                auto const second { normalized( -turn0 - alpha ) };
+                auto const candidate { std::abs( first ) < std::abs( second ) ? first : second };
+                if( best < 0 || std::abs( candidate ) < std::abs( tilt ) ) { tilt = candidate; best = static_cast<int>( index ); joint = joints[ index ].second; }
+            }
+            if( best < 0 ) { fail( "the strut \"" + strutpart.name + "\" can't reach the top bar \"" + barpart.name + "\" from its mount" ); }
+            m_result.values[ "stay.joint" ] = joints[ best ].first.compare( 0, 5, "hole_" ) == 0 ? std::stod( joints[ best ].first.substr( 5 ) ) : 0.0;
             if( std::abs( tilt ) > 5.0 * 3.14159265358979323846 / 180.0 ) {
                 warn( "the strut \"" + strutpart.name + "\" is tilted by " + to_text( tilt * 180.0 / 3.14159265358979323846 ) + " degrees to meet the top bar" );
             }
@@ -1401,8 +1419,8 @@ private:
             if( slide < -1e-3 ) { warn( "the messenger is " + to_text( -slide ) + " m short of the saddle slide on the strut \"" + strutpart.name + "\"" ); }
             if( slide > flatlength + 1e-3 ) { warn( "the messenger is " + to_text( slide - flatlength ) + " m beyond the saddle slide on the strut \"" + strutpart.name + "\"" ); }
             auto const lug { strutpin + rotate( body, tilt ) };
-            vec2 const stay { upper.y, lug.z };
-            auto const barline { unit( lug - stay ) };
+            vec2 const stay { upper.y, lug.z - joint.z };
+            auto const barline { unit( vec2 { lug.y, stay.z } - stay ) };
             m_points[ "strut_pin" ] = strutpin;
             m_points[ "strut_start" ] = strutpin + rotate( base, tilt );
             m_points[ "stay_pin" ] = stay;
