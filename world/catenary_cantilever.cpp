@@ -1500,6 +1500,12 @@ private:
             make_line( "strut_insulator", strutpin, rotate( axis, tilt ) );
             make_line( "tee", strutpin + rotate( base, tilt ), rotate( toward_track, tilt ) );
             make_line( "stay", stay, toward_track );
+            // zakres przesuwu na ukośniku (węzeł 4360 na 6103): człon "leg" od slide_min do slide_max, położenie "end"
+            if( strutpart.points.count( "slide_min" ) && strutpart.points.count( "slide_max" ) ) {
+                auto const slidemin { pointof( strutpart, "slide_min" ) };
+                auto const slidemax { pointof( strutpart, "slide_max" ) };
+                make_line( "leg", strutpin + rotate( base + slidemin, tilt ), rotate( unit( slidemax - slidemin ), tilt ) ).stations[ "end" ] = length( slidemax - slidemin );
+            }
             m_result.values[ "strut.drop" ] = mount.z - strutpin.z;
             m_result.values[ "stay_mount.shift" ] = barz - upper.z;
             m_result.values[ "strut.tilt" ] = tilt * 180.0 / 3.14159265358979323846;
