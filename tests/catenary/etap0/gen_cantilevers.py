@@ -877,13 +877,18 @@ TWO_NETS = """
   export wire_b
   export messenger_b
 """
-ASSEMBLIES += ('\n// teownik rozjazdowy dwoch sieci, wyk. 4 (6101 + 4320): siec B na poprzeczce 6124 z glowica 4370-2\nassembly tee_two_nets\n'
-    + ('  tee strut_mount stay_mount messenger\n' + TWO_NETS).replace('NET_GAP', f(NET_GAP)).replace('TOPEND', 'strut.hole_1')
-      .replace('SADDLEAXIS', 'tee').replace('XBARCLAMP', 'leg@leg.xbar_clamp').replace('STEADYCLAMP', 'leg@leg.steady_clamp') + 'endassembly\n')
+TWO4 = (('  tee strut_mount stay_mount messenger\n' + TWO_NETS).replace('NET_GAP', f(NET_GAP)).replace('TOPEND', 'strut.hole_1')
+        .replace('SADDLEAXIS', 'tee').replace('XBARCLAMP', 'leg@leg.xbar_clamp').replace('STEADYCLAMP', 'leg@leg.steady_clamp'))
+# wysieg z rury 6111 na glowicy 4370 obrocony o 90 st. wokol wlasnej osi (Jan 18.10); teowe 6115 (0184, 0194) bez obrotu
+ASSEMBLIES += ('\n// teownik rozjazdowy dwoch sieci, wyk. 4 (6101 + 4320): siec B na poprzeczce 6124 z glowica 4370-2; wysieg 6111 obrocony o 90 st.\nassembly tee_two_nets\n'
+    + TWO4 + '  roll steady -\nendassembly\n')
+ASSEMBLIES += ('\n// jak tee_two_nets, wysieg teowy 6115 (0184, 0194) bez obrotu\nassembly tee_two_nets_tee\n' + TWO4 + 'endassembly\n')
 # wyk. 5: obejma 4370-5 na 6103 (eye = os zawiasu), zawias 4370-4 (zero w eye obejmy) - jak wezel 4360: polozenie na ramieniu przesuniete
 TWO5 = (TWO_NETS.replace('NET_GAP', f(NET_GAP)).replace('TOPEND', 'stay.hole_1').replace('SADDLEAXIS', 'stay')
         .replace('XBARCLAMP', 'leg@leg.xbar_clamp').replace('STEADYCLAMP', 'leg@leg.steady_clamp'))
 ASSEMBLIES += ('\n// jak tee_two_nets, wyk. 5 (6103 + 4330-5, siodlo sieci A na precie, obejmy 4370-5 + zawiasy 4370-4)\nassembly tee_two_nets_bar\n'
+    + '  tee_bar strut_mount stay_mount messenger hole_1\n' + TWO5 + '  roll steady -\nendassembly\n')
+ASSEMBLIES += ('\n// jak tee_two_nets_bar, wysieg teowy 6115 bez obrotu\nassembly tee_two_nets_bar_tee\n'
     + '  tee_bar strut_mount stay_mount messenger hole_1\n' + TWO5 + 'endassembly\n')
 # izolator wysiegu z rura (7010) i jego rura (6111/6011) przy uchwycie 4630: cwierc obrotu wokol wlasnej osi, jak izolator
 # odciagu na szekli (Jan 2026-10-17: kazdy izolator mocowany tak samo); na koncu skladanki, po wszystkich krokach
@@ -1520,6 +1525,7 @@ w('part 4170-02 kind messenger_clamp point rope -0.0027 0.0507 endpart   // glow
 w('part 4370-02 kind clamp point eye -0.0883 -0.0060 endpart   // glowica 4370 na obejmie 4350-02 (Jan): zero w eye obejmy = os obrotu, eye = sworzen wysiegu/poprzeczki')
 w('part 4370-05 kind clamp point eye 0.0000 -0.0785 endpart   // obejma 4370 na belke: eye = os zawiasu 4370-04')
 w('part 4370-04 kind clamp point eye -0.0883 -0.0060 endpart   // zawias do 4370-05: zero w eye 4370-05 = os obrotu, eye = sworzen')
+w('part 4280-02 kind arm_holder point eye 0.0000 -0.1960 endpart   // jak 4280-01 (zero na spodzie rury/teownika, Jan 18.10), 0180, 0184')
 w('part 4380-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na 6107 (jak 4350-02), eye = os obrotu glowicy 4380-01')
 w('part 4380-01 kind clamp point eye -0.1012 0.0001 endpart   // glowica wezla 4380: zero w osi obrotu, eye = zaczep odciagu linowego')
 w('part 9832-02 kind cord length 1.0000 model 4490-00 girth 2.5000 endpart   // odciag linowy 09xx (stal 6x24x7 Ro-Zn, ~10 mm): model linki 4490-00 (4 mm) pogrubiony 2,5 raza (Jan)')
@@ -1618,8 +1624,10 @@ for card, (reg, arms_roles, steadies, outward) in sorted(TEE02.items()):
 # sekcyjne przerwy izolacyjne (przechylne, wyk. 1-4; wyk. 1 jak 012x: 6102 + 4330-01, wysieg na wlasnym 7110); z tabel:
 # 0115/0116 ramiona 6201-3 + 6201-4 na 4240-1, 0135/0136 6204-1 + 6204-2 na 4250-4, 0155/0156 6202-1 na 4250-3 (hk 1,30);
 # 4130-1 (0115/0116) i 4110-1 (0135/0136, 0155/0156) - uchwyty przewodu w zestawach ramion
-TEE05 = {115: ('113x-1', (('arms', '6201-04'),) + ARMS_4240, {1: 3, 2: 4, 3: 5, 4: 6}, False, 1.70),
-         116: ('114x-1', (('arms', '6201-04'),) + ARMS_4240, {1: 6, 2: 7, 3: 7, 4: 8}, True, 1.70),
+# 0115/0116 to przerwy na prostej, a tabele podaja ramiona lukowe 6201-3 + 6201-4 - blad katalogu (Jan 18.10: wyk. 1 0115 z 6201-04 nie
+# miesci sie na wysiegu - uchwyt 4240 wchodzi w izolator); przyjete proste 6201-1 + 6201-2 (model 6201-02) jak w 0111/0112
+TEE05 = {115: ('111x-1', (('arms', '6201-02'),) + ARMS_4240, {1: 3, 2: 4, 3: 5, 4: 6}, False, 1.70),
+         116: ('112x-1', (('arms', '6201-02'),) + ARMS_4240, {1: 6, 2: 7, 3: 7, 4: 8}, True, 1.70),
          135: ('111x-2', (('arms', '6204-02'), ('arms_bracket', '4250-04')), {1: 3, 2: 4, 3: 5, 4: 6}, False, 1.70),
          136: ('112x-2', (('arms', '6204-02'), ('arms_bracket', '4250-04')), {1: 6, 2: 6, 3: 7, 4: 8}, True, 1.70),
          155: ('111x-3', (('arms', '6202-01'), ('arms_bracket', '4250-03')), {1: 3, 2: 3, 3: 3, 4: 4}, False, 1.30),
@@ -1753,7 +1761,6 @@ for card, arms in ((177, '6203-01'), (179, '6203-1111')):
         tee_scheme(card, wyk, 1.30, 'ropex', (('arms', arms), ('rope', '9814-03')) + extra, 0, False, True, no_steady=True,
                    base='tee_rope', base1='tee_bar_rope', base5='tee_node_rope', steady_mount=0.10)
 tee_scheme(197, 4, 1.30, 'ropex', (('arms', '6206-1212'), ('rope', '9814-03')), 0, False, True, no_steady=True, base='tee_rope')
-w('part 4280-02 kind arm_holder point eye 0.0000 -0.1960 endpart   // jak 4280-01 (zero na spodzie rury/teownika, Jan 18.10), 0180')
 w('registration 0180 tube 0.2942 clamp -1.3500 endregistration   // 6113 nad przewodem: ucho 4280-2 w punkcie zawieszenia 6206-1111 (od slupa: clamp ujemny)')
 w('// teownik 0180 - rozjazdowe, ramiona podwojne 6206-1 na 4280-2 na wysiegu teowym 6113, od slupa, nieprzechylne')
 for wyk, st in ((1, 1), (2, 1), (3, 2), (4, 2), (5, 3)):
@@ -1769,6 +1776,11 @@ T2N = {181: ('018x', (('arms', '6202-01'), ('arms_bracket', '4250-03')), (('arms
        182: ('0182', (('arms', '6206-01'), ('arms_bracket', '4260-01')), (('arms_b', '6206-01'), ('arms_bracket_b', '4260-01'))),
        192: ('0192', (('arms', '6201-04'), ('arms_bracket', '4240-02'), ('arms_head', '4240-22')), (('arms_b', '6201-04'), ('arms_bracket_b', '4240-02'), ('arms_head_b', '4240-22'))),
        193: ('018x', (('arms', '6202-01'), ('arms_bracket', '4250-03')), (('arms_b', '6204-02'), ('arms_bracket_b', '4250-04')))}
+# 0184 (s. 114, Jan 18.10): wysieg teowy 6115-3/-4 (pliki 6115-01/-02), siec A (blizej slupa) - para ruchomych 6206-1 z osobnymi 4110
+# (6206-1111) na 4280-2, siec B (dalej) - sztywne pojedyncze 6206-01 na 4280-1. Przydzial 4280-1/-2 do sieci - ZALOZENIE (ten sam wymiar)
+w('registration 0184 tube 0.2942 clamp 0.1689 endregistration   // 6115 nad przewodem: ucho 4280 w punkcie zawieszenia 6206 (0,0792 + 0,196 + 0,019)')
+T2N[184] = ('0184', (('arms', '6206-1111'), ('arms_bracket', '4280-02')), (('arms_b', '6206-01'), ('arms_bracket_b', '4280-01')))
+TEE_STEADY_2N = {184: ('6115-01', '6115-02')}
 for card, (reg, arms_a, arms_b) in sorted(T2N.items()):
     for wyk in (4, 5):
         amin, amax = A_TEE[wyk]
@@ -1787,7 +1799,8 @@ for card, (reg, arms_a, arms_b) in sorted(T2N.items()):
             roles = [('strut_insulator', '7110-01'), ('strut', '6103-01'), ('stay_insulator', '7110-01'), ('stay', '4330-05'),
                      ('xbar_clamp', '4370-05'), ('xbar_head', '4370-04'), ('steady_clamp', '4370-05'), ('steady_head', '4370-04'), ('xbar', '6124-02')]
             assembly = 'tee_two_nets_bar'
-        roles += [('messenger_clamp', '4160-01'), ('messenger_clamp_b', '4160-01'), ('steady', '6111-08'), ('cord', '4490-00'), ('cord_clamp', '4210-02'),
+        if card in TEE_STEADY_2N: assembly += '_tee'
+        roles += [('messenger_clamp', '4160-01'), ('messenger_clamp_b', '4160-01'), ('steady', TEE_STEADY_2N[card][wyk - 4] if card in TEE_STEADY_2N else '6111-08'), ('cord', '4490-00'), ('cord_clamp', '4210-02'),
                   ('cord_holder', '4230-01'), ('rope', '9814-03'), ('rope_holder', '4230-01')] + list(arms_a) + list(arms_b)
         line = 'scheme %d %d reach %s %s height 1.7000 registration %s mount stay %s mount strut %s assembly %s' % (card, wyk, f(amin), f(amax), reg, f(stay_z), f(strut_z), assembly)
         for role, part in roles: line += ' role %s %s' % (role, part)
