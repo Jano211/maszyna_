@@ -724,9 +724,11 @@ node 1000 0 none suspension scheme 1232 1 at -323.688 5.800 188.500 rope -323.68
 node 1000 0 none suspension scheme 108 2 at -335.913 5.800 150.000 rope -335.913 7.500 150.000 pole 1701 -338.000 0.300 150.000 endsuspension
 node 1000 0 none suspension scheme 108 3 at -335.463 5.800 153.500 rope -335.463 7.500 153.500 pole 1701 -338.000 0.300 153.500 endsuspension
 node 1000 0 none suspension scheme 108 4 at -335.013 5.800 157.000 rope -335.013 7.500 157.000 pole 1701 -338.000 0.300 157.000 endsuspension
-node 1000 0 none suspension scheme 109 2 at -335.913 5.800 160.500 rope -335.913 7.500 160.500 pole 1701 -338.000 0.300 160.500 endsuspension
-node 1000 0 none suspension scheme 109 3 at -335.463 5.800 164.000 rope -335.463 7.500 164.000 pole 1701 -338.000 0.300 164.000 endsuspension
-node 1000 0 none suspension scheme 109 4 at -335.013 5.800 167.500 rope -335.013 7.500 167.500 pole 1701 -338.000 0.300 167.500 endsuspension
+node 1000 0 none suspension scheme 109 1 at -336.363 5.800 160.500 rope -336.363 7.500 160.500 pole 1701 -338.000 0.300 160.500 endsuspension
+node 1000 0 none suspension scheme 109 2 at -335.913 5.800 164.000 rope -335.913 7.500 164.000 pole 1701 -338.000 0.300 164.000 endsuspension
+node 1000 0 none suspension scheme 109 3 at -335.463 5.800 167.500 rope -335.463 7.500 167.500 pole 1701 -338.000 0.300 167.500 endsuspension
+node 1000 0 none suspension scheme 109 4 at -335.013 5.800 171.000 rope -335.013 7.500 171.000 pole 1701 -338.000 0.300 171.000 endsuspension
+node 1000 0 none suspension scheme 109 5 at -333.788 5.800 174.500 rope -333.788 7.500 174.500 pole 1701 -338.000 0.300 174.500 endsuspension
 node 1000 0 none suspension scheme 111 2 at -343.913 5.800 150.000 rope -343.913 7.500 150.000 pole 1701 -346.000 0.300 150.000 endsuspension
 node 1000 0 none suspension scheme 111 3 at -343.463 5.800 153.500 rope -343.463 7.500 153.500 pole 1701 -346.000 0.300 153.500 endsuspension
 node 1000 0 none suspension scheme 111 4 at -343.013 5.800 157.000 rope -343.013 7.500 157.000 pole 1701 -346.000 0.300 157.000 endsuspension

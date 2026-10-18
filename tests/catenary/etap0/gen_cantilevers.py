@@ -537,6 +537,17 @@ assembly tee_messenger
   place messenger_clamp saddle tee -y
 endassembly
 """
+ASSEMBLIES += """
+// teownik nieprzechylny, siodlo na precie (0109 wyk. 1 i 5): tee_bar <zaczep ukosnika> <zaczep preta> <lina> <punkt ukosnika w eye preta>
+assembly tee_bar_messenger
+  tee_bar strut_mount stay_mount messenger hole_1
+  place strut_insulator strut_pin strut_insulator -y
+  place strut strut_start tee -y
+  place stay_insulator stay_pin stay -y
+  place stay stay_start stay -y
+  place messenger_clamp saddle stay -y
+endassembly
+"""
 # od slupa (0112, 0114): linka skosnie z hole_1 (koniec poziomego ramienia, Jan 2026-10-18) do obejmy 4210 w miejscu z zestawu ramion
 ASSEMBLIES += ('\n// jak tee_swing, odsuw od slupa: linka z konca poziomego ramienia (hole_1) do obejmy 4210 w miejscu z zestawu ramion\nassembly tee_swing_out\n' +
     re.search(r'assembly tee_swing\n(.*?)endassembly\n', ASSEMBLIES, re.S).group(1)
@@ -1153,6 +1164,10 @@ for n, L in ((2, 1.27), (3, 1.72), (4, 2.17)):
     w('part 4310-%02d kind stay length %s point eye %s 0.0000 endpart   // pret gorny przechylny, eye = laczenie z ukosnikiem' % (n, f(L), f(-L)))
 for n, L in ((2, 1.21), (3, 1.66), (4, 2.11)):
     w('part 4320-%02d kind stay %s endpart   // pret gorny nieprzechylny: hole_1..3 co 50 mm, 40 mm pod osia; ucho 6101 w jednym z nich (solver bierze otwor z najmniejszym obrotem)' % (n, ' '.join('point hole_%d %s -0.0400' % (k + 1, f(-(L - 0.05 * k))) for k in range(3))))
+w('part 6102-01 kind tee_strut point hole_1 -0.7188 0.5333 point hole_2 -0.6627 0.4916 point slide_min -0.0683 0.0507 point slide_max -0.6224 0.4618 endpart   // ukosnik wyk. 1, prosty 36,6 st.; hole_1 w eye preta 4330-01')
+w('part 6103-01 kind tee_strut point hole_1 -4.1250 0.0000 point eye -3.6250 -0.0500 endpart   // ukosnik wyk. 5 (model lezy poziomo); hole_1 w eye preta 4330-05 (z geometrii: 7110 + 6103 do hole_1 = 4,325 m przy ~2,25 m odstepu)')
+w('part 4330-01 kind stay point hole_1 -1.3750 0.0000 point eye -0.6930 -0.0625 point slide_horizontal_min -0.8400 0.0445 point slide_horizontal_max -1.3400 0.0445 endpart   // pret wyk. 1, siodlo na precie')
+w('part 4330-05 kind stay point hole_1 -4.0750 0.0000 point eye -3.5450 0.0000 point slide_horizontal_min -3.5850 0.0445 point slide_horizontal_max -4.0400 0.0445 endpart   // pret wyk. 5, siodlo na precie')
 w('part 7110-01 kind insulator length 0.2000 endpart   // punkt "eye" modelu')
 w('part 7120-01 kind insulator length 0.1700 endpart   // punkt "eye" modelu')
 w('part 4160-01 kind messenger_clamp point rope 0.0000 0.0106 endpart   // siodlo liny: zero na gorze polki teownika, rope = os liny')
@@ -1180,6 +1195,16 @@ for card, top_ins, bar, dz in ((108, '7120-01', '4310', 0.0), (109, '7110-01', '
       for role, part in (('strut_insulator', '7110-01'), ('strut', '6101-%02d' % wyk), ('stay_insulator', top_ins), ('stay', '%s-%02d' % (bar, wyk)), ('messenger_clamp', '4160-01')):
           line += ' role %s %s' % (role, part)
       w(line + ' endscheme')
+# 0109 wyk. 1 (A 1,30-1,75, ~0,75 m) i 5 (A 3,70-4,50, ~2,25 m): siodlo na precie 4330, ukosnik hole_1 w eye preta; izolatory 7110
+for wyk, (amin, amax), strut, bar, strut_len, eye in ((1, (1.30, 1.75), '6102-01', '4330-01', math.hypot(0.7188, 0.5333) + 0.20, (0.693, -0.0625)),
+                                                     (5, (3.70, 4.50), '6103-01', '4330-05', 4.125 + 0.20, (3.545, 0.0))):
+    stay_z = 1.70 - 0.0106 - 0.0445
+    dy = 0.20 + eye[0]
+    strut_z = stay_z + eye[1] - math.sqrt(max(0.0, strut_len ** 2 - dy ** 2))
+    line = 'scheme 109 %d reach %s %s height 1.7000 mount stay %s mount strut %s assembly tee_bar_messenger' % (wyk, f(amin), f(amax), f(stay_z), f(strut_z))
+    for role, part in (('strut_insulator', '7110-01'), ('strut', strut), ('stay_insulator', '7110-01'), ('stay', bar), ('messenger_clamp', '4160-01')):
+        line += ' role %s %s' % (role, part)
+    w(line + ' endscheme')
 w('// teowniki 0111-0114 (przechylne): zaczepy z geometrii modeli, pret gorny poziomy; lina w siodle na wysokosci hk')
 for card, (assembly, reg, arms, steadies) in sorted(TEE01.items()):
   for wyk, (amin, amax) in ((2, (1.75, 2.20)), (3, (2.20, 2.65)), (4, (2.65, 3.10))):
