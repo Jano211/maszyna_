@@ -1588,6 +1588,14 @@ for card, (reg, arms, bracket, steadies, outward, tilting) in sorted(T097.items(
 for wyk, st in zip(range(1, 5), (3, 4, 5, 5)):
     tee_scheme(970, wyk, 1.70, '120x', (), st, False, False, base='tee_tension', base1='tee_bar_tension', extra_roles=(('contact_clamp', '4120-03'),),
                rope=0.0507, saddle=(('messenger_base', '4170-01'), ('messenger_clamp', '4170-02')), steady_mount=0.0519)
+# rozjazdowe jednej sieci, ramiona pojedyncze 6206 (s. 109, 118): 0178 (siec 5, odsuw od slupa, nieprzechylne, wyk. 1-5, 6206-1 na
+# 4260-1) i 0196 (nad rozjazdem krzyzowym S49 1:9/300, przechylne, tylko wyk. 4, 6206-2 na 4260-2, 6111-3, hk 1,70 z karty).
+# 0178 hk 1,30 (siec 5) - ZALOZENIE. 0177/0179/0197 (ramiona na linie 9814-3), 0180 (6113 na 4280), 018x/019x (dwie sieci) - jeszcze nie.
+w('registration 0196 tube 0.3280 clamp 0.1689 endregistration   // 6206-02 do slupa na 4260-02 (ucho 0,1192 + 0,1898 + promien rury)')
+w('// teowniki - rozjazdowe 0178, 0196 (ramiona pojedyncze 6206)')
+for wyk, st in ((1, 6), (2, 5), (3, 6), (4, 6), (5, 7)):
+    tee_scheme(178, wyk, 1.30, '126x', (('arms', '6206-01'), ('arms_bracket', '4260-01')), st, True, False)
+tee_scheme(196, 4, 1.70, '0196', (('arms', '6206-02'), ('arms_bracket', '4260-02')), 3, False, True)
 w('// teowniki 0141-0144 (sieci 3, 4) i 0161-0164 (siec 5, hk 1,30): nieprzechylne, wyk. 1-5')
 for card, (reg, arms_roles, steadies, outward, hk) in sorted(TEE04.items()):
   for wyk in sorted(steadies):
