@@ -14,6 +14,13 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 - Klucz uwag liczy `etap0/klucz_uwag.cpp` (g++ z world/catenary_cantilever.cpp, argument: katalog data; wynik do `gen_tk.py <plik>`); RAISE w gen_tk i w klucz_uwag.cpp muszą być zgodne.
 - Pliki na G: 2026-10-18 16:45: traction_cantilevers.txt md5 0194bbc268e4b26f40c2bd1887f3af64, td_katalog.scm 9f04ea7b707ebd665c6eb5264aa5ef40. Jan obejrzał 0111 („bajka”); reszty jeszcze nie.
 
+**Ustalenia 16:40–17:35 (Jan):**
+- Wszystkie linki z 4490-00 (średnica modelu 4 mm). 9814-3 (KB35, ~7,5 mm) i 9832-2 (stal 6×24×7 Ro-Zn, ~10 mm) – przeskalować w poprzek (~1,9 / ~2,5) w X i Y modelu; pogrubione pętle na końcach – martwić się dopiero, gdy będzie widać.
+- 5420 pomijany: linka 4490 wprost na linę nośną (0167).
+- 7130: `7130-01` sam izolator (eye 0,1778), `7130-02` z dwoma uszami 6509 (nasze wykonanie, w 09xx zawsze 1× 7130 + 2× 6509; eye 0,3183 = zaczep liny 9832-2). Łańcuch odciągu 6305/5290 pomijany, lina od `eye` 7130-02 do `eye` 4380-01.
+- 6107: jedna para `slide_horizontal_min/max` na całą długość (nie dzielić na strefy – granice wyjdą z geometrii), na SPODZIE półki (Z −0,045), bo 6107 ma półkę na dole; siodło 4160 obrócone o 180° wokół osi teownika (klocek `flip`), lina 10,6 mm pod półką; czy inne części też siedzą odwrotnie – sprawdzić na pierwszym teście 09xx w symulatorze.
+- Nowe modele (sprawdzone 17:35, punkty w danych jako `part` bez schematów): 6107-01…06 (hole_1 1,385…3,635 co 0,45; slide 0,085…hole_1−0,05 na Z −0,045), 6113-01…04 (hole_1 2,945/3,445/3,845/4,245; slide jak 6107), 6115 pliki `6115-01/-02` = katalogowe 6115-3/-4 (hole_1 3,850/4,250 Z +0,0446; slide Z 0 od 0,13), 6124-01/-02 (hole_1/hole_2 na 1,05/1,25 m, Z −0,025/−0,0548; slide Z 0 od 0,13), 7130-01/-02, 4170-01/-02. Brakuje tylko 4370-02/-05.
+
 **Teowniki – dalej (kolejność):**
 1. Przerwy izolacyjne 0115/0116, 0135/0136, 0155/0156 (drugi przewód na 4120-3 na wysięgu, jak `_second_wire` w rurowych) – części są.
 2. Nieprzechylne sieci 3–4 i 5: 0141–0144, 0161–0164 (jak 012x; ramiona 6204/6205/6202/6203) – części są; tabele s. 86–89, 99–102.

@@ -1231,6 +1231,19 @@ w('part 7110-01 kind insulator length 0.2000 endpart   // punkt "eye" modelu')
 w('part 7120-01 kind insulator length 0.1700 endpart   // punkt "eye" modelu')
 w('part 4160-01 kind messenger_clamp point rope 0.0000 0.0106 endpart   // siodlo liny: zero na gorze polki teownika, rope = os liny')
 w('part 4230-01 kind clamp point eye 0.0000 -0.0781 endpart   // uchwyt linki na teowniku (sruba w hole_2), wisi w linii linki; eye = zaczep linki')
+# teowniki - czesci na kolejne karty (modele Jana 2026-10-18 16:15-17:30, punkty z plikow t3d), jeszcze bez schematow
+for n, L in zip(range(1, 7), (1.385, 1.835, 2.285, 2.735, 3.185, 3.635)):
+    w('part 6107-%02d kind tee_bar point hole_1 %s 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max %s -0.0450 endpart   // pozioma teowa 09xx, polka NA DOLE (siodlo 4160 odwrocone - flip), slide na spodzie polki' % (n, f(-L), f(-(L - 0.05))))
+for n, L in zip(range(1, 5), (2.9452, 3.4452, 3.8452, 4.2452)):
+    w('part 6113-%02d kind tee_bar point hole_1 %s 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max %s -0.0450 endpart   // wysieg teowy (przesla naprezenia na luku, rozjazdowe)' % (n, f(-L), f(-(L - 0.05))))
+for n, kat, L in ((1, 3, 3.8504), (2, 4, 4.2504)):
+    w('part 6115-%02d kind tee_bar point hole_1 %s 0.0446 point slide_horizontal_min -0.1300 0.0000 point slide_horizontal_max %s 0.0000 endpart   // katalogowe 6115-%d (plik Jana 6115-%02d), wysieg 0184 i rozjazdowe dwoch sieci' % (n, f(-L), f(-(L - 0.05)), kat, n))
+for n, L in ((1, 1.05), (2, 1.25)):
+    w('part 6124-%02d kind tee_bar point hole_1 %s -0.0250 point hole_2 %s -0.0548 point slide_horizontal_min -0.1300 0.0000 point slide_horizontal_max %s 0.0000 endpart   // poprzeczka drugiej liny (rozjazdowe dwoch sieci)' % (n, f(-L), f(-L), f(-(L - 0.0601))))
+w('part 7130-01 kind insulator length 0.1778 endpart   // izolator odciagu linowego 09xx, sam (punkt eye)')
+w('part 7130-02 kind insulator length 0.3183 endpart   // 7130 z dwoma uszami 6509 (wykonanie nasze, nie katalogowe; 09xx), eye = zaczep liny 9832-2')
+w('part 4170-01 kind clamp endpart   // podstawa uchwytu liny obrotowego: zero na gorze polki = os obrotu glowicy')
+w('part 4170-02 kind messenger_clamp point rope -0.0027 0.0507 endpart   // glowica obrotowa 4170, mimosrod Y -2,7 mm zamierzony (Jan)')
 w('part 4350-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na teowniku, eye = os obrotu glowicy')
 w('part 4350-01 kind clamp point eye -0.0515 0.0004 point mount -0.0514 -0.0359 endpart   // glowica wezla: eye = rura/teownik wysiegu, mount = lina (nazwy poprawione przez Jana 2026-10-18 14:48)')
 # 0111 (s. 64): wyk. 2/3/4 = A 1,75-2,20 / 2,20-2,65 / 2,65-3,10, hk 1,70 (sieci 1-4, karta 13-0002); 6101-2/3/4, 4310-2/3/4,
