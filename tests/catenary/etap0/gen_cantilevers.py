@@ -494,7 +494,7 @@ ASSEMBLIES += ('\n// jak inner_push, linka V od glowicy do liny (1267-1269)\nass
 # izolatorze 7110 (mocowanie 4610) i pret gorny 4310 na izolatorze 7120 (mocowanie 4620 na wysokosci liny - karta 33-0501 starego
 # katalogu), lina w siodle 4160 na poziomym ramieniu ukosnika, wysieg 6111 na wezle 4350 (obejma 4350-02 na skosnym ramieniu,
 # obrotowa glowica 4350-01), ramiona jak 111x, linka 9812 (4490-00) pionowo od otworu hole_2 ukosnika (uchwyt 4230 - brak modelu;
-# ZALOZENIE: hole_2 ~100 mm od zagiecia jest pod 4230) do obejmy 4210 na wysiegu
+# hole_2 = uchwyt 4230, potwierdzone przez Jana 2026-10-18; od slupa - z hole_1) do obejmy 4210 na wysiegu; 4230 wisi w linii linki
 ASSEMBLIES += """
 // teownik przechylny (01xx stary katalog): bryla 7110 + 6101 na dolnym zaczepie, pret 4310 + 7120 poziomo od gornego, siodlo 4160
 // na poziomym ramieniu (tee <zaczep ukosnika> <zaczep preta> <lina>), wysieg 6111 na wezle 4350 na skosnym ramieniu
@@ -509,6 +509,8 @@ assembly tee_swing
   project steady cord_clamp strut.hole_2 steady.length rules.cord_clamp_inset
   point cord_clamp_at steady@steady.cord_clamp
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
+  line cord_line strut.hole_2 toward cord_anchor
+  point cord_top cord_line@-cord_holder.eye.z
   place strut_insulator strut_pin strut_insulator -y
   place strut strut_start tee -y
   place stay_insulator stay_pin stay -y
@@ -518,7 +520,8 @@ assembly tee_swing
   place steady_head steady_pivot steady -y
   place steady steady_start steady -y
   place cord_clamp cord_clamp_at steady.up +z
-  stretch ?cord cord_anchor strut.hole_2 +z
+  place cord_holder strut.hole_2 cord_line -z
+  stretch ?cord cord_anchor cord_top +z
   hangarms ?arms arms_bracket ?arms_head steady registration
 endassembly
 """
@@ -1133,6 +1136,7 @@ for n, L in ((2, 1.27), (3, 1.72), (4, 2.17)):
 w('part 7110-01 kind insulator length 0.2000 endpart   // punkt "eye" modelu')
 w('part 7120-01 kind insulator length 0.1700 endpart   // punkt "eye" modelu')
 w('part 4160-01 kind messenger_clamp point rope 0.0000 0.0106 endpart   // siodlo liny: zero na gorze polki teownika, rope = os liny')
+w('part 4230-01 kind clamp point eye 0.0000 -0.0781 endpart   // uchwyt linki na teowniku (sruba w hole_2), wisi w linii linki; eye = zaczep linki')
 w('part 4350-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na teowniku, eye = os obrotu glowicy')
 w('part 4350-01 kind clamp point eye -0.0515 0.0004 point mount -0.0514 -0.0359 endpart   // glowica wezla: eye = rura/teownik wysiegu, mount = lina (nazwy poprawione przez Jana 2026-10-18 14:48)')
 # 0111 (s. 64): wyk. 2/3/4 = A 1,75-2,20 / 2,20-2,65 / 2,65-3,10, hk 1,70 (sieci 1-4, karta 13-0002); 6101-2/3/4, 4310-2/3/4,
@@ -1148,7 +1152,7 @@ for wyk, (amin, amax) in ((2, (1.75, 2.20)), (3, (2.20, 2.65)), (4, (2.65, 3.10)
     line = 'scheme 111 %d reach %s %s height 1.7000 registration 111x-1 mount stay %s mount strut %s assembly tee_swing' % (wyk, f(amin), f(amax), f(stay_z), f(strut_z))
     roles = [('strut_insulator', '7110-01'), ('strut', '6101-%02d' % wyk), ('stay_insulator', '7120-01'), ('stay', '4310-%02d' % wyk),
              ('messenger_clamp', '4160-01'), ('steady_clamp', '4350-02'), ('steady_head', '4350-01'), ('steady', '6111-%02d' % (wyk - 1)),
-             ('cord', '4490-00'), ('cord_clamp', '4210-02'), ('arms', '6201-02'), ('arms_bracket', '4240-02'), ('arms_head', '4240-22')]
+             ('cord', '4490-00'), ('cord_clamp', '4210-02'), ('cord_holder', '4230-01'), ('arms', '6201-02'), ('arms_bracket', '4240-02'), ('arms_head', '4240-22')]
     for role, part in roles: line += ' role %s %s' % (role, part)
     w(line + ' endscheme')
 w()
