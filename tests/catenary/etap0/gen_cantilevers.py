@@ -1402,8 +1402,9 @@ w('part 6206-02 kind arms point holder 1.3700 0.1192 endpart   // pojedyncze sta
 # jedno +0,13 m w X i +5 st., drugie -0,14 m i -5 st. (Jan) - ucha schodza sie ok. 6 cm od siebie na 4280-4, druty w tej samej linii Y.
 w('part 6206-11 kind arms point holder 1.2100 0.0792 endpart   // ruchome 6206-1 bez 4110 (model Jana 2026-10-17)')
 w('part 6206-12 kind arms point holder 1.3700 0.1192 endpart   // ruchome 6206-2 bez 4110 (model Jana 2026-10-17)')
-w('part 6206-1111 kind arms point holder %s 0.0792 member 6206-11 0.1300 0.0000 0.0000 5.0000 member 4110-01 0.1300 0.0000 0.0000 5.0000 '
-  'member 6206-11 -0.1400 0.0000 0.0000 -5.0000 member 4110-01 -0.1400 0.0000 0.0000 -5.0000 endpart   // para 2x 6206-1 (1287-1289)' % f(1.21 * math.cos(math.radians(5.0))))
+# uchwyty 4110 w parach ruchomych ramion stoja prosto (wzdluz przewodu), obraca sie tylko ramie (Jan 2026-10-18)
+w('part 6206-1111 kind arms point holder %s 0.0792 member 6206-11 0.1300 0.0000 0.0000 5.0000 member 4110-01 0.1300 0.0000 0.0000 0.0000 '
+  'member 6206-11 -0.1400 0.0000 0.0000 -5.0000 member 4110-01 -0.1400 0.0000 0.0000 0.0000 endpart   // para 2x 6206-1 (1287-1289)' % f(1.21 * math.cos(math.radians(5.0))))
 w('registration 1287 tube %s clamp 0.0000 endregistration   // os wysiegu 6001: ucho 4280-4 w punkcie zawieszenia 6206-11' % f(0.0792 + 0.196 + 0.03))
 for card, pipes, stay in ((1287, ((9, 10), (8, 9)), 8), (1288, ((10, 11), (9, 10)), 11), (1289, ((14, 14), (11, 11)), 9)):
     n = card % 10
@@ -1469,8 +1470,8 @@ w('registration ropex tube 0.0000 clamp 0.0000 endregistration   // ramiona na l
 # 127x (tom 3 s. 155-160, ramiona podwojne): para ruchomych 6203-11 pod osobne 4110 na jednej linie - na probe (Jan 18:05) +-5 st.
 # i symetrycznie +-0,13 m w X; tylko wyk. 3, 4; rury i hk jak 125x (1270 jak 1250: lina z wlasnego zaczepu)
 w('part 6203-11 kind arms point holder 0.8817 0.0219 endpart   // ruchome 6203-1 bez 4110 (model Jana 2026-10-17)')
-w('part 6203-1111 kind arms point holder %s 0.0219 member 6203-11 0.1300 0.0000 0.0000 5.0000 member 4110-01 0.1300 0.0000 0.0000 5.0000 '
-  'member 6203-11 -0.1300 0.0000 0.0000 -5.0000 member 4110-01 -0.1300 0.0000 0.0000 -5.0000 endpart   // para 2x 6203-1 (127x), na probe' % f(0.88169 * math.cos(math.radians(5.0))))
+w('part 6203-1111 kind arms point holder %s 0.0219 member 6203-11 0.1300 0.0000 0.0000 5.0000 member 4110-01 0.1300 0.0000 0.0000 0.0000 '
+  'member 6203-11 -0.1300 0.0000 0.0000 -5.0000 member 4110-01 -0.1300 0.0000 0.0000 0.0000 endpart   // para 2x 6203-1 (127x), na probe' % f(0.88169 * math.cos(math.radians(5.0))))
 for card in list(range(1052, 1057)) + [1250, 1251, 1252, 1253, 1254, 1257] + [1270, 1271, 1272, 1273, 1274, 1277]:
     n = card % 10
     for wyk in (2, 3, 4):
@@ -1833,8 +1834,8 @@ tee_scheme(196, 4, 1.70, '0196', (('arms', '6206-02'), ('arms_bracket', '4260-02
 # 0177 (s. 108, odsuw do slupa, 6203-1), 0179 (s. 110, para 6203-1 - zestaw 6203-1111 jak 127x), wyk. 1-5, przechylne (wyk. 2-4: 4310 +
 # 7120; wyk. 1: 6102 + 4330-1, lina z wlasnego 7110; wyk. 5: 6103 + 4330-5 + 4360); 0197 (s. 119, hk 1,30, para 6206-2, tylko wyk. 4).
 # hk 0177/0179 = 1,30 (siec 5) - ZALOZENIE. Linie 9814-3: model 4490-00 pogrubiony.
-w('part 6206-1212 kind arms point holder %s 0.1192 member 6206-12 0.1300 0.0000 0.0000 5.0000 member 4110-01 0.1300 0.0000 0.0000 5.0000 '
-  'member 6206-12 -0.1400 0.0000 0.0000 -5.0000 member 4110-01 -0.1400 0.0000 0.0000 -5.0000 endpart   // para 2x 6206-2 (0197), jak 6206-1111' % f(1.37 * math.cos(math.radians(5))))
+w('part 6206-1212 kind arms point holder %s 0.1192 member 6206-12 0.1300 0.0000 0.0000 5.0000 member 4110-01 0.1300 0.0000 0.0000 0.0000 '
+  'member 6206-12 -0.1400 0.0000 0.0000 -5.0000 member 4110-01 -0.1400 0.0000 0.0000 0.0000 endpart   // para 2x 6206-2 (0197), jak 6206-1111' % f(1.37 * math.cos(math.radians(5))))
 w('// teowniki - rozjazdowe z ramionami na linie 0177, 0179, 0197')
 for card, arms in ((177, '6203-01'), (179, '6203-1111')):
     for wyk in range(1, 6):
