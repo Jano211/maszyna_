@@ -37,6 +37,7 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   - 0167 (`aux_steady`) i 0169 (`aux_rope`): bez teownika, tylko zaczep 4630 na wysokości przewodu (mount steady 0,22 / 0,10); 0167 wysięg 6111 na 7110, 6203-01 na 4260-01, linka pionowo do liny nośnej; 0169 lina 9814-3 z 7120 do ucha 6207-03, linki z łuku ramion do liny. Karty to komplety 2× (wysięgniki rozstawione wzdłuż toru) – tu jeden; drugi stawia sceneria/edytor.
   - C++: przy schemacie bez ról strut i stay `solve_cantilever_on_pole` nie stawia mocowań ukośnika/odciągu (0167, 0169). Przebudowa: catenary_cantilever.cpp.
   - G: traction_cantilevers.txt md5 d3f80c88fba085af4195a7961b9e4dae, td_katalog.scm f22e4bf48d53872a10c6fda7c5b89e4e.
+- 21:50 (Jan 19:31, zrzut 0138 z symulatora): wspornik 4290-04 / 4280 nie siedział na teowniku – solver brał domyślny promień rury 0,019. Teraz `radius` w części = odległość zera od spodu profilu: 6113 0,045 (półka na dole), 6115 0,0 (spód w zerze), 6107 0,045. 6113 w 0138/0158/0172 (ramiona 6207 z łukiem do 0,464 nad drutem) podniesiony nad łuk: rejestracja `0138` rura 0,5824 (4290 hole_6, spód 6113 0,537); `0140` 0,2503 (hole_2), `0180` 0,3202, `0184` 0,2752. G: traction_cantilevers.txt md5 2db5b79b76d15b58b9521647dac5bd82 (td_katalog bez zmian). Tylko dane.
 - Dalej (poza teownikami): kotwy, inne słupy niż 1701, dobór karty z odległości, edytor.
 
 ## Stan poprzedni – 2026-10-18 16:45

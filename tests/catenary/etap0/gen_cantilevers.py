@@ -1577,9 +1577,9 @@ w('part 4230-01 kind clamp point eye 0.0000 -0.0781 endpart   // uchwyt linki na
 for n, L in zip(range(1, 7), (1.385, 1.835, 2.285, 2.735, 3.185, 3.635)):
     w('part 6107-%02d kind tee_bar length %s radius 0.0450 point hole_1 %s 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max %s -0.0450 endpart   // pozioma teowa 09xx, polka NA DOLE (siodlo 4160 odwrocone - flip), slide na spodzie polki; length = koniec modelu' % (n, f(L + 0.03), f(-L), f(-(L - 0.05))))
 for n, L in zip(range(1, 5), (2.9452, 3.4452, 3.8452, 4.2452)):
-    w('part 6113-%02d kind tee_bar length %s point hole_1 %s 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max %s -0.0450 endpart   // wysieg teowy (przesla naprezenia na luku, rozjazdowe); length = hole_1' % (n, f(L), f(-L), f(-(L - 0.05))))
+    w('part 6113-%02d kind tee_bar length %s radius 0.0450 point hole_1 %s 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max %s -0.0450 endpart   // wysieg teowy (przesla naprezenia na luku, rozjazdowe); length = hole_1' % (n, f(L), f(-L), f(-(L - 0.05))))
 for n, kat, L in ((1, 3, 3.8504), (2, 4, 4.2504)):
-    w('part 6115-%02d kind tee_bar length %s point hole_1 %s 0.0446 point slide_horizontal_min -0.1300 0.0000 point slide_horizontal_max %s 0.0000 endpart   // katalogowe 6115-%d (plik Jana 6115-%02d), wysieg 0184 i rozjazdowe dwoch sieci' % (n, f(L), f(-L), f(-(L - 0.05)), kat, n))
+    w('part 6115-%02d kind tee_bar length %s radius 0.0000 point hole_1 %s 0.0446 point slide_horizontal_min -0.1300 0.0000 point slide_horizontal_max %s 0.0000 endpart   // katalogowe 6115-%d (plik Jana 6115-%02d), wysieg 0184 i rozjazdowe dwoch sieci' % (n, f(L), f(-L), f(-(L - 0.05)), kat, n))
 for n, L in ((1, 1.05), (2, 1.25)):
     w('part 6124-%02d kind tee_bar point hole_1 %s -0.0250 point hole_2 %s -0.0548 point slide_horizontal_min -0.1300 0.0000 point slide_horizontal_max %s 0.0000 endpart   // poprzeczka drugiej liny (rozjazdowe dwoch sieci)' % (n, f(-L), f(-L), f(-(L - 0.0601))))
 w('part 7130-01 kind insulator length 0.1778 endpart   // izolator odciagu linowego 09xx, sam (punkt eye)')
@@ -1825,12 +1825,12 @@ for card, arms in ((177, '6203-01'), (179, '6203-1111')):
         tee_scheme(card, wyk, 1.30, 'ropex', (('arms', arms), ('rope', '9814-03')) + extra, 0, False, True, no_steady=True,
                    base='tee_rope', base1='tee_bar_rope', base5='tee_node_rope', steady_mount=0.10)
 tee_scheme(197, 4, 1.30, 'ropex', (('arms', '6206-1212'), ('rope', '9814-03')), 0, False, True, no_steady=True, base='tee_rope')
-w('registration 0180 tube 0.2942 clamp -1.3500 endregistration   // 6113 nad przewodem: ucho 4280-2 w punkcie zawieszenia 6206-1111 (od slupa: clamp ujemny)')
+w('registration 0180 tube 0.3202 clamp -1.3500 endregistration   // 6113 nad przewodem: ucho 4280-2 w punkcie zawieszenia 6206-1111 (od slupa: clamp ujemny)')
 w('// teownik 0180 - rozjazdowe, ramiona podwojne 6206-1 na 4280-2 na wysiegu teowym 6113, od slupa, nieprzechylne')
 for wyk, st in ((1, 1), (2, 1), (3, 2), (4, 2), (5, 3)):
     roles = [('steady', '6113-%02d' % st), ('cord', '4490-00'), ('cord_holder', '4230-01'), ('cord_holder_b', '4230-01'),
              ('arms', '6206-1111'), ('arms_bracket', '4280-02')]
-    tee_scheme(180, wyk, 1.30, '0180', roles, 0, True, False, no_steady=True, base='tee_tbar', base1='tee_bar_tbar', base5='tee_node_tbar', steady_mount=0.2942)
+    tee_scheme(180, wyk, 1.30, '0180', roles, 0, True, False, no_steady=True, base='tee_tbar', base1='tee_bar_tbar', base5='tee_node_tbar', steady_mount=0.3202)
 w('// teowniki - rozjazdowe dwoch sieci 0181, 0182, 0192, 0193 (wyk. 4, 5); siec B 0,30 m dalej od slupa, hk 1,30 na poprzeczce 6124')
 w('registration 018x tube 0.2284 clamp 0.1689 endregistration   // 6202-01 / 6204-02 na 4250 (wysieg 6111 na glowicy 4370)')
 w('registration 0182 tube 0.2880 clamp 0.1689 endregistration   // 6206-01 na 4260-01')
@@ -1842,7 +1842,7 @@ T2N = {181: ('018x', (('arms', '6202-01'), ('arms_bracket', '4250-03')), (('arms
        193: ('018x', (('arms', '6202-01'), ('arms_bracket', '4250-03')), (('arms_b', '6204-02'), ('arms_bracket_b', '4250-04')))}
 # 0184 (s. 114, Jan 18.10): wysieg teowy 6115-3/-4 (pliki 6115-01/-02), siec A (blizej slupa) - para ruchomych 6206-1 z osobnymi 4110
 # (6206-1111) na 4280-2, siec B (dalej) - sztywne pojedyncze 6206-01 na 4280-1. Przydzial 4280-1/-2 do sieci - ZALOZENIE (ten sam wymiar)
-w('registration 0184 tube 0.2942 clamp 0.1689 endregistration   // 6115 nad przewodem: ucho 4280 w punkcie zawieszenia 6206 (0,0792 + 0,196 + 0,019)')
+w('registration 0184 tube 0.2752 clamp 0.1689 endregistration   // 6115 nad przewodem: ucho 4280 w punkcie zawieszenia 6206 (0,0792 + 0,196, spod 6115 w zerze)')
 T2N[184] = ('0184', (('arms', '6206-1111'), ('arms_bracket', '4280-02')), (('arms_b', '6206-01'), ('arms_bracket_b', '4280-01')))
 # 0194 (s. 117, Jan 18.10): blizej slupa 6205-02, dalej para ruchomych 6206-1 z osobnymi 4110 (6206-1111), oba na 4280-2 na 6115.
 # Ucha zestawow na roznych wysokosciach (6205-02 0,022, 6206-11 0,079) - wysieg 6115 pochylony (Jan 18.10), skladanka *_tilt
@@ -1881,8 +1881,10 @@ for card, (reg, arms_a, arms_b) in sorted(T2N.items()):
 #  0158: skrocone przeslo naprezenia, jak 0172 (6113-1/2/3, 6207-3 na 4290-3, 4170), hk 1,30
 #  0139, 0159, 0173: przechylne do slupa, ramiona 6207 na linie 9814-3 (jak 0177; 0139 para 6207-12, 0159/0173 6207-03), 0159/0173 z 4170
 # hk: sieci 1-4 1,70, siec 5 1,30 (0159 - rysunek 1,70)
-w('registration 0138 tube 0.1964 clamp -1.3500 endregistration   // 6113 nad przewodem: 4290 hole_2 w uchu 6207 (holder -0,006), od slupa')
-w('registration 0140 tube 0.2243 clamp -1.3500 endregistration   // 6113 nad przewodem: 4290 hole_2 w uchu 6205-02/6203-01 (0,022), od slupa')
+# radius w 6113/6115 = odleglosc osi (zera) od spodu profilu, na ktorym siedzi zero wspornika 4290-04/4280 (Jan 18.10: 6113 - polka na
+# dole, spod 0,045 pod zerem; 6115 - spod w zerze). 0138: 6113 ponad lukiem ramion 6207 (gora luku 0,464) - 4290 hole_6 (Jan: podniesc)
+w('registration 0138 tube 0.5824 clamp -1.3500 endregistration   // 6113 nad lukiem 6207: 4290 hole_6 w uchu 6207 (holder -0,006), spod 6113 0,537 nad drutem, od slupa')
+w('registration 0140 tube 0.2503 clamp -1.3500 endregistration   // 6113 nad przewodem: 4290 hole_2 w uchu 6205-02/6203-01 (0,022), od slupa')
 w('// teowniki - przesla naprezenia na luku 0137-0140, 0158, 0159, 0172-0174')
 T4170 = dict(rope=0.0507, saddle=(('messenger_base', '4170-01'), ('messenger_clamp', '4170-02')))
 for wyk, st in ((2, 2), (3, 3), (4, 4)):
