@@ -2,7 +2,7 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – stan na 2026-10-18 21:25 (TEOWNIKI w toku)
+## START TUTAJ – stan na 2026-10-18 21:40 (TEOWNIKI – komplet kart w danych)
 
 **Teowniki 18.10 wieczór (nowy czat):** w danych doszły (generator: funkcja `tee_scheme`, tablice TEE04/TEE05/TEE06):
 - 0141–0144 (sieci 3,4: 6204-02 na 4250-04 / 6205-02 na 4260-02) i 0161–0164 (sieć 5, hk 1,30: 6202-01 na 4250-03 / 6203-01 na 4260-01), nieprzechylne wyk. 1–5 jak 012x; wysięgi z tabel s. 86–89, 99–102.
@@ -32,7 +32,12 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 - 21:15 (Jan 19:10, cały rząd dwóch sieci): łapki sieci B nie trafiały w mocowanie – `hangarms` liczył punkt zawieszenia od zera układu, a nie od bieżącego punktu `wire` (przestawionego na przewód sieci B), więc wspornik B stał 0,30 m za blisko. Poprawka w `catenary_cantilever.cpp` (punkt zawieszenia = `wire` + holder); dane bez zmian; przebudowa exe: tylko catenary_cantilever.cpp. Sprawdzone na podglądzie 0192-4 i 0194-4.
 - 21:20 (Jan 19:13): w wyk. 5 dwóch sieci obejma 4370-5 poprzeczki wypadała na występie 6103 pod linkę – pominięta, zawias 4370-4 wpięty wprost w `eye` 6103 (`point xbar_pivot strut.eye`); lina sieci B leży wtedy na poprzeczce na hk ok. 1,354 (zamiast 1,30), wynik `messenger_b_at`. Wysięg wyk. 5 nadal na 4370-5 + 4370-4. G: traction_cantilevers.txt md5 d1720d48d95c85e89bd7c61b75111452 (td_katalog bez zmian, b654dac1…). Klucz: uwagi tylko 0194 (6205-02 5,7 cm).
 - 21:25 (Jan 19:15): 0194 – wysięg 6115 pochylony (ok. 1,4°, w górę w stronę toru), żeby przechodził przez oś rury nad obydwoma punktami zawieszenia (6205-02 ucho 0,022, 6206-11 0,079, sztywne 4280-2): składanki `tee_two_nets_tee_tilt` / `tee_two_nets_bar_tee_tilt` (prosta `tilt` przez oba punkty, węzeł na skośnym ramieniu dobierany w `repeat`). Wsporniki ramion przechylają się razem z rurą (Jan 19:18; `hangarms`: oś wspornika wzdłuż rury, wspornik ze stałym uchem przesuwany wzdłuż rury tak, żeby ucho trafiło w punkt zawieszenia; przy rurze poziomej bez zmian – klucz i td_katalog identyczne). Wymaga przebudowy catenary_cantilever.cpp. Klucz: 321 teowników, bez uwag. G: traction_cantilevers.txt md5 bc38b1c7cf1216d3987c15fe289c75fc.
-- ZOSTAŁY: 0167, 0169, przęsła naprężenia na łuku 0137–0140, 0158/0159, 0172–0174.
+- 21:40 – WSZYSTKIE KARTY TEOWNIKÓW W DANYCH (356 schematów, klucz bez uwag):
+  - przęsła naprężenia na łuku: 0137 (przechylne do słupa, 6205-02 na 4260-02 na 6111), 0138/0140/0158/0172/0174 (nieprzechylne od słupa, 6113 na węźle 4350, na końcu 4290-04 + głowica -22/-21, ramiona 6207-12 / 6205-02 / 6207-03 / 6203-01, linka między 4230 – składanka `tee_tbar` jak 0180; rejestracje `0138` rura 0,1964 i `0140` 0,2243, 4290 hole_2), 0139/0159/0173 (ramiona 6207 na linie 9814-3 jak 0177, `tee_rope`; węzeł 4350 najniżej na początku skośnego ramienia – lina lekko w dół do ucha). 0158/0159/0172/0173 z 4170. hk: sieci 1–4 1,70, sieć 5 1,30, 0159 1,70 (rysunek). DRUGI PRZEWÓD (wyprowadzany do kotwy, 0,15 m wyżej na rysunkach) – w tabelach brak 4120, więc wysięgnik go nie trzyma; do przęsła/edytora. ZAŁOŻENIE do sprawdzenia przez Jana.
+  - 0167 (`aux_steady`) i 0169 (`aux_rope`): bez teownika, tylko zaczep 4630 na wysokości przewodu (mount steady 0,22 / 0,10); 0167 wysięg 6111 na 7110, 6203-01 na 4260-01, linka pionowo do liny nośnej; 0169 lina 9814-3 z 7120 do ucha 6207-03, linki z łuku ramion do liny. Karty to komplety 2× (wysięgniki rozstawione wzdłuż toru) – tu jeden; drugi stawia sceneria/edytor.
+  - C++: przy schemacie bez ról strut i stay `solve_cantilever_on_pole` nie stawia mocowań ukośnika/odciągu (0167, 0169). Przebudowa: catenary_cantilever.cpp.
+  - G: traction_cantilevers.txt md5 d3f80c88fba085af4195a7961b9e4dae, td_katalog.scm f22e4bf48d53872a10c6fda7c5b89e4e.
+- Dalej (poza teownikami): kotwy, inne słupy niż 1701, dobór karty z odległości, edytor.
 
 ## Stan poprzedni – 2026-10-18 16:45
 

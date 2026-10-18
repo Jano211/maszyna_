@@ -2158,6 +2158,13 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
     for( auto const &note : notes ) { Result.warnings.push_back( "cantilever " + label + ": " + note ); }
     for( auto const &height : heights ) { Result.values[ "mount." + height.first ] = height.second; }
     if( false == solved ) { return false; }
+    // wysięgnik pomocniczy bez ukośnika i odciągu (0167, 0169 - tylko zaczep na wysokości przewodu): bez ich mocowań na słupie
+    if( Scheme.roles.count( "strut" ) == 0 && Scheme.roles.count( "stay" ) == 0 ) {
+        poleparts.erase( std::remove_if( poleparts.begin(), poleparts.end(), []( cantilever_placement const &Placement ) {
+            return Placement.role.compare( 0, 6, "strut_" ) == 0 || Placement.role.compare( 0, 5, "stay_" ) == 0; } ), poleparts.end() );
+        Result.values.erase( "mount.stay" );
+        Result.values.erase( "mount.strut" );
+    }
     Result.parts.insert( Result.parts.end(), poleparts.begin(), poleparts.end() );
     return true;
 }
