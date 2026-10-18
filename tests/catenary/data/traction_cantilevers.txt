@@ -2107,6 +2107,24 @@ part 7110-01 kind insulator length 0.2000 endpart   // punkt "eye" modelu
 part 7120-01 kind insulator length 0.1700 endpart   // punkt "eye" modelu
 part 4160-01 kind messenger_clamp point rope 0.0000 0.0106 endpart   // siodlo liny: zero na gorze polki teownika, rope = os liny
 part 4230-01 kind clamp point eye 0.0000 -0.0781 endpart   // uchwyt linki na teowniku (sruba w hole_2), wisi w linii linki; eye = zaczep linki
+part 6107-01 kind tee_bar point hole_1 -1.3850 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max -1.3350 -0.0450 endpart   // pozioma teowa 09xx, polka NA DOLE (siodlo 4160 odwrocone - flip), slide na spodzie polki
+part 6107-02 kind tee_bar point hole_1 -1.8350 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max -1.7850 -0.0450 endpart   // pozioma teowa 09xx, polka NA DOLE (siodlo 4160 odwrocone - flip), slide na spodzie polki
+part 6107-03 kind tee_bar point hole_1 -2.2850 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max -2.2350 -0.0450 endpart   // pozioma teowa 09xx, polka NA DOLE (siodlo 4160 odwrocone - flip), slide na spodzie polki
+part 6107-04 kind tee_bar point hole_1 -2.7350 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max -2.6850 -0.0450 endpart   // pozioma teowa 09xx, polka NA DOLE (siodlo 4160 odwrocone - flip), slide na spodzie polki
+part 6107-05 kind tee_bar point hole_1 -3.1850 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max -3.1350 -0.0450 endpart   // pozioma teowa 09xx, polka NA DOLE (siodlo 4160 odwrocone - flip), slide na spodzie polki
+part 6107-06 kind tee_bar point hole_1 -3.6350 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max -3.5850 -0.0450 endpart   // pozioma teowa 09xx, polka NA DOLE (siodlo 4160 odwrocone - flip), slide na spodzie polki
+part 6113-01 kind tee_bar point hole_1 -2.9452 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max -2.8952 -0.0450 endpart   // wysieg teowy (przesla naprezenia na luku, rozjazdowe)
+part 6113-02 kind tee_bar point hole_1 -3.4452 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max -3.3952 -0.0450 endpart   // wysieg teowy (przesla naprezenia na luku, rozjazdowe)
+part 6113-03 kind tee_bar point hole_1 -3.8452 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max -3.7952 -0.0450 endpart   // wysieg teowy (przesla naprezenia na luku, rozjazdowe)
+part 6113-04 kind tee_bar point hole_1 -4.2452 0.0000 point slide_horizontal_min -0.0850 -0.0450 point slide_horizontal_max -4.1952 -0.0450 endpart   // wysieg teowy (przesla naprezenia na luku, rozjazdowe)
+part 6115-01 kind tee_bar point hole_1 -3.8504 0.0446 point slide_horizontal_min -0.1300 0.0000 point slide_horizontal_max -3.8004 0.0000 endpart   // katalogowe 6115-3 (plik Jana 6115-01), wysieg 0184 i rozjazdowe dwoch sieci
+part 6115-02 kind tee_bar point hole_1 -4.2504 0.0446 point slide_horizontal_min -0.1300 0.0000 point slide_horizontal_max -4.2004 0.0000 endpart   // katalogowe 6115-4 (plik Jana 6115-02), wysieg 0184 i rozjazdowe dwoch sieci
+part 6124-01 kind tee_bar point hole_1 -1.0500 -0.0250 point hole_2 -1.0500 -0.0548 point slide_horizontal_min -0.1300 0.0000 point slide_horizontal_max -0.9899 0.0000 endpart   // poprzeczka drugiej liny (rozjazdowe dwoch sieci)
+part 6124-02 kind tee_bar point hole_1 -1.2500 -0.0250 point hole_2 -1.2500 -0.0548 point slide_horizontal_min -0.1300 0.0000 point slide_horizontal_max -1.1899 0.0000 endpart   // poprzeczka drugiej liny (rozjazdowe dwoch sieci)
+part 7130-01 kind insulator length 0.1778 endpart   // izolator odciagu linowego 09xx, sam (punkt eye)
+part 7130-02 kind insulator length 0.3183 endpart   // 7130 z dwoma uszami 6509 (wykonanie nasze, nie katalogowe; 09xx), eye = zaczep liny 9832-2
+part 4170-01 kind clamp endpart   // podstawa uchwytu liny obrotowego: zero na gorze polki = os obrotu glowicy
+part 4170-02 kind messenger_clamp point rope -0.0027 0.0507 endpart   // glowica obrotowa 4170, mimosrod Y -2,7 mm zamierzony (Jan)
 part 4350-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na teowniku, eye = os obrotu glowicy
 part 4350-01 kind clamp point eye -0.0515 0.0004 point mount -0.0514 -0.0359 endpart   // glowica wezla: eye = rura/teownik wysiegu, mount = lina (nazwy poprawione przez Jana 2026-10-18 14:48)
 // teowniki 0108, 0109: samo podwieszenie liny nosnej
