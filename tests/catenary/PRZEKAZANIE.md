@@ -2,7 +2,7 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – stan na 2026-10-18 19:40 (TEOWNIKI w toku)
+## START TUTAJ – stan na 2026-10-18 19:55 (TEOWNIKI w toku)
 
 **Teowniki 18.10 wieczór (nowy czat):** w danych doszły (generator: funkcja `tee_scheme`, tablice TEE04/TEE05/TEE06):
 - 0141–0144 (sieci 3,4: 6204-02 na 4250-04 / 6205-02 na 4260-02) i 0161–0164 (sieć 5, hk 1,30: 6202-01 na 4250-03 / 6203-01 na 4260-01), nieprzechylne wyk. 1–5 jak 012x; wysięgi z tabel s. 86–89, 99–102.
@@ -17,8 +17,14 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   - 097x (sieć 5, hk 1,70): 0971–0974 jak 015x, 0975–0978 jak 016x, 0970 jak 0160.
   - Mapa: 4290-3 (teownik, jedna łapka) = 4290-04 + 4290-21, 4290-4 = 4290-04 + 4290-22.
 - C++ (19:40): część może mieć `model <plik>` (inny plik modelu niż numer) i `girth <skala>` (skala w poprzek przy `stretch`) – `9832-02` = model 4490-00 × 2,5, `9814-03` = 4490-00 × 1,9. Zmiana w `catenary_cantilever.h` (pola `model`, `girth`) – przebudowa catenary_cantilever.cpp i catenary_scene.cpp. Testy z build.sh przechodzą. Klucz: 287 teowników bez uwag.
-- td_katalog: nowe rzędy teowników 93x −394 (słup +0,30), 94x −402 (+0,60), 96x −410 (+0,30), 97x −418 (+0,10), 98x −426 (+0,60). G: traction_cantilevers.txt md5 786f6df5f8ae9a2488da13d1680b9d0a, td_katalog.scm 3fd8ab87eddd8cb2ae2475f47cd9c5ae.
-- Zostały: przęsła naprężenia na łuku 0137–0140, 0158/0159, 0172–0174 (6113 + 4290 + 6207 na linkach, dwa przewody 0,15 m); 0167/0169; rozjazdowe 0177–0197.
+- td_katalog: nowe rzędy teowników 93x (słup +0,30), 94x (+0,60), 96x (+0,30), 97x (+0,10), 98x (+0,60) – położenia niżej.
+- Rozjazdowe 0178 (sieć 5, od słupa, nieprzechylne wyk. 1–5, 6206-01 na 4260-01, rejestracja 126x; hk 1,30 – ZAŁOŻENIE) i 0196 (wyk. 4, przechylne, 6206-02 na 4260-02, 6111-3, hk 1,70 z karty, nowa rejestracja `0196` rura 0,328) w danych, bez uwag. Rzędy 17x −394, 19x −402 (słup +0,10); rzędy 09xx przesunięte: 93x −410, 94x −418, 96x −426, 97x −434, 98x −442. G (19:55): traction_cantilevers.txt md5 0d479e02955cf7a402e45d8df1e74e2d, td_katalog.scm 6d086f5063ecb5e5915ec460a780ed92. Klucz: 293 teowniki bez uwag.
+- ZOSTAŁY (nowa mechanika, do omówienia z Janem):
+  - 0177, 0179, 0197: ramiona 6203-1 / 6206-2 wiszą na linie 9814-3 (KB35) z zaciskami 5270-3 + 6301-3 rozpiętej od dolnego izolatora do końca... (jak 105x/125x `rope_arms`, tylko z teownika); 0179 para 6203-1.
+  - 0180: wysięg teowy 6113 zamiast 6111, 6206-1 na 4280-2 na 6113 – nie wiadomo, jak 4280 siedzi na teowniku (4280 ma zero na spodzie rury).
+  - 0181, 0182, 0184, 0192–0194 (dwie sieci): druga lina na poprzeczce 6124 z głowicą 4370-2/-5 (hk 1,70 i 1,30 na jednym wysięgniku), lina 9814-3, wysięg 6111/6115 na 4280.
+  - 0167 (dwa wysięgi 6111 na 7110, 4260-1, cięgna do 5420-5 na linie), 0169 (lina 9814-3 z 2× 6207-3).
+  - Przęsła naprężenia na łuku 0137–0140, 0158/0159, 0172–0174 (6113 + 4290 + 6207 na linkach, dwa przewody 0,15 m).
 
 ## Stan poprzedni – 2026-10-18 16:45
 

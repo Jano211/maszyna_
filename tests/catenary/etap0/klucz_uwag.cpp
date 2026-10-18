@@ -5,7 +5,7 @@ using namespace catenary;
 int main( int, char *argv[] ) {
     cantilever_catalog cat; std::vector<std::string> err;
     cat.load( std::string( argv[ 1 ] ) + "/traction_cantilevers.txt", err );
-    std::map<int,double> raise { {103,0.76},{104,0.76},{101,1.40},{11,0.10},{10,0.10},{12,0.10},{13,0.10},{14,0.10},{93,0.30},{94,0.60},{96,0.30},{97,0.10},{98,0.60} };
+    std::map<int,double> raise { {103,0.76},{104,0.76},{101,1.40},{11,0.10},{10,0.10},{12,0.10},{13,0.10},{14,0.10},{17,0.10},{19,0.10},{93,0.30},{94,0.60},{96,0.30},{97,0.10},{98,0.60} };
     auto const *pole { cat.pole( "1701" ) };
     for( auto const &e : cat.schemes() ) {
         auto const &s { e.second };
