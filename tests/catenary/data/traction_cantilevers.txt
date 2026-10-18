@@ -1022,6 +1022,7 @@ assembly tee_swing
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
   place steady_clamp leg@leg.steady_clamp leg -y
   place steady_head steady_pivot steady -y
   place steady steady_start steady -y
@@ -1039,6 +1040,7 @@ assembly tee_messenger
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
 endassembly
 
 // teownik nieprzechylny, siodlo na precie (0109 wyk. 1 i 5): tee_bar <zaczep ukosnika> <zaczep preta> <lina> <punkt ukosnika w eye preta>
@@ -1049,6 +1051,7 @@ assembly tee_bar_messenger
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
 endassembly
 
 // teownik nieprzechylny wyk. 1 do slupa: siodlo na precie 4330, wysieg 6111 na wlasnym izolatorze, linka z hole_2 ukosnika
@@ -1067,6 +1070,7 @@ assembly tee_bar_steady
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place steady_insulator steady_mount steady_insulator -y
   place steady steady_start steady -y
   place cord_clamp cord_clamp_at steady.up +z
@@ -1093,6 +1097,7 @@ assembly tee_bar_steady_out
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place steady_insulator steady_mount steady_insulator -y
   place steady steady_start steady -y
   place cord_clamp cord_clamp_at steady.up +z
@@ -1120,6 +1125,7 @@ assembly tee_bar_node
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place steady_clamp leg@leg.steady_clamp+steady_clamp.eye.y leg -y
   place steady steady_start steady -y
   place cord_clamp cord_clamp_at steady.up +z
@@ -1145,6 +1151,7 @@ assembly tee_bar_node_out
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place steady_clamp leg@leg.steady_clamp+steady_clamp.eye.y leg -y
   place steady steady_start steady -y
   place cord_clamp cord_clamp_at steady.up +z
@@ -1172,6 +1179,7 @@ assembly tee_swing_out
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
   place steady_clamp leg@leg.steady_clamp leg -y
   place steady_head steady_pivot steady -y
   place steady steady_start steady -y
@@ -1201,6 +1209,7 @@ assembly tee_swing_wire_out
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
   place steady_clamp leg@leg.steady_clamp leg -y
   place steady_head steady_pivot steady -y
   place steady steady_start steady -y
@@ -1233,6 +1242,7 @@ assembly tee_bar_steady_wire_out
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place steady_insulator steady_mount steady_insulator -y
   place steady steady_start steady -y
   place cord_clamp cord_clamp_at steady.up +z
@@ -1269,6 +1279,7 @@ assembly tee_swing_wire_in
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
   place steady_clamp leg@leg.steady_clamp leg -y
   place steady_head steady_pivot steady -y
   place steady steady_start steady -y
@@ -1301,6 +1312,7 @@ assembly tee_bar_steady_wire_in
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place steady_insulator steady_mount steady_insulator -y
   place steady steady_start steady -y
   place cord_clamp cord_clamp_at steady.up +z
@@ -1413,6 +1425,7 @@ assembly tee_low
   place strut_insulator strut_mount strut_insulator -y
   place strut strut_start strut -y
   place messenger_clamp saddle strut -y
+  place ?messenger_base saddle strut -y
   flip messenger_clamp
   place stay_clamp node strut -y
   flip stay_clamp
@@ -1441,6 +1454,7 @@ assembly tee_low_steady
   place strut_insulator strut_mount strut_insulator -y
   place strut strut_start strut -y
   place messenger_clamp saddle strut -y
+  place ?messenger_base saddle strut -y
   flip messenger_clamp
   place stay_clamp node strut -y
   flip stay_clamp
@@ -1482,6 +1496,7 @@ assembly tee_low_steady_out
   place strut_insulator strut_mount strut_insulator -y
   place strut strut_start strut -y
   place messenger_clamp saddle strut -y
+  place ?messenger_base saddle strut -y
   flip messenger_clamp
   place stay_clamp node strut -y
   flip stay_clamp
@@ -1527,6 +1542,7 @@ assembly tee_low_tension
   place strut_insulator strut_mount strut_insulator -y
   place strut strut_start strut -y
   place messenger_clamp saddle strut -y
+  place ?messenger_base saddle strut -y
   flip messenger_clamp
   place stay_clamp node strut -y
   flip stay_clamp
@@ -1573,6 +1589,7 @@ assembly tee_swing_steady
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
   place steady_insulator steady_mount steady_insulator -y
   place steady steady_start steady -y
   place cord_clamp cord_clamp_at steady.up +z
@@ -1599,6 +1616,7 @@ assembly tee_swing_steady_out
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
   place steady_insulator steady_mount steady_insulator -y
   place steady steady_start steady -y
   place cord_clamp cord_clamp_at steady.up +z
@@ -1626,6 +1644,7 @@ assembly tee_rope
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
   place steady_clamp leg@leg.steady_clamp leg -y
   place steady_head steady_pivot head_dir -y
   armropes rope rope_eye
@@ -1643,6 +1662,7 @@ assembly tee_bar_rope
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place rope_insulator steady_mount rope_line -y
   armropes rope rope_eye
 endassembly
@@ -1660,6 +1680,7 @@ assembly tee_node_rope
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place steady_clamp leg@leg.steady_clamp+steady_clamp.eye.y leg -y
   armropes rope rope_eye
 endassembly
@@ -1681,6 +1702,7 @@ assembly tee_rope_out
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
   place steady_clamp leg@leg.steady_clamp leg -y
   place steady_head steady_pivot head_dir -y
   armropes rope rope_eye
@@ -1698,6 +1720,7 @@ assembly tee_bar_rope_out
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place rope_insulator steady_mount rope_line -y
   armropes rope rope_eye
 endassembly
@@ -1715,6 +1738,7 @@ assembly tee_node_rope_out
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place steady_clamp leg@leg.steady_clamp+steady_clamp.eye.y leg -y
   armropes rope rope_eye
 endassembly
@@ -1733,6 +1757,7 @@ assembly tee_tbar
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
   place steady_clamp leg@leg.steady_clamp leg -y
   place steady_head steady_pivot steady -y
   place steady steady_start steady -y
@@ -1758,6 +1783,7 @@ assembly tee_bar_tbar
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place steady_insulator steady_mount steady_insulator -y
   place steady steady_start steady -y
   point steady_end steady@-steady.hole_1.y
@@ -1785,6 +1811,7 @@ assembly tee_node_tbar
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place steady_clamp leg@leg.steady_clamp+steady_clamp.eye.y leg -y
   place steady steady_start steady -y
   point steady_end steady@-steady.hole_1.y
@@ -1835,6 +1862,7 @@ assembly tee_two_nets
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
   place xbar_clamp leg@leg.xbar_clamp leg -y
   place xbar_head xbar_pivot xbar -y
   place xbar xbar_start xbar -y
@@ -1895,6 +1923,7 @@ assembly tee_two_nets_tee
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
   place xbar_clamp leg@leg.xbar_clamp leg -y
   place xbar_head xbar_pivot xbar -y
   place xbar xbar_start xbar -y
@@ -1953,6 +1982,7 @@ assembly tee_two_nets_bar
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place xbar_clamp leg@leg.end leg -y
   place xbar_head xbar_pivot xbar -y
   place xbar xbar_start xbar -y
@@ -2013,6 +2043,7 @@ assembly tee_two_nets_bar_tee
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place xbar_clamp leg@leg.end leg -y
   place xbar_head xbar_pivot xbar -y
   place xbar xbar_start xbar -y
@@ -2081,6 +2112,7 @@ assembly tee_two_nets_tee_tilt
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
   place xbar_clamp leg@leg.xbar_clamp leg -y
   place xbar_head xbar_pivot xbar -y
   place xbar xbar_start xbar -y
@@ -2147,6 +2179,7 @@ assembly tee_two_nets_bar_tee_tilt
   place stay_insulator stay_pin stay -y
   place stay stay_start stay -y
   place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
   place xbar_clamp leg@leg.end leg -y
   place xbar_head xbar_pivot xbar -y
   place xbar xbar_start xbar -y
