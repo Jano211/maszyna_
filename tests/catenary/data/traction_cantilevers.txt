@@ -1015,6 +1015,8 @@ assembly tee_swing
   project steady cord_clamp strut.hole_2 steady.length rules.cord_clamp_inset
   point cord_clamp_at steady@steady.cord_clamp
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
+  line cord_line strut.hole_2 toward cord_anchor
+  point cord_top cord_line@-cord_holder.eye.z
   place strut_insulator strut_pin strut_insulator -y
   place strut strut_start tee -y
   place stay_insulator stay_pin stay -y
@@ -1024,7 +1026,8 @@ assembly tee_swing
   place steady_head steady_pivot steady -y
   place steady steady_start steady -y
   place cord_clamp cord_clamp_at steady.up +z
-  stretch ?cord cord_anchor strut.hole_2 +z
+  place cord_holder strut.hole_2 cord_line -z
+  stretch ?cord cord_anchor cord_top +z
   hangarms ?arms arms_bracket ?arms_head steady registration
 endassembly
 
@@ -1945,12 +1948,13 @@ part 4310-04 kind stay length 2.1700 point eye -2.1700 0.0000 endpart   // pret 
 part 7110-01 kind insulator length 0.2000 endpart   // punkt "eye" modelu
 part 7120-01 kind insulator length 0.1700 endpart   // punkt "eye" modelu
 part 4160-01 kind messenger_clamp point rope 0.0000 0.0106 endpart   // siodlo liny: zero na gorze polki teownika, rope = os liny
+part 4230-01 kind clamp point eye 0.0000 -0.0781 endpart   // uchwyt linki na teowniku (sruba w hole_2), wisi w linii linki; eye = zaczep linki
 part 4350-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na teowniku, eye = os obrotu glowicy
 part 4350-01 kind clamp point eye -0.0515 0.0004 point mount -0.0514 -0.0359 endpart   // glowica wezla: eye = rura/teownik wysiegu, mount = lina (nazwy poprawione przez Jana 2026-10-18 14:48)
 // teowniki 0111 (przechylne, prosta, odsuw do slupa): zaczepy z geometrii modeli, pret gorny poziomy; lina w siodle na wysokosci hk
-scheme 111 2 reach 1.7500 2.2000 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0193 assembly tee_swing role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-01 role cord 4490-00 role cord_clamp 4210-02 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
-scheme 111 3 reach 2.2000 2.6500 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0345 assembly tee_swing role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-02 role cord 4490-00 role cord_clamp 4210-02 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
-scheme 111 4 reach 2.6500 3.1000 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0468 assembly tee_swing role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-03 role cord 4490-00 role cord_clamp 4210-02 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
+scheme 111 2 reach 1.7500 2.2000 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0193 assembly tee_swing role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-01 role cord 4490-00 role cord_clamp 4210-02 role cord_holder 4230-01 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
+scheme 111 3 reach 2.2000 2.6500 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0345 assembly tee_swing role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-02 role cord 4490-00 role cord_clamp 4210-02 role cord_holder 4230-01 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
+scheme 111 4 reach 2.6500 3.1000 height 1.7000 registration 111x-1 mount stay 1.7051 mount strut -0.0468 assembly tee_swing role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-03 role cord 4490-00 role cord_clamp 4210-02 role cord_holder 4230-01 role arms 6201-02 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
 
 
 // mocowania do slupa (karty 40-4610, 30-4620, 40-4630): axis = pionowa os obrotu wspornika ukosnika, eye = ucho zaczepu izolatora,
