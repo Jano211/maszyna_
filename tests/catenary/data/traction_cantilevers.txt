@@ -1652,6 +1652,7 @@ assembly tee_rope
   place steady_clamp leg@leg.steady_clamp leg -y
   place steady_head steady_pivot head_dir -y
   armropes rope rope_eye
+  armcords ?arms_cord ?arms_cord_clamp strut.hole_1 0
 endassembly
 
 // teownik rozjazdowy, ramiona na linie 9814-3 (do slupa)
@@ -1671,6 +1672,7 @@ assembly tee_bar_rope
   armropes rope rope_eye
   roll rope_insulator -
   roll rope -
+  armcords ?arms_cord ?arms_cord_clamp stay.hole_1 0
 endassembly
 
 // teownik rozjazdowy, ramiona na linie 9814-3 (do slupa)
@@ -1691,6 +1693,7 @@ assembly tee_bar_rope_pair
   roll rope_insulator -
   roll rope -
   roll rope.2 -
+  armcords ?arms_cord ?arms_cord_clamp stay.hole_1 0
 endassembly
 
 // teownik rozjazdowy, ramiona na linie 9814-3 (do slupa)
@@ -1709,6 +1712,28 @@ assembly tee_node_rope
   place ?messenger_base saddle stay -y
   place steady_clamp leg@leg.steady_clamp+steady_clamp.eye.y leg -y
   armropes rope rope_eye
+  armcords ?arms_cord ?arms_cord_clamp stay.hole_1 0
+endassembly
+
+// teownik rozjazdowy, ramiona na linie 9814-3 (do slupa)
+assembly tee_rope_mount
+  tee strut_mount stay_mount messenger
+  shift arms_side wire 1 0
+  setarms ?arms arms_side
+  line rope_line steady_mount toward arms_holder
+  point rope_eye rope_line@rope_insulator.length
+  place strut_insulator strut_pin strut_insulator -y
+  place strut strut_start tee -y
+  place stay_insulator stay_pin stay -y
+  place stay stay_start stay -y
+  place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
+  place rope_insulator steady_mount rope_line -y
+  armropes rope rope_eye
+  roll rope_insulator -
+  roll rope -
+  armcords ?arms_cord ?arms_cord_clamp strut.hole_1 0
+  roll rope.2 -
 endassembly
 
 // teownik rozjazdowy, ramiona na linie 9814-3 (od slupa)
@@ -1732,6 +1757,7 @@ assembly tee_rope_out
   place steady_clamp leg@leg.steady_clamp leg -y
   place steady_head steady_pivot head_dir -y
   armropes rope rope_eye
+  armcords ?arms_cord ?arms_cord_clamp strut.hole_1 0
 endassembly
 
 // teownik rozjazdowy, ramiona na linie 9814-3 (od slupa)
@@ -1751,6 +1777,7 @@ assembly tee_bar_rope_out
   armropes rope rope_eye
   roll rope_insulator -
   roll rope -
+  armcords ?arms_cord ?arms_cord_clamp stay.hole_1 0
 endassembly
 
 // teownik rozjazdowy, ramiona na linie 9814-3 (od slupa)
@@ -1771,6 +1798,7 @@ assembly tee_bar_rope_pair_out
   roll rope_insulator -
   roll rope -
   roll rope.2 -
+  armcords ?arms_cord ?arms_cord_clamp stay.hole_1 0
 endassembly
 
 // teownik rozjazdowy, ramiona na linie 9814-3 (od slupa)
@@ -1789,9 +1817,32 @@ assembly tee_node_rope_out
   place ?messenger_base saddle stay -y
   place steady_clamp leg@leg.steady_clamp+steady_clamp.eye.y leg -y
   armropes rope rope_eye
+  armcords ?arms_cord ?arms_cord_clamp stay.hole_1 0
 endassembly
 
-// 0180 wyk. 2-4: jak tee_swing_out, wysieg teowy 6113 z 4280 na koncu, linka miedzy uchwytami 4230 (hole_1 ukosnika - hole_1 6113)
+// teownik rozjazdowy, ramiona na linie 9814-3 (od slupa)
+assembly tee_rope_mount_out
+  tee strut_mount stay_mount messenger
+  shift arms_side wire -1 0
+  setarms ?arms arms_side
+  line rope_line steady_mount toward arms_holder
+  point rope_eye rope_line@rope_insulator.length
+  place strut_insulator strut_pin strut_insulator -y
+  place strut strut_start tee -y
+  place stay_insulator stay_pin stay -y
+  place stay stay_start stay -y
+  place messenger_clamp saddle tee -y
+  place ?messenger_base saddle tee -y
+  place rope_insulator steady_mount rope_line -y
+  armropes rope rope_eye
+  roll rope_insulator -
+  roll rope -
+  armcords ?arms_cord ?arms_cord_clamp strut.hole_1 0
+  roll rope.2 -
+endassembly
+
+// 0180 wyk. 2-4: jak tee_swing_out, wysieg teowy 6113 z 4280 na koncu, linka miedzy uchwytami 4230 (hole_1 ukosnika - hole_1 6113);
+// lapki 6207 (0138, 0158, 0172) podwiazane do hole_1 ukosnika
 assembly tee_tbar
   tee strut_mount stay_mount messenger
   shift tube_ref registration 0 -steady_head.eye.z
@@ -1818,6 +1869,7 @@ assembly tee_tbar
   place cord_holder_b steady_end cord_up -z
   stretch ?cord cord_bottom cord_top +z
   hangarms ?arms arms_bracket ?arms_head steady registration
+  armcords ?arms_cord ?arms_cord_clamp strut.hole_1 0
 endassembly
 
 // 0180 wyk. 1: jak tee_bar_steady, wysieg 6113 na wlasnym izolatorze
@@ -3513,30 +3565,31 @@ registration 0140 tube 0.2503 clamp -1.3500 endregistration   // 6113 nad przewo
 scheme 137 2 reach 1.7500 2.2000 height 1.7000 registration 113x-2 mount stay 1.7051 mount strut -0.0193 assembly tee_swing role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6111-02 role cord 4490-00 role cord_clamp 4210-02 role cord_holder 4230-01 role arms 6205-02 role arms_bracket 4260-02 endscheme
 scheme 137 3 reach 2.2000 2.6500 height 1.7000 registration 113x-2 mount stay 1.7051 mount strut -0.0345 assembly tee_swing role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6111-03 role cord 4490-00 role cord_clamp 4210-02 role cord_holder 4230-01 role arms 6205-02 role arms_bracket 4260-02 endscheme
 scheme 137 4 reach 2.6500 3.1000 height 1.7000 registration 113x-2 mount stay 1.7051 mount strut -0.0468 assembly tee_swing role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6111-04 role cord 4490-00 role cord_clamp 4210-02 role cord_holder 4230-01 role arms 6205-02 role arms_bracket 4260-02 endscheme
-scheme 138 2 reach 1.7500 2.2000 height 1.7000 registration 0138 mount stay 1.7451 mount strut -0.0193 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7110-01 role stay 4320-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6113-02 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-12 role arms_bracket 4290-04 role arms_head 4290-22 endscheme
-scheme 138 3 reach 2.2000 2.6500 height 1.7000 registration 0138 mount stay 1.7451 mount strut -0.0345 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7110-01 role stay 4320-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6113-03 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-12 role arms_bracket 4290-04 role arms_head 4290-22 endscheme
-scheme 138 4 reach 2.6500 3.1000 height 1.7000 registration 0138 mount stay 1.7451 mount strut -0.0468 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7110-01 role stay 4320-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6113-04 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-12 role arms_bracket 4290-04 role arms_head 4290-22 endscheme
+scheme 138 2 reach 1.7500 2.2000 height 1.7000 registration 0138 mount stay 1.7451 mount strut -0.0193 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7110-01 role stay 4320-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6113-02 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-12 role arms_bracket 4290-04 role arms_head 4290-22 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 138 3 reach 2.2000 2.6500 height 1.7000 registration 0138 mount stay 1.7451 mount strut -0.0345 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7110-01 role stay 4320-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6113-03 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-12 role arms_bracket 4290-04 role arms_head 4290-22 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 138 4 reach 2.6500 3.1000 height 1.7000 registration 0138 mount stay 1.7451 mount strut -0.0468 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7110-01 role stay 4320-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6113-04 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-12 role arms_bracket 4290-04 role arms_head 4290-22 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
 scheme 140 2 reach 1.7500 2.2000 height 1.7000 registration 0140 mount stay 1.7451 mount strut -0.0193 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7110-01 role stay 4320-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6113-02 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6205-02 role arms_bracket 4290-04 role arms_head 4290-22 endscheme
 scheme 140 3 reach 2.2000 2.6500 height 1.7000 registration 0140 mount stay 1.7451 mount strut -0.0345 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7110-01 role stay 4320-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6113-03 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6205-02 role arms_bracket 4290-04 role arms_head 4290-22 endscheme
 scheme 140 4 reach 2.6500 3.1000 height 1.7000 registration 0140 mount stay 1.7451 mount strut -0.0468 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7110-01 role stay 4320-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6113-04 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6205-02 role arms_bracket 4290-04 role arms_head 4290-22 endscheme
-scheme 158 2 reach 1.7500 2.2000 height 1.3000 registration 0138 mount stay 1.3050 mount strut -0.4594 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7110-01 role stay 4320-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role steady 6113-01 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-03 role arms_bracket 4290-04 role arms_head 4290-21 endscheme
-scheme 158 3 reach 2.2000 2.6500 height 1.3000 registration 0138 mount stay 1.3050 mount strut -0.4746 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7110-01 role stay 4320-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role steady 6113-02 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-03 role arms_bracket 4290-04 role arms_head 4290-21 endscheme
-scheme 158 4 reach 2.6500 3.1000 height 1.3000 registration 0138 mount stay 1.3050 mount strut -0.4869 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7110-01 role stay 4320-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role steady 6113-03 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-03 role arms_bracket 4290-04 role arms_head 4290-21 endscheme
-scheme 172 2 reach 1.7500 2.2000 height 1.3000 registration 0138 mount stay 1.3050 mount strut -0.4594 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7110-01 role stay 4320-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role steady 6113-02 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-03 role arms_bracket 4290-04 role arms_head 4290-21 endscheme
-scheme 172 3 reach 2.2000 2.6500 height 1.3000 registration 0138 mount stay 1.3050 mount strut -0.4746 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7110-01 role stay 4320-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role steady 6113-03 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-03 role arms_bracket 4290-04 role arms_head 4290-21 endscheme
-scheme 172 4 reach 2.6500 3.1000 height 1.3000 registration 0138 mount stay 1.3050 mount strut -0.4869 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7110-01 role stay 4320-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role steady 6113-04 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-03 role arms_bracket 4290-04 role arms_head 4290-21 endscheme
+scheme 158 2 reach 1.7500 2.2000 height 1.3000 registration 0138 mount stay 1.3050 mount strut -0.4594 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7110-01 role stay 4320-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role steady 6113-01 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-03 role arms_bracket 4290-04 role arms_head 4290-21 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 158 3 reach 2.2000 2.6500 height 1.3000 registration 0138 mount stay 1.3050 mount strut -0.4746 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7110-01 role stay 4320-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role steady 6113-02 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-03 role arms_bracket 4290-04 role arms_head 4290-21 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 158 4 reach 2.6500 3.1000 height 1.3000 registration 0138 mount stay 1.3050 mount strut -0.4869 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7110-01 role stay 4320-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role steady 6113-03 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-03 role arms_bracket 4290-04 role arms_head 4290-21 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 172 2 reach 1.7500 2.2000 height 1.3000 registration 0138 mount stay 1.3050 mount strut -0.4594 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7110-01 role stay 4320-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role steady 6113-02 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-03 role arms_bracket 4290-04 role arms_head 4290-21 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 172 3 reach 2.2000 2.6500 height 1.3000 registration 0138 mount stay 1.3050 mount strut -0.4746 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7110-01 role stay 4320-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role steady 6113-03 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-03 role arms_bracket 4290-04 role arms_head 4290-21 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 172 4 reach 2.6500 3.1000 height 1.3000 registration 0138 mount stay 1.3050 mount strut -0.4869 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7110-01 role stay 4320-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role steady 6113-04 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6207-03 role arms_bracket 4290-04 role arms_head 4290-21 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
 scheme 174 2 reach 1.7500 2.2000 height 1.3000 registration 0140 mount stay 1.3451 mount strut -0.4193 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7110-01 role stay 4320-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6113-02 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6203-01 role arms_bracket 4290-04 role arms_head 4290-21 endscheme
 scheme 174 3 reach 2.2000 2.6500 height 1.3000 registration 0140 mount stay 1.3451 mount strut -0.4345 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7110-01 role stay 4320-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6113-03 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6203-01 role arms_bracket 4290-04 role arms_head 4290-21 endscheme
 scheme 174 4 reach 2.6500 3.1000 height 1.3000 registration 0140 mount stay 1.3451 mount strut -0.4468 assembly tee_tbar role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7110-01 role stay 4320-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6113-04 role cord 4490-00 role cord_holder 4230-01 role cord_holder_b 4230-01 role arms 6203-01 role arms_bracket 4290-04 role arms_head 4290-21 endscheme
-scheme 139 2 reach 1.7500 2.2000 height 1.7000 registration ropex mount stay 1.7051 mount strut -0.0193 assembly tee_rope role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role arms 6207-12 role rope 9814-03 endscheme
-scheme 139 3 reach 2.2000 2.6500 height 1.7000 registration ropex mount stay 1.7051 mount strut -0.0345 assembly tee_rope role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role arms 6207-12 role rope 9814-03 endscheme
-scheme 139 4 reach 2.6500 3.1000 height 1.7000 registration ropex mount stay 1.7051 mount strut -0.0468 assembly tee_rope role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role arms 6207-12 role rope 9814-03 endscheme
-scheme 159 2 reach 1.7500 2.2000 height 1.7000 registration ropex mount stay 1.6650 mount strut -0.0594 assembly tee_rope role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role arms 6207-03 role rope 9814-03 endscheme
-scheme 159 3 reach 2.2000 2.6500 height 1.7000 registration ropex mount stay 1.6650 mount strut -0.0746 assembly tee_rope role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role arms 6207-03 role rope 9814-03 endscheme
-scheme 159 4 reach 2.6500 3.1000 height 1.7000 registration ropex mount stay 1.6650 mount strut -0.0869 assembly tee_rope role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role arms 6207-03 role rope 9814-03 endscheme
-scheme 173 2 reach 1.7500 2.2000 height 1.3000 registration ropex mount stay 1.2650 mount strut -0.4594 assembly tee_rope role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role arms 6207-03 role rope 9814-03 endscheme
-scheme 173 3 reach 2.2000 2.6500 height 1.3000 registration ropex mount stay 1.2650 mount strut -0.4746 assembly tee_rope role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role arms 6207-03 role rope 9814-03 endscheme
-scheme 173 4 reach 2.6500 3.1000 height 1.3000 registration ropex mount stay 1.2650 mount strut -0.4869 assembly tee_rope role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role arms 6207-03 role rope 9814-03 endscheme
+part 6207-0303 kind arms point holder 1.3947 -0.0060 member 6207-03 0.1300 0.0000 0.0000 5.0000 member 6207-03 -0.1300 0.0000 0.0000 -5.0000 endpart   // dwa rozstawione 6207-3 (0159, 0173 wyk. 2), +-0,13 m / +-5 st. jak inne pary ruchome - ZALOZENIE
+scheme 139 2 reach 1.7500 2.2000 height 1.7000 registration ropex mount stay 1.7051 mount strut -0.0193 assembly tee_rope role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role arms 6207-12 role rope 9814-03 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 139 3 reach 2.2000 2.6500 height 1.7000 registration ropex mount stay 1.7051 mount strut -0.0345 assembly tee_rope role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role arms 6207-12 role rope 9814-03 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 139 4 reach 2.6500 3.1000 height 1.7000 registration ropex mount stay 1.7051 mount strut -0.0468 assembly tee_rope role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role arms 6207-12 role rope 9814-03 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 159 2 reach 1.7500 2.2000 height 1.7000 registration ropex mount stay 1.6650 mount strut -0.0594 mount steady 0.1000 assembly tee_rope_mount role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role steady_insulator 7110-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role arms 6207-0303 role rope 9814-03 role rope_insulator 7120-01 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 159 3 reach 2.2000 2.6500 height 1.7000 registration ropex mount stay 1.6650 mount strut -0.0746 assembly tee_rope role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role arms 6207-03 role rope 9814-03 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 159 4 reach 2.6500 3.1000 height 1.7000 registration ropex mount stay 1.6650 mount strut -0.0869 assembly tee_rope role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role arms 6207-03 role rope 9814-03 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 173 2 reach 1.7500 2.2000 height 1.3000 registration ropex mount stay 1.2650 mount strut -0.4594 mount steady 0.1000 assembly tee_rope_mount role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role steady_insulator 7110-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role arms 6207-0303 role rope 9814-03 role rope_insulator 7120-01 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 173 3 reach 2.2000 2.6500 height 1.3000 registration ropex mount stay 1.2650 mount strut -0.4746 assembly tee_rope role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role arms 6207-03 role rope 9814-03 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+scheme 173 4 reach 2.6500 3.1000 height 1.3000 registration ropex mount stay 1.2650 mount strut -0.4869 assembly tee_rope role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_base 4170-01 role messenger_clamp 4170-02 role arms 6207-03 role rope 9814-03 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
 // 0167, 0169 - wysiegniki pomocnicze bez teownika (jeden z pary)
 scheme 167 1 reach 1.3000 1.7500 height 1.3000 registration 113x-3 mount steady 0.2200 assembly aux_steady role steady_insulator 7110-01 role steady 6111-03 role cord 4490-00 role cord_clamp 4210-02 role arms 6203-01 role arms_bracket 4260-01 endscheme
 scheme 167 2 reach 1.7500 2.2000 height 1.3000 registration 113x-3 mount steady 0.2200 assembly aux_steady role steady_insulator 7110-01 role steady 6111-04 role cord 4490-00 role cord_clamp 4210-02 role arms 6203-01 role arms_bracket 4260-01 endscheme

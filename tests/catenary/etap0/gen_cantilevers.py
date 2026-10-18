@@ -801,8 +801,18 @@ TEE_NODE_ROPE = """
 # przy parze ramion dwie liny (rope, rope.2) - osobna skladanka tee_bar_rope_pair
 TEE_BAR_ROPE_PAIR = TEE_BAR_ROPE + '  roll rope_insulator -\n  roll rope -\n  roll rope.2 -\n'
 TEE_BAR_ROPE += '  roll rope_insulator -\n  roll rope -\n'
+# podwiaz lapek 6207 (Jan 2026-10-18): linki z obejmy 4210 na luku ramienia nie do liny nosnej (jak w rurowych), tylko do otworu hole_1
+# na koncu poziomego ramienia ukosnika / preta; dziala tylko dla ramion z punktem cord_nom (6207), inne zestawy bez zmian
+TEE_ROPE += '  armcords ?arms_cord ?arms_cord_clamp strut.hole_1 0\n'
+TEE_BAR_ROPE += '  armcords ?arms_cord ?arms_cord_clamp stay.hole_1 0\n'
+TEE_BAR_ROPE_PAIR += '  armcords ?arms_cord ?arms_cord_clamp stay.hole_1 0\n'
+TEE_NODE_ROPE += '  armcords ?arms_cord ?arms_cord_clamp stay.hole_1 0\n'
+# 0159, 0173 wyk. 2 (Jan): dwa rozstawione 6207-3 na linie z wlasnego izolatora 7120 na slupie (mocowanie steady), nie z wezla ukosnika
+TEE_ROPE_MOUNT = (TEE_BAR_ROPE.replace('  tee_bar strut_mount stay_mount messenger hole_1\n', '  tee strut_mount stay_mount messenger\n')
+                  .replace('  place messenger_clamp saddle stay -y\n', '  place messenger_clamp saddle tee -y\n')
+                  .replace('stay.hole_1 0', 'strut.hole_1 0') + '  roll rope.2 -\n')
 for side, sign in (('', '1'), ('_out', '-1')):
-    for name, body in (('tee_rope', TEE_ROPE), ('tee_bar_rope', TEE_BAR_ROPE), ('tee_bar_rope_pair', TEE_BAR_ROPE_PAIR), ('tee_node_rope', TEE_NODE_ROPE)):
+    for name, body in (('tee_rope', TEE_ROPE), ('tee_bar_rope', TEE_BAR_ROPE), ('tee_bar_rope_pair', TEE_BAR_ROPE_PAIR), ('tee_node_rope', TEE_NODE_ROPE), ('tee_rope_mount', TEE_ROPE_MOUNT)):
         ASSEMBLIES += ('\n// teownik rozjazdowy, ramiona na linie 9814-3 (%s)\nassembly %s%s\n' % ('od slupa' if side else 'do slupa', name, side)
                        + body.replace('ARMSIDE', sign).lstrip('\n') + 'endassembly\n')
 # 0180 (s. 111, rozjazdowe jednej sieci, ramiona podwojne, od slupa, nieprzechylne): wysieg teowy 6113 zamiast 6111, na koncu 4280-2
@@ -816,8 +826,8 @@ def _tbar(body, top):
                    '  point cord_top cord_line@-cord_holder.eye.z\n  point cord_bottom cord_up@-cord_holder_b.eye.z\n'
                    '  place cord_holder %s cord_line -z\n  place cord_holder_b steady_end cord_up -z\n  stretch ?cord cord_bottom cord_top +z\n'
                    '  hangarms ?arms arms_bracket ?arms_head steady registration\n') % (top, top, top)
-ASSEMBLIES += ('\n// 0180 wyk. 2-4: jak tee_swing_out, wysieg teowy 6113 z 4280 na koncu, linka miedzy uchwytami 4230 (hole_1 ukosnika - hole_1 6113)\nassembly tee_tbar\n'
-    + _tbar(_tee_body('tee_swing'), 'strut.hole_1') + 'endassembly\n')
+ASSEMBLIES += ('\n// 0180 wyk. 2-4: jak tee_swing_out, wysieg teowy 6113 z 4280 na koncu, linka miedzy uchwytami 4230 (hole_1 ukosnika - hole_1 6113);\n// lapki 6207 (0138, 0158, 0172) podwiazane do hole_1 ukosnika\nassembly tee_tbar\n'
+    + _tbar(_tee_body('tee_swing'), 'strut.hole_1') + '  armcords ?arms_cord ?arms_cord_clamp strut.hole_1 0\nendassembly\n')
 ASSEMBLIES += ('\n// 0180 wyk. 1: jak tee_bar_steady, wysieg 6113 na wlasnym izolatorze\nassembly tee_bar_tbar\n'
     + _tbar(TEE_BAR_STEADY.replace('CORDREF', 'registration').replace('CORDTOP', 'stay.hole_1').lstrip('\n'), 'stay.hole_1') + 'endassembly\n')
 ASSEMBLIES += ('\n// 0180 wyk. 5: jak tee_bar_node, wysieg 6113 na wezle 4360\nassembly tee_node_tbar\n'
@@ -1912,6 +1922,7 @@ for card, (reg, arms_a, arms_b) in sorted(T2N.items()):
 # hk: sieci 1-4 1,70, siec 5 1,30 (0159 - rysunek 1,70)
 # radius w 6113/6115 = odleglosc osi (zera) od spodu profilu, na ktorym siedzi zero wspornika 4290-04/4280 (Jan 18.10: 6113 - polka na
 # dole, spod 0,045 pod zerem; 6115 - spod w zerze). 0138: 6113 ponad lukiem ramion 6207 (gora luku 0,464) - 4290 hole_6 (Jan: podniesc)
+CORDS6207 = (('arms_cord', '4490-00'), ('arms_cord_clamp', '4210-02'))
 w('registration 0138 tube 0.5824 clamp -1.3500 endregistration   // 6113 nad lukiem 6207: 4290 hole_6 w uchu 6207 (holder -0,006), spod 6113 0,537 nad drutem, od slupa')
 w('registration 0140 tube 0.2503 clamp -1.3500 endregistration   // 6113 nad przewodem: 4290 hole_2 w uchu 6205-02/6203-01 (0,022), od slupa')
 w('// teowniki - przesla naprezenia na luku 0137-0140, 0158, 0159, 0172-0174')
@@ -1925,11 +1936,17 @@ for card, hk, reg, arms, head, bars, tension in ((138, 1.70, '0138', '6207-12', 
                                                (174, 1.30, '0140', '6203-01', '4290-21', (2, 3, 4), False)):
     for wyk in (2, 3, 4):
         roles = [('steady', '6113-%02d' % bars[wyk - 2]), ('cord', '4490-00'), ('cord_holder', '4230-01'), ('cord_holder_b', '4230-01'),
-                 ('arms', arms), ('arms_bracket', '4290-04'), ('arms_head', head)]
+                 ('arms', arms), ('arms_bracket', '4290-04'), ('arms_head', head)] + (list(CORDS6207) if arms.startswith('6207') else [])
         tee_scheme(card, wyk, hk, reg, roles, 0, True, False, no_steady=True, base='tee_tbar', **(T4170 if tension else {}))
+CORDS6207 = (('arms_cord', '4490-00'), ('arms_cord_clamp', '4210-02'))
+w('part 6207-0303 kind arms point holder %s -0.0060 member 6207-03 0.1300 0.0000 0.0000 5.0000 member 6207-03 -0.1300 0.0000 0.0000 -5.0000 endpart   // dwa rozstawione 6207-3 (0159, 0173 wyk. 2), +-0,13 m / +-5 st. jak inne pary ruchome - ZALOZENIE' % f(1.40 * math.cos(math.radians(5.0))))
 for card, hk, arms, tension in ((139, 1.70, '6207-12', False), (159, 1.70, '6207-03', True), (173, 1.30, '6207-03', True)):
     for wyk in (2, 3, 4):
-        tee_scheme(card, wyk, hk, 'ropex', (('arms', arms), ('rope', '9814-03')), 0, False, True, no_steady=True, base='tee_rope', **(T4170 if tension else {}))
+        if wyk == 2 and card in (159, 173):
+            tee_scheme(card, 2, hk, 'ropex', (('arms', '6207-0303'), ('rope', '9814-03'), ('rope_insulator', '7120-01')) + CORDS6207, 0, False, True,
+                       no_steady=True, base='tee_rope_mount', own_steady=0.10, **(T4170 if tension else {}))
+            continue
+        tee_scheme(card, wyk, hk, 'ropex', (('arms', arms), ('rope', '9814-03')) + CORDS6207, 0, False, True, no_steady=True, base='tee_rope', **(T4170 if tension else {}))
 # 0167 (wyk. 1-5, 6111-3/4/5/6/8), 0169 (wyk. 2-4): zaczep na wysokosci przewodu (mount steady), mocowania stay/strut nieuzywane
 w('// 0167, 0169 - wysiegniki pomocnicze bez teownika (jeden z pary)')
 for wyk, st in ((1, 3), (2, 4), (3, 5), (4, 6), (5, 8)):
