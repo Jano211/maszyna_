@@ -10,7 +10,7 @@ COL_DZ=3.5        # odstep wysiegnikow w rzedzie
 Z0=150.0          # poczatek rzedow wzdluz toru
 WIRE_Y=5.8; RAIL_Y=0.2
 PLATFORM=0.76     # peronowe (103x, 104x): slup stoi na peronie, 0,76 m nad glowka szyny
-RAISE={103:PLATFORM,104:PLATFORM,101:1.40,10:0.10,11:0.10,12:0.10,13:0.10,14:0.10,17:0.10,19:0.10,93:0.30,94:0.60,96:0.30,97:0.10,98:0.60}   # 101x: odciag 8,66 m nad glowka, 1701 pozwala na 7,30 (tylko na probe);
+RAISE={103:PLATFORM,104:PLATFORM,101:1.40,10:0.10,11:0.10,12:0.10,13:0.10,14:0.10,17:0.10,18:0.10,19:0.10,93:0.30,94:0.60,96:0.30,97:0.10,98:0.60}   # 101x: odciag 8,66 m nad glowka, 1701 pozwala na 7,30 (tylko na probe);
 # 011x (teowniki): mocowanie 4620 na wysokosci liny, 1-2 cm nad mount_max 1701 - slup 0,10 m wyzej
 POLE_HALF=0.112   # pol glebokosci slupa 1701 na wysokosci mocowania (jak w gen_td.py)
 data=open('data/traction_cantilevers.txt',encoding='utf-8').read()
@@ -63,15 +63,18 @@ for i,(card,wyk) in enumerate(TRIAL25):
                  %(card,wyk,wx,WIRE_Y,z,wx,WIRE_Y+hk,z,px,RAIL_Y,z,extra))
         K.append('%d;proba 25 kV;%d;%d;%d;%.3f;%.1f;%.3f;%.2f-%.2f;%.3f;%s'%(len(groups)+2,2*i+j+1,card,wyk,px,z,a,amin,amax,hk,
                  '3 kV (porownanie)' if j==0 else '25 kV: izolatory -25, rury dobiera exe'))
+# przerwy izolacyjne teownikowe: lina nosna w polowie miedzy przewodem ramion a drugim przewodem (0,08 m), A mierzone do liny;
+# MID = polozenie liny wzgledem przewodu ramion w strone slupa (do slupa drugi przewod dalej od slupa)
+MID={115:-0.04,135:-0.04,155:-0.04,116:0.04,136:0.04,156:0.04}
 # teowniki (stary katalog): rzad na grupe kart, za rzedem proby 25 kV
 for r,g in enumerate(old_groups):
     px=ROW0_X-ROW_DX*len(groups)-28.0-ROW_DX*r
     row=sorted(s for s in schemes if s[0]//10==g)
     for i,(card,wyk,amin,amax,hk) in enumerate(row):
-        z=Z0+COL_DZ*i; a=0.5*(amin+amax); wx=px+a+POLE_HALF
+        z=Z0+COL_DZ*i; a=0.5*(amin+amax); mx=px+a+POLE_HALF; wx=mx+MID.get(card,0.0)
         rail=RAIL_Y+RAISE.get(g,0.0)
         L.append('node 1000 0 none suspension scheme %d %d at %.3f %.3f %.3f rope %.3f %.3f %.3f pole 1701 %.3f %.3f %.3f endsuspension'
-                 %(card,wyk,wx,WIRE_Y,z,wx,WIRE_Y+hk,z,px,rail,z))
+                 %(card,wyk,wx,WIRE_Y,z,mx,WIRE_Y+hk,z,px,rail,z))
         K.append('%d;teowniki %02dx;%d;%04d;%d;%.3f;%.1f;%.3f;%.2f-%.2f;%.3f;%s'%(len(groups)+3+r,g,i+1,card,wyk,px,z,a,amin,amax,hk,warn.get((card,wyk),'')))
 open('td_katalog.scm','w',newline='').write('\r\n'.join(L)+'\r\n')
 open('td_katalog_klucz.csv','w',encoding='utf-8-sig',newline='').write('\r\n'.join(K)+'\r\n')

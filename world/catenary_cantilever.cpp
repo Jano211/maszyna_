@@ -1558,6 +1558,7 @@ private:
                 auto placement { place_3d( side < 0.0 ? role : role + "_2", stretched.name, from, direction, w[ 4 ] ) };
                 auto const axis { ( w[ 4 ][ 1 ] == 'y' ? 1 : 2 ) };
                 if( stretched.length > 1e-6 ) { placement.scale[ axis ] = legs / stretched.length; }
+                for( int across = 0; across < 3; ++across ) { if( across != axis ) { placement.scale[ across ] *= stretched.girth; } }
                 put( placement );
             }
             return;
@@ -1609,6 +1610,7 @@ private:
                     placement.rotation[ row * 3 + 2 ] = d[ row ];
                 }
                 if( cord.length > 1e-6 ) { placement.scale[ 2 ] = span / cord.length; }
+                placement.scale[ 0 ] *= cord.girth; placement.scale[ 1 ] *= cord.girth;
                 m_result.values[ placement.role + ".span" ] = span;
                 put( placement );
             }
@@ -1662,6 +1664,7 @@ private:
                     placement.rotation[ row * 3 + 2 ] = d[ row ];
                 }
                 if( cord.length > 1e-6 ) { placement.scale[ 2 ] = span / cord.length; }
+                placement.scale[ 0 ] *= cord.girth; placement.scale[ 1 ] *= cord.girth;
                 m_result.values[ Role + ".span" ] = span;
                 put( placement );
             };
