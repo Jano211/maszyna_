@@ -884,7 +884,16 @@ TWO4 = (('  tee strut_mount stay_mount messenger\n' + TWO_NETS).replace('NET_GAP
 # wysieg z rury 6111 na glowicy 4370 obrocony o 90 st. wokol wlasnej osi (Jan 18.10); teowe 6115 (0184, 0194) bez obrotu
 ASSEMBLIES += ('\n// teownik rozjazdowy dwoch sieci, wyk. 4 (6101 + 4320): siec B na poprzeczce 6124 z glowica 4370-2; wysieg 6111 obrocony o 90 st.\nassembly tee_two_nets\n'
     + TWO4 + '  roll steady -\nendassembly\n')
-ASSEMBLIES += ('\n// jak tee_two_nets, wysieg teowy 6115 (0184, 0194) bez obrotu\nassembly tee_two_nets_tee\n' + TWO4 + 'endassembly\n')
+# na teowym wysiegu 6115 nie ma obejmy 4210 (opaska na rure 6111 - Jan 18.10): linka do drugiego uchwytu 4230 w otworze hole_1 na koncu 6115
+_CORD_TUBE = ('  project steady cord_clamp cord_far steady.length rules.cord_clamp_inset\n  point cord_clamp_at steady@steady.cord_clamp\n'
+              '  shift cord_anchor cord_clamp_at 0 cord_clamp.eye\n  line cord_line xbar_hole2 toward cord_anchor\n  point cord_top cord_line@-cord_holder.eye.z\n')
+_CORD_TEE = ('  side cord_hole steady -steady.hole_1.y steady.hole_1.z\n  line cord_line xbar_hole2 toward cord_hole\n  line cord_up cord_hole toward xbar_hole2\n'
+             '  point cord_top cord_line@-cord_holder.eye.z\n  point cord_anchor cord_up@-cord_holder_b.eye.z\n')
+def _tee_cord(body):
+    assert _CORD_TUBE in body and '  place cord_clamp cord_clamp_at steady.up +z\n' in body
+    return (body.replace(_CORD_TUBE, _CORD_TEE)
+                .replace('  place cord_clamp cord_clamp_at steady.up +z\n', '  place cord_holder_b cord_hole cord_up -z\n'))
+ASSEMBLIES += ('\n// jak tee_two_nets, wysieg teowy 6115 (0184, 0194) bez obrotu, linka do 4230 na koncu 6115\nassembly tee_two_nets_tee\n' + _tee_cord(TWO4) + 'endassembly\n')
 # wyk. 5: obejma 4370-5 na 6103 (eye = os zawiasu), zawias 4370-4 (zero w eye obejmy) - jak wezel 4360: polozenie na ramieniu przesuniete
 TWO5 = (TWO_NETS.replace('NET_GAP', f(NET_GAP)).replace('TOPEND', 'stay.hole_1').replace('SADDLEAXIS', 'stay')
         .replace('XBARCLAMP', 'leg@leg.xbar_clamp').replace('STEADYCLAMP', 'leg@leg.steady_clamp'))
@@ -900,8 +909,8 @@ TWO5 = (TWO5.replace(_old, '  point xbar_pivot strut.eye\n')
 assert 'xbar_clamp' not in TWO5.replace('xbar_clamp_unused', '')
 ASSEMBLIES += ('\n// jak tee_two_nets, wyk. 5 (6103 + 4330-5, siodlo sieci A na precie, obejmy 4370-5 + zawiasy 4370-4)\nassembly tee_two_nets_bar\n'
     + '  tee_bar strut_mount stay_mount messenger hole_1\n' + TWO5 + '  roll steady -\nendassembly\n')
-ASSEMBLIES += ('\n// jak tee_two_nets_bar, wysieg teowy 6115 bez obrotu\nassembly tee_two_nets_bar_tee\n'
-    + '  tee_bar strut_mount stay_mount messenger hole_1\n' + TWO5 + 'endassembly\n')
+ASSEMBLIES += ('\n// jak tee_two_nets_bar, wysieg teowy 6115 bez obrotu, linka do 4230 na koncu 6115\nassembly tee_two_nets_bar_tee\n'
+    + '  tee_bar strut_mount stay_mount messenger hole_1\n' + _tee_cord(TWO5) + 'endassembly\n')
 # 0194 (Jan 18.10): ucha 6205-02 (siec A) i 6206-11 (siec B) na roznych wysokosciach, oba na sztywnym 4280-2 - wysieg 6115 lekko
 # pochylony (w gore w strone toru), tak zeby przechodzil przez os rury nad obydwoma punktami zawieszenia; wezel na skosnym ramieniu
 # dobierany iteracyjnie (sworzen glowicy na tej prostej)
@@ -1867,7 +1876,8 @@ for card, (reg, arms_a, arms_b) in sorted(T2N.items()):
                      ('xbar_head', '4370-04'), ('steady_clamp', '4370-05'), ('steady_head', '4370-04'), ('xbar', '6124-02')]
             assembly = 'tee_two_nets_bar'
         if card in TEE_STEADY_2N: assembly += '_tee' + ('_tilt' if card == 194 else '')
-        roles += [('messenger_clamp', '4160-01'), ('messenger_clamp_b', '4160-01'), ('steady', TEE_STEADY_2N[card][wyk - 4] if card in TEE_STEADY_2N else '6111-08'), ('cord', '4490-00'), ('cord_clamp', '4210-02'),
+        roles += [('messenger_clamp', '4160-01'), ('messenger_clamp_b', '4160-01'), ('steady', TEE_STEADY_2N[card][wyk - 4] if card in TEE_STEADY_2N else '6111-08'), ('cord', '4490-00'),
+                  ('cord_holder_b', '4230-01') if card in TEE_STEADY_2N else ('cord_clamp', '4210-02'),
                   ('cord_holder', '4230-01'), ('rope', '9814-03'), ('rope_holder', '4230-01')] + list(arms_a) + list(arms_b)
         line = 'scheme %d %d reach %s %s height 1.7000 registration %s mount stay %s mount strut %s assembly %s' % (card, wyk, f(amin), f(amax), reg, f(stay_z), f(strut_z), assembly)
         for role, part in roles: line += ' role %s %s' % (role, part)
