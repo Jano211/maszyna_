@@ -1749,16 +1749,27 @@ private:
             // punkt na spodzie rury nad tym miejscem
             if( std::abs( tube.direction.y ) < 1e-6 ) { fail( "line \"" + w[ 3 ] + "\" is vertical, the arm holder can't be placed" ); }
             auto const radius { has_role( w[ 3 ] ) ? part( w[ 3 ] ).radius : 0.019 };
-            auto const along { ( bracket_y - tube.origin.y ) / tube.direction.y };
+            // wspornik siedzi na rurze i przechyla się razem z nią (pochylony wysięg 6115 w 0194, Jan 2026-10-18): oś Y wspornika wzdłuż
+            // rury w stronę słupa, Z prostopadle w górę; wspornik ze stałym uchem (bez zwisu i otworów) stawiany tak, żeby ucho wypadło
+            // w poziomie punktu zawieszenia. Przy rurze poziomej wszystko jak dawniej
+            vec2 const sup { tube.direction.y < 0.0 ? vec2 { -tube.direction.y, -tube.direction.z } : tube.direction };
+            vec2 const up { -sup.z, sup.y };
+            auto const *fixedeye { ( lookup( bracket, "slide_min" ) == nullptr && lookup( bracket, "hole_1" ) == nullptr ) ? lookup( bracket, "eye" ) : nullptr };
+            auto along { ( bracket_y - tube.origin.y ) / tube.direction.y };
+            if( fixedeye != nullptr && std::abs( up.y ) > 1e-9 ) {
+                along = ( bracket_y - tube.origin.y + up.y * radius - sup.y * side * fixedeye->first - up.y * fixedeye->second ) / tube.direction.y;
+            }
             auto const axis { tube.at( along ) };
-            vec2 const zero { bracket_y, axis.z - radius };
+            vec2 const zero { axis.y - up.y * radius, axis.z - up.z * radius };
             auto const turn = [ & ]( cantilever_placement &Placement ) {
                 if( flip ) { for( int column : { 0, 1 } ) { for( int row = 0; row < 3; ++row ) { Placement.rotation[ row * 3 + column ] = -Placement.rotation[ row * 3 + column ]; } } }
             };
             put_arm_set( setrole, set, flip );
             auto const *slide_min { lookup( bracket, "slide_min" ) };
             auto const *slide_max { lookup( bracket, "slide_max" ) };
-            auto const drop { zero.z - hang.z };
+            auto drop { zero.z - hang.z };
+            // ucho wspornika ze stałym uchem na pochylonej rurze: wysokość ucha liczona po przechyle
+            if( fixedeye != nullptr ) { drop = zero.z + up.z * fixedeye->second - fixedeye->second - hang.z; }
             if( slide_min != nullptr && slide_max != nullptr ) {
                 auto const low { -slide_min->second };
                 auto const high { -slide_max->second };
@@ -1798,7 +1809,7 @@ private:
                     warn( "arm holder \"" + bracket.name + "\" holds the arms " + to_text( drop + eye->second ) + " m off their hanging point" );
                 }
             }
-            auto bracketplacement { place( w[ 1 ], bracket.name, zero, toward_support, toward_support ) };
+            auto bracketplacement { place( w[ 1 ], bracket.name, zero, sup, toward_support ) };
             turn( bracketplacement );
             put( bracketplacement );
             // wspornik musi siedzieć na rurze
