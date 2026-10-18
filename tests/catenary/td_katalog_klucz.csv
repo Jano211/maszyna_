@@ -885,8 +885,10 @@
 47;teowniki 19x;2;0192;5;-410.000;153.5;4.100;3.70-4.50;1.700;the xbar_clamp falls too close to the end of the leg
 47;teowniki 19x;3;0193;4;-410.000;157.0;2.875;2.65-3.10;1.700;
 47;teowniki 19x;4;0193;5;-410.000;160.5;4.100;3.70-4.50;1.700;the xbar_clamp falls too close to the end of the leg
-47;teowniki 19x;5;0196;4;-410.000;164.0;2.875;2.65-3.10;1.700;
-47;teowniki 19x;6;0197;4;-410.000;167.5;2.875;2.65-3.10;1.300;
+47;teowniki 19x;5;0194;4;-410.000;164.0;2.875;2.65-3.10;1.700;arm holder "4280-02" holds the arms 0.057 m off their hanging point
+47;teowniki 19x;6;0194;5;-410.000;167.5;4.100;3.70-4.50;1.700;the xbar_clamp falls too close to the end of the leg | arm holder "4280-02" holds the arms 0.057 m off their hanging point
+47;teowniki 19x;7;0196;4;-410.000;171.0;2.875;2.65-3.10;1.700;
+47;teowniki 19x;8;0197;4;-410.000;174.5;2.875;2.65-3.10;1.300;
 48;teowniki 93x;1;0931;1;-418.000;150.0;1.525;1.30-1.75;0.350;
 48;teowniki 93x;2;0931;2;-418.000;153.5;1.975;1.75-2.20;0.350;
 48;teowniki 93x;3;0931;3;-418.000;157.0;2.425;2.20-2.65;0.350;

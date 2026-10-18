@@ -1522,9 +1522,9 @@ w('part 7130-01 kind insulator length 0.1778 endpart   // izolator odciagu linow
 w('part 7130-02 kind insulator length 0.3183 endpart   // 7130 z dwoma uszami 6509 (wykonanie nasze, nie katalogowe; 09xx), eye = zaczep liny 9832-2')
 w('part 4170-01 kind clamp endpart   // podstawa uchwytu liny obrotowego: zero na gorze polki = os obrotu glowicy')
 w('part 4170-02 kind messenger_clamp point rope -0.0027 0.0507 endpart   // glowica obrotowa 4170, mimosrod Y -2,7 mm zamierzony (Jan)')
-w('part 4370-02 kind clamp point eye -0.0883 -0.0060 endpart   // glowica 4370 na obejmie 4350-02 (Jan): zero w eye obejmy = os obrotu, eye = sworzen wysiegu/poprzeczki')
+w('part 4370-02 kind clamp point eye -0.0883 0.0060 endpart   // glowica 4370 na obejmie 4350-02 (Jan): zero w eye obejmy = os obrotu, eye = sworzen wysiegu/poprzeczki')
 w('part 4370-05 kind clamp point eye 0.0000 -0.0785 endpart   // obejma 4370 na belke: eye = os zawiasu 4370-04')
-w('part 4370-04 kind clamp point eye -0.0883 -0.0060 endpart   // zawias do 4370-05: zero w eye 4370-05 = os obrotu, eye = sworzen')
+w('part 4370-04 kind clamp point eye -0.0883 0.0060 endpart   // zawias do 4370-05: zero w eye 4370-05 = os obrotu, eye = sworzen')
 w('part 4280-02 kind arm_holder point eye 0.0000 -0.1960 endpart   // jak 4280-01 (zero na spodzie rury/teownika, Jan 18.10), 0180, 0184')
 w('part 4380-02 kind clamp point eye 0.0000 -0.0432 endpart   // obejma wezla na 6107 (jak 4350-02), eye = os obrotu glowicy 4380-01')
 w('part 4380-01 kind clamp point eye -0.1012 0.0001 endpart   // glowica wezla 4380: zero w osi obrotu, eye = zaczep odciagu linowego')
@@ -1780,7 +1780,10 @@ T2N = {181: ('018x', (('arms', '6202-01'), ('arms_bracket', '4250-03')), (('arms
 # (6206-1111) na 4280-2, siec B (dalej) - sztywne pojedyncze 6206-01 na 4280-1. Przydzial 4280-1/-2 do sieci - ZALOZENIE (ten sam wymiar)
 w('registration 0184 tube 0.2942 clamp 0.1689 endregistration   // 6115 nad przewodem: ucho 4280 w punkcie zawieszenia 6206 (0,0792 + 0,196 + 0,019)')
 T2N[184] = ('0184', (('arms', '6206-1111'), ('arms_bracket', '4280-02')), (('arms_b', '6206-01'), ('arms_bracket_b', '4280-01')))
-TEE_STEADY_2N = {184: ('6115-01', '6115-02')}
+# 0194 (s. 117, Jan 18.10): blizej slupa 6205-02, dalej para ruchomych 6206-1 z osobnymi 4110 (6206-1111), oba na 4280-2 na 6115.
+# Ucha zestawow na roznych wysokosciach (6205-02 0,022, 6206-11 0,079) - rura pod 6206, 6205-02 wychodzi 5,7 cm nizej (DO USTALENIA z Janem)
+T2N[194] = ('0184', (('arms', '6205-02'), ('arms_bracket', '4280-02')), (('arms_b', '6206-1111'), ('arms_bracket_b', '4280-02')))
+TEE_STEADY_2N = {184: ('6115-01', '6115-02'), 194: ('6115-01', '6115-02')}
 for card, (reg, arms_a, arms_b) in sorted(T2N.items()):
     for wyk in (4, 5):
         amin, amax = A_TEE[wyk]

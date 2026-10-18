@@ -886,8 +886,10 @@ node 1000 0 none suspension scheme 192 4 at -407.013 5.800 150.000 rope -407.013
 node 1000 0 none suspension scheme 192 5 at -405.788 5.800 153.500 rope -405.788 7.500 153.500 pole 1701 -410.000 0.300 153.500 endsuspension
 node 1000 0 none suspension scheme 193 4 at -407.013 5.800 157.000 rope -407.013 7.500 157.000 pole 1701 -410.000 0.300 157.000 endsuspension
 node 1000 0 none suspension scheme 193 5 at -405.788 5.800 160.500 rope -405.788 7.500 160.500 pole 1701 -410.000 0.300 160.500 endsuspension
-node 1000 0 none suspension scheme 196 4 at -407.013 5.800 164.000 rope -407.013 7.500 164.000 pole 1701 -410.000 0.300 164.000 endsuspension
-node 1000 0 none suspension scheme 197 4 at -407.013 5.800 167.500 rope -407.013 7.100 167.500 pole 1701 -410.000 0.300 167.500 endsuspension
+node 1000 0 none suspension scheme 194 4 at -407.013 5.800 164.000 rope -407.013 7.500 164.000 pole 1701 -410.000 0.300 164.000 endsuspension
+node 1000 0 none suspension scheme 194 5 at -405.788 5.800 167.500 rope -405.788 7.500 167.500 pole 1701 -410.000 0.300 167.500 endsuspension
+node 1000 0 none suspension scheme 196 4 at -407.013 5.800 171.000 rope -407.013 7.500 171.000 pole 1701 -410.000 0.300 171.000 endsuspension
+node 1000 0 none suspension scheme 197 4 at -407.013 5.800 174.500 rope -407.013 7.100 174.500 pole 1701 -410.000 0.300 174.500 endsuspension
 node 1000 0 none suspension scheme 931 1 at -416.363 5.800 150.000 rope -416.363 6.150 150.000 pole 1701 -418.000 0.500 150.000 endsuspension
 node 1000 0 none suspension scheme 931 2 at -415.913 5.800 153.500 rope -415.913 6.150 153.500 pole 1701 -418.000 0.500 153.500 endsuspension
 node 1000 0 none suspension scheme 931 3 at -415.463 5.800 157.000 rope -415.463 6.150 157.000 pole 1701 -418.000 0.500 157.000 endsuspension
