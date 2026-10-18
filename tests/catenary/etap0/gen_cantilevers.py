@@ -284,6 +284,8 @@ assembly rope_arms
   place rope_clamp strut@strut.rope_clamp strut.down -z
   armropes rope rope_eye
   armcords ?arms_cord ?arms_cord_clamp messenger 0.125
+  roll rope_insulator -
+  roll rope -
 endassembly
 """
 ROPE_ARMS += ("\n// jak rope_arms, ale lina z wlasnego zaczepu na slupie (mocowanie steady) przez izolator 7020 (1250, 1270)\nassembly rope_arms_mount\n"
@@ -795,8 +797,12 @@ TEE_NODE_ROPE = """
   place steady_clamp leg@leg.steady_clamp+steady_clamp.eye.y leg -y
   armropes rope rope_eye
 """
+# izolator liny z mocowania na slupie (wyk. 1) i lina obrocone o cwierc obrotu - inaczej izolator nie trafia w mocowanie (Jan 2026-10-18);
+# przy parze ramion dwie liny (rope, rope.2) - osobna skladanka tee_bar_rope_pair
+TEE_BAR_ROPE_PAIR = TEE_BAR_ROPE + '  roll rope_insulator -\n  roll rope -\n  roll rope.2 -\n'
+TEE_BAR_ROPE += '  roll rope_insulator -\n  roll rope -\n'
 for side, sign in (('', '1'), ('_out', '-1')):
-    for name, body in (('tee_rope', TEE_ROPE), ('tee_bar_rope', TEE_BAR_ROPE), ('tee_node_rope', TEE_NODE_ROPE)):
+    for name, body in (('tee_rope', TEE_ROPE), ('tee_bar_rope', TEE_BAR_ROPE), ('tee_bar_rope_pair', TEE_BAR_ROPE_PAIR), ('tee_node_rope', TEE_NODE_ROPE)):
         ASSEMBLIES += ('\n// teownik rozjazdowy, ramiona na linie 9814-3 (%s)\nassembly %s%s\n' % ('od slupa' if side else 'do slupa', name, side)
                        + body.replace('ARMSIDE', sign).lstrip('\n') + 'endassembly\n')
 # 0180 (s. 111, rozjazdowe jednej sieci, ramiona podwojne, od slupa, nieprzechylne): wysieg teowy 6113 zamiast 6111, na koncu 4280-2
@@ -961,6 +967,8 @@ assembly aux_rope
   point rope_eye rope_line@rope_insulator.length
   armropes rope rope_eye
   armcords ?arms_cord ?arms_cord_clamp messenger 0.125
+  roll rope_insulator -
+  roll rope -
 endassembly
 """
 # podstawa obrotowego uchwytu liny 4170-01 (Jan 18.10: w 0172/0173 byla sama glowica 4170-02): w kazdej skladance teownikowej, ktora
@@ -1841,7 +1849,7 @@ for card, arms in ((177, '6203-01'), (179, '6203-1111')):
     for wyk in range(1, 6):
         extra = (('rope_insulator', '7110-01'),) if wyk == 1 else ()
         tee_scheme(card, wyk, 1.30, 'ropex', (('arms', arms), ('rope', '9814-03')) + extra, 0, False, True, no_steady=True,
-                   base='tee_rope', base1='tee_bar_rope', base5='tee_node_rope', steady_mount=0.10)
+                   base='tee_rope', base1='tee_bar_rope_pair' if arms.endswith('1111') else 'tee_bar_rope', base5='tee_node_rope', steady_mount=0.10)
 tee_scheme(197, 4, 1.30, 'ropex', (('arms', '6206-1212'), ('rope', '9814-03')), 0, False, True, no_steady=True, base='tee_rope')
 w('registration 0180 tube 0.3202 clamp -1.3500 endregistration   // 6113 nad przewodem: ucho 4280-2 w punkcie zawieszenia 6206-1111 (od slupa: clamp ujemny)')
 w('// teownik 0180 - rozjazdowe, ramiona podwojne 6206-1 na 4280-2 na wysiegu teowym 6113, od slupa, nieprzechylne')

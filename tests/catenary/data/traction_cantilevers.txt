@@ -500,6 +500,8 @@ assembly rope_arms
   place rope_clamp strut@strut.rope_clamp strut.down -z
   armropes rope rope_eye
   armcords ?arms_cord ?arms_cord_clamp messenger 0.125
+  roll rope_insulator -
+  roll rope -
 endassembly
 
 // jak rope_arms, ale lina z wlasnego zaczepu na slupie (mocowanie steady) przez izolator 7020 (1250, 1270)
@@ -527,6 +529,8 @@ assembly rope_arms_mount
   point rope_eye rope_line@rope_insulator.length
   armropes rope rope_eye
   armcords ?arms_cord ?arms_cord_clamp messenger 0.125
+  roll rope_insulator -
+  roll rope -
 endassembly
 
 // dwie sieci (102x): swing_vee + drugi przewod i druga lina nosna, wysieg podparty plaskownikiem 6506 do 4760 na ukosniku
@@ -1665,6 +1669,28 @@ assembly tee_bar_rope
   place ?messenger_base saddle stay -y
   place rope_insulator steady_mount rope_line -y
   armropes rope rope_eye
+  roll rope_insulator -
+  roll rope -
+endassembly
+
+// teownik rozjazdowy, ramiona na linie 9814-3 (do slupa)
+assembly tee_bar_rope_pair
+  tee_bar strut_mount stay_mount messenger hole_1
+  shift arms_side wire 1 0
+  setarms ?arms arms_side
+  line rope_line steady_mount toward arms_holder
+  point rope_eye rope_line@rope_insulator.length
+  place strut_insulator strut_pin strut_insulator -y
+  place strut strut_start tee -y
+  place stay_insulator stay_pin stay -y
+  place stay stay_start stay -y
+  place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
+  place rope_insulator steady_mount rope_line -y
+  armropes rope rope_eye
+  roll rope_insulator -
+  roll rope -
+  roll rope.2 -
 endassembly
 
 // teownik rozjazdowy, ramiona na linie 9814-3 (do slupa)
@@ -1723,6 +1749,28 @@ assembly tee_bar_rope_out
   place ?messenger_base saddle stay -y
   place rope_insulator steady_mount rope_line -y
   armropes rope rope_eye
+  roll rope_insulator -
+  roll rope -
+endassembly
+
+// teownik rozjazdowy, ramiona na linie 9814-3 (od slupa)
+assembly tee_bar_rope_pair_out
+  tee_bar strut_mount stay_mount messenger hole_1
+  shift arms_side wire -1 0
+  setarms ?arms arms_side
+  line rope_line steady_mount toward arms_holder
+  point rope_eye rope_line@rope_insulator.length
+  place strut_insulator strut_pin strut_insulator -y
+  place strut strut_start tee -y
+  place stay_insulator stay_pin stay -y
+  place stay stay_start stay -y
+  place messenger_clamp saddle stay -y
+  place ?messenger_base saddle stay -y
+  place rope_insulator steady_mount rope_line -y
+  armropes rope rope_eye
+  roll rope_insulator -
+  roll rope -
+  roll rope.2 -
 endassembly
 
 // teownik rozjazdowy, ramiona na linie 9814-3 (od slupa)
@@ -2232,6 +2280,8 @@ assembly aux_rope
   point rope_eye rope_line@rope_insulator.length
   armropes rope rope_eye
   armcords ?arms_cord ?arms_cord_clamp messenger 0.125
+  roll rope_insulator -
+  roll rope -
 endassembly
 
 // zestawy ramion: gotowy model, zero w osi przewodu jezdnego, holder = punkt zawieszenia na wsporniku
@@ -3428,7 +3478,7 @@ scheme 177 2 reach 1.7500 2.2000 height 1.3000 registration ropex mount stay 1.3
 scheme 177 3 reach 2.2000 2.6500 height 1.3000 registration ropex mount stay 1.3051 mount strut -0.4345 assembly tee_rope role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role arms 6203-01 role rope 9814-03 endscheme
 scheme 177 4 reach 2.6500 3.1000 height 1.3000 registration ropex mount stay 1.3051 mount strut -0.4468 assembly tee_rope role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role arms 6203-01 role rope 9814-03 endscheme
 scheme 177 5 reach 3.7000 4.5000 height 1.3000 registration ropex mount stay 1.2449 mount strut -0.9186 assembly tee_node_rope role strut_insulator 7110-01 role strut 6103-01 role stay_insulator 7110-01 role stay 4330-05 role steady_clamp 4360-01 role messenger_clamp 4160-01 role arms 6203-01 role rope 9814-03 endscheme
-scheme 179 1 reach 1.3000 1.7500 height 1.3000 registration ropex mount stay 1.2449 mount strut 0.5486 mount steady 0.1000 assembly tee_bar_rope role strut_insulator 7110-01 role strut 6102-01 role stay_insulator 7110-01 role stay 4330-01 role steady_insulator 7110-01 role messenger_clamp 4160-01 role arms 6203-1111 role rope 9814-03 role rope_insulator 7110-01 endscheme
+scheme 179 1 reach 1.3000 1.7500 height 1.3000 registration ropex mount stay 1.2449 mount strut 0.5486 mount steady 0.1000 assembly tee_bar_rope_pair role strut_insulator 7110-01 role strut 6102-01 role stay_insulator 7110-01 role stay 4330-01 role steady_insulator 7110-01 role messenger_clamp 4160-01 role arms 6203-1111 role rope 9814-03 role rope_insulator 7110-01 endscheme
 scheme 179 2 reach 1.7500 2.2000 height 1.3000 registration ropex mount stay 1.3051 mount strut -0.4193 assembly tee_rope role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7120-01 role stay 4310-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role arms 6203-1111 role rope 9814-03 endscheme
 scheme 179 3 reach 2.2000 2.6500 height 1.3000 registration ropex mount stay 1.3051 mount strut -0.4345 assembly tee_rope role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role arms 6203-1111 role rope 9814-03 endscheme
 scheme 179 4 reach 2.6500 3.1000 height 1.3000 registration ropex mount stay 1.3051 mount strut -0.4468 assembly tee_rope role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role arms 6203-1111 role rope 9814-03 endscheme
