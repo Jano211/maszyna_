@@ -525,6 +525,12 @@ assembly tee_swing
   hangarms ?arms arms_bracket ?arms_head steady registration
 endassembly
 """
+# od slupa (0112, 0114): linka skosnie z hole_1 (koniec poziomego ramienia, Jan 2026-10-18) do obejmy 4210 w miejscu z zestawu ramion
+ASSEMBLIES += ('\n// jak tee_swing, odsuw od slupa: linka z konca poziomego ramienia (hole_1) do obejmy 4210 w miejscu z zestawu ramion\nassembly tee_swing_out\n' +
+    re.search(r'assembly tee_swing\n(.*?)endassembly\n', ASSEMBLIES, re.S).group(1)
+      .replace('project steady cord_clamp strut.hole_2 ', 'project steady cord_clamp registration ')
+      .replace('line cord_line strut.hole_2 toward', 'line cord_line strut.hole_1 toward')
+      .replace('place cord_holder strut.hole_2 ', 'place cord_holder strut.hole_1 ') + 'endassembly\n')
 # izolator wysiegu z rura (7010) i jego rura (6111/6011) przy uchwycie 4630: cwierc obrotu wokol wlasnej osi, jak izolator
 # odciagu na szekli (Jan 2026-10-17: kazdy izolator mocowany tak samo); na koncu skladanki, po wszystkich krokach
 _steady_insulated = False
@@ -1142,19 +1148,24 @@ w('part 4350-01 kind clamp point eye -0.0515 0.0004 point mount -0.0514 -0.0359 
 # 0111 (s. 64): wyk. 2/3/4 = A 1,75-2,20 / 2,20-2,65 / 2,65-3,10, hk 1,70 (sieci 1-4, karta 13-0002); 6101-2/3/4, 4310-2/3/4,
 # 6111-1/2/3, ramiona 6201-1 + 6201-2 na 4240-1, linka 9812-1 1,60 m. Zaczepy nominalne z geometrii modeli (bryla bez obrotu):
 # dolny = lina - (7110 wzdluz ramienia + gora polki + os liny w siodle), gorny = wysokosc ucha 6101 (pret poziomy)
-w('// teowniki 0111 (przechylne, prosta, odsuw do slupa): zaczepy z geometrii modeli, pret gorny poziomy; lina w siodle na wysokosci hk')
-for wyk, (amin, amax) in ((2, (1.75, 2.20)), (3, (2.20, 2.65)), (4, (2.65, 3.10))):
-    pts = dict((m.group(1), (float(m.group(2)), float(m.group(3)))) for m in re.finditer(r'point (\S+) (\S+) (\S+)', TEE6101[wyk]))
-    dy, dz = pts['slide_max'][0] - pts['slide_min'][0], pts['slide_max'][1] - pts['slide_min'][1]
-    sn = dz / math.hypot(dy, dz)
-    strut_z = 1.70 - (0.20 * sn + pts['slide_horizontal_min'][1] + 0.0106)
-    stay_z = strut_z + 0.20 * sn + pts['eye'][1]
-    line = 'scheme 111 %d reach %s %s height 1.7000 registration 111x-1 mount stay %s mount strut %s assembly tee_swing' % (wyk, f(amin), f(amax), f(stay_z), f(strut_z))
-    roles = [('strut_insulator', '7110-01'), ('strut', '6101-%02d' % wyk), ('stay_insulator', '7120-01'), ('stay', '4310-%02d' % wyk),
-             ('messenger_clamp', '4160-01'), ('steady_clamp', '4350-02'), ('steady_head', '4350-01'), ('steady', '6111-%02d' % (wyk - 1)),
-             ('cord', '4490-00'), ('cord_clamp', '4210-02'), ('cord_holder', '4230-01'), ('arms', '6201-02'), ('arms_bracket', '4240-02'), ('arms_head', '4240-22')]
-    for role, part in roles: line += ' role %s %s' % (role, part)
-    w(line + ' endscheme')
+# 0112-0114 (s. 65-67): 0112 prosta od slupa - 6111-6/6/7, linka 1,90; 0113 luk do slupa - 6111-1/2/3, ramiona 6201-3 + 6201-4,
+# linka 1,60; 0114 luk od slupa - 6111-6/7/8, 6201-3 + 6201-4, linka 1,90. Ramiona na 4240-1 jak 11xx wyk. 1.
+TEE01 = {111: ('tee_swing', '111x-1', '6201-02', (1, 2, 3)), 112: ('tee_swing_out', '112x-1', '6201-02', (6, 6, 7)),
+         113: ('tee_swing', '113x-1', '6201-04', (1, 2, 3)), 114: ('tee_swing_out', '114x-1', '6201-04', (6, 7, 8))}
+w('// teowniki 0111-0114 (przechylne): zaczepy z geometrii modeli, pret gorny poziomy; lina w siodle na wysokosci hk')
+for card, (assembly, reg, arms, steadies) in sorted(TEE01.items()):
+  for wyk, (amin, amax) in ((2, (1.75, 2.20)), (3, (2.20, 2.65)), (4, (2.65, 3.10))):
+      pts = dict((m.group(1), (float(m.group(2)), float(m.group(3)))) for m in re.finditer(r'point (\S+) (\S+) (\S+)', TEE6101[wyk]))
+      dy, dz = pts['slide_max'][0] - pts['slide_min'][0], pts['slide_max'][1] - pts['slide_min'][1]
+      sn = dz / math.hypot(dy, dz)
+      strut_z = 1.70 - (0.20 * sn + pts['slide_horizontal_min'][1] + 0.0106)
+      stay_z = strut_z + 0.20 * sn + pts['eye'][1]
+      line = 'scheme %d %d reach %s %s height 1.7000 registration %s mount stay %s mount strut %s assembly %s' % (card, wyk, f(amin), f(amax), reg, f(stay_z), f(strut_z), assembly)
+      roles = [('strut_insulator', '7110-01'), ('strut', '6101-%02d' % wyk), ('stay_insulator', '7120-01'), ('stay', '4310-%02d' % wyk),
+               ('messenger_clamp', '4160-01'), ('steady_clamp', '4350-02'), ('steady_head', '4350-01'), ('steady', '6111-%02d' % steadies[wyk - 2]),
+               ('cord', '4490-00'), ('cord_clamp', '4210-02'), ('cord_holder', '4230-01'), ('arms', arms), ('arms_bracket', '4240-02'), ('arms_head', '4240-22')]
+      for role, part in roles: line += ' role %s %s' % (role, part)
+      w(line + ' endscheme')
 w()
 # mocowania do slupa: punkty z modeli Jana (eksport 2026-10-13); zero na plaszczyznie przylegania do slupa, slup w +Y
 w()
