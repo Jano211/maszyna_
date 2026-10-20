@@ -500,8 +500,6 @@ assembly rope_arms
   place rope_clamp strut@strut.rope_clamp strut.down -z
   armropes rope rope_eye
   armcords ?arms_cord ?arms_cord_clamp messenger 0.125
-  roll rope_insulator -
-  roll rope -
 endassembly
 
 // jak rope_arms, ale lina z wlasnego zaczepu na slupie (mocowanie steady) przez izolator 7020 (1250, 1270)
