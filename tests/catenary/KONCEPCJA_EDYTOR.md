@@ -35,6 +35,21 @@ na nie (Jan 2026-10-16: kolega robi renderer GL 4.6); konstrukcje wsporcze robim
 6. **Parasole** – dwa podwieszenia na jednym słupie (`umbrella <nazwa>`), wspólne mocowania.
 7. **Kontrole** – rozpiętość przęsła, zygzak, wysokość przewodu, pasmo A, kolizja z gabarytem (moduł gauge jest).
 
+## Panel „Konstrukcje wsporcze” (Jan 2026-10-21)
+
+Cel: ktoś ulepi własny słup, wklepie go w edytorze, opisze co trzeba i od razu wstawia – bez notatnika i szukania, co co robi.
+Panel w ImGui, część edytora sieci (te same: wstawianie słupa, podgląd, wywołanie solvera), nie osobno.
+
+- Lista słupów i mocowań z polami: model, fundament, top, length, depth góra/dół, mount_max, mocowania strut/stay/steady.
+- Podgląd na żywo: słup z mocowaniami na kilku wysokościach i przykładowy wysięgnik.
+- Przycisk „sprawdź”: solver na wszystkich kartach na tym słupie – ile bez uwag / z uwagami / nie składa, z listą uwag.
+- Zapis przez exe do `data/traction_supports.txt` (plik zostaje jako magazyn; ręczna edycja dalej możliwa).
+- Opcjonalnie przeglądarka kart tylko do odczytu (karta + wykonanie → złożony wysięgnik, lista części).
+
+NA KONIEC / może nigdy (Jan: szansa, że ktoś przyjdzie z własnym katalogiem sieci, praktycznie zerowa): definiowanie nowych
+części z punktami klikanymi w modelu, edycja kart i przepisów składania, GUI do generatora. Generator (`gen_cantilevers.py`)
+zostaje narzędziem deweloperskim, `traction_cantilevers.txt` – częścią paczki jak tekstury.
+
 ## Kolejność
 
 1. Gałąź `siec-trakcyjna` od aktualnego mastera, przeniesienie dzisiejszej sieci (pliki `world/catenary_*` bez
@@ -46,5 +61,5 @@ na nie (Jan 2026-10-16: kolega robi renderer GL 4.6); konstrukcje wsporcze robim
 ## Do ustalenia z Janem
 
 - Tabele rozpiętości przęseł i zygzaka – z którego katalogu (tom 1?).
-- Czy słupy mają być osobnym plikiem rejestru, czy dalej w `traction_cantilevers.txt`.
+- ~~Czy słupy mają być osobnym plikiem~~ – USTALONE 2026-10-21: osobny ręczny `data/traction_supports.txt` (słupy i mocowania).
 - Radio: osobna gałąź od mastera (PR niezależny od sieci).
