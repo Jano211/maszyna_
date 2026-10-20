@@ -38,7 +38,7 @@ Parametry do składania są w komentarzach w nagłówku jako `//$e_<klucz>=<wart
    w środku, przelotowy – możliwość dźwigarów z obu stron). Nic więcej.
 2. Zwis przesuwa się po dźwigarze; zero zwisu ustawione tak, że chodzi na wysokości prześwitu. Typ zwisu musi pasować
    do konstrukcji (`Drop_type`). Na zwisie montuje się wysięgnik – zwykły albo parasol: ZWIS = „pływający słup” na bramce
-   (te same mocowania, ten sam solver co na słupie).
+   (solver jak na słupie; jakie mocowania idą na zwis – DO USTALENIA).
    Dźwigar jest kratownicą, zwis przechodzi przez jego środek, więc w rzeczywistości nie każde miejsce jest możliwe
    (prawdopodobnie schodki co ok. 60 cm, w każdym ±10–20 cm ruchu) – NIE robimy (za duży wysiłek, mało widoczne).
    Ewentualnie kiedyś po sprawdzeniu na modelach.
