@@ -275,6 +275,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 if( key == ending ) { closed = true; break; }
                 if( ispole ) {
                     if( key == "model" ) { text( pole.model ); std::replace( pole.model.begin(), pole.model.end(), '\\', '/' ); }
+                    else if( key == "foundation" ) { text( pole.foundation ); std::replace( pole.foundation.begin(), pole.foundation.end(), '\\', '/' ); }
                     else if( key == "top" ) { number( pole.top, good ); }
                     else if( key == "length" ) { number( pole.length, good ); }
                     else if( key == "depth" ) { number( pole.depth_top, good ); number( pole.depth_base, good ); }
@@ -2092,7 +2093,11 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
         return cantilever_point { face + Mount.attach_y(), Bolts + Mount.attach_z() };
     };
 
-    if( Umbrella.pole ) { add( "pole", Pole.name, Pole.model, Distance, RailHead ); }
+    if( Umbrella.pole ) {
+        add( "pole", Pole.name, Pole.model, Distance, RailHead );
+        // fundament ma to samo zero co słup (oś słupa na wysokości główki szyny)
+        if( false == Pole.foundation.empty() ) { add( "foundation", Pole.name + "_foundation", Pole.foundation, Distance, RailHead ); }
+    }
     auto const raise { Messenger.z - Scheme.height };
     auto staybolts { Scheme.mount_stay + raise - stay->attach_z() };
     if( Pole.mount_max > 0.0 && staybolts - RailHead > Pole.mount_max ) {
