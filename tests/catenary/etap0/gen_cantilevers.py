@@ -66,7 +66,7 @@ w('part 7010-01 kind insulator length 0.3200 endpart')
 w('part 7020-01 kind insulator length 0.3200 endpart')
 w('part 7010-25 kind insulator length 0.6401 endpart   // izolatory 25 kV (Jan 2026-10-17, punkt "end" modeli)')
 w('part 7020-25 kind insulator length 0.6360 endpart')
-w('part 7100-25 kind insulator length 0.6360 endpart')
+w('part 7100-25 kind insulator length 0.6360 clearance 0.0350 endpart   // clearance: izolator konczy sie 30 mm za punktem end (666 mm), 4050 ma 31 mm od osi; +4 mm luzu (Jan 2026-10-21, 1112-1 na 1665)')
 w('part 4700-01 kind shackle length 0.0480 endpart   // karta 23-4700: 48 mm od luku do sworznia; punkt "eye" modelu')
 w('part 4490-00 kind cord length 1.0000 endpart   // linka uniwersalna (nie z katalogu): model 1 m od zera do punktu "end", skalowana wzdluz Z')
 w()
@@ -150,9 +150,9 @@ assembly swing
   endrepeat
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -188,7 +188,7 @@ assembly swing_steady
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -215,7 +215,7 @@ assembly messenger_only
   tangent strut strut_mount messenger_clamp.hook head_clamp.eye head_clamp
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place stay_insulator stay_mount stay -y
@@ -264,12 +264,12 @@ assembly rope_arms
   hang messenger_clamp messenger wire
   tangent strut strut_mount messenger_clamp.hook head_clamp.eye head_clamp
   level strut rope_clamp arms_holder -rope_clamp.eye
-  atleast strut rope_clamp strut_insulator.length+rules.clamp_margin
+  atleast strut rope_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin
   side rope_eye strut strut.rope_clamp -rope_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut rope_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut rope_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -284,17 +284,16 @@ assembly rope_arms
   place rope_clamp strut@strut.rope_clamp strut.down -z
   armropes rope rope_eye
   armcords ?arms_cord ?arms_cord_clamp messenger 0.125
-  roll rope_insulator -
-  roll rope -
 endassembly
 """
 ROPE_ARMS += ("\n// jak rope_arms, ale lina z wlasnego zaczepu na slupie (mocowanie steady) przez izolator 7020 (1250, 1270)\nassembly rope_arms_mount\n"
     + re.search(r'assembly rope_arms\n(.*?)endassembly\n', ROPE_ARMS, re.S).group(1)
-      .replace('  level strut rope_clamp arms_holder -rope_clamp.eye\n  atleast strut rope_clamp strut_insulator.length+rules.clamp_margin\n  side rope_eye strut strut.rope_clamp -rope_clamp.eye\n', '')
-      .replace('  window strut rope_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min\n', '')
+      .replace('  level strut rope_clamp arms_holder -rope_clamp.eye\n  atleast strut rope_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin\n  side rope_eye strut strut.rope_clamp -rope_clamp.eye\n', '')
+      .replace('  window strut rope_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min\n', '')
       .replace('  place rope_clamp strut@strut.rope_clamp strut.down -z\n  armropes rope rope_eye\n',
                '  line rope_line steady_mount toward arms_holder\n  place rope_insulator steady_mount rope_line -y\n  point rope_eye rope_line@rope_insulator.length\n  armropes rope rope_eye\n')
-    + "endassembly\n")
+    # izolator liny i lina obrocone o 90 st. tylko tu: w rope_arms lina idzie z uchwytu na ukosniku, bez izolatora (2026-10-21)
+    + "  roll rope_insulator -\n  roll rope -\nendassembly\n")
 ASSEMBLIES += ROPE_ARMS
 # 102x (tom 3 s. 12-16, dwie sieci w przesle naprezenia, nieprzechylne): jak swing_vee bez ramion; na wysiegu 6011 dwa uchwyty 4120-3
 # dla przewodow obu sieci 0,08 m od siebie (+-0,04 wokol A, odczyt z rysunku 1022); drugi uchwyt liny 4140 na drugim 4050 na ukosniku,
@@ -353,7 +352,7 @@ def _level_arms(name, sign, gaps, below=False):
             "  tangent strut strut_mount messenger_clamp.hook head_clamp.eye head_clamp\n"
             "  limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin\n" + extra +
             "  chain strut stay_clamp stay_mount " + ('-stay_clamp.eye.z' if below else 'stay_clamp.eye') + " stay_insulator.length+stay.length stay_end " + reference + " %s\n"
-            "  window strut stay_clamp strut_insulator.length+rules.clamp_margin strut_insulator.length+strut.length-rules.clamp_margin\n"
+            "  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut_insulator.length+strut.length-rules.clamp_margin\n"
             "  side stay_pin strut strut.stay_clamp %s\n%s"
             "  place stay_clamp strut@strut.stay_clamp strut.%s +z\n  place strut_insulator strut_mount strut -y\n"
             "  place strut strut@strut_insulator.length strut -y\n  place head_clamp strut@strut.head_clamp strut.down -z\n"
@@ -387,7 +386,7 @@ def _top_head(name, sign, contact):
 LEVEL_CONTACT = ("assembly level_contact\n  shift clamp_eye wire contact_eye.eye.y contact_eye.eye.z\n  line strut strut_mount toward clamp_eye\n"
     "  project strut contact_at clamp_eye strut_insulator.length+strut.length rules.clamp_margin\n"
     "  chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end contact_at rules.stay_gap_min rules.stay_gap rules.stay_gap_max\n"
-    "  window strut stay_clamp strut_insulator.length+rules.clamp_margin -\n  side stay_pin strut strut.stay_clamp stay_clamp.eye\n" + STAY_PARTS +
+    "  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -\n  side stay_pin strut strut.stay_clamp stay_clamp.eye\n" + STAY_PARTS +
     "  place stay_clamp strut@strut.stay_clamp strut.up +z\n  place strut_insulator strut_mount strut -y\n  place strut strut@strut_insulator.length strut -y\n"
     + _contacts('strut') + "endassembly\n")
 # 108x (tom 3 s. 38-43): wysieg 6001 poziomo od dolnej czesci ukosnika (4070 uchem w dol + 4400 w osi wysiegu), wychodzi za drut,
@@ -408,9 +407,9 @@ assembly inner_push
     shift tip_eye tip 0 steady_head.eye.z
   endrepeat
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
 """ + STAY_PARTS + """  place stay_clamp strut@strut.stay_clamp strut.up +z
   place strut_insulator strut_mount strut -y
@@ -2017,6 +2016,9 @@ for ex in ('01', '02', '03', '04', '05', '06', '07', '08', '10'):
 w()
 w('// slupy: wysokosci od glowki szyny, zbieznosc od gory na dlugosci "length", depth = wymiar od toru w glab u gory i u dolu')
 w('pole 1701 model siec_trakcyjna/slupy/1701 top 7.4600 length 8.7500 depth 0.1750 0.3850 mount_max 7.3000 strut 4610-03 stay 4620-03 steady 4630-03 endpole   // slup betonowy (Jan, 2026-10-11)')
+w('pole 1665 model siec_trakcyjna/slupy/1665 foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2000 0.2000 mount_max 8.0500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (Jan, 2026-10-21)')
+w('pole 1666 model siec_trakcyjna/slupy/1666 foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2000 0.2000 mount_max 7.6500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (Jan, 2026-10-21)')
+w('pole 1667 model siec_trakcyjna/slupy/1667 foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2000 0.2000 mount_max 7.2500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (Jan, 2026-10-21)')
 
 open('data/traction_cantilevers.txt', 'w', encoding='utf-8', newline='').write(out.getvalue())
 open('cantilever_ref.txt', 'w', encoding='utf-8', newline='').write(ref.getvalue())

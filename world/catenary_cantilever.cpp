@@ -128,6 +128,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 if( key == "endpart" ) { closed = true; break; }
                 if( key == "kind" ) { if( index < count ) { part.kind = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "length" ) { number( part.length, good ); }
+                else if( key == "clearance" ) { number( part.clearance, good ); }
                 else if( key == "pin" ) { number( part.pin, good ); }
                 else if( key == "radius" ) { number( part.radius, good ); }
                 else if( key == "model" ) { if( index < count ) { part.model = Tokens[ index++ ]; } else { good = false; } }
@@ -496,6 +497,7 @@ namespace {
 // znane pola części dostępne w wyrażeniach jako <rola>.<pole>
 bool part_field( cantilever_part const &Part, std::string const &Field, double &Value ) {
     if( Field == "length" ) { Value = Part.length; }
+    else if( Field == "clearance" ) { Value = Part.clearance; }
     else if( Field == "pin" ) { Value = Part.pin; }
     else if( Field == "radius" ) { Value = Part.radius; }
     else if( Field == "eye" ) { Value = Part.eye; }
