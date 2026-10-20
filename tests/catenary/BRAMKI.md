@@ -32,11 +32,17 @@ Parametry do składania są w komentarzach w nagłówku jako `//$e_<klucz>=<wart
   `Hk=7.835` (wysokość konstrukcyjna do przylepiania zwisów), `Beam_out=7.30` (długość dźwigara), `Drop_type=4840`
 - Pozostałe (1901, ESN-540, new_1901/1905/1906/1907) – bez parametrów, stary układ parametrów (P6/P7 = obroty, P1 = tekstura)
 
-## Do ustalenia z użytkownikiem (zanim powstanie kod)
-1. Słup + dźwigar: gdzie jest zero dźwigara i jak siada na słupie (`Mount_low`/`high` = spód/góra dźwigara? oś?),
-   co dokładnie odsuwa `Offset_x` (oś dźwigara od osi słupa w poprzek?).
-2. Zwis na dźwigarze: dowolne miejsce wzdłuż dźwigara czy stałe punkty? Zero zwisu (góra – przylega do spodu dźwigara?),
-   a na dole – co do niego mocujemy (wysięgnik z rur przez mocowania jak na słupie? osobne karty?).
-3. Fundament słupa bramki: model fundamentu osobno (jak `foundation` przy słupie) czy w modelu słupa (3031-1…-4)?
-4. Półbramki bez tagów – uzupełnić (W, L, H, Hk, Beam_out, Drop_type) czy wyliczyć z nazwy?
-5. Docelowy zapis: nowe bloki w `traction_supports.txt` (np. `mast`, `beam`, `drop`, `semi_gantry`) zamiast tagów w `.inc`.
+## Ustalenia (2026-10-21, odpowiedzi użytkownika)
+1. Dźwigar siada na słupie na wysokości: główka szyny (0) + prześwit (`Mount_low` / `Mount_high`).
+   `Offset_x` = przesunięcie dźwigara w Y względem środka słupa, żeby trafił w mocowanie (słup końcowy ma mocowania
+   w środku, przelotowy – możliwość dźwigarów z obu stron). Nic więcej.
+2. Zwis przesuwa się po dźwigarze; zero zwisu ustawione tak, że chodzi na wysokości prześwitu. Typ zwisu musi pasować
+   do konstrukcji (`Drop_type`). Na zwisie montuje się wysięgnik – zwykły albo parasol: ZWIS = „pływający słup” na bramce
+   (te same mocowania, ten sam solver co na słupie).
+   Dźwigar jest kratownicą, zwis przechodzi przez jego środek, więc w rzeczywistości nie każde miejsce jest możliwe
+   (prawdopodobnie schodki co ok. 60 cm, w każdym ±10–20 cm ruchu) – NIE robimy (za duży wysiłek, mało widoczne).
+   Ewentualnie kiedyś po sprawdzeniu na modelach.
+3. Fundamentu osobno nie ma – słupy bramek mają po prostu więcej wykonań (-1…-4). Można je kiedyś rozdzielić;
+   malowane osobno, więc mogą służyć za dodatkowy wariant tekstury.
+4. Półbramkom bez tagów trzeba dopisać brakujące parametry (W, L, H, Hk, Beam_out, Drop_type).
+5. Zapis docelowo w `traction_supports.txt` jako nowe bloki (np. `mast`, `beam`, `drop`, `semi_gantry`) – tak.
