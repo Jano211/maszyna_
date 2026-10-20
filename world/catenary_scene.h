@@ -22,5 +22,5 @@ void catenary_scene_load( cParser &Input );
 void catenary_scene_resolve();
 // przed wczytaniem nowej scenerii: usuwa podwieszenia poprzedniej
 void catenary_scene_clear();
-// zmienia katalog, z którego czytany jest katalog wysięgników (traction_cantilevers.txt); domyślnie "data/"
+// zmienia katalog, z którego czytany jest katalog wysięgników (traction_cantilevers.txt i traction_supports.txt); domyślnie "data/"
 void catenary_scene_data( std::string const &Directory );

@@ -1,0 +1,62 @@
+// Konstrukcje wsporcze sieci trakcyjnej: slupy i mocowania wysiegnikow do slupow.
+// TEN PLIK MOZNA EDYTOWAC RECZNIE. Nie jest generowany - generator (gen_cantilevers.py) pisze tylko traction_cantilevers.txt
+// (czesci, zestawy ramion, przepisy skladania i karty). Exe czyta oba pliki z katalogu data\ przy pierwszym wysiegniku w scenerii.
+// Tu mozna tez dopisac wlasne czesci ("part ... endpart", skladnia jak w traction_cantilevers.txt), np. nowe mocowanie.
+// Nazwa uzyta drugi raz (tu albo w traction_cantilevers.txt) daje blad w logu i zostaje pierwsza definicja.
+// Jednostki: metry. Komentarz od "//" do konca linii.
+//
+// ---- slup ------------------------------------------------------------------------------------------------------
+// pole <nazwa> model <sciezka> [foundation <sciezka>] top <m> length <m> depth <gora> <dol> [mount_max <m>] strut <mocowanie> stay <mocowanie> [steady <mocowanie>] endpole
+//   nazwa       - tak jak w scenerii we wpisie suspension: "pole <nazwa> x y z"
+//   model       - model slupa wzgledem katalogu models\, bez .t3d; zero modelu w osi slupa na wysokosci glowki szyny
+//   foundation  - (opcjonalnie) model fundamentu stawiany automatycznie w tym samym zerze co slup
+//   top         - wierzch slupa nad glowka szyny
+//   length      - dlugosc liczona od gory, na ktorej slup sie zbiega (dla slupa bez zbieznosci: dowolna, np. = top)
+//   depth       - wymiar slupa od toru w glab (prostopadle do toru): u gory i na koncu dlugosci "length"; bez zbieznosci dwa razy to samo
+//   mount_max   - najwyzej polozona os srub mocowania nad glowka szyny (zapas na gorze slupa); 0 albo brak = bez ograniczenia
+//   strut, stay, steady - mocowania (wpisy "mount" nizej): ukosnika, odciagu, wysiegu pomocniczego (wysiegniki z trzema zaczepami)
+//
+// ---- mocowanie do slupa ----------------------------------------------------------------------------------------
+// mount <nazwa> axis|eye <Y> <Z> [hinge <czesc> <Y> <Z>] [rod <czesc>] [back <czesc>] [twin <czesc>] endmount
+//   uklad: zero na plaszczyznie przylegania do slupa w polowie miedzy srubami, slup w +Y, Z w gore; nazwa = model w components\
+//   axis = pionowa os obrotu wspornika ukosnika, eye = ucho zaczepu izolatora (Y Z wzgledem zera mocowania)
+//   hinge = zawias z uchem (Y Z ucha wzgledem osi obrotu), rod = pret z uchem stawiany w eye,
+//   back = tyl na tylnej scianie slupa (odsuniety o glebokosc slupa), twin = polowka z nakretkami przy mocowaniu dwustronnym (parasol)
+//
+// Przyklad wlasnego slupa (dwuteownik 200x200, wierzch 8,2 m, na fundamencie palowym):
+//   pole 1665 model siec_trakcyjna/slupy/1665 foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2000 0.2000 mount_max 8.0500 strut 4610-07 stay 4620-07 steady 4630-07 endpole
+
+// ---- mocowania (karty 40-4610, 30-4620, 40-4630; punkty z modeli Jana, eksport 2026-10-13) ----------------------
+mount 4610-01 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 endmount
+mount 4620-01 eye -0.1800 0.0000 rod 4620-00 endmount
+mount 4630-01 eye -0.0970 0.0395 endmount
+mount 4610-02 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 endmount
+mount 4620-02 eye -0.1800 0.0000 rod 4620-00 endmount
+mount 4630-02 eye -0.0970 0.0395 endmount
+mount 4610-03 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 back 4610-20 twin 4640-05 endmount
+mount 4620-03 eye -0.1800 0.0000 rod 4620-00 back 4610-20 twin 4650-05 endmount
+mount 4630-03 eye -0.0970 0.0395 back 4610-20 twin 4660-05 endmount
+mount 4610-04 axis -0.1587 0.0243 hinge 4610-00 -0.0798 0.0344 endmount
+mount 4620-04 eye -0.1800 0.0000 rod 4620-00 endmount
+mount 4630-04 eye -0.1070 0.0395 endmount
+mount 4610-05 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 back 4610-20 twin 4640-05 endmount
+mount 4620-05 eye -0.1800 0.0000 rod 4620-00 back 4610-20 twin 4650-05 endmount
+mount 4630-05 eye -0.0970 0.0395 back 4610-20 twin 4660-05 endmount
+mount 4610-06 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 endmount
+mount 4620-06 eye -0.1800 0.0000 rod 4620-00 endmount
+mount 4630-06 eye -0.0970 0.0395 endmount
+mount 4610-07 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 back 4610-21 twin 4640-05 endmount
+mount 4620-07 eye -0.1800 0.0000 rod 4620-00 back 4610-21 twin 4650-05 endmount
+mount 4630-07 eye -0.0970 0.0395 back 4610-21 twin 4660-05 endmount
+mount 4610-08 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 back 4610-21 twin 4640-05 endmount
+mount 4620-08 eye -0.1800 0.0000 rod 4620-00 back 4610-21 twin 4650-05 endmount
+mount 4630-08 eye -0.0970 0.0395 back 4610-21 twin 4660-05 endmount
+mount 4610-10 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 back 4610-22 twin 4640-10 endmount
+mount 4620-10 eye -0.1800 0.0000 rod 4620-00 back 4610-22 twin 4650-10 endmount
+mount 4630-10 eye -0.0970 0.0395 back 4610-22 twin 4660-10 endmount
+
+// ---- slupy -----------------------------------------------------------------------------------------------------
+pole 1701 model siec_trakcyjna/slupy/1701 top 7.4600 length 8.7500 depth 0.1750 0.3850 mount_max 7.3000 strut 4610-03 stay 4620-03 steady 4630-03 endpole   // slup betonowy (Jan, 2026-10-11)
+pole 1665 model siec_trakcyjna/slupy/1665 foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2000 0.2000 mount_max 8.0500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (Jan, 2026-10-21)
+pole 1666 model siec_trakcyjna/slupy/1666 foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2000 0.2000 mount_max 7.6500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (Jan, 2026-10-21)
+pole 1667 model siec_trakcyjna/slupy/1667 foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2000 0.2000 mount_max 7.2500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (Jan, 2026-10-21)
