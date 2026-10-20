@@ -84,9 +84,9 @@ part 4140-01 kind messenger_clamp hook -0.0062 0.0751 end 0.0056 -0.0357 endpart
 part 7100-01 kind insulator length 0.3300 endpart   // karta 35-7100: 330 mm od ucha do sruby M16; tak samo punkt "end" modelu
 part 7010-01 kind insulator length 0.3200 endpart
 part 7020-01 kind insulator length 0.3200 endpart
-part 7010-25 kind insulator length 0.6401 endpart   // izolatory 25 kV (Jan 2026-10-17, punkt "end" modeli)
-part 7020-25 kind insulator length 0.6360 endpart
-part 7100-25 kind insulator length 0.6360 clearance 0.0350 endpart   // clearance: izolator konczy sie 30 mm za punktem end (666 mm), 4050 ma 31 mm od osi; +4 mm luzu (Jan 2026-10-21, 1112-1 na 1665)
+part 7010-25 kind insulator length 0.6401 clearance 0.0840 endpart   // izolatory 25 kV (Jan 2026-10-17, punkt "end" modeli); calosc 719 mm (Jan 2026-10-21)
+part 7020-25 kind insulator length 0.6360 clearance 0.0350 endpart   // calosc 666 mm jak 7100-25 (Jan 2026-10-21)
+part 7100-25 kind insulator length 0.6360 clearance 0.0350 endpart   // clearance: zapas osi uchwytu ponad clamp_margin = (calosc - end) + 31 mm (pol 4050) - 30 mm + 4 mm luzu; calosc 666 mm (Jan 2026-10-21, 1112-1 na 1665)
 part 4700-01 kind shackle length 0.0480 endpart   // karta 23-4700: 48 mm od luku do sworznia; punkt "eye" modelu
 part 4490-00 kind cord length 1.0000 endpart   // linka uniwersalna (nie z katalogu): model 1 m od zera do punktu "end", skalowana wzdluz Z
 
