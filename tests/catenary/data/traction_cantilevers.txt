@@ -3677,39 +3677,3 @@ scheme 114 2 reach 1.7500 2.2000 height 1.7000 registration 114x-1 mount stay 1.
 scheme 114 3 reach 2.2000 2.6500 height 1.7000 registration 114x-1 mount stay 1.7051 mount strut -0.0345 assembly tee_swing_out role strut_insulator 7110-01 role strut 6101-03 role stay_insulator 7120-01 role stay 4310-03 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-07 role cord 4490-00 role cord_clamp 4210-02 role cord_holder 4230-01 role arms 6201-04 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
 scheme 114 4 reach 2.6500 3.1000 height 1.7000 registration 114x-1 mount stay 1.7051 mount strut -0.0468 assembly tee_swing_out role strut_insulator 7110-01 role strut 6101-04 role stay_insulator 7120-01 role stay 4310-04 role messenger_clamp 4160-01 role steady_clamp 4350-02 role steady_head 4350-01 role steady 6111-08 role cord 4490-00 role cord_clamp 4210-02 role cord_holder 4230-01 role arms 6201-04 role arms_bracket 4240-02 role arms_head 4240-22 endscheme
 
-
-// mocowania do slupa (karty 40-4610, 30-4620, 40-4630): axis = pionowa os obrotu wspornika ukosnika, eye = ucho zaczepu izolatora,
-// hinge = zawias z uchem (Y Z ucha wzgledem osi obrotu), rod = pret z uchem stawiany w eye, back = tyl na tylnej scianie slupa
-mount 4610-01 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 endmount
-mount 4620-01 eye -0.1800 0.0000 rod 4620-00 endmount
-mount 4630-01 eye -0.0970 0.0395 endmount
-mount 4610-02 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 endmount
-mount 4620-02 eye -0.1800 0.0000 rod 4620-00 endmount
-mount 4630-02 eye -0.0970 0.0395 endmount
-mount 4610-03 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 back 4610-20 twin 4640-05 endmount
-mount 4620-03 eye -0.1800 0.0000 rod 4620-00 back 4610-20 twin 4650-05 endmount
-mount 4630-03 eye -0.0970 0.0395 back 4610-20 twin 4660-05 endmount
-mount 4610-04 axis -0.1587 0.0243 hinge 4610-00 -0.0798 0.0344 endmount
-mount 4620-04 eye -0.1800 0.0000 rod 4620-00 endmount
-mount 4630-04 eye -0.1070 0.0395 endmount
-mount 4610-05 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 back 4610-20 twin 4640-05 endmount
-mount 4620-05 eye -0.1800 0.0000 rod 4620-00 back 4610-20 twin 4650-05 endmount
-mount 4630-05 eye -0.0970 0.0395 back 4610-20 twin 4660-05 endmount
-mount 4610-06 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 endmount
-mount 4620-06 eye -0.1800 0.0000 rod 4620-00 endmount
-mount 4630-06 eye -0.0970 0.0395 endmount
-mount 4610-07 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 back 4610-21 twin 4640-05 endmount
-mount 4620-07 eye -0.1800 0.0000 rod 4620-00 back 4610-21 twin 4650-05 endmount
-mount 4630-07 eye -0.0970 0.0395 back 4610-21 twin 4660-05 endmount
-mount 4610-08 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 back 4610-21 twin 4640-05 endmount
-mount 4620-08 eye -0.1800 0.0000 rod 4620-00 back 4610-21 twin 4650-05 endmount
-mount 4630-08 eye -0.0970 0.0395 back 4610-21 twin 4660-05 endmount
-mount 4610-10 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 back 4610-22 twin 4640-10 endmount
-mount 4620-10 eye -0.1800 0.0000 rod 4620-00 back 4610-22 twin 4650-10 endmount
-mount 4630-10 eye -0.0970 0.0395 back 4610-22 twin 4660-10 endmount
-
-// slupy: wysokosci od glowki szyny, zbieznosc od gory na dlugosci "length", depth = wymiar od toru w glab u gory i u dolu
-pole 1701 model siec_trakcyjna/slupy/1701 top 7.4600 length 8.7500 depth 0.1750 0.3850 mount_max 7.3000 strut 4610-03 stay 4620-03 steady 4630-03 endpole   // slup betonowy (Jan, 2026-10-11)
-pole 1665 model siec_trakcyjna/slupy/1665 foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2000 0.2000 mount_max 8.0500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (Jan, 2026-10-21)
-pole 1666 model siec_trakcyjna/slupy/1666 foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2000 0.2000 mount_max 7.6500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (Jan, 2026-10-21)
-pole 1667 model siec_trakcyjna/slupy/1667 foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2000 0.2000 mount_max 7.2500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (Jan, 2026-10-21)

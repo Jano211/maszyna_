@@ -2,6 +2,7 @@ import re
 # -*- coding: utf-8 -*-
 # Generuje z etap0/zlozenia.json:
 #   data/traction_cantilevers.txt  - czesci, zestawy ramion odciagowych i schematy wysiegnikow dla exe
+#   (slupy i mocowania do slupow NIE - sa w recznym data/traction_supports.txt)
 #   cantilever_ref.txt             - punkty wzorcowe zlozen z Blendera dla testu solvera
 # Uruchamiac z katalogu tests/catenary:  python3 etap0/gen_cantilevers.py
 # Wymiary czesci pochodza z kart katalogowych (tom 5), nie ze zlozen; ze zlozen brane sa tylko:
@@ -2000,25 +2001,7 @@ for card, (assembly, reg, arms, steadies) in sorted(TEE01.items()):
       for role, part in roles: line += ' role %s %s' % (role, part)
       w(line + ' endscheme')
 w()
-# mocowania do slupa: punkty z modeli Jana (eksport 2026-10-13); zero na plaszczyznie przylegania do slupa, slup w +Y
-w()
-w('// mocowania do slupa (karty 40-4610, 30-4620, 40-4630): axis = pionowa os obrotu wspornika ukosnika, eye = ucho zaczepu izolatora,')
-w('// hinge = zawias z uchem (Y Z ucha wzgledem osi obrotu), rod = pret z uchem stawiany w eye, back = tyl na tylnej scianie slupa')
-BACK = {'03': '4610-20', '05': '4610-20', '07': '4610-21', '08': '4610-21', '10': '4610-22'}
-for ex in ('01', '02', '03', '04', '05', '06', '07', '08', '10'):
-    back = (' back ' + BACK[ex]) if ex in BACK else ''
-    twin = ('10' if ex == '10' else '05') if ex in BACK else None   # parasol: polowka z nakretkami (Jan: -05 do 03/05/07/08, osobno -10)
-    deep = 0.010 if ex == '04' else 0.0          # wykonanie 4: katownik miedzy uchwytem a slupem
-    tw = lambda n: (' twin %d-%s' % (n, twin)) if twin else ''
-    w('mount 4610-%s axis %s 0.0243 hinge 4610-00 -0.0798 0.0344%s%s endmount' % (ex, f(-0.1487 - deep), back, tw(4640)))
-    w('mount 4620-%s eye -0.1800 0.0000 rod 4620-00%s%s endmount' % (ex, back, tw(4650)))
-    w('mount 4630-%s eye %s 0.0395%s%s endmount' % (ex, f(-0.097 - deep), back, tw(4660)))
-w()
-w('// slupy: wysokosci od glowki szyny, zbieznosc od gory na dlugosci "length", depth = wymiar od toru w glab u gory i u dolu')
-w('pole 1701 model siec_trakcyjna/slupy/1701 top 7.4600 length 8.7500 depth 0.1750 0.3850 mount_max 7.3000 strut 4610-03 stay 4620-03 steady 4630-03 endpole   // slup betonowy (Jan, 2026-10-11)')
-w('pole 1665 model siec_trakcyjna/slupy/1665 foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2000 0.2000 mount_max 8.0500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (Jan, 2026-10-21)')
-w('pole 1666 model siec_trakcyjna/slupy/1666 foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2000 0.2000 mount_max 7.6500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (Jan, 2026-10-21)')
-w('pole 1667 model siec_trakcyjna/slupy/1667 foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2000 0.2000 mount_max 7.2500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (Jan, 2026-10-21)')
+# mocowania do slupow i slupy sa w data/traction_supports.txt - plik reczny, generator go nie pisze (Jan 2026-10-21)
 
 open('data/traction_cantilevers.txt', 'w', encoding='utf-8', newline='').write(out.getvalue())
 open('cantilever_ref.txt', 'w', encoding='utf-8', newline='').write(ref.getvalue())

@@ -50,7 +50,8 @@ bool Initialized { false };
 // uwagi solvera już wypisane do logu; ta sama uwaga dla tej samej karty idzie tylko raz, żeby nie zalać logu
 std::set<std::string> Notes;
 
-// katalog wysięgników: części, zestawy ramion i schematy kart; czytany z traction_cantilevers.txt przy pierwszym użyciu
+// katalog wysięgników: części, zestawy ramion i schematy kart (traction_cantilevers.txt) oraz słupy i mocowania
+// (traction_supports.txt); czytany przy pierwszym użyciu
 catenary::cantilever_catalog const *
 cantilevers() {
 
@@ -64,6 +65,13 @@ cantilevers() {
         good = catalog.load( filename, errors );
         if( false == good ) {
             ErrorLog( "Catenary: file \"" + filename + "\" is missing, cantilevers won't be assembled" );
+        }
+        // słupy i mocowania do słupów: osobny plik pisany ręcznie (generator go nie rusza), dopisywany do tego samego katalogu
+        if( good ) {
+            auto const supports { Datadirectory + "traction_supports.txt" };
+            if( false == catalog.load( supports, errors ) ) {
+                ErrorLog( "Catenary: file \"" + supports + "\" is missing, cantilevers on poles won't be assembled" );
+            }
         }
         for( auto const &error : errors ) {
             ErrorLog( error );

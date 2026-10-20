@@ -26,7 +26,7 @@ int main( int argc, char *argv[] ) {
 
     catenary::cantilever_catalog catalog;
     std::vector<std::string> errors;
-    auto const loaded { catalog.load( data + "/traction_cantilevers.txt", errors ) };
+    auto const loaded { catalog.load( data + "/traction_cantilevers.txt", errors ) && catalog.load( data + "/traction_supports.txt", errors ) };
     {
         int swing { 0 }; for( auto const &entry : catalog.schemes() ) { swing += ( entry.first.first / 100 == 11 ); }
         auto const good { loaded && errors.empty() && swing == 174 && /* 111x-114x: 163, 117x/118x: 11 */  catalog.registration_count() >= 20 && catalog.part_count() > 50 && catalog.models() == "siec_trakcyjna/components/" };
