@@ -47,7 +47,6 @@ Exe czyta oba pliki danych do jednego katalogu. Python w grze nie bierze udział
    Stan 2026-10-21: 1701 387/645/4, 1665 1023/13/0, 1666 983/49/4, 1667 365/667/4.
 3. Sceneria próbna przez kod sceny z atrapą (`tests/catenary/mock`, wzór: `test_scene.cpp`), np. `td_wys25.scm`:
    69/69 złożonych, 1656 części, zero uwag.
-4. Zmieniony nagłówek (`catenary_cantilever.h` itd.) → uprzedzić, że przebudowa potrwa dłużej (pełna kompilacja).
 
 ## Dostarczenie
 
