@@ -86,7 +86,7 @@ part 7010-01 kind insulator length 0.3200 endpart
 part 7020-01 kind insulator length 0.3200 endpart
 part 7010-25 kind insulator length 0.6401 endpart   // izolatory 25 kV (Jan 2026-10-17, punkt "end" modeli)
 part 7020-25 kind insulator length 0.6360 endpart
-part 7100-25 kind insulator length 0.6360 endpart
+part 7100-25 kind insulator length 0.6360 clearance 0.0350 endpart   // clearance: izolator konczy sie 30 mm za punktem end (666 mm), 4050 ma 31 mm od osi; +4 mm luzu (Jan 2026-10-21, 1112-1 na 1665)
 part 4700-01 kind shackle length 0.0480 endpart   // karta 23-4700: 48 mm od luku do sworznia; punkt "eye" modelu
 part 4490-00 kind cord length 1.0000 endpart   // linka uniwersalna (nie z katalogu): model 1 m od zera do punktu "end", skalowana wzdluz Z
 
@@ -184,9 +184,9 @@ assembly swing
   endrepeat
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -222,7 +222,7 @@ assembly swing_steady
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -251,7 +251,7 @@ assembly messenger_only
   tangent strut strut_mount messenger_clamp.hook head_clamp.eye head_clamp
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place stay_insulator stay_mount stay -y
@@ -279,9 +279,9 @@ assembly swing_vee
   endrepeat
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -317,7 +317,7 @@ assembly swing_steady_vee
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -355,9 +355,9 @@ assembly swing_vee_contacts
   endrepeat
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -400,9 +400,9 @@ assembly swing_vee_wire_out
   endrepeat
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -444,9 +444,9 @@ assembly swing_vee_wire_in
   endrepeat
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -480,12 +480,12 @@ assembly rope_arms
   hang messenger_clamp messenger wire
   tangent strut strut_mount messenger_clamp.hook head_clamp.eye head_clamp
   level strut rope_clamp arms_holder -rope_clamp.eye
-  atleast strut rope_clamp strut_insulator.length+rules.clamp_margin
+  atleast strut rope_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin
   side rope_eye strut strut.rope_clamp -rope_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut rope_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut rope_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -510,7 +510,7 @@ assembly rope_arms_mount
   tangent strut strut_mount messenger_clamp.hook head_clamp.eye head_clamp
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -547,9 +547,9 @@ assembly double_net
   endrepeat
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -604,9 +604,9 @@ assembly swing_vee_pair
   endrepeat
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place ?stay_shackle stay@-stay_shackle.length stay -y
@@ -638,7 +638,7 @@ assembly level_arms_in
   tangent strut strut_mount messenger_clamp.hook head_clamp.eye head_clamp
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin strut_insulator.length+strut.length-rules.clamp_margin
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut_insulator.length+strut.length-rules.clamp_margin
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place stay_insulator stay_mount stay -y
@@ -659,7 +659,7 @@ assembly level_arms_out
   shift bracket_at wire -arms.holder.y+arms_head.eye.y 0
   project strut arms_at bracket_at strut_insulator.length+strut.length 0
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end arms_at 0.05 0.20 0.30
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin strut_insulator.length+strut.length-rules.clamp_margin
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut_insulator.length+strut.length-rules.clamp_margin
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place stay_insulator stay_mount stay -y
@@ -680,7 +680,7 @@ assembly level_push_in
   tangent strut strut_mount messenger_clamp.hook head_clamp.eye head_clamp
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
   chain strut stay_clamp stay_mount -stay_clamp.eye.z stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin strut_insulator.length+strut.length-rules.clamp_margin
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut_insulator.length+strut.length-rules.clamp_margin
   side stay_pin strut strut.stay_clamp -stay_clamp.eye.z
   line stay stay_mount toward stay_pin
   place stay_insulator stay_mount stay -y
@@ -708,9 +708,9 @@ assembly inner_push
     shift tip_eye tip 0 steady_head.eye.z
   endrepeat
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place stay_insulator stay_mount stay -y
@@ -746,9 +746,9 @@ assembly inner_push_cords
     shift tip_eye tip 0 steady_head.eye.z
   endrepeat
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place stay_insulator stay_mount stay -y
@@ -916,7 +916,7 @@ assembly level_contact
   line strut strut_mount toward clamp_eye
   project strut contact_at clamp_eye strut_insulator.length+strut.length rules.clamp_margin
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end contact_at rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place stay_insulator stay_mount stay -y
@@ -946,9 +946,9 @@ assembly inner_push_pair
     shift tip_eye tip 0 steady_head.eye.z
   endrepeat
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place stay_insulator stay_mount stay -y
@@ -983,9 +983,9 @@ assembly inner_push_vee
     shift tip_eye tip 0 steady_head.eye.z
   endrepeat
   limit strut head_clamp strut_insulator.length+strut.length rules.clamp_margin
-  window strut steady_clamp strut_insulator.length+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
+  window strut steady_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin strut.head_clamp-rules.stay_gap_min
   chain strut stay_clamp stay_mount stay_clamp.eye stay_insulator.length+stay.length stay_end head_clamp rules.stay_gap_min rules.stay_gap rules.stay_gap_max
-  window strut stay_clamp strut_insulator.length+rules.clamp_margin -
+  window strut stay_clamp strut_insulator.length+strut_insulator.clearance+rules.clamp_margin -
   side stay_pin strut strut.stay_clamp stay_clamp.eye
   line stay stay_mount toward stay_pin
   place stay_insulator stay_mount stay -y

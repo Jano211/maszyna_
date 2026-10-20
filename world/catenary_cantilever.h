@@ -45,6 +45,7 @@ struct cantilever_part {
     std::string name;               // numer katalogowy, zarazem nazwa modelu
     std::string kind;               // strut, stay, stay_end, steady, clamp, messenger_clamp, insulator, shackle, cord
     double length { 0.0 };          // od głównego zaczepu do końca albo do osi drugiego połączenia
+    double clearance { 0.0 };       // izolator: dodatkowy odstęp za "length", którego nie może zająć uchwyt na rurze (gruby koniec izolatora 25 kV)
     double pin { 0.0 };             // rura: odległość osi otworu sworznia od końca rury
     double radius { 0.019 };        // rura: promień (6011, 6111: 38 mm; 6001, 6002, 6003: 60 mm - Jan)
     double eye { 0.0 };             // uchwyt: odległość ucha od osi rury
