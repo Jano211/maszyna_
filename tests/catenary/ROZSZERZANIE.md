@@ -1,6 +1,6 @@
 # Sieć trakcyjna – jak dokładać nowe rzeczy i nie zepsuć starych
 
-Dla Claude'a w nowym czacie (i każdego, kto przyjdzie z własnym katalogiem). Krótko: **co gdzie siedzi, co zmieniać
+Dla Claude'a w nowym czacie i dla każdego, kto rozwija sieć trakcyjną. Krótko: **co gdzie siedzi, co zmieniać
 w którym miejscu, jak sprawdzić, że nic się nie rozjechało.** Stan opisany: 2026-10-21. Bieżące szczegóły i historia
 są w `PRZEKAZANIE.md` (sekcja START TUTAJ), koncepcja edytora w `KONCEPCJA_EDYTOR.md`.
 
@@ -21,7 +21,7 @@ Exe czyta oba pliki danych do jednego katalogu. Python w grze nie bierze udział
   Generatora nie ruszać.
 - **Wymiar albo punkt części, nowa część, karta, zestaw ramion, przepis składania (`assembly`)** → `gen_cantilevers.py`,
   potem wygenerować. **Nigdy ręcznie w `traction_cantilevers.txt`** – zginie przy następnym generowaniu.
-  (Wyjątek: Jan może ręcznie dłubać na G: na próbę – wtedy przenieść wartość do generatora.)
+  (Wyjątek: ręczna zmiana w katalogu symulatora na próbę – po potwierdzeniu przenieść wartość do generatora.)
 - **Nowy rodzaj kroku w przepisie, nowe słowo w danych, nowe zachowanie** (np. `foundation`, `clearance`) → C++.
   Nowe słowo zawsze z wartością domyślną, przy której stare dane działają jak dotąd.
 
@@ -34,8 +34,8 @@ Exe czyta oba pliki danych do jednego katalogu. Python w grze nie bierze udział
    do bazowej trafia do pochodnych i odwrotnie. Sprawdzić, w których przepisach kończy się zmiana.
    (2026-10-18: `roll rope_insulator` w `rope_arms` – 40 kart przestało się składać na wszystkich słupach.)
 3. **„Bez uwag” w solverze ≠ dobrze w symulatorze.** Reguły pilnują tylko tego, co w nie wpisano. Wymiary z modeli
-   (np. całkowita długość izolatora vs punkt `end`) potwierdzać z Janem.
-4. **Gdy czegoś nie wiadomo – pytać Jana, nie zakładać.** Założenia, jeśli już, oznaczać w danych i notatkach słowem ZAŁOŻENIE.
+   (np. całkowita długość izolatora vs punkt `end`) potwierdzać z autorem modelu / użytkownikiem.
+4. **Gdy czegoś nie wiadomo – pytać użytkownika, nie zakładać.** Założenia, jeśli już, oznaczać w danych i notatkach słowem ZAŁOŻENIE.
 5. **Podglądów PNG nie generować bez prośby** (zjadają kontekst).
 
 ## Sprawdzenie przed commitem (każdym, który rusza dane albo solver)
@@ -47,12 +47,12 @@ Exe czyta oba pliki danych do jednego katalogu. Python w grze nie bierze udział
    Stan 2026-10-21: 1701 387/645/4, 1665 1023/13/0, 1666 983/49/4, 1667 365/667/4.
 3. Sceneria próbna przez kod sceny z atrapą (`tests/catenary/mock`, wzór: `test_scene.cpp`), np. `td_wys25.scm`:
    69/69 złożonych, 1656 części, zero uwag.
-4. Zmieniony nagłówek (`catenary_cantilever.h` itd.) → napisać Janowi, że przebudowa potrwa dłużej (~30 min).
+4. Zmieniony nagłówek (`catenary_cantilever.h` itd.) → uprzedzić, że przebudowa potrwa dłużej (pełna kompilacja).
 
 ## Dostarczenie
 
 - Commit razem z notatką w `PRZEKAZANIE.md` (jeden krok = jeden commit), push na `siec-trakcyjna`, merge do `wszystko`,
-  push `wszystko`. Jan robi Pull w GitHub Desktop i kompiluje.
-- Dane na `G:\Maszyna2510\data\`: **oba pliki**, w CRLF; po zapisie sprawdzić md5 (pobrać z powrotem i porównać).
-  Scenerie do `scenery\`. Oryginałów Jana nie nadpisywać – nowa nazwa pliku (np. `td_wys25`).
-- `Traction.h` i `Globals.h` – nie ruszać bez wyraźnej zgody Jana.
+  push `wszystko` (gałąź zbiorcza, z której buduje się exe do testów).
+- Dane do katalogu `data\` symulatora: **oba pliki**, w CRLF; po zapisie sprawdzić md5 (pobrać z powrotem i porównać).
+  Scenerie do `scenery\`. Cudzych scenerii nie nadpisywać – nowa nazwa pliku (np. `td_wys25`).
+- `Traction.h` i `Globals.h` – nie ruszać bez wyraźnej zgody użytkownika (pliki wspólne z resztą exe, konflikty przy merge).
