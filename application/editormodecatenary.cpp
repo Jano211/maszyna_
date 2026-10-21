@@ -1507,7 +1507,7 @@ void editor_mode::render_catenary_ui()
 		if (ImGui::Button(STR_C("Take back")))
 			catenary_undo();
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("Takes back the last change of the catenary (Ctrl+Z of the editor doesn't)"));
+			ImGui::SetTooltip("%s", STR_C("Takes back the last change of the catenary (also Ctrl+Z while this tool is open)"));
 	}
 	if (catenary_scene_changed())
 		ImGui::TextDisabled("%s", STR_C("The catenary files are written when the scenery is saved"));

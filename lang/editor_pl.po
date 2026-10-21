@@ -5582,3 +5582,6 @@ msgstr "Brak toru przy bramce"
 
 msgid "Gantry %s: beam %s, masts %.3f m apart"
 msgstr "Bramka %s: dźwigar %s, słupy %.3f m od siebie"
+
+msgid "Takes back the last change of the catenary (also Ctrl+Z while this tool is open)"
+msgstr "Cofa ostatnią zmianę sieci (także Ctrl+Z przy otwartym tym narzędziu)"
