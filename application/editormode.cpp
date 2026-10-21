@@ -5383,6 +5383,12 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
         return;
     if (Global.ctrlState && Key == GLFW_KEY_Z && is_press(Action))
     {
+        // in the catenary tool its own changes are taken back first
+        if (ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::catenary && m_catenary.dragging == 0 && false == m_catenary.undo.empty())
+        {
+            catenary_undo();
+            return;
+        }
         undo_last();
         return;
     }
