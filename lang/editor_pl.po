@@ -5561,3 +5561,24 @@ msgstr "Przeciągnij: przesuń bramkę"
 
 msgid "Click: put the cantilevers on drops on this gantry, drag: move it"
 msgstr "Klik: wysięgniki na zwisach tej bramki, przeciągnij: przesuń ją"
+
+msgid "Beam"
+msgstr "Dźwigar"
+
+msgid "Take the masts"
+msgstr "Weź słupy"
+
+msgid "The masts chosen above go to this gantry; the first mast stays, the second goes as far as the beam needs"
+msgstr "Słupy wybrane wyżej idą do tej bramki; pierwszy zostaje, drugi odsuwa się tyle, ile trzeba dźwigarowi"
+
+msgid "Turn (degrees)"
+msgstr "Obrót (stopnie)"
+
+msgid "Drag sideways: turns the gantry around its middle"
+msgstr "Przeciągnij w bok: obraca bramkę wokół jej środka"
+
+msgid "No track near the gantry"
+msgstr "Brak toru przy bramce"
+
+msgid "Gantry %s: beam %s, masts %.3f m apart"
+msgstr "Bramka %s: dźwigar %s, słupy %.3f m od siebie"

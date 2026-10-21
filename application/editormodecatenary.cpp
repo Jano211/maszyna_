@@ -1365,6 +1365,61 @@ void editor_mode::render_catenary_ui()
 		if (auto const *gantry{tool.gantry_selected >= 0 ? catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected)) : nullptr}; gantry != nullptr)
 		{
 			ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Gantry %s, beam %s: the cantilevers go on drops on it"), gantry->name.c_str(), gantry->beam.c_str()).c_str());
+			// another beam: the first mast stays, the second goes as far as the beam spans
+			ImGui::PushItemWidth(120.0f);
+			if (ImGui::BeginCombo(STR_C("Beam"), gantry->beam.c_str()))
+			{
+				for (auto const &beam : catalog->beams())
+					if (ImGui::Selectable(format("%s  %.1f m", beam.first.c_str(), beam.second.span).c_str(), beam.first == gantry->beam))
+						catenary_gantry_reshape(beam.first, 0.0, false);
+				ImGui::EndCombo();
+			}
+			ImGui::PopItemWidth();
+			ImGui::SameLine();
+			auto const step = [&](int const Direction) {
+				// the beam one step (0.1 m) longer or shorter
+				auto const *current{catalog->beam(gantry->beam)};
+				if (current == nullptr)
+					return;
+				std::string next;
+				auto best{std::numeric_limits<double>::max()};
+				for (auto const &beam : catalog->beams())
+				{
+					auto const difference{(beam.second.span - current->span) * Direction};
+					if (difference > 0.01 && difference < best)
+					{
+						best = difference;
+						next = beam.first;
+					}
+				}
+				if (false == next.empty())
+					catenary_gantry_reshape(next, 0.0, false);
+			};
+			if (ImGui::SmallButton("-"))
+				step(-1);
+			ImGui::SameLine();
+			if (ImGui::SmallButton("+"))
+				step(1);
+			ImGui::SameLine();
+			if (ImGui::Button(STR_C("Square to the track")))
+				catenary_gantry_reshape({}, 0.0, true);
+			ImGui::SameLine();
+			if (ImGui::Button(STR_C("Take the masts")))
+				catenary_gantry_reshape({}, 0.0, false);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("The masts chosen above go to this gantry; the first mast stays, the second goes as far as the beam needs"));
+			{
+				float turn{0.0f};
+				ImGui::PushItemWidth(120.0f);
+				if (ImGui::DragFloat(STR_C("Turn (degrees)"), &turn, 0.1f, -10.0f, 10.0f, "%.1f") && turn != 0.0f)
+					catenary_gantry_reshape({}, turn, false);
+				ImGui::PopItemWidth();
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("Drag sideways: turns the gantry around its middle"));
+			}
+			gantry = catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected));
+			if (gantry == nullptr)
+				return;
 			// the heights of the masts: their zero is at the rail heads; the foundation head (variants -1...-4) takes the ground
 			for (int mast = 0; mast < 2; ++mast)
 			{
@@ -1661,4 +1716,89 @@ void editor_mode::catenary_release()
 	tool.drag_gantry.reset();
 	tool.drag_drops.clear();
 	tool.probed = false;
+}
+
+void editor_mode::catenary_gantry_reshape(std::string const &Beam, double const Turn, bool const Square)
+{
+	auto &tool{m_catenary};
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *gantry{tool.gantry_selected >= 0 ? catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected)) : nullptr};
+	if (catalog == nullptr || gantry == nullptr)
+		return;
+	auto changed{*gantry};
+	if (false == Beam.empty())
+		changed.beam = Beam;
+	if (false == tool.masts.empty() && Beam.empty() && Turn == 0.0 && false == Square)
+	{
+		// the masts chosen in the panel
+		changed.masts[0] = tool.masts[std::clamp(tool.mast_first, 0, static_cast<int>(tool.masts.size()) - 1)];
+		changed.masts[1] = tool.masts[std::clamp(tool.mast_second, 0, static_cast<int>(tool.masts.size()) - 1)];
+	}
+	auto const *beam{catalog->beam(changed.beam)};
+	auto const *a{catalog->mast(changed.masts[0])};
+	auto const *b{catalog->mast(changed.masts[1])};
+	if (beam == nullptr || a == nullptr || b == nullptr)
+		return;
+	glm::dvec3 const first{gantry->points[0][0], gantry->points[0][1], gantry->points[0][2]};
+	glm::dvec3 const second{gantry->points[1][0], gantry->points[1][1], gantry->points[1][2]};
+	auto direction{plan_of(second) - plan_of(first)};
+	direction = glm::length(direction) > 1e-6 ? glm::normalize(direction) : glm::dvec2{1.0, 0.0};
+	auto const middle{0.5 * (plan_of(first) + plan_of(second))};
+	auto centre{middle};
+	if (Turn != 0.0)
+	{
+		auto const angle{glm::radians(Turn)};
+		direction = {direction.x * std::cos(angle) - direction.y * std::sin(angle), direction.x * std::sin(angle) + direction.y * std::cos(angle)};
+	}
+	if (Square)
+	{
+		// square to the track nearest to the middle of the gantry
+		auto best{std::numeric_limits<double>::max()};
+		glm::dvec2 along{0.0};
+		for (auto *track : simulation::Paths.sequence())
+		{
+			if (track == nullptr || track->m_editorremoved || track->m_paths.empty())
+				continue;
+			for (int path = 0; path < static_cast<int>(track->m_paths.size()); ++path)
+			{
+				bezier const curve{track->m_paths[path]};
+				glm::dvec3 const probe{middle.x, 0.0, middle.y};
+				if (geometry::plan_distance(curve.point(0.5), probe) > curve.plan_length() * 0.5 + std::min(best, 60.0))
+					continue;
+				auto const parameter{nearest_parameter(*track, path, probe)};
+				auto const distance{geometry::plan_distance(curve.point(parameter), probe)};
+				if (distance < best)
+				{
+					best = distance;
+					along = forward_at(*track, path, parameter);
+				}
+			}
+		}
+		if (glm::length(along) < 0.5)
+		{
+			tool.status = STR("No track near the gantry");
+			return;
+		}
+		auto const across{right_of(along)};
+		direction = glm::dot(across, direction) >= 0.0 ? across : -across;
+	}
+	auto const spacing{beam->span + a->offset + b->offset};
+	// turned or squared: around its middle; a new beam or masts: the first mast stays
+	glm::dvec2 const start{(Turn != 0.0 || Square) ? centre - direction * (0.5 * spacing) : plan_of(first)};
+	auto const end{start + direction * spacing};
+	changed.points[0][0] = start.x;
+	changed.points[0][2] = start.y;
+	changed.points[1][0] = end.x;
+	changed.points[1][2] = end.y;
+	catenary_change change;
+	change.group = ++tool.group;
+	change.gantry = true;
+	change.index = static_cast<std::size_t>(tool.gantry_selected);
+	change.gantry_before = *gantry;
+	auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
+	// turning in small steps is taken back at once
+	if (Turn == 0.0 || tool.undo.empty() || false == last.gantry || last.index != change.index || false == last.gantry_before.has_value())
+		tool.undo.push_back(change);
+	catenary_gantry_update(static_cast<std::size_t>(tool.gantry_selected), changed);
+	tool.status = format(STR_C("Gantry %s: beam %s, masts %.3f m apart"), changed.name.c_str(), changed.beam.c_str(), spacing);
 }

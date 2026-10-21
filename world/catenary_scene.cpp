@@ -466,6 +466,11 @@ assemble_gantry( scene_gantry &Gantry ) {
     };
     add( first->model, 0.0, 0.0, 0.0 );
     add( second->model, 0.0, distance, b.y - a.y );
+    {
+        // drugi słup patrzy na pierwszy: obrócony o 180°, żeby mocowania stały do dźwigara
+        double const turned[ 9 ] { 0.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+        std::copy( std::begin( turned ), std::end( turned ), placements.back().rotation );
+    }
     // dźwigar: każdy koniec na mocowaniu swojego słupa (przesunięcie wzdłuż toru i prześwit), więc przy słupach różnej
     // szerokości albo prześwitu leży lekko skośnie
     double from[ 3 ], to[ 3 ];
