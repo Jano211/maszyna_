@@ -112,16 +112,16 @@ struct span_check
 
 std::vector<span_check> spans_around(glm::dvec3 const &Camera, std::string const &Network, int const Zone)
 {
-	std::vector<std::size_t> near;
+	std::vector<std::size_t> nearby;
 	for (std::size_t index = 0; index < catenary_scene_size(); ++index)
 	{
 		auto const *data{catenary_scene_get(index)};
 		if (data != nullptr && data->has_at && glm::distance(wire_of(*data), Camera) < kCatenaryRange)
-			near.push_back(index);
+			nearby.push_back(index);
 	}
 	auto const &tables{catenary_scene_layout()};
 	std::vector<span_check> result;
-	for (auto const i : near)
+	for (auto const i : nearby)
 	{
 		auto const &a{*catenary_scene_get(i)};
 		auto const across{across_of(a)};
@@ -130,7 +130,7 @@ std::vector<span_check> spans_around(glm::dvec3 const &Camera, std::string const
 		{
 			auto best{kSpanSearch};
 			std::size_t found{i};
-			for (auto const j : near)
+			for (auto const j : nearby)
 			{
 				if (j == i)
 					continue;
