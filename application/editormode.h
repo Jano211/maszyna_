@@ -1594,6 +1594,8 @@ class editor_mode : public application_mode, private editor_track::observer
 	glm::dvec3 catenary_mast_point() const;
 	bool catenary_on_gantry(catenary_spot &Spot);
 	void catenary_drag_update();
+	// the selected gantry anew: another beam, masts, turned around its middle (degrees), or square to the nearest track
+	void catenary_gantry_reshape(std::string const &Beam, double const Turn, bool const Square);
 	void catenary_release();
 	bool catenary_delete_selected();
 	void catenary_undo();
