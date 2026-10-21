@@ -45,6 +45,7 @@ Exe czyta oba pliki danych do jednego katalogu. Python w grze nie bierze udział
    Program: pętla po `catalog.schemes()` i `solve_cantilever_on_pole` na każdym słupie, drut 5,6 m nad główką,
    środek pasma A (wzór: `etap0/klucz_uwag.cpp`). Każda zmiana tych liczb musi mieć wyjaśnienie.
    Stan 2026-10-21: 1701 387/645/4, 1665 1023/13/0, 1666 983/49/4, 1667 365/667/4.
+   161x (21.10 wieczór): 1611-xx 1023/13/0, 1613-xx 983/49/4, 1614-xx 365/667/4.
 3. Sceneria próbna przez kod sceny z atrapą (`tests/catenary/mock`, wzór: `test_scene.cpp`), np. `td_wys25.scm`:
    69/69 złożonych, 1656 części, zero uwag.
 

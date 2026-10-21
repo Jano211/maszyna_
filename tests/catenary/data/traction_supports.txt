@@ -60,3 +60,24 @@ pole 1701 model siec_trakcyjna/slupy/1701 top 7.4600 length 8.7500 depth 0.1750 
 pole 1665 model siec_trakcyjna/slupy/1665 foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2000 0.2000 mount_max 8.0500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (2026-10-21)
 pole 1666 model siec_trakcyjna/slupy/1666 foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2000 0.2000 mount_max 7.6500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (2026-10-21)
 pole 1667 model siec_trakcyjna/slupy/1667 foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2000 0.2000 mount_max 7.2500 strut 4610-07 stay 4620-07 steady 4630-07 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (2026-10-21)
+
+// ---- slupy kratowe 161x na fundamentach palowych (2026-10-21) ------------------------------------------------
+// Kratownica wezszym bokiem wzdluz toru; depth = wiekszy wymiar (w glab od toru): u gory i u podstawy, zbieznosc na calej wysokosci.
+// Mocowania: wyk. 10 (C 120-140), czesci -08 (C 160-200) - karta 53-0501. Pale: -11, -11-1 -> 1491; -12, -13 -> 1492; -14, -15 -> 1493.
+// mount_max = wierzch - 0,15 m (jak dwuteowniki 166x) - ZALOZENIE, do potwierdzenia.
+pole 1611-11 model siec_trakcyjna/slupy/1611-11 foundation siec_trakcyjna/slupy/1491-01 top 8.2000 length 8.2000 depth 0.2000 0.3000 mount_max 8.0500 strut 4610-10 stay 4620-10 steady 4630-10 endpole   // C120, pal 1491
+pole 1611-11-1 model siec_trakcyjna/slupy/1611-11-1 foundation siec_trakcyjna/slupy/1491-01 top 8.2000 length 8.2000 depth 0.2000 0.3000 mount_max 8.0500 strut 4610-10 stay 4620-10 steady 4630-10 endpole   // C120E, pal 1491
+pole 1611-12 model siec_trakcyjna/slupy/1611-12 foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2300 0.3300 mount_max 8.0500 strut 4610-10 stay 4620-10 steady 4630-10 endpole   // C140E, pal 1492
+pole 1611-13 model siec_trakcyjna/slupy/1611-13 foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2300 0.3300 mount_max 8.0500 strut 4610-08 stay 4620-08 steady 4630-08 endpole   // C160E, pal 1492
+pole 1611-14 model siec_trakcyjna/slupy/1611-14 foundation siec_trakcyjna/slupy/1493-01 top 8.2000 length 8.2000 depth 0.2300 0.3300 mount_max 8.0500 strut 4610-08 stay 4620-08 steady 4630-08 endpole   // C180E, pal 1493
+pole 1611-15 model siec_trakcyjna/slupy/1611-15 foundation siec_trakcyjna/slupy/1493-01 top 8.2000 length 8.2000 depth 0.2300 0.3300 mount_max 8.0500 strut 4610-08 stay 4620-08 steady 4630-08 endpole   // C200E, pal 1493
+pole 1613-11 model siec_trakcyjna/slupy/1613-11 foundation siec_trakcyjna/slupy/1491-01 top 7.8000 length 7.8000 depth 0.2000 0.3000 mount_max 7.6500 strut 4610-10 stay 4620-10 steady 4630-10 endpole   // C120, pal 1491
+pole 1613-11-1 model siec_trakcyjna/slupy/1613-11-1 foundation siec_trakcyjna/slupy/1491-01 top 7.8000 length 7.8000 depth 0.2000 0.3000 mount_max 7.6500 strut 4610-10 stay 4620-10 steady 4630-10 endpole   // C120E, pal 1491
+pole 1613-12 model siec_trakcyjna/slupy/1613-12 foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2300 0.3300 mount_max 7.6500 strut 4610-10 stay 4620-10 steady 4630-10 endpole   // C140E, pal 1492
+pole 1613-13 model siec_trakcyjna/slupy/1613-13 foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2300 0.3300 mount_max 7.6500 strut 4610-08 stay 4620-08 steady 4630-08 endpole   // C160E, pal 1492
+pole 1613-14 model siec_trakcyjna/slupy/1613-14 foundation siec_trakcyjna/slupy/1493-01 top 7.8000 length 7.8000 depth 0.2300 0.3300 mount_max 7.6500 strut 4610-08 stay 4620-08 steady 4630-08 endpole   // C180E, pal 1493
+pole 1613-15 model siec_trakcyjna/slupy/1613-15 foundation siec_trakcyjna/slupy/1493-01 top 7.8000 length 7.8000 depth 0.2300 0.3300 mount_max 7.6500 strut 4610-08 stay 4620-08 steady 4630-08 endpole   // C200E, pal 1493
+pole 1614-11 model siec_trakcyjna/slupy/1614-11 foundation siec_trakcyjna/slupy/1491-01 top 7.4000 length 7.4000 depth 0.2000 0.3000 mount_max 7.2500 strut 4610-10 stay 4620-10 steady 4630-10 endpole   // C120, pal 1491
+pole 1614-11-1 model siec_trakcyjna/slupy/1614-11-1 foundation siec_trakcyjna/slupy/1491-01 top 7.4000 length 7.4000 depth 0.2000 0.3000 mount_max 7.2500 strut 4610-10 stay 4620-10 steady 4630-10 endpole   // C120E, pal 1491
+pole 1614-12 model siec_trakcyjna/slupy/1614-12 foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2300 0.3300 mount_max 7.2500 strut 4610-10 stay 4620-10 steady 4630-10 endpole   // C140E, pal 1492
+pole 1614-13 model siec_trakcyjna/slupy/1614-13 foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2300 0.3300 mount_max 7.2500 strut 4610-08 stay 4620-08 steady 4630-08 endpole   // C160E, pal 1492
