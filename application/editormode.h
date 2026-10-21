@@ -1573,6 +1573,7 @@ class editor_mode : public application_mode, private editor_track::observer
 		std::optional<catenary::gantry> drag_gantry; // the gantry as it was when the drag started
 		std::vector<std::pair<std::size_t, catenary::suspension>> drag_drops; // the drops of the gantry, as they were
 		int gantry_selected{-1}; // the gantry the drops go to
+		std::string drop_choice; // the drop for the next cantilevers on a gantry; empty: the shortest one which fits
 	};
 	catenary_tool m_catenary;
 	void catenary_scan();
