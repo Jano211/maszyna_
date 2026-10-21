@@ -78,3 +78,6 @@ Parametry do składania są w komentarzach w nagłówku jako `//$e_<klucz>=<wart
 - Wysokość słupów zaznaczonej bramki: pola „Słup 1/2 na wysokości” (zero słupa w główce szyny; teren bierze głowica
   fundamentu wykonania -1…-4). Gizmo edytora nie działa na części sieci – są poza warstwami scenerii.
 - Przeciąganie: słup (zwykły) wzdłuż toru, bramka (za dźwigar) razem ze zwisami.
+- Poprawka (użytkownik 2026-10-22 23:48): między słupami jest o 0,20 m mniej niż numer dźwigara (E101 = 9,9 m), drugiego słupa
+  nie obracamy. Rozstaw osi = numer/10 − 0,20 + offsetA + offsetB (`catenary::gantry_spacing`). Edycja postawionej bramki:
+  dźwigar z listy / ±0,1 m, obrót wokół środka, „Prostopadle do toru”, „Weź słupy”. Zwisy idą za bramką tylko przy przeciąganiu.

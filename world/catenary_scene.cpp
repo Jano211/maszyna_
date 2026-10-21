@@ -445,10 +445,10 @@ assemble_gantry( scene_gantry &Gantry ) {
     auto const dx { b.x - a.x }, dz { b.z - a.z };
     auto const distance { std::sqrt( dx * dx + dz * dz ) };
     if( distance < 1.0 ) { ErrorLog( label + "has its masts less than 1 m apart" ); return 0; }
-    // dźwigar biegnie między ścianami słupów: osie słupów są o offset każdego słupa dalej niż końce dźwigara
-    if( std::abs( distance - ( beam->span + first->offset + second->offset ) ) > 0.05 ) {
+    // między ścianami słupów jest o 0,20 m mniej niż numer dźwigara (E101: 9,9 m - użytkownik), osie słupów o offset każdego dalej
+    if( std::abs( distance - catenary::gantry_spacing( *beam, *first, *second ) ) > 0.05 ) {
         WriteLog( ( "Catenary: gantry \"" + data.name + "\" has its masts " + text_number( distance, 3 ) + " m apart, beam \"" + beam->name + "\" with these masts needs "
-            + text_number( beam->span + first->offset + second->offset, 3 ) + " m" ).c_str() );
+            + text_number( catenary::gantry_spacing( *beam, *first, *second ), 3 ) + " m" ).c_str() );
     }
     // układ jak wysięgnika: Y wzdłuż dźwigara (od pierwszego słupa do drugiego), X wzdłuż toru, Z w górę
     auto const heading { std::atan2( dx, dz ) };
@@ -466,11 +466,6 @@ assemble_gantry( scene_gantry &Gantry ) {
     };
     add( first->model, 0.0, 0.0, 0.0 );
     add( second->model, 0.0, distance, b.y - a.y );
-    {
-        // drugi słup patrzy na pierwszy: obrócony o 180°, żeby mocowania stały do dźwigara
-        double const turned[ 9 ] { 0.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
-        std::copy( std::begin( turned ), std::end( turned ), placements.back().rotation );
-    }
     // dźwigar: każdy koniec na mocowaniu swojego słupa (przesunięcie wzdłuż toru i prześwit), więc przy słupach różnej
     // szerokości albo prześwitu leży lekko skośnie
     double from[ 3 ], to[ 3 ];
