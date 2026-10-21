@@ -5531,3 +5531,33 @@ msgstr "Klik: pierwszy słup bramki"
 
 msgid "Click: put the cantilevers on drops on this gantry"
 msgstr "Klik: wysięgniki na zwisach tej bramki"
+
+msgid "The cantilevers now go on drops on this gantry: LMB over a track; drag the beam to move the gantry"
+msgstr "Wysięgniki idą teraz na zwisy tej bramki: LPM nad torem; przeciągnij dźwigar, żeby przesunąć bramkę"
+
+msgid "Square to the track"
+msgstr "Prostopadle do toru"
+
+msgid "The beam goes square to the track the first mast is put by"
+msgstr "Dźwigar prostopadle do toru, przy którym stoi pierwszy słup"
+
+msgid "Texture"
+msgstr "Tekstura"
+
+msgid "Replaceable texture of the masts, the beam and the drops of the new gantry (the models have none of their own)"
+msgstr "Tekstura wymienna słupów, dźwigara i zwisów nowej bramki (modele nie mają własnej)"
+
+msgid "Mast %d at the height (m)"
+msgstr "Słup %d na wysokości (m)"
+
+msgid "The zero of the mast is at the rail heads (the clearance of the beam is counted from it); the ground is taken by the foundation head of the variant -1...-4. Drag or Ctrl+click to type"
+msgstr "Zero słupa jest w główce szyny (od niej liczony jest prześwit dźwigara); teren bierze głowica fundamentu wykonania -1…-4. Przeciągnij albo Ctrl+klik, żeby wpisać"
+
+msgid "Give it the texture"
+msgstr "Nadaj teksturę"
+
+msgid "Drag: move the gantry"
+msgstr "Przeciągnij: przesuń bramkę"
+
+msgid "Click: put the cantilevers on drops on this gantry, drag: move it"
+msgstr "Klik: wysięgniki na zwisach tej bramki, przeciągnij: przesuń ją"

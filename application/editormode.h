@@ -1564,6 +1564,14 @@ class editor_mode : public application_mode, private editor_track::observer
 		int gantry_side{1};
 		bool gantry_placing{false}; // the next two clicks put the masts
 		std::optional<glm::dvec3> gantry_first; // the first mast, waiting for the second
+		std::optional<glm::dvec2> gantry_track; // the direction of the track by the first mast, for the beam square to it
+		bool gantry_square{true}; // the beam goes square to the track
+		char gantry_skin[128]{}; // the replaceable texture of the masts, the beam and the drops
+		int dragging{0}; // 1: the selected pole along the track, 2: the selected gantry along the track
+		glm::vec2 pressed{0.f};
+		glm::dvec3 drag_start{0.0}; // the point of the ground the drag started at
+		std::optional<catenary::gantry> drag_gantry; // the gantry as it was when the drag started
+		std::vector<std::pair<std::size_t, catenary::suspension>> drag_drops; // the drops of the gantry, as they were
 		int gantry_selected{-1}; // the gantry the drops go to
 	};
 	catenary_tool m_catenary;
@@ -1585,6 +1593,8 @@ class editor_mode : public application_mode, private editor_track::observer
 	bool catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3 &Second, std::string &Beam) const;
 	glm::dvec3 catenary_mast_point() const;
 	bool catenary_on_gantry(catenary_spot &Spot);
+	void catenary_drag_update();
+	void catenary_release();
 	bool catenary_delete_selected();
 	void catenary_undo();
 	void render_catenary_ui();
