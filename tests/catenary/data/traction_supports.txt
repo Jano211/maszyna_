@@ -81,3 +81,316 @@ pole 1614-11 model siec_trakcyjna/slupy/1614-11 foundation siec_trakcyjna/slupy/
 pole 1614-11-1 model siec_trakcyjna/slupy/1614-11-1 foundation siec_trakcyjna/slupy/1491-01 top 7.4000 length 7.4000 depth 0.2000 0.3000 mount_max 7.2500 strut 4610-10 stay 4620-10 steady 4630-10 endpole   // C120E, pal 1491
 pole 1614-12 model siec_trakcyjna/slupy/1614-12 foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2300 0.3300 mount_max 7.2500 strut 4610-10 stay 4620-10 steady 4630-10 endpole   // C140E, pal 1492
 pole 1614-13 model siec_trakcyjna/slupy/1614-13 foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2300 0.3300 mount_max 7.2500 strut 4610-08 stay 4620-08 steady 4630-08 endpole   // C160E, pal 1492
+
+// ---- bramki: slupy, dzwigary, zwisy (2026-10-22) ---------------------------------------------------------------
+// mast <nazwa> model <sciezka> width <wzdluz toru> length <wzdluz dzwigara> height <m> mount <przeswit dolny> <gorny> offset <m> through|end endmast
+//   zero w osi slupa na wysokosci glowki szyny, Y modelu wzdluz dzwigara; offset = przesuniecie dzwigara wzdluz toru (wg tagow $e_ w .inc)
+// beam <nazwa> model <sciezka> span <rozstaw osi slupow> drop <rodzina zwisow> endbeam
+//   zero w osi pierwszego slupa na spodzie dzwigara, X modelu wzdluz dzwigara
+// zwis = "plywajacy slup" (pole z zerem w spodzie dzwigara: top 0, mocowania ponizej, turn 90 = profil szerszym bokiem wzdluz toru)
+mast 3031-1 model siec_trakcyjna/slupy/3031-1 width 0.240 length 0.600 height 8.66 mount 7.35 7.75 offset 0.121 through endmast
+mast 3031-2 model siec_trakcyjna/slupy/3031-2 width 0.240 length 0.600 height 8.66 mount 7.35 7.75 offset 0.121 through endmast
+mast 3031-3 model siec_trakcyjna/slupy/3031-3 width 0.240 length 0.600 height 8.66 mount 7.35 7.75 offset 0.121 through endmast
+mast 3031-4 model siec_trakcyjna/slupy/3031-4 width 0.240 length 0.600 height 8.66 mount 7.35 7.75 offset 0.121 through endmast
+mast 3032-1 model siec_trakcyjna/slupy/3032-1 width 0.140 length 0.600 height 8.66 mount 7.35 7.75 offset 0.071 end endmast
+mast 3032-2 model siec_trakcyjna/slupy/3032-2 width 0.140 length 0.600 height 8.66 mount 7.35 7.75 offset 0.071 end endmast
+mast 3032-3 model siec_trakcyjna/slupy/3032-3 width 0.140 length 0.600 height 8.66 mount 7.35 7.75 offset 0.071 end endmast
+mast 3032-4 model siec_trakcyjna/slupy/3032-4 width 0.140 length 0.600 height 8.66 mount 7.35 7.75 offset 0.071 end endmast
+mast 3033-1 model siec_trakcyjna/slupy/3033-1 width 0.240 length 0.600 height 9.46 mount 8.15 8.55 offset 0.121 through endmast
+mast 3033-2 model siec_trakcyjna/slupy/3033-2 width 0.240 length 0.600 height 9.46 mount 8.15 8.55 offset 0.121 through endmast
+mast 3033-3 model siec_trakcyjna/slupy/3033-3 width 0.240 length 0.600 height 9.46 mount 8.15 8.55 offset 0.121 through endmast
+mast 3033-4 model siec_trakcyjna/slupy/3033-4 width 0.240 length 0.600 height 9.46 mount 8.15 8.55 offset 0.121 through endmast
+mast 3034-1 model siec_trakcyjna/slupy/3034-1 width 0.140 length 0.600 height 9.46 mount 8.15 8.55 offset 0.071 end endmast
+mast 3034-2 model siec_trakcyjna/slupy/3034-2 width 0.140 length 0.600 height 9.46 mount 8.15 8.55 offset 0.071 end endmast
+mast 3034-3 model siec_trakcyjna/slupy/3034-3 width 0.140 length 0.600 height 9.46 mount 8.15 8.55 offset 0.071 end endmast
+mast 3034-4 model siec_trakcyjna/slupy/3034-4 width 0.140 length 0.600 height 9.46 mount 8.15 8.55 offset 0.071 end endmast
+mast 3035-1 model siec_trakcyjna/slupy/3035-1 width 0.240 length 0.600 height 6.66 mount 5.35 5.75 offset 0.121 through endmast
+mast 3035-2 model siec_trakcyjna/slupy/3035-2 width 0.240 length 0.600 height 6.66 mount 5.35 5.75 offset 0.121 through endmast
+mast 3035-3 model siec_trakcyjna/slupy/3035-3 width 0.240 length 0.600 height 6.66 mount 5.35 5.75 offset 0.121 through endmast
+mast 3035-4 model siec_trakcyjna/slupy/3035-4 width 0.240 length 0.600 height 6.66 mount 5.35 5.75 offset 0.121 through endmast
+mast 3036-1 model siec_trakcyjna/slupy/3036-1 width 0.140 length 0.600 height 6.66 mount 5.35 5.75 offset 0.071 end endmast
+mast 3036-2 model siec_trakcyjna/slupy/3036-2 width 0.140 length 0.600 height 6.66 mount 5.35 5.75 offset 0.071 end endmast
+mast 3036-3 model siec_trakcyjna/slupy/3036-3 width 0.140 length 0.600 height 6.66 mount 5.35 5.75 offset 0.071 end endmast
+mast 3036-4 model siec_trakcyjna/slupy/3036-4 width 0.140 length 0.600 height 6.66 mount 5.35 5.75 offset 0.071 end endmast
+mast 3037-1 model siec_trakcyjna/slupy/3037-1 width 0.240 length 0.600 height 8.86 mount 7.55 7.95 offset 0.121 through endmast
+mast 3037-2 model siec_trakcyjna/slupy/3037-2 width 0.240 length 0.600 height 8.86 mount 7.55 7.95 offset 0.121 through endmast
+mast 3037-3 model siec_trakcyjna/slupy/3037-3 width 0.240 length 0.600 height 8.86 mount 7.55 7.95 offset 0.121 through endmast
+mast 3037-4 model siec_trakcyjna/slupy/3037-4 width 0.240 length 0.600 height 8.86 mount 7.55 7.95 offset 0.121 through endmast
+mast 3038-1 model siec_trakcyjna/slupy/3038-1 width 0.140 length 0.600 height 8.86 mount 7.55 7.95 offset 0.071 end endmast
+mast 3038-2 model siec_trakcyjna/slupy/3038-2 width 0.140 length 0.600 height 8.86 mount 7.55 7.95 offset 0.071 end endmast
+mast 3038-3 model siec_trakcyjna/slupy/3038-3 width 0.140 length 0.600 height 8.86 mount 7.55 7.95 offset 0.071 end endmast
+mast 3038-4 model siec_trakcyjna/slupy/3038-4 width 0.140 length 0.600 height 8.86 mount 7.55 7.95 offset 0.071 end endmast
+mast 3111 model siec_trakcyjna/slupy/3111 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through endmast
+mast 3112 model siec_trakcyjna/slupy/3112 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through endmast
+mast 3113 model siec_trakcyjna/slupy/3113 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through endmast
+mast 3121 model siec_trakcyjna/slupy/3121 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through endmast
+mast 3122 model siec_trakcyjna/slupy/3122 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through endmast
+mast 3123 model siec_trakcyjna/slupy/3123 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through endmast
+beam E90 model siec_trakcyjna/dzwigary/9m span 9.0 drop 4850 endbeam
+beam E91 model siec_trakcyjna/dzwigary/9.1m span 9.1 drop 4850 endbeam
+beam E92 model siec_trakcyjna/dzwigary/9.2m span 9.2 drop 4850 endbeam
+beam E93 model siec_trakcyjna/dzwigary/9.3m span 9.3 drop 4850 endbeam
+beam E94 model siec_trakcyjna/dzwigary/9.4m span 9.4 drop 4850 endbeam
+beam E95 model siec_trakcyjna/dzwigary/9.5m span 9.5 drop 4850 endbeam
+beam E96 model siec_trakcyjna/dzwigary/9.6m span 9.6 drop 4850 endbeam
+beam E97 model siec_trakcyjna/dzwigary/9.7m span 9.7 drop 4850 endbeam
+beam E98 model siec_trakcyjna/dzwigary/9.8m span 9.8 drop 4850 endbeam
+beam E99 model siec_trakcyjna/dzwigary/9.9m span 9.9 drop 4850 endbeam
+beam E100 model siec_trakcyjna/dzwigary/10m span 10.0 drop 4850 endbeam
+beam E101 model siec_trakcyjna/dzwigary/10.1m span 10.1 drop 4850 endbeam
+beam E102 model siec_trakcyjna/dzwigary/10.2m span 10.2 drop 4850 endbeam
+beam E103 model siec_trakcyjna/dzwigary/10.3m span 10.3 drop 4850 endbeam
+beam E104 model siec_trakcyjna/dzwigary/10.4m span 10.4 drop 4850 endbeam
+beam E105 model siec_trakcyjna/dzwigary/10.5m span 10.5 drop 4850 endbeam
+beam E106 model siec_trakcyjna/dzwigary/10.6m span 10.6 drop 4850 endbeam
+beam E107 model siec_trakcyjna/dzwigary/10.7m span 10.7 drop 4850 endbeam
+beam E108 model siec_trakcyjna/dzwigary/10.8m span 10.8 drop 4850 endbeam
+beam E109 model siec_trakcyjna/dzwigary/10.9m span 10.9 drop 4850 endbeam
+beam E110 model siec_trakcyjna/dzwigary/11m span 11.0 drop 4850 endbeam
+beam E111 model siec_trakcyjna/dzwigary/11.1m span 11.1 drop 4850 endbeam
+beam E112 model siec_trakcyjna/dzwigary/11.2m span 11.2 drop 4850 endbeam
+beam E113 model siec_trakcyjna/dzwigary/11.3m span 11.3 drop 4850 endbeam
+beam E114 model siec_trakcyjna/dzwigary/11.4m span 11.4 drop 4850 endbeam
+beam E115 model siec_trakcyjna/dzwigary/11.5m span 11.5 drop 4850 endbeam
+beam E116 model siec_trakcyjna/dzwigary/11.6m span 11.6 drop 4850 endbeam
+beam E117 model siec_trakcyjna/dzwigary/11.7m span 11.7 drop 4850 endbeam
+beam E118 model siec_trakcyjna/dzwigary/11.8m span 11.8 drop 4850 endbeam
+beam E119 model siec_trakcyjna/dzwigary/11.9m span 11.9 drop 4850 endbeam
+beam E120 model siec_trakcyjna/dzwigary/12m span 12.0 drop 4850 endbeam
+beam E121 model siec_trakcyjna/dzwigary/12.1m span 12.1 drop 4850 endbeam
+beam E122 model siec_trakcyjna/dzwigary/12.2m span 12.2 drop 4850 endbeam
+beam E123 model siec_trakcyjna/dzwigary/12.3m span 12.3 drop 4850 endbeam
+beam E124 model siec_trakcyjna/dzwigary/12.4m span 12.4 drop 4850 endbeam
+beam E125 model siec_trakcyjna/dzwigary/12.5m span 12.5 drop 4850 endbeam
+beam E126 model siec_trakcyjna/dzwigary/12.6m span 12.6 drop 4850 endbeam
+beam E127 model siec_trakcyjna/dzwigary/12.7m span 12.7 drop 4850 endbeam
+beam E128 model siec_trakcyjna/dzwigary/12.8m span 12.8 drop 4850 endbeam
+beam E129 model siec_trakcyjna/dzwigary/12.9m span 12.9 drop 4850 endbeam
+beam E130 model siec_trakcyjna/dzwigary/13m span 13.0 drop 4850 endbeam
+beam E131 model siec_trakcyjna/dzwigary/13.1m span 13.1 drop 4850 endbeam
+beam E132 model siec_trakcyjna/dzwigary/13.2m span 13.2 drop 4850 endbeam
+beam E133 model siec_trakcyjna/dzwigary/13.3m span 13.3 drop 4850 endbeam
+beam E134 model siec_trakcyjna/dzwigary/13.4m span 13.4 drop 4850 endbeam
+beam E135 model siec_trakcyjna/dzwigary/13.5m span 13.5 drop 4850 endbeam
+beam E136 model siec_trakcyjna/dzwigary/13.6m span 13.6 drop 4850 endbeam
+beam E137 model siec_trakcyjna/dzwigary/13.7m span 13.7 drop 4850 endbeam
+beam E138 model siec_trakcyjna/dzwigary/13.8m span 13.8 drop 4850 endbeam
+beam E139 model siec_trakcyjna/dzwigary/13.9m span 13.9 drop 4850 endbeam
+beam E140 model siec_trakcyjna/dzwigary/14m span 14.0 drop 4850 endbeam
+beam E141 model siec_trakcyjna/dzwigary/14.1m span 14.1 drop 4850 endbeam
+beam E142 model siec_trakcyjna/dzwigary/14.2m span 14.2 drop 4850 endbeam
+beam E143 model siec_trakcyjna/dzwigary/14.3m span 14.3 drop 4850 endbeam
+beam E144 model siec_trakcyjna/dzwigary/14.4m span 14.4 drop 4850 endbeam
+beam E145 model siec_trakcyjna/dzwigary/14.5m span 14.5 drop 4850 endbeam
+beam E146 model siec_trakcyjna/dzwigary/14.6m span 14.6 drop 4850 endbeam
+beam E147 model siec_trakcyjna/dzwigary/14.7m span 14.7 drop 4850 endbeam
+beam E148 model siec_trakcyjna/dzwigary/14.8m span 14.8 drop 4850 endbeam
+beam E149 model siec_trakcyjna/dzwigary/14.9m span 14.9 drop 4850 endbeam
+beam E150 model siec_trakcyjna/dzwigary/15m span 15.0 drop 4850 endbeam
+beam E151 model siec_trakcyjna/dzwigary/15.1m span 15.1 drop 4850 endbeam
+beam E152 model siec_trakcyjna/dzwigary/15.2m span 15.2 drop 4850 endbeam
+beam E153 model siec_trakcyjna/dzwigary/15.3m span 15.3 drop 4850 endbeam
+beam E154 model siec_trakcyjna/dzwigary/15.4m span 15.4 drop 4850 endbeam
+beam E155 model siec_trakcyjna/dzwigary/15.5m span 15.5 drop 4850 endbeam
+beam E156 model siec_trakcyjna/dzwigary/15.6m span 15.6 drop 4850 endbeam
+beam E157 model siec_trakcyjna/dzwigary/15.7m span 15.7 drop 4850 endbeam
+beam E158 model siec_trakcyjna/dzwigary/15.8m span 15.8 drop 4850 endbeam
+beam E159 model siec_trakcyjna/dzwigary/15.9m span 15.9 drop 4850 endbeam
+beam E160 model siec_trakcyjna/dzwigary/16m span 16.0 drop 4850 endbeam
+beam E161 model siec_trakcyjna/dzwigary/16.1m span 16.1 drop 4850 endbeam
+beam E162 model siec_trakcyjna/dzwigary/16.2m span 16.2 drop 4850 endbeam
+beam E163 model siec_trakcyjna/dzwigary/16.3m span 16.3 drop 4850 endbeam
+beam E164 model siec_trakcyjna/dzwigary/16.4m span 16.4 drop 4850 endbeam
+beam E165 model siec_trakcyjna/dzwigary/16.5m span 16.5 drop 4850 endbeam
+beam E166 model siec_trakcyjna/dzwigary/16.6m span 16.6 drop 4850 endbeam
+beam E167 model siec_trakcyjna/dzwigary/16.7m span 16.7 drop 4850 endbeam
+beam E168 model siec_trakcyjna/dzwigary/16.8m span 16.8 drop 4850 endbeam
+beam E169 model siec_trakcyjna/dzwigary/16.9m span 16.9 drop 4850 endbeam
+beam E170 model siec_trakcyjna/dzwigary/17m span 17.0 drop 4850 endbeam
+beam E171 model siec_trakcyjna/dzwigary/17.1m span 17.1 drop 4850 endbeam
+beam E172 model siec_trakcyjna/dzwigary/17.2m span 17.2 drop 4850 endbeam
+beam E173 model siec_trakcyjna/dzwigary/17.3m span 17.3 drop 4850 endbeam
+beam E174 model siec_trakcyjna/dzwigary/17.4m span 17.4 drop 4850 endbeam
+beam E175 model siec_trakcyjna/dzwigary/17.5m span 17.5 drop 4850 endbeam
+beam E176 model siec_trakcyjna/dzwigary/17.6m span 17.6 drop 4850 endbeam
+beam E177 model siec_trakcyjna/dzwigary/17.7m span 17.7 drop 4850 endbeam
+beam E178 model siec_trakcyjna/dzwigary/17.8m span 17.8 drop 4850 endbeam
+beam E179 model siec_trakcyjna/dzwigary/17.9m span 17.9 drop 4850 endbeam
+beam E180 model siec_trakcyjna/dzwigary/18m span 18.0 drop 4850 endbeam
+beam E181 model siec_trakcyjna/dzwigary/18.1m span 18.1 drop 4850 endbeam
+beam E182 model siec_trakcyjna/dzwigary/18.2m span 18.2 drop 4850 endbeam
+beam E183 model siec_trakcyjna/dzwigary/18.3m span 18.3 drop 4850 endbeam
+beam E184 model siec_trakcyjna/dzwigary/18.4m span 18.4 drop 4850 endbeam
+beam E185 model siec_trakcyjna/dzwigary/18.5m span 18.5 drop 4850 endbeam
+beam E186 model siec_trakcyjna/dzwigary/18.6m span 18.6 drop 4850 endbeam
+beam E187 model siec_trakcyjna/dzwigary/18.7m span 18.7 drop 4850 endbeam
+beam E188 model siec_trakcyjna/dzwigary/18.8m span 18.8 drop 4850 endbeam
+beam E189 model siec_trakcyjna/dzwigary/18.9m span 18.9 drop 4850 endbeam
+beam E190 model siec_trakcyjna/dzwigary/19m span 19.0 drop 4850 endbeam
+beam E191 model siec_trakcyjna/dzwigary/19.1m span 19.1 drop 4850 endbeam
+beam E192 model siec_trakcyjna/dzwigary/19.2m span 19.2 drop 4850 endbeam
+beam E193 model siec_trakcyjna/dzwigary/19.3m span 19.3 drop 4850 endbeam
+beam E194 model siec_trakcyjna/dzwigary/19.4m span 19.4 drop 4850 endbeam
+beam E195 model siec_trakcyjna/dzwigary/19.5m span 19.5 drop 4850 endbeam
+beam E196 model siec_trakcyjna/dzwigary/19.6m span 19.6 drop 4850 endbeam
+beam E197 model siec_trakcyjna/dzwigary/19.7m span 19.7 drop 4850 endbeam
+beam E198 model siec_trakcyjna/dzwigary/19.8m span 19.8 drop 4850 endbeam
+beam E199 model siec_trakcyjna/dzwigary/19.9m span 19.9 drop 4850 endbeam
+beam E200 model siec_trakcyjna/dzwigary/20m span 20.0 drop 4850 endbeam
+beam E201 model siec_trakcyjna/dzwigary/20.1m span 20.1 drop 4850 endbeam
+beam E202 model siec_trakcyjna/dzwigary/20.2m span 20.2 drop 4850 endbeam
+beam E203 model siec_trakcyjna/dzwigary/20.3m span 20.3 drop 4850 endbeam
+beam E204 model siec_trakcyjna/dzwigary/20.4m span 20.4 drop 4850 endbeam
+beam E205 model siec_trakcyjna/dzwigary/20.5m span 20.5 drop 4850 endbeam
+beam E206 model siec_trakcyjna/dzwigary/20.6m span 20.6 drop 4850 endbeam
+beam E207 model siec_trakcyjna/dzwigary/20.7m span 20.7 drop 4850 endbeam
+beam E208 model siec_trakcyjna/dzwigary/20.8m span 20.8 drop 4850 endbeam
+beam E209 model siec_trakcyjna/dzwigary/20.9m span 20.9 drop 4850 endbeam
+beam E210 model siec_trakcyjna/dzwigary/21m span 21.0 drop 4850 endbeam
+beam E211 model siec_trakcyjna/dzwigary/21.1m span 21.1 drop 4850 endbeam
+beam E212 model siec_trakcyjna/dzwigary/21.2m span 21.2 drop 4850 endbeam
+beam E213 model siec_trakcyjna/dzwigary/21.3m span 21.3 drop 4850 endbeam
+beam E214 model siec_trakcyjna/dzwigary/21.4m span 21.4 drop 4850 endbeam
+beam E215 model siec_trakcyjna/dzwigary/21.5m span 21.5 drop 4850 endbeam
+beam E216 model siec_trakcyjna/dzwigary/21.6m span 21.6 drop 4850 endbeam
+beam E217 model siec_trakcyjna/dzwigary/21.7m span 21.7 drop 4850 endbeam
+beam E218 model siec_trakcyjna/dzwigary/21.8m span 21.8 drop 4850 endbeam
+beam E219 model siec_trakcyjna/dzwigary/21.9m span 21.9 drop 4850 endbeam
+beam E220 model siec_trakcyjna/dzwigary/22m span 22.0 drop 4850 endbeam
+beam E221 model siec_trakcyjna/dzwigary/22.1m span 22.1 drop 4850 endbeam
+beam E222 model siec_trakcyjna/dzwigary/22.2m span 22.2 drop 4850 endbeam
+beam E223 model siec_trakcyjna/dzwigary/22.3m span 22.3 drop 4850 endbeam
+beam E224 model siec_trakcyjna/dzwigary/22.4m span 22.4 drop 4850 endbeam
+beam E225 model siec_trakcyjna/dzwigary/22.5m span 22.5 drop 4850 endbeam
+beam E226 model siec_trakcyjna/dzwigary/22.6m span 22.6 drop 4850 endbeam
+beam E227 model siec_trakcyjna/dzwigary/22.7m span 22.7 drop 4850 endbeam
+beam E228 model siec_trakcyjna/dzwigary/22.8m span 22.8 drop 4850 endbeam
+beam E229 model siec_trakcyjna/dzwigary/22.9m span 22.9 drop 4850 endbeam
+beam E230 model siec_trakcyjna/dzwigary/23m span 23.0 drop 4850 endbeam
+beam E231 model siec_trakcyjna/dzwigary/23.1m span 23.1 drop 4850 endbeam
+beam E232 model siec_trakcyjna/dzwigary/23.2m span 23.2 drop 4850 endbeam
+beam E233 model siec_trakcyjna/dzwigary/23.3m span 23.3 drop 4850 endbeam
+beam E234 model siec_trakcyjna/dzwigary/23.4m span 23.4 drop 4850 endbeam
+beam E235 model siec_trakcyjna/dzwigary/23.5m span 23.5 drop 4850 endbeam
+beam E236 model siec_trakcyjna/dzwigary/23.6m span 23.6 drop 4850 endbeam
+beam E237 model siec_trakcyjna/dzwigary/23.7m span 23.7 drop 4850 endbeam
+beam E238 model siec_trakcyjna/dzwigary/23.8m span 23.8 drop 4850 endbeam
+beam E239 model siec_trakcyjna/dzwigary/23.9m span 23.9 drop 4850 endbeam
+beam E240 model siec_trakcyjna/dzwigary/24m span 24.0 drop 4850 endbeam
+beam E241 model siec_trakcyjna/dzwigary/24.1m span 24.1 drop 4850 endbeam
+beam E242 model siec_trakcyjna/dzwigary/24.2m span 24.2 drop 4850 endbeam
+beam E243 model siec_trakcyjna/dzwigary/24.3m span 24.3 drop 4850 endbeam
+beam E244 model siec_trakcyjna/dzwigary/24.4m span 24.4 drop 4850 endbeam
+beam E245 model siec_trakcyjna/dzwigary/24.5m span 24.5 drop 4850 endbeam
+beam E246 model siec_trakcyjna/dzwigary/24.6m span 24.6 drop 4850 endbeam
+beam E247 model siec_trakcyjna/dzwigary/24.7m span 24.7 drop 4850 endbeam
+beam E248 model siec_trakcyjna/dzwigary/24.8m span 24.8 drop 4850 endbeam
+beam E249 model siec_trakcyjna/dzwigary/24.9m span 24.9 drop 4850 endbeam
+beam E250 model siec_trakcyjna/dzwigary/25m span 25.0 drop 4850 endbeam
+beam E251 model siec_trakcyjna/dzwigary/25.1m span 25.1 drop 4850 endbeam
+beam E252 model siec_trakcyjna/dzwigary/25.2m span 25.2 drop 4850 endbeam
+beam E253 model siec_trakcyjna/dzwigary/25.3m span 25.3 drop 4850 endbeam
+beam E254 model siec_trakcyjna/dzwigary/25.4m span 25.4 drop 4850 endbeam
+beam E255 model siec_trakcyjna/dzwigary/25.5m span 25.5 drop 4850 endbeam
+beam E256 model siec_trakcyjna/dzwigary/25.6m span 25.6 drop 4850 endbeam
+beam E257 model siec_trakcyjna/dzwigary/25.7m span 25.7 drop 4850 endbeam
+beam E258 model siec_trakcyjna/dzwigary/25.8m span 25.8 drop 4850 endbeam
+beam E259 model siec_trakcyjna/dzwigary/25.9m span 25.9 drop 4850 endbeam
+beam E260 model siec_trakcyjna/dzwigary/26m span 26.0 drop 4850 endbeam
+beam E261 model siec_trakcyjna/dzwigary/26.1m span 26.1 drop 4850 endbeam
+beam E262 model siec_trakcyjna/dzwigary/26.2m span 26.2 drop 4850 endbeam
+beam E263 model siec_trakcyjna/dzwigary/26.3m span 26.3 drop 4850 endbeam
+beam E264 model siec_trakcyjna/dzwigary/26.4m span 26.4 drop 4850 endbeam
+beam E265 model siec_trakcyjna/dzwigary/26.5m span 26.5 drop 4850 endbeam
+beam E266 model siec_trakcyjna/dzwigary/26.6m span 26.6 drop 4850 endbeam
+beam E267 model siec_trakcyjna/dzwigary/26.7m span 26.7 drop 4850 endbeam
+beam E268 model siec_trakcyjna/dzwigary/26.8m span 26.8 drop 4850 endbeam
+beam E269 model siec_trakcyjna/dzwigary/26.9m span 26.9 drop 4850 endbeam
+beam E270 model siec_trakcyjna/dzwigary/27m span 27.0 drop 4850 endbeam
+beam E271 model siec_trakcyjna/dzwigary/27.1m span 27.1 drop 4850 endbeam
+beam E272 model siec_trakcyjna/dzwigary/27.2m span 27.2 drop 4850 endbeam
+beam E273 model siec_trakcyjna/dzwigary/27.3m span 27.3 drop 4850 endbeam
+beam E274 model siec_trakcyjna/dzwigary/27.4m span 27.4 drop 4850 endbeam
+beam E275 model siec_trakcyjna/dzwigary/27.5m span 27.5 drop 4850 endbeam
+beam E276 model siec_trakcyjna/dzwigary/27.6m span 27.6 drop 4850 endbeam
+beam E277 model siec_trakcyjna/dzwigary/27.7m span 27.7 drop 4850 endbeam
+beam E278 model siec_trakcyjna/dzwigary/27.8m span 27.8 drop 4850 endbeam
+beam E279 model siec_trakcyjna/dzwigary/27.9m span 27.9 drop 4850 endbeam
+beam E280 model siec_trakcyjna/dzwigary/28m span 28.0 drop 4850 endbeam
+beam E281 model siec_trakcyjna/dzwigary/28.1m span 28.1 drop 4850 endbeam
+beam E282 model siec_trakcyjna/dzwigary/28.2m span 28.2 drop 4850 endbeam
+beam E283 model siec_trakcyjna/dzwigary/28.3m span 28.3 drop 4850 endbeam
+beam E284 model siec_trakcyjna/dzwigary/28.4m span 28.4 drop 4850 endbeam
+beam E285 model siec_trakcyjna/dzwigary/28.5m span 28.5 drop 4850 endbeam
+beam E286 model siec_trakcyjna/dzwigary/28.6m span 28.6 drop 4850 endbeam
+beam E287 model siec_trakcyjna/dzwigary/28.7m span 28.7 drop 4850 endbeam
+beam E288 model siec_trakcyjna/dzwigary/28.8m span 28.8 drop 4850 endbeam
+beam E289 model siec_trakcyjna/dzwigary/28.9m span 28.9 drop 4850 endbeam
+beam E290 model siec_trakcyjna/dzwigary/29m span 29.0 drop 4850 endbeam
+beam E291 model siec_trakcyjna/dzwigary/29.1m span 29.1 drop 4850 endbeam
+beam E292 model siec_trakcyjna/dzwigary/29.2m span 29.2 drop 4850 endbeam
+beam E293 model siec_trakcyjna/dzwigary/29.3m span 29.3 drop 4850 endbeam
+beam E294 model siec_trakcyjna/dzwigary/29.4m span 29.4 drop 4850 endbeam
+beam E295 model siec_trakcyjna/dzwigary/29.5m span 29.5 drop 4850 endbeam
+beam E296 model siec_trakcyjna/dzwigary/29.6m span 29.6 drop 4850 endbeam
+beam E297 model siec_trakcyjna/dzwigary/29.7m span 29.7 drop 4850 endbeam
+beam E298 model siec_trakcyjna/dzwigary/29.8m span 29.8 drop 4850 endbeam
+beam E299 model siec_trakcyjna/dzwigary/29.9m span 29.9 drop 4850 endbeam
+beam E300 model siec_trakcyjna/dzwigary/30m span 30.0 drop 4850 endbeam
+beam E301 model siec_trakcyjna/dzwigary/30.1m span 30.1 drop 4850 endbeam
+beam E302 model siec_trakcyjna/dzwigary/30.2m span 30.2 drop 4850 endbeam
+beam E303 model siec_trakcyjna/dzwigary/30.3m span 30.3 drop 4850 endbeam
+beam E304 model siec_trakcyjna/dzwigary/30.4m span 30.4 drop 4850 endbeam
+beam E305 model siec_trakcyjna/dzwigary/30.5m span 30.5 drop 4850 endbeam
+beam E306 model siec_trakcyjna/dzwigary/30.6m span 30.6 drop 4850 endbeam
+beam E307 model siec_trakcyjna/dzwigary/30.7m span 30.7 drop 4850 endbeam
+beam E308 model siec_trakcyjna/dzwigary/30.8m span 30.8 drop 4850 endbeam
+beam E309 model siec_trakcyjna/dzwigary/30.9m span 30.9 drop 4850 endbeam
+beam E310 model siec_trakcyjna/dzwigary/31m span 31.0 drop 4850 endbeam
+beam E311 model siec_trakcyjna/dzwigary/31.1m span 31.1 drop 4850 endbeam
+beam E312 model siec_trakcyjna/dzwigary/31.2m span 31.2 drop 4850 endbeam
+beam E313 model siec_trakcyjna/dzwigary/31.3m span 31.3 drop 4850 endbeam
+beam E314 model siec_trakcyjna/dzwigary/31.4m span 31.4 drop 4850 endbeam
+beam E315 model siec_trakcyjna/dzwigary/31.5m span 31.5 drop 4850 endbeam
+beam E316 model siec_trakcyjna/dzwigary/31.6m span 31.6 drop 4850 endbeam
+beam E317 model siec_trakcyjna/dzwigary/31.7m span 31.7 drop 4850 endbeam
+beam E318 model siec_trakcyjna/dzwigary/31.8m span 31.8 drop 4850 endbeam
+beam E319 model siec_trakcyjna/dzwigary/31.9m span 31.9 drop 4850 endbeam
+beam E320 model siec_trakcyjna/dzwigary/32m span 32.0 drop 4850 endbeam
+beam E321 model siec_trakcyjna/dzwigary/32.1m span 32.1 drop 4850 endbeam
+beam E322 model siec_trakcyjna/dzwigary/32.2m span 32.2 drop 4850 endbeam
+beam E323 model siec_trakcyjna/dzwigary/32.3m span 32.3 drop 4850 endbeam
+beam E324 model siec_trakcyjna/dzwigary/32.4m span 32.4 drop 4850 endbeam
+beam E325 model siec_trakcyjna/dzwigary/32.5m span 32.5 drop 4850 endbeam
+beam E326 model siec_trakcyjna/dzwigary/32.6m span 32.6 drop 4850 endbeam
+beam E327 model siec_trakcyjna/dzwigary/32.7m span 32.7 drop 4850 endbeam
+beam E328 model siec_trakcyjna/dzwigary/32.8m span 32.8 drop 4850 endbeam
+beam E329 model siec_trakcyjna/dzwigary/32.9m span 32.9 drop 4850 endbeam
+beam E330 model siec_trakcyjna/dzwigary/33m span 33.0 drop 4850 endbeam
+beam E331 model siec_trakcyjna/dzwigary/33.1m span 33.1 drop 4850 endbeam
+beam E332 model siec_trakcyjna/dzwigary/33.2m span 33.2 drop 4850 endbeam
+beam E333 model siec_trakcyjna/dzwigary/33.3m span 33.3 drop 4850 endbeam
+beam E334 model siec_trakcyjna/dzwigary/33.4m span 33.4 drop 4850 endbeam
+beam E335 model siec_trakcyjna/dzwigary/33.5m span 33.5 drop 4850 endbeam
+beam E336 model siec_trakcyjna/dzwigary/33.6m span 33.6 drop 4850 endbeam
+beam E337 model siec_trakcyjna/dzwigary/33.7m span 33.7 drop 4850 endbeam
+beam E338 model siec_trakcyjna/dzwigary/33.8m span 33.8 drop 4850 endbeam
+beam E339 model siec_trakcyjna/dzwigary/33.9m span 33.9 drop 4850 endbeam
+beam E340 model siec_trakcyjna/dzwigary/34m span 34.0 drop 4850 endbeam
+beam E341 model siec_trakcyjna/dzwigary/34.1m span 34.1 drop 4850 endbeam
+beam E342 model siec_trakcyjna/dzwigary/34.2m span 34.2 drop 4850 endbeam
+beam E343 model siec_trakcyjna/dzwigary/34.3m span 34.3 drop 4850 endbeam
+beam E344 model siec_trakcyjna/dzwigary/34.4m span 34.4 drop 4850 endbeam
+beam E345 model siec_trakcyjna/dzwigary/34.5m span 34.5 drop 4850 endbeam
+beam E346 model siec_trakcyjna/dzwigary/34.6m span 34.6 drop 4850 endbeam
+beam E347 model siec_trakcyjna/dzwigary/34.7m span 34.7 drop 4850 endbeam
+beam E348 model siec_trakcyjna/dzwigary/34.8m span 34.8 drop 4850 endbeam
+beam E349 model siec_trakcyjna/dzwigary/34.9m span 34.9 drop 4850 endbeam
+beam E385 model siec_trakcyjna/dzwigary/38.5m span 38.5 drop 4850 endbeam
+// zwisy 4850 (bramki i nowe polbramki): profil 0,12 m w strone toru; mocowania wyk. 05 (karta 53-0501: wsporniki-zwisy bramek
+// i polbramek), wysiegnik w pelnym zakresie dlugosci zwisu (uzytkownik 2026-10-22)
+pole 4850-1 model siec_trakcyjna/zwisy/4850/4850-1 top 0.0000 length 1.8000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -1.8000 turn 90 drop 4850 strut 4610-05 stay 4620-05 steady 4630-05 endpole   // zwis 1.8 m
+pole 4850-2 model siec_trakcyjna/zwisy/4850/4850-2 top 0.0000 length 2.1000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -2.1000 turn 90 drop 4850 strut 4610-05 stay 4620-05 steady 4630-05 endpole   // zwis 2.1 m
+pole 4850-3 model siec_trakcyjna/zwisy/4850/4850-3 top 0.0000 length 2.4000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -2.4000 turn 90 drop 4850 strut 4610-05 stay 4620-05 steady 4630-05 endpole   // zwis 2.4 m
+pole 4850-4 model siec_trakcyjna/zwisy/4850/4850-4 top 0.0000 length 2.7000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -2.7000 turn 90 drop 4850 strut 4610-05 stay 4620-05 steady 4630-05 endpole   // zwis 2.7 m
+pole 4850-5 model siec_trakcyjna/zwisy/4850/4850-5 top 0.0000 length 3.1000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -3.1000 turn 90 drop 4850 strut 4610-05 stay 4620-05 steady 4630-05 endpole   // zwis 3.1 m

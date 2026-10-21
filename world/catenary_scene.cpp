@@ -76,6 +76,15 @@ struct scene_chain {
 };
 std::vector<scene_chain> Chains;
 
+// bramka z pliku: słupy i dźwigar wstawione jako modele
+struct scene_gantry {
+    catenary::gantry data;
+    std::string file;
+    std::vector<TAnimModel *> parts;
+    bool removed { false };
+};
+std::vector<scene_gantry> Gantries;
+
 scene_file *
 file_named( std::string const &Name ) {
     for( auto &file : Files ) { if( file.name == Name ) { return &file; } }
@@ -395,6 +404,67 @@ drop_parts( scene_suspension &Suspension ) {
     Suspension.parts.clear();
 }
 
+// wstawia słupy i dźwigar bramki (albo usuwa, gdy bramka usunięta). zwraca liczbę wstawionych modeli
+std::size_t
+assemble_gantry( scene_gantry &Gantry ) {
+    for( auto *part : Gantry.parts ) { catenary_part_delete( part ); }
+    Gantry.parts.clear();
+    if( Gantry.removed ) { return 0; }
+    auto const *catalog { cantilevers() };
+    if( catalog == nullptr ) { return 0; }
+    auto const &data { Gantry.data };
+    auto const label { "Bad scenario: gantry \"" + ( data.name.empty() ? std::string( "none" ) : data.name ) + "\" " };
+    auto const *first { catalog->mast( data.masts[ 0 ] ) };
+    auto const *second { catalog->mast( data.masts[ 1 ] ) };
+    auto const *beam { catalog->beam( data.beam ) };
+    if( first == nullptr || second == nullptr || beam == nullptr ) {
+        ErrorLog( label + "uses a mast or a beam which isn't in the supports catalogue (traction_supports.txt)" );
+        return 0;
+    }
+    glm::dvec3 const a { data.points[ 0 ][ 0 ], data.points[ 0 ][ 1 ], data.points[ 0 ][ 2 ] };
+    glm::dvec3 const b { data.points[ 1 ][ 0 ], data.points[ 1 ][ 1 ], data.points[ 1 ][ 2 ] };
+    auto const dx { b.x - a.x }, dz { b.z - a.z };
+    auto const distance { std::sqrt( dx * dx + dz * dz ) };
+    if( distance < 1.0 ) { ErrorLog( label + "has its masts less than 1 m apart" ); return 0; }
+    if( std::abs( distance - beam->span ) > 0.05 ) {
+        WriteLog( ( "Catenary: gantry \"" + data.name + "\" has its masts " + text_number( distance, 3 ) + " m apart, beam \"" + beam->name + "\" is for " + text_number( beam->span, 2 ) + " m" ).c_str() );
+    }
+    // układ jak wysięgnika: Y wzdłuż dźwigara (od pierwszego słupa do drugiego), X wzdłuż toru, Z w górę
+    auto const heading { std::atan2( dx, dz ) };
+    std::vector<catenary::cantilever_placement> placements;
+    auto const add = [ & ]( std::string const &Model, double const X, double const Y, double const Z, bool const Along ) {
+        catenary::cantilever_placement placement;
+        placement.model = Model;
+        placement.position[ 0 ] = X;
+        placement.position[ 1 ] = Y;
+        placement.position[ 2 ] = Z;
+        if( Along ) {
+            // dźwigar: X modelu wzdłuż dźwigara
+            double const turned[ 9 ] { 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+            std::copy( std::begin( turned ), std::end( turned ), placement.rotation );
+        }
+        placements.push_back( placement );
+    };
+    add( first->model, 0.0, 0.0, 0.0, false );
+    add( second->model, 0.0, distance, b.y - a.y, false );
+    add( beam->model, data.side * first->offset, 0.0, data.high ? first->mount_high : first->mount_low, true );
+    auto const skin { data.skin.empty() ? std::string( "none" ) : data.skin };
+    std::size_t count { 0 };
+    for( auto const &placement : placements ) {
+        auto const part { catenary::cantilever_to_scene( placement, heading ) };
+        auto const entry {
+            "node " + text_number( data.range_max, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 " + placement.model + ".t3d " + skin
+            + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) + " endmodel" };
+        glm::dvec3 const position { a.x + part.offset[ 0 ], a.y + part.offset[ 1 ], a.z + part.offset[ 2 ] };
+        if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
+            catenary_part_detach( model );
+            Gantry.parts.push_back( model );
+            ++count;
+        }
+    }
+    return count;
+}
+
 // numer podwieszenia o podanej nazwie z podanego pliku; Suspensions.size() gdy nie ma
 std::size_t
 suspension_named( std::string const &File, std::string const &Name ) {
@@ -526,6 +596,13 @@ catenary_scene_load( cParser &Input ) {
         suspension.file = filename;
         Suspensions.emplace_back( suspension );
     }
+    for( auto const &line : file.gantries ) {
+        scene_gantry gantry;
+        gantry.data = line;
+        gantry.file = filename;
+        Gantries.emplace_back( gantry );
+        assemble_gantry( Gantries.back() );
+    }
     // przęsła łańcuchów powstają od razu: przed inicjalizacją scenerii łączy je InitTraction razem z resztą sieci
     for( auto const &line : file.chains ) {
         scene_chain chain;
@@ -634,6 +711,7 @@ catenary_scene_clear() {
 
     Suspensions.clear();
     Chains.clear();
+    Gantries.clear();
     Files.clear();
     Notes.clear();
     Resolved = 0;
@@ -857,6 +935,10 @@ catenary_scene_save( std::string &Message ) {
             if( chain.removed || chain.file != file.name ) { continue; }
             text += catenary::write_chain( chain.data ) + "\r\n";
         }
+        for( auto const &gantry : Gantries ) {
+            if( gantry.removed || gantry.file != file.name ) { continue; }
+            text += catenary::write_gantry( gantry.data ) + "\r\n";
+        }
         auto const path { Global.asCurrentSceneryPath + file.name };
         std::ofstream output { path, std::ios::binary | std::ios::trunc };
         if( false == output.is_open() ) {
@@ -970,4 +1052,75 @@ catenary_chain_of( std::size_t const Suspension, std::size_t &Position ) {
         }
     }
     return -1;
+}
+
+// ---- bramki -------------------------------------------------------------------------------------------------------------
+
+std::size_t
+catenary_gantry_size() {
+    return Gantries.size();
+}
+
+catenary::gantry const *
+catenary_gantry_get( std::size_t const Index ) {
+    if( Index >= Gantries.size() || Gantries[ Index ].removed ) { return nullptr; }
+    return &Gantries[ Index ].data;
+}
+
+std::string
+catenary_gantry_file( std::size_t const Index ) {
+    return ( Index < Gantries.size() ? Gantries[ Index ].file : std::string() );
+}
+
+std::size_t
+catenary_gantry_parts( std::size_t const Index ) {
+    return ( Index < Gantries.size() ? Gantries[ Index ].parts.size() : 0 );
+}
+
+std::size_t
+catenary_gantry_add( std::string const &File, catenary::gantry const &Data ) {
+    if( file_named( File ) == nullptr ) {
+        scene_file created;
+        created.name = File;
+        created.created = true;
+        created.header = "// Plik sieci trakcyjnej (podwieszenia), zalozony w edytorze scenerii.\n";
+        Files.emplace_back( created );
+    }
+    scene_gantry gantry;
+    gantry.data = Data;
+    gantry.file = File;
+    Gantries.emplace_back( gantry );
+    assemble_gantry( Gantries.back() );
+    mark_changed( File );
+    return Gantries.size() - 1;
+}
+
+bool
+catenary_gantry_update( std::size_t const Index, catenary::gantry const &Data ) {
+    if( Index >= Gantries.size() ) { return false; }
+    auto &gantry { Gantries[ Index ] };
+    gantry.data = Data;
+    gantry.removed = false;
+    assemble_gantry( gantry );
+    mark_changed( gantry.file );
+    return true;
+}
+
+void
+catenary_gantry_remove( std::size_t const Index ) {
+    if( Index >= Gantries.size() || Gantries[ Index ].removed ) { return; }
+    Gantries[ Index ].removed = true;
+    assemble_gantry( Gantries[ Index ] );
+    mark_changed( Gantries[ Index ].file );
+}
+
+std::string
+catenary_scene_new_gantry_name( std::string const &File ) {
+    auto stem { File };
+    if( auto const slash { stem.find_last_of( "/\\" ) }; slash != std::string::npos ) { stem.erase( 0, slash + 1 ); }
+    if( auto const dot { stem.rfind( '.' ) }; dot != std::string::npos ) { stem.erase( dot ); }
+    for( int number = 1; ; ++number ) {
+        auto const name { stem + "_b" + std::to_string( number ) };
+        if( std::none_of( Gantries.begin(), Gantries.end(), [ & ]( scene_gantry const &Gantry ) { return Gantry.data.name == name; } ) ) { return name; }
+    }
 }

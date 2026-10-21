@@ -281,6 +281,9 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     else if( key == "length" ) { number( pole.length, good ); }
                     else if( key == "depth" ) { number( pole.depth_top, good ); number( pole.depth_base, good ); }
                     else if( key == "mount_max" ) { number( pole.mount_max, good ); }
+                    else if( key == "mount_min" ) { number( pole.mount_min, good ); pole.has_mount_min = true; }
+                    else if( key == "turn" ) { number( pole.turn, good ); }
+                    else if( key == "drop" ) { text( pole.drop ); }
                     else if( key == "strut" ) { text( pole.strut ); }
                     else if( key == "stay" ) { text( pole.stay ); }
                     else if( key == "steady" ) { text( pole.steady ); }
@@ -310,6 +313,50 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
             else {
                 if( m_mounts.find( name ) != m_mounts.end() ) { report( entry, "defined more than once, the first definition stays" ); continue; }
                 m_mounts.emplace( name, mount );
+            }
+            continue;
+        }
+
+        if( token == "mast" || token == "beam" ) {
+            // konstrukcje bramek: mast <nazwa> model … endmast, beam <nazwa> model … endbeam
+            auto const ismast { token == "mast" };
+            if( index >= count ) { report( "", "\"" + token + "\" without a name" ); break; }
+            gantry_mast mast;
+            gantry_beam beam;
+            auto const name { Tokens[ index++ ] };
+            mast.name = beam.name = name;
+            auto const entry { token + " \"" + name + "\"" };
+            auto const ending { ismast ? std::string( "endmast" ) : std::string( "endbeam" ) };
+            auto good { true };
+            auto closed { false };
+            auto const text = [ & ]( std::string &Value ) { if( index < count ) { Value = Tokens[ index++ ]; } else { good = false; } };
+            while( index < count && good ) {
+                auto const key { Tokens[ index++ ] };
+                if( key == ending ) { closed = true; break; }
+                if( key == "model" ) { text( ismast ? mast.model : beam.model ); auto &model { ismast ? mast.model : beam.model }; std::replace( model.begin(), model.end(), '\\', '/' ); }
+                else if( ismast && key == "width" ) { number( mast.width, good ); }
+                else if( ismast && key == "length" ) { number( mast.length, good ); }
+                else if( ismast && key == "height" ) { number( mast.height, good ); }
+                else if( ismast && key == "mount" ) { number( mast.mount_low, good ); number( mast.mount_high, good ); }
+                else if( ismast && key == "offset" ) { number( mast.offset, good ); }
+                else if( ismast && key == "through" ) { mast.through = true; }
+                else if( ismast && key == "end" ) { mast.through = false; }
+                else if( false == ismast && key == "span" ) { number( beam.span, good ); }
+                else if( false == ismast && key == "drop" ) { text( beam.drop ); }
+                else { report( entry, "unknown keyword \"" + key + "\"" ); good = false; --index; }
+            }
+            if( false == good || false == closed ) {
+                if( good ) { report( entry, "missing \"" + ending + "\"" ); } else { report( entry, "bad or missing value" ); }
+                skip();
+                continue;
+            }
+            if( ismast ) {
+                if( mast.model.empty() || mast.mount_low <= 0.0 ) { report( entry, "needs \"model\" and \"mount\"" ); continue; }
+                if( false == m_masts.emplace( name, mast ).second ) { report( entry, "defined more than once, the first definition stays" ); }
+            }
+            else {
+                if( beam.model.empty() || beam.span <= 0.0 ) { report( entry, "needs \"model\" and \"span\"" ); continue; }
+                if( false == m_beams.emplace( name, beam ).second ) { report( entry, "defined more than once, the first definition stays" ); }
             }
             continue;
         }
@@ -474,6 +521,16 @@ cantilever_scheme const *cantilever_catalog::scheme_for_reach( int const Card, i
         if( scheme.execution == Execution && Reach >= scheme.reach_min && Reach < scheme.reach_max ) { return &scheme; }
     }
     return nullptr;
+}
+
+gantry_mast const *cantilever_catalog::mast( std::string const &Name ) const {
+    auto const lookup { m_masts.find( Name ) };
+    return ( lookup != m_masts.end() ? &lookup->second : nullptr );
+}
+
+gantry_beam const *cantilever_catalog::beam( std::string const &Name ) const {
+    auto const lookup { m_beams.find( Name ) };
+    return ( lookup != m_beams.end() ? &lookup->second : nullptr );
 }
 
 cantilever_input cantilever_nominal_input( cantilever_scheme const &Scheme, double const Reach ) {
@@ -2023,7 +2080,7 @@ void umbrella_mounts( cantilever_catalog const &Catalog, cantilever_pole const &
         height( Second, pair.second, b );
         // średnia nie wychodzi ponad najwyższe położenie mocowania na słupie (odciąg ścięty do mount_max po jednej stronie)
         auto shared { 0.5 * ( a + b ) };
-        if( Pole.mount_max > 0.0 ) { shared = std::min( shared, std::max( Pole.mount_max, std::min( a, b ) ) ); }
+        if( Pole.mount_max != 0.0 ) { shared = std::min( shared, std::max( Pole.mount_max, std::min( a, b ) ) ); }
         FirstSide.shared[ pair.first ] = SecondSide.shared[ pair.second ] = shared;
         if( pair.nutside == 0 ) { FirstSide.nuts.insert( pair.first ); }
         else { SecondSide.nuts.insert( pair.second ); }
@@ -2097,12 +2154,19 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
 
     if( Umbrella.pole ) {
         add( "pole", Pole.name, Pole.model, Distance, RailHead );
+        if( Pole.turn != 0.0 ) {
+            // model obrócony wokół pionu (zwis na bramce: profil szerszym bokiem wzdłuż toru)
+            auto const angle { Pole.turn * 3.14159265358979323846 / 180.0 };
+            auto const c { std::cos( angle ) }, s { std::sin( angle ) };
+            double const turned[ 9 ] { c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0 };
+            std::copy( std::begin( turned ), std::end( turned ), poleparts.back().rotation );
+        }
         // fundament ma to samo zero co słup (oś słupa na wysokości główki szyny)
         if( false == Pole.foundation.empty() ) { add( "foundation", Pole.name + "_foundation", Pole.foundation, Distance, RailHead ); }
     }
     auto const raise { Messenger.z - Scheme.height };
     auto staybolts { Scheme.mount_stay + raise - stay->attach_z() };
-    if( Pole.mount_max > 0.0 && staybolts - RailHead > Pole.mount_max ) {
+    if( Pole.mount_max != 0.0 && staybolts - RailHead > Pole.mount_max ) {
         notes.push_back( "the stay mount was lowered to the highest mount position of the pole (" + to_text( Pole.mount_max ) + " m above the rail head)" );
         staybolts = RailHead + Pole.mount_max;
     }
@@ -2124,6 +2188,12 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
     auto stayeye { fix( "stay", *stay, staybolts ) };
     input.strut_mount = fix( "strut", *strut, Scheme.mount_strut + ( Scheme.steady_mounted ? raise : 0.0 ) - strut->attach_z() );
     if( steady != nullptr ) { input.steady_mount = fix( "steady", *steady, Scheme.mount_steady - steady->attach_z() ); }
+    // zwis na bramce: mocowania nie mogą zejść poniżej jego końca
+    if( Pole.has_mount_min ) {
+        for( auto const &height : heights ) {
+            if( height.second < Pole.mount_min - 1e-6 ) { notes.push_back( height.first + " mount " + to_text( Pole.mount_min - height.second ) + " m below the lowest mount position of the pole" ); }
+        }
+    }
 
     // szekla odciągu wisi na uchu mocowania, a izolator na szekli: zaczep izolatora leży o długość szekli dalej wzdłuż odciągu,
     // którego kierunek zależy od złożenia, więc dwa przebiegi
@@ -2138,7 +2208,7 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
         auto const shift { shifted->second };
         poleparts.erase( std::remove_if( poleparts.begin(), poleparts.end(), []( cantilever_placement const &Placement ) { return Placement.role.compare( 0, 5, "stay_" ) == 0; } ), poleparts.end() );
         staybolts += shift;
-        if( Pole.mount_max > 0.0 && staybolts - RailHead > Pole.mount_max + 1e-6 ) {
+        if( Pole.mount_max != 0.0 && staybolts - RailHead > Pole.mount_max + 1e-6 ) {
             notes.push_back( "the stay mount needs to be " + to_text( staybolts - RailHead - Pole.mount_max ) + " m above the highest mount position of the pole" );
         }
         stayeye = fix( "stay", *stay, staybolts );

@@ -222,11 +222,25 @@ editor_mode::track_intent editor_mode::track_intent_at(int const Mods)
 		return turntable_intent(ground, shift);
 	if (m_track_tab == track_tab::catenary)
 	{
+		if (m_catenary.gantry_placing)
+		{
+			intent.position = catenary_mast_point();
+			intent.action = m_catenary.gantry_first.has_value() ? STR("Click: the second mast, as far as the nearest beam spans") : STR("Click: the first mast of the gantry");
+			intent.what = kind::catenary_mast;
+			return intent;
+		}
 		if (auto const hit{catenary_hit()}; hit >= 0)
 		{
 			intent.index = hit;
 			intent.action = STR("Click: select the pole");
 			intent.what = kind::catenary_select;
+			return intent;
+		}
+		if (auto const hit{catenary_gantry_hit()}; hit >= 0 && hit != m_catenary.gantry_selected)
+		{
+			intent.index = hit;
+			intent.action = STR("Click: put the cantilevers on drops on this gantry");
+			intent.what = kind::catenary_gantry;
 			return intent;
 		}
 		if (auto const hit{catenary_span_hit()}; hit >= 0)
@@ -486,7 +500,9 @@ void editor_mode::track_press(track_intent const &Intent)
 	case kind::signal_move: signal_press(Intent); return;
 	case kind::catenary_place:
 	case kind::catenary_select:
-	case kind::catenary_chain: catenary_press(Intent); return;
+	case kind::catenary_chain:
+	case kind::catenary_gantry:
+	case kind::catenary_mast: catenary_press(Intent); return;
 	case kind::select:
 	case kind::none:
 	{

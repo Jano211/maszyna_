@@ -92,10 +92,13 @@ glm::dvec2 across_of(catenary::suspension const &Data)
 	return glm::length(delta) > 1e-6 ? glm::normalize(delta) : glm::dvec2{1.0, 0.0};
 }
 
+// the top of the pole over its point; a drop hangs down from its point, so its "top" is negative
 double pole_top(catenary::suspension const &Data)
 {
 	auto const *catalog{catenary_scene_catalog()};
 	auto const *pole{catalog != nullptr && Data.has_pole ? catalog->pole(Data.pole_type) : nullptr};
+	if (pole != nullptr && false == pole->drop.empty())
+		return -pole->length;
 	return pole != nullptr ? pole->top : 7.0;
 }
 
@@ -237,8 +240,14 @@ void editor_mode::catenary_scan()
 	tool.scanned = true;
 	tool.poles.clear();
 	if (auto const *catalog{catenary_scene_catalog()}; catalog != nullptr)
+	{
 		for (auto const &pole : catalog->poles())
-			tool.poles.push_back(pole.first);
+			if (pole.second.drop.empty())
+				tool.poles.push_back(pole.first);
+		tool.masts.clear();
+		for (auto const &mast : catalog->masts())
+			tool.masts.push_back(mast.first);
+	}
 	tool.networks = catenary_scene_layout().symbols();
 	auto const preferred{std::find(tool.networks.begin(), tool.networks.end(), std::string{"YwsC120-2C"})};
 	tool.network = preferred != tool.networks.end() ? static_cast<int>(preferred - tool.networks.begin()) : 0;
@@ -285,18 +294,156 @@ bool editor_mode::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3 con
 		// the middle of the arc is outwards of the chord: is the pole on the outside of the curve
 		Spot.toward = glm::dot(plan_of(Spot.axis) - 0.5 * (plan_of(before) + plan_of(after)), right) * Spot.side > 0.0;
 	}
-	catenary_compose(Spot, m_catenary.clearance, Spot.curve ? std::max(static_cast<double>(m_catenary.stagger), catenary_scene_layout().curve_stagger()) : m_catenary.stagger, Spot.toward);
+	auto const stagger{Spot.curve ? std::max(static_cast<double>(m_catenary.stagger), catenary_scene_layout().curve_stagger()) : static_cast<double>(m_catenary.stagger)};
+	catenary_compose(Spot, m_catenary.clearance, stagger, Spot.toward);
+	// a gantry is selected: the cantilever hangs on a drop on its beam
+	glm::dvec3 from, to;
+	double bottom{0.0};
+	auto const *catalog{catenary_scene_catalog()};
+	if (m_catenary.gantry_placing || m_catenary.gantry_selected < 0 || catalog == nullptr || false == catenary_gantry_beam(static_cast<std::size_t>(m_catenary.gantry_selected), from, to, bottom))
+		return true;
+	auto const *gantry{catenary_gantry_get(static_cast<std::size_t>(m_catenary.gantry_selected))};
+	auto const *beam{gantry != nullptr ? catalog->beam(gantry->beam) : nullptr};
+	std::vector<std::pair<double, std::string>> drops;
+	for (auto const &pole : catalog->poles())
+		if (beam != nullptr && pole.second.drop == beam->drop)
+			drops.emplace_back(pole.second.length, pole.first);
+	std::sort(drops.begin(), drops.end());
+	if (drops.empty())
+	{
+		Spot.card = 0;
+		Spot.problem = STR("No drops in the catalogue for this beam");
+		return true;
+	}
+	// along the track onto the line of the beam
+	catenary_compose(Spot, m_catenary.clearance, stagger, Spot.toward, drops.front().second);
+	auto const p{plan_of(glm::dvec3{Spot.data.pole[0], 0.0, Spot.data.pole[2]})};
+	auto const f{Spot.forward};
+	auto const origin{plan_of(from)};
+	auto const u{plan_of(to) - origin};
+	auto const denominator{f.x * u.y - f.y * u.x};
+	if (std::abs(denominator) < 1e-6)
+	{
+		Spot.card = 0;
+		Spot.problem = STR("The track runs along the beam of the gantry");
+		return true;
+	}
+	auto const s{((origin.x - p.x) * u.y - (origin.y - p.y) * u.x) / denominator};
+	auto const t{((origin.x - p.x) * f.y - (origin.y - p.y) * f.x) / denominator};
+	if (t < 0.0 || t > 1.0)
+	{
+		Spot.card = 0;
+		Spot.problem = STR("The drop would be off the beam of the gantry");
+		return true;
+	}
+	Spot.axis.x += f.x * s;
+	Spot.axis.z += f.y * s;
+	// the shortest drop which reaches down to the lowest mount of the cantilever
+	auto const take = [&](std::string const &Name) {
+		catenary_compose(Spot, m_catenary.clearance, stagger, Spot.toward, Name);
+		Spot.data.pole[1] = bottom;
+	};
+	for (auto const &drop : drops)
+	{
+		take(drop.second);
+		if (Spot.card == 0)
+			return true;
+		catenary::cantilever_result probe;
+		catenary_scene_probe(Spot.data, probe);
+		if (std::none_of(probe.warnings.begin(), probe.warnings.end(), [](std::string const &Warning) { return Warning.find("below the lowest mount") != std::string::npos; }))
+			return true;
+	}
+	take(drops.back().second);
 	return true;
 }
 
-void editor_mode::catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward) const
+// the line of the beam of the gantry at its bottom (where the drops hang from)
+bool editor_mode::catenary_gantry_beam(std::size_t const Index, glm::dvec3 &From, glm::dvec3 &To, double &Bottom) const
+{
+	auto const *gantry{catenary_gantry_get(Index)};
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *mast{gantry != nullptr && catalog != nullptr ? catalog->mast(gantry->masts[0]) : nullptr};
+	if (mast == nullptr)
+		return false;
+	glm::dvec3 const a{gantry->points[0][0], gantry->points[0][1], gantry->points[0][2]};
+	glm::dvec3 const b{gantry->points[1][0], gantry->points[1][1], gantry->points[1][2]};
+	auto const heading{std::atan2(b.x - a.x, b.z - a.z)};
+	// along the track as the scene sees the X of the gantry (see cantilever_to_scene)
+	glm::dvec3 const along{-std::cos(heading), 0.0, std::sin(heading)};
+	auto const shift{along * (gantry->side * mast->offset)};
+	Bottom = a.y + (gantry->high ? mast->mount_high : mast->mount_low);
+	From = a + shift;
+	To = b + shift;
+	From.y = To.y = Bottom;
+	return true;
+}
+
+glm::dvec3 editor_mode::catenary_mast_point() const
+{
+	// on the ground, at the height of the rail heads of the track under the cursor if there's one
+	auto point{cursor_ground()};
+	if (m_hover.track != nullptr)
+		point.y = m_hover.point.y + kRailTop;
+	return point;
+}
+
+// the second mast: towards the cursor, as far as the nearest beam of the catalogue spans
+bool editor_mode::catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3 &Second, std::string &Beam) const
+{
+	auto const &tool{m_catenary};
+	auto const *catalog{catenary_scene_catalog()};
+	if (catalog == nullptr || false == tool.gantry_first.has_value())
+		return false;
+	auto const first{*tool.gantry_first};
+	auto const delta{plan_of(Point) - plan_of(first)};
+	auto const distance{glm::length(delta)};
+	if (distance < 1.0)
+		return false;
+	auto best{std::numeric_limits<double>::max()};
+	double span{0.0};
+	for (auto const &beam : catalog->beams())
+		if (std::abs(beam.second.span - distance) < best)
+		{
+			best = std::abs(beam.second.span - distance);
+			span = beam.second.span;
+			Beam = beam.first;
+		}
+	if (span <= 0.0)
+		return false;
+	auto const direction{delta / distance};
+	Second = {first.x + direction.x * span, Point.y, first.z + direction.y * span};
+	return true;
+}
+
+int editor_mode::catenary_gantry_hit() const
+{
+	screen_projection const projection;
+	auto best{kPolePick * kPolePick};
+	int result{-1};
+	for (std::size_t index = 0; index < catenary_gantry_size(); ++index)
+	{
+		glm::dvec3 from, to;
+		double bottom{0.0};
+		if (false == catenary_gantry_beam(index, from, to, bottom) || glm::distance(from, glm::dvec3{Global.pCamera.Pos}) > kCatenaryRange)
+			continue;
+		auto const distance{mouse_to_segment(projection, from, to)};
+		if (distance < best)
+		{
+			best = distance;
+			result = static_cast<int>(index);
+		}
+	}
+	return result;
+}
+
+void editor_mode::catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole) const
 {
 	auto const &tool{m_catenary};
 	Spot.card = 0;
 	Spot.problem.clear();
 	Spot.toward = Toward;
 	auto const *catalog{catenary_scene_catalog()};
-	auto const *pole{catalog != nullptr && tool.pole >= 0 && tool.pole < static_cast<int>(tool.poles.size()) ? catalog->pole(tool.poles[tool.pole]) : nullptr};
+	auto const *pole{catalog == nullptr ? nullptr : false == Pole.empty() ? catalog->pole(Pole) : tool.pole >= 0 && tool.pole < static_cast<int>(tool.poles.size()) ? catalog->pole(tool.poles[tool.pole]) : nullptr};
 	if (pole == nullptr)
 	{
 		Spot.problem = STR("No pole: the catalogue (data/traction_cantilevers.txt, data/traction_supports.txt) isn't loaded or has no poles");
@@ -546,7 +693,12 @@ void editor_mode::catenary_copy(std::vector<std::size_t> const &Targets)
 		auto spot{*found};
 		auto const right{right_of(spot.forward) * static_cast<double>(spot.side)};
 		auto const offset{glm::dot(plan_of(wire_of(*current)) - plan_of(spot.axis), right)};
-		catenary_compose(spot, tool.clearance, std::abs(offset), offset >= 0.0);
+		auto const *catalog{catenary_scene_catalog()};
+		auto const *own{catalog != nullptr ? catalog->pole(current->pole_type) : nullptr};
+		auto const drop{own != nullptr && false == own->drop.empty()};
+		catenary_compose(spot, tool.clearance, std::abs(offset), offset >= 0.0, drop ? current->pole_type : std::string{});
+		if (drop)
+			spot.data.pole[1] = current->pole[1];
 		if (spot.card == 0)
 		{
 			++failed;
@@ -680,6 +832,51 @@ void editor_mode::catenary_press(track_intent const &Intent)
 		catenary_select(Intent.index);
 		return;
 	}
+	if (Intent.what == track_intent::kind::catenary_gantry)
+	{
+		tool.gantry_selected = Intent.index;
+		tool.selected = -1;
+		tool.status = STR("The cantilevers now go on drops on this gantry: LMB over a track");
+		return;
+	}
+	if (Intent.what == track_intent::kind::catenary_mast)
+	{
+		auto const point{catenary_mast_point()};
+		if (false == tool.gantry_first.has_value())
+		{
+			tool.gantry_first = point;
+			return;
+		}
+		glm::dvec3 second;
+		std::string beam;
+		if (false == catenary_gantry_second(point, second, beam) || tool.masts.empty())
+			return;
+		catenary::gantry gantry;
+		std::string const file{tool.file};
+		gantry.name = catenary_scene_new_gantry_name(file);
+		gantry.beam = beam;
+		gantry.high = tool.gantry_high;
+		gantry.side = tool.gantry_side;
+		gantry.masts[0] = tool.masts[std::clamp(tool.mast_first, 0, static_cast<int>(tool.masts.size()) - 1)];
+		gantry.masts[1] = tool.masts[std::clamp(tool.mast_second, 0, static_cast<int>(tool.masts.size()) - 1)];
+		auto const first{*tool.gantry_first};
+		for (int i = 0; i < 3; ++i)
+		{
+			gantry.points[0][i] = first[i];
+			gantry.points[1][i] = second[i];
+		}
+		auto const index{catenary_gantry_add(file, gantry)};
+		catenary_change change;
+		change.group = ++tool.group;
+		change.gantry = true;
+		change.index = index;
+		tool.undo.push_back(change);
+		tool.gantry_selected = static_cast<int>(index);
+		tool.gantry_placing = false;
+		tool.gantry_first.reset();
+		tool.status = format(STR_C("Gantry %s with beam %s placed; LMB over a track puts a drop with a cantilever on it"), gantry.name.c_str(), beam.c_str());
+		return;
+	}
 	if (Intent.what == track_intent::kind::catenary_chain)
 	{
 		tool.selected = -1;
@@ -769,6 +966,18 @@ void editor_mode::catenary_undo()
 	{
 		auto const change{tool.undo.back()};
 		tool.undo.pop_back();
+		if (change.gantry)
+		{
+			if (change.gantry_before.has_value())
+				catenary_gantry_update(change.index, *change.gantry_before);
+			else
+			{
+				catenary_gantry_remove(change.index);
+				if (tool.gantry_selected == static_cast<int>(change.index))
+					tool.gantry_selected = -1;
+			}
+			continue;
+		}
 		if (change.chain)
 		{
 			if (change.chain_before.has_value())
@@ -960,7 +1169,13 @@ void editor_mode::render_catenary_ui()
 		{
 			auto spot{*found};
 			spot.curve = tool.bend == 2 || (tool.bend == 0 && spot.radius > 0.0 && spot.radius < kCurveRadius);
-			catenary_compose(spot, tool.clearance, tool.stagger, tool.toward);
+			// a drop on a gantry stays the drop it is, hanging from the beam
+			auto const *current{catenary_scene_get(static_cast<std::size_t>(tool.selected))};
+			auto const *own{current != nullptr ? catalog->pole(current->pole_type) : nullptr};
+			auto const drop{own != nullptr && false == own->drop.empty()};
+			catenary_compose(spot, tool.clearance, tool.stagger, tool.toward, drop ? current->pole_type : std::string{});
+			if (drop)
+				spot.data.pole[1] = current->pole[1];
 			if (spot.card != 0)
 				catenary_apply(spot);
 			else
@@ -1022,6 +1237,62 @@ void editor_mode::render_catenary_ui()
 		}
 	}
 	render_catenary_chain_ui();
+	// gantries
+	ImGui::Separator();
+	if (false == tool.masts.empty())
+	{
+		ImGui::PushItemWidth(120.0f);
+		auto const combo = [&](char const *Label, int &Chosen) {
+			if (ImGui::BeginCombo(Label, tool.masts[std::clamp(Chosen, 0, static_cast<int>(tool.masts.size()) - 1)].c_str()))
+			{
+				for (int i = 0; i < static_cast<int>(tool.masts.size()); ++i)
+					if (ImGui::Selectable(tool.masts[i].c_str(), i == Chosen))
+						Chosen = i;
+				ImGui::EndCombo();
+			}
+		};
+		combo(STR_C("First mast"), tool.mast_first);
+		ImGui::SameLine();
+		combo(STR_C("Second mast"), tool.mast_second);
+		ImGui::PopItemWidth();
+		ImGui::TextUnformatted(STR_C("Beam:"));
+		ImGui::SameLine();
+		if (ImGui::RadioButton(STR_C("lower mount"), false == tool.gantry_high))
+			tool.gantry_high = false;
+		ImGui::SameLine();
+		if (ImGui::RadioButton(STR_C("upper mount"), tool.gantry_high))
+			tool.gantry_high = true;
+		ImGui::SameLine();
+		if (ImGui::Button(tool.gantry_side > 0 ? STR_C("Beam on side +") : STR_C("Beam on side -")))
+			tool.gantry_side = -tool.gantry_side;
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("On which side of the masts, along the track, the beam is fixed"));
+		if (ImGui::Button(tool.gantry_placing ? STR_C("Cancel the gantry") : STR_C("Place a gantry")))
+		{
+			tool.gantry_placing = false == tool.gantry_placing;
+			tool.gantry_first.reset();
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("LMB the first mast, LMB the second: the beam is the one of the catalogue nearest to that distance"));
+		if (auto const *gantry{tool.gantry_selected >= 0 ? catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected)) : nullptr}; gantry != nullptr)
+		{
+			ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Gantry %s, beam %s: the cantilevers go on drops on it"), gantry->name.c_str(), gantry->beam.c_str()).c_str());
+			if (ImGui::Button(STR_C("Remove the gantry")))
+			{
+				catenary_change change;
+				change.group = ++tool.group;
+				change.gantry = true;
+				change.index = static_cast<std::size_t>(tool.gantry_selected);
+				change.gantry_before = *gantry;
+				tool.undo.push_back(change);
+				catenary_gantry_remove(static_cast<std::size_t>(tool.gantry_selected));
+				tool.gantry_selected = -1;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button(STR_C("Back to the poles")))
+				tool.gantry_selected = -1;
+		}
+	}
 	if (false == tool.undo.empty())
 	{
 		if (ImGui::Button(STR_C("Take back")))
@@ -1050,6 +1321,46 @@ void editor_mode::draw_catenary_overlay() const
 		if (projection.project(wire, point))
 			drawlist->AddCircleFilled(point, Width + 1.5f, Colour);
 	};
+	// gantries: the masts and the line of the bottom of the beam, where the drops hang from
+	auto const *catalog{catenary_scene_catalog()};
+	for (std::size_t index = 0; index < catenary_gantry_size(); ++index)
+	{
+		glm::dvec3 from, to;
+		double bottom{0.0};
+		auto const *gantry{catenary_gantry_get(index)};
+		if (gantry == nullptr || false == catenary_gantry_beam(index, from, to, bottom) || glm::distance(from, camera) > kCatenaryRange)
+			continue;
+		auto const selected{static_cast<int>(index) == tool.gantry_selected};
+		auto const hovered{m_intent.what == track_intent::kind::catenary_gantry && m_intent.index == static_cast<int>(index)};
+		auto const broken{catenary_gantry_parts(index) == 0};
+		auto const colour{selected ? overlay_color::selected : hovered ? overlay_color::highlight : broken ? overlay_color::invalid : IM_COL32(255, 160, 60, 170)};
+		projection.line(drawlist, from, to, colour, selected || hovered ? 3.0f : 1.5f);
+		for (int mast = 0; mast < 2; ++mast)
+		{
+			auto const *type{catalog != nullptr ? catalog->mast(gantry->masts[mast]) : nullptr};
+			glm::dvec3 const foot{gantry->points[mast][0], gantry->points[mast][1], gantry->points[mast][2]};
+			projection.line(drawlist, foot, foot + glm::dvec3{0.0, type != nullptr ? type->height : 8.0, 0.0}, colour, selected || hovered ? 3.0f : 1.5f);
+		}
+		ImVec2 middle;
+		if ((selected || hovered || broken) && projection.project(0.5 * (from + to) + glm::dvec3{0.0, 1.2, 0.0}, middle))
+			drawlist->AddText(middle, colour, (gantry->name + "  " + gantry->beam).c_str());
+	}
+	// the gantry being placed: the first mast, and the second one where the beam would reach
+	if (tool.gantry_placing && tool.gantry_first.has_value())
+	{
+		auto const first{*tool.gantry_first};
+		projection.line(drawlist, first, first + glm::dvec3{0.0, 8.0, 0.0}, overlay_color::grip, 3.0f);
+		glm::dvec3 second;
+		std::string beam;
+		if (catenary_gantry_second(catenary_mast_point(), second, beam))
+		{
+			projection.line(drawlist, second, second + glm::dvec3{0.0, 8.0, 0.0}, overlay_color::marked, 3.0f);
+			projection.line(drawlist, first + glm::dvec3{0.0, 7.5, 0.0}, second + glm::dvec3{0.0, 7.5, 0.0}, overlay_color::marked, 2.0f);
+			ImVec2 middle;
+			if (projection.project(0.5 * (first + second) + glm::dvec3{0.0, 8.2, 0.0}, middle))
+				drawlist->AddText(middle, overlay_color::marked, format("%s  %.1f m", beam.c_str(), glm::length(plan_of(second) - plan_of(first))).c_str());
+		}
+	}
 	for (std::size_t index = 0; index < catenary_scene_size(); ++index)
 	{
 		auto const *data{catenary_scene_get(index)};

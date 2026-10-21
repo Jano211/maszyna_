@@ -1080,7 +1080,7 @@ class editor_mode : public application_mode, private editor_track::observer
 	void draw_track_hover() const;
 	struct track_intent
 	{
-		enum class kind { none, gizmo, select, point, box, straight_set, straight_break, detour, straight_tool, straight_handle, route_vertex, route_grip, switch_at, lay, lay_end, sweep, turntable_place, turntable_exit, turntable_fit, spread, extend_end, signal_place, signal_move, catenary_place, catenary_select, catenary_chain };
+		enum class kind { none, gizmo, select, point, box, straight_set, straight_break, detour, straight_tool, straight_handle, route_vertex, route_grip, switch_at, lay, lay_end, sweep, turntable_place, turntable_exit, turntable_fit, spread, extend_end, signal_place, signal_move, catenary_place, catenary_select, catenary_chain, catenary_gantry, catenary_mast };
 		kind what{kind::none};
 		TTrack *track{nullptr};
 		int path{0};
@@ -1517,6 +1517,8 @@ class editor_mode : public application_mode, private editor_track::observer
 		std::optional<catenary::suspension> before; // none: the suspension was added
 		std::optional<catenary::chain> chain_before; // none: the chain was added
 		bool removed{false}; // the suspension was removed
+		bool gantry{false}; // a change of a gantry
+		std::optional<catenary::gantry> gantry_before; // none: the gantry was added
 	};
 	struct catenary_tool
 	{
@@ -1554,11 +1556,20 @@ class editor_mode : public application_mode, private editor_track::observer
 		bool probe_good{false};
 		std::string status;
 		bool scanned{false};
+		// gantries: two masts and the beam between them, drops with cantilevers on the beam
+		std::vector<std::string> masts;
+		int mast_first{0};
+		int mast_second{0};
+		bool gantry_high{false};
+		int gantry_side{1};
+		bool gantry_placing{false}; // the next two clicks put the masts
+		std::optional<glm::dvec3> gantry_first; // the first mast, waiting for the second
+		int gantry_selected{-1}; // the gantry the drops go to
 	};
 	catenary_tool m_catenary;
 	void catenary_scan();
 	bool catenary_spot_at(TTrack &Track, int const Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor, int const Side, catenary_spot &Spot) const;
-	void catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward) const;
+	void catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole = {}) const;
 	catenary_spot const *catenary_spot_of(std::size_t const Index);
 	int catenary_hit() const;
 	int catenary_span_hit() const;
@@ -1569,6 +1580,11 @@ class editor_mode : public application_mode, private editor_track::observer
 	bool catenary_propose_toward(bool &Toward);
 	void catenary_place(catenary_spot const &Spot);
 	void catenary_chain_apply();
+	int catenary_gantry_hit() const;
+	bool catenary_gantry_beam(std::size_t const Index, glm::dvec3 &From, glm::dvec3 &To, double &Bottom) const;
+	bool catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3 &Second, std::string &Beam) const;
+	glm::dvec3 catenary_mast_point() const;
+	bool catenary_on_gantry(catenary_spot &Spot);
 	bool catenary_delete_selected();
 	void catenary_undo();
 	void render_catenary_ui();

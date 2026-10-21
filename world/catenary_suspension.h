@@ -60,11 +60,29 @@ struct chain {
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
 };
 
+// bramka: dwa słupy i dźwigar między nimi, wpis
+// "node <max> <min> <nazwa> gantry beam <dźwigar> level low|high side 1|-1 mast <słup> x y z mast <słup> x y z endgantry".
+// Punkty to osie słupów na wysokości główki szyny; dźwigar biegnie od pierwszego do drugiego, na prześwicie dolnego albo górnego
+// mocowania pierwszego słupa, przesunięty wzdłuż toru o offset słupa na stronę "side". Zwisy z wysięgnikami to zwykłe podwieszenia
+// ze "pole <zwis> x y z" (punkt w spodzie dźwigara)
+struct gantry {
+    std::string name;
+    double      range_max { 1000.0 };
+    double      range_min { 0.0 };
+    std::string beam;
+    bool        high { false };             // górne mocowanie dźwigara
+    int         side { 1 };
+    std::string masts[ 2 ];
+    double      points[ 2 ][ 3 ] { { 0.0, 0.0, 0.0 }, { 0.0, 0.0, 0.0 } };
+    std::string skin;
+};
+
 // zawartość pliku podwieszeń
 struct suspension_file {
     std::string skin;                       // domyślna wymienna tekstura dla wpisów bez własnej
     std::vector<suspension> entries;
     std::vector<chain> chains;
+    std::vector<gantry> gantries;
 };
 
 // rozbiera plik podwieszeń podany jako kolejne słowa (już bez komentarzy). Source: nazwa pliku do komunikatów.
@@ -76,6 +94,8 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
 std::string write_suspension( suspension const &Entry );
 // wpis łańcucha w postaci tekstu do pliku (jedna linia)
 std::string write_chain( chain const &Entry );
+// wpis bramki w postaci tekstu do pliku (jedna linia)
+std::string write_gantry( gantry const &Entry );
 
 // dane konstrukcji wsporczej z rejestru
 struct support_data {

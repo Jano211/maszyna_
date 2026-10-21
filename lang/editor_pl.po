@@ -5465,3 +5465,69 @@ msgstr "przejściowe"
 
 msgid "tarnished"
 msgstr "zaśniedziałe"
+
+msgid "No drops in the catalogue for this beam"
+msgstr "Brak w katalogu zwisów do tego dźwigara"
+
+msgid "The track runs along the beam of the gantry"
+msgstr "Tor biegnie wzdłuż dźwigara bramki"
+
+msgid "The drop would be off the beam of the gantry"
+msgstr "Zwis wypadłby poza dźwigarem bramki"
+
+msgid "The cantilevers now go on drops on this gantry: LMB over a track"
+msgstr "Wysięgniki idą teraz na zwisy tej bramki: LPM nad torem"
+
+msgid "Gantry %s with beam %s placed; LMB over a track puts a drop with a cantilever on it"
+msgstr "Postawiona bramka %s z dźwigarem %s; LPM nad torem wiesza na niej zwis z wysięgnikiem"
+
+msgid "First mast"
+msgstr "Pierwszy słup"
+
+msgid "Second mast"
+msgstr "Drugi słup"
+
+msgid "Beam:"
+msgstr "Dźwigar:"
+
+msgid "lower mount"
+msgstr "dolne mocowanie"
+
+msgid "upper mount"
+msgstr "górne mocowanie"
+
+msgid "Beam on side +"
+msgstr "Dźwigar po stronie +"
+
+msgid "Beam on side -"
+msgstr "Dźwigar po stronie -"
+
+msgid "On which side of the masts, along the track, the beam is fixed"
+msgstr "Po której stronie słupów (wzdłuż toru) mocowany jest dźwigar"
+
+msgid "Cancel the gantry"
+msgstr "Anuluj bramkę"
+
+msgid "Place a gantry"
+msgstr "Postaw bramkę"
+
+msgid "LMB the first mast, LMB the second: the beam is the one of the catalogue nearest to that distance"
+msgstr "LPM pierwszy słup, LPM drugi: dźwigar z katalogu najbliższy tej odległości"
+
+msgid "Gantry %s, beam %s: the cantilevers go on drops on it"
+msgstr "Bramka %s, dźwigar %s: wysięgniki idą na zwisy na niej"
+
+msgid "Remove the gantry"
+msgstr "Usuń bramkę"
+
+msgid "Back to the poles"
+msgstr "Wróć do słupów"
+
+msgid "Click: the second mast, as far as the nearest beam spans"
+msgstr "Klik: drugi słup, w odległości najbliższego dźwigara"
+
+msgid "Click: the first mast of the gantry"
+msgstr "Klik: pierwszy słup bramki"
+
+msgid "Click: put the cantilevers on drops on this gantry"
+msgstr "Klik: wysięgniki na zwisach tej bramki"
