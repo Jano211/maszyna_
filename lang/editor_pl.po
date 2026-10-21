@@ -5387,3 +5387,81 @@ msgstr "Klik: zaznacz słup"
 
 msgid "The catenary couldn't be saved: %s"
 msgstr "Nie udało się zapisać sieci: %s"
+
+msgid "with the span from the last pole, %.1f m"
+msgstr "z przęsłem od ostatniego słupa, %.1f m"
+
+msgid "Settings copied to %zu poles"
+msgstr "Ustawienia skopiowane na słupy: %zu"
+
+msgid "Settings copied to %zu poles, %zu couldn't take them (no card for their A or not by a track)"
+msgstr "Ustawienia skopiowane na słupy: %zu, nie dało się na: %zu (brak karty dla ich A albo nie stoją przy torze)"
+
+msgid "New chains take these settings; LMB on a span selects its chain"
+msgstr "Nowe łańcuchy dostają te ustawienia; LPM na przęśle zaznacza jego łańcuch"
+
+msgid "Chain %s: %zu poles, %zu spans; changes apply to all of them"
+msgstr "Łańcuch %s: słupy %zu, przęsła %zu; zmiany od razu na całym łańcuchu"
+
+msgid "Network type"
+msgstr "Typ sieci"
+
+msgid "Material"
+msgstr "Materiał"
+
+msgid "Wires"
+msgstr "Druty"
+
+msgid "Power source"
+msgstr "Zasilacz"
+
+msgid "Voltage (V)"
+msgstr "Napięcie (V)"
+
+msgid "Continue the chain from its end"
+msgstr "Ciągnij łańcuch od końca"
+
+msgid "from its start"
+msgstr "od początku"
+
+msgid "Chain: a span from the last pole"
+msgstr "Łańcuch: przęsło od ostatniego słupa"
+
+msgid "Each pole placed is joined with a span to the one placed before it, one chain from anchor to anchor"
+msgstr "Każdy stawiany słup łączy się przęsłem z poprzednim, jeden łańcuch od kotwy do kotwy"
+
+msgid "End the chain"
+msgstr "Zakończ łańcuch"
+
+msgid "The next pole of the chain gets the wires the other way than the last one; after three the same way in a row it keeps that way, until one goes the other way"
+msgstr "Następny słup łańcucha dostaje odsuw w drugą stronę niż ostatni; po trzech z rzędu w tę samą stronę zostaje tak, aż któryś pójdzie w drugą"
+
+msgid "Copy to:"
+msgstr "Kopiuj na:"
+
+msgid "previous"
+msgstr "poprzedni"
+
+msgid "next"
+msgstr "następny"
+
+msgid "both"
+msgstr "oba"
+
+msgid "the whole chain"
+msgstr "cały łańcuch"
+
+msgid "The pole, its face from the track, execution, height of the wires and insulators; each pole keeps its stagger"
+msgstr "Słup, czoło od toru, wykonanie, wysokość drutów i izolatory; każdy słup zachowuje swój odsuw"
+
+msgid "Click: select the chain of this span"
+msgstr "Klik: zaznacz łańcuch tego przęsła"
+
+msgid "new"
+msgstr "nowe"
+
+msgid "worn"
+msgstr "przejściowe"
+
+msgid "tarnished"
+msgstr "zaśniedziałe"

@@ -229,6 +229,13 @@ editor_mode::track_intent editor_mode::track_intent_at(int const Mods)
 			intent.what = kind::catenary_select;
 			return intent;
 		}
+		if (auto const hit{catenary_span_hit()}; hit >= 0)
+		{
+			intent.index = hit;
+			intent.action = STR("Click: select the chain of this span");
+			intent.what = kind::catenary_chain;
+			return intent;
+		}
 		if (m_hover.track != nullptr)
 		{
 			catenary_spot spot;
@@ -478,7 +485,8 @@ void editor_mode::track_press(track_intent const &Intent)
 	case kind::signal_place:
 	case kind::signal_move: signal_press(Intent); return;
 	case kind::catenary_place:
-	case kind::catenary_select: catenary_press(Intent); return;
+	case kind::catenary_select:
+	case kind::catenary_chain: catenary_press(Intent); return;
 	case kind::select:
 	case kind::none:
 	{

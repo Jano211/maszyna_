@@ -67,3 +67,21 @@ std::vector<std::string> catenary_scene_new_files();
 void catenary_scene_file_included( std::string const &File );
 // zapisuje zmienione pliki sieci do katalogu scenerii. Message: co zapisano albo co poszło źle
 bool catenary_scene_save( std::string &Message );
+
+// ---- łańcuchy sieci (wpisy "chain" w pliku sieci): przęsła od podwieszenia do podwieszenia ------------------------------
+// nowa, wolna w pliku nazwa podwieszenia (s0001, s0002, ...) i łańcucha (<plik>_l1, ...)
+std::string catenary_scene_new_name( std::string const &File );
+std::string catenary_scene_new_chain_name( std::string const &File );
+std::size_t catenary_chain_size();
+// łańcuch o podanym numerze; nullptr gdy usunięty
+catenary::chain const *catenary_chain_get( std::size_t Index );
+std::string catenary_chain_file( std::size_t Index );
+// numery podwieszeń łańcucha po kolei (catenary_scene_size() w miejscu brakującego)
+std::vector<std::size_t> catenary_chain_members( std::size_t Index );
+// dodaje łańcuch (podwieszenia muszą mieć nazwy i być w tym samym pliku) i od razu robi jego przęsła. zwraca numer
+std::size_t catenary_chain_add( std::string const &File, catenary::chain const &Data );
+// zmienia łańcuch i robi jego przęsła od nowa (mniej niż dwa podwieszenia = łańcuch usunięty)
+bool catenary_chain_update( std::size_t Index, catenary::chain const &Data );
+void catenary_chain_remove( std::size_t Index );
+// łańcuch, do którego należy podwieszenie, i jego miejsce w łańcuchu; -1 gdy żaden
+int catenary_chain_of( std::size_t Suspension, std::size_t &Position );

@@ -1080,7 +1080,7 @@ class editor_mode : public application_mode, private editor_track::observer
 	void draw_track_hover() const;
 	struct track_intent
 	{
-		enum class kind { none, gizmo, select, point, box, straight_set, straight_break, detour, straight_tool, straight_handle, route_vertex, route_grip, switch_at, lay, lay_end, sweep, turntable_place, turntable_exit, turntable_fit, spread, extend_end, signal_place, signal_move, catenary_place, catenary_select };
+		enum class kind { none, gizmo, select, point, box, straight_set, straight_break, detour, straight_tool, straight_handle, route_vertex, route_grip, switch_at, lay, lay_end, sweep, turntable_place, turntable_exit, turntable_fit, spread, extend_end, signal_place, signal_move, catenary_place, catenary_select, catenary_chain };
 		kind what{kind::none};
 		TTrack *track{nullptr};
 		int path{0};
@@ -1511,8 +1511,11 @@ class editor_mode : public application_mode, private editor_track::observer
 	};
 	struct catenary_change
 	{
+		int group{0}; // changes of one action are taken back together
+		bool chain{false}; // a change of a chain, otherwise of a suspension
 		std::size_t index{0};
 		std::optional<catenary::suspension> before; // none: the suspension was added
+		std::optional<catenary::chain> chain_before; // none: the chain was added
 		bool removed{false}; // the suspension was removed
 	};
 	struct catenary_tool
@@ -1529,16 +1532,26 @@ class editor_mode : public application_mode, private editor_track::observer
 		int bend{0}; // 0: from the track, 1: straight, 2: curve
 		float stagger{0.30f};
 		float clearance{2.50f}; // from the axis of the track to the face of the pole
-		float height{5.60f}; // of the contact wires over the rail heads
+		float height{5.60f}; // of the contact wires over the rails
 		bool insulators25{false};
 		char file[128]{};
 		int selected{-1};
-		std::map<std::size_t, catenary_spot> spots; // where the suspensions put in the editor are, by their numbers
+		// chains: the poles placed one after another are joined by spans
+		bool chaining{true};
+		int chain{-1}; // the chain the next pole is added to
+		int last{-1}; // the pole the next span starts at
+		bool append{true}; // the next pole goes after the last one of the chain, otherwise before the first
+		int chain_selected{-1}; // the chain shown in the panel
+		char power[64]{"none"};
+		float voltage{3000.0f};
+		int material{0}; // 0 cu, 1 al
+		int state{0}; // 0 new, 1 worn, 2 tarnished (state 0, 2, 1 in the entry)
+		std::map<std::size_t, catenary_spot> spots; // where the suspensions are by the track, by their numbers
 		std::vector<catenary_change> undo;
+		int group{0};
 		catenary::cantilever_result probe;
 		bool probed{false};
 		bool probe_good{false};
-		int hover{-1};
 		std::string status;
 		bool scanned{false};
 	};
@@ -1546,13 +1559,20 @@ class editor_mode : public application_mode, private editor_track::observer
 	void catenary_scan();
 	bool catenary_spot_at(TTrack &Track, int const Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor, int const Side, catenary_spot &Spot) const;
 	void catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward) const;
+	catenary_spot const *catenary_spot_of(std::size_t const Index);
 	int catenary_hit() const;
+	int catenary_span_hit() const;
 	void catenary_press(track_intent const &Intent);
 	void catenary_select(int const Index);
 	void catenary_apply(catenary_spot const &Spot);
+	void catenary_copy(std::vector<std::size_t> const &Targets);
+	bool catenary_propose_toward(bool &Toward);
+	void catenary_place(catenary_spot const &Spot);
+	void catenary_chain_apply();
 	bool catenary_delete_selected();
 	void catenary_undo();
 	void render_catenary_ui();
+	void render_catenary_chain_ui();
 	void draw_catenary_overlay() const;
 	std::string catenary_intent_label(catenary_spot const &Spot) const;
 
