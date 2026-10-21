@@ -181,7 +181,7 @@ void editor_mode::draw_track_hover() const
 bool editor_mode::track_gesture_on() const
 {
 	return mouseHold || m_track_set_using || m_track_box.active || m_input.mouse.button(GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS || m_track_gizmo_using || m_route_gizmo_using || m_extend.active || m_switch.placing || m_straights.dragging || m_straights.tool_mouse ||
-	       m_point_drag.active || m_handle_drag.active || m_sweep.dragging || m_turntable.placing || m_signal.placing || m_signal.moving || ImGuizmo::IsUsing();
+	       m_point_drag.active || m_handle_drag.active || m_sweep.dragging || m_turntable.placing || m_signal.placing || m_signal.moving || m_catenary.dragging != 0 || ImGuizmo::IsUsing();
 }
 
 editor_mode::track_intent editor_mode::track_intent_at(int const Mods)
@@ -236,10 +236,10 @@ editor_mode::track_intent editor_mode::track_intent_at(int const Mods)
 			intent.what = kind::catenary_select;
 			return intent;
 		}
-		if (auto const hit{catenary_gantry_hit()}; hit >= 0 && hit != m_catenary.gantry_selected)
+		if (auto const hit{catenary_gantry_hit()}; hit >= 0)
 		{
 			intent.index = hit;
-			intent.action = STR("Click: put the cantilevers on drops on this gantry");
+			intent.action = hit == m_catenary.gantry_selected ? STR("Drag: move the gantry") : STR("Click: put the cantilevers on drops on this gantry, drag: move it");
 			intent.what = kind::catenary_gantry;
 			return intent;
 		}

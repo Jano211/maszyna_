@@ -66,3 +66,15 @@ Parametry do składania są w komentarzach w nagłówku jako `//$e_<klucz>=<wart
   dźwigara” (przy hk 1,70 odciąg chce być nad dźwigarem); 7,75 – zwis 4850-4/-5 prawie wszystko bez uwag.
 - Jeszcze nie ma: półbramki, dźwigary środkowe 30xx (wiele przęseł), zwisy 4840 i ESN-544, przesuwanie zwisu po dźwigarze
   przeciąganiem.
+
+### Poprawki 2026-10-22 (po obejrzeniu przez użytkownika)
+- Słupy bramek obrócone o 90°: X modelu (szerokość W) wzdłuż dźwigara. Offset działa wzdłuż dźwigara: dźwigar biegnie
+  między ścianami słupów, osie słupów są o offset każdego słupa dalej niż końce dźwigara (rozstaw osi = numer/10 + offsetA
+  + offsetB). Każdy koniec dźwigara bierze swój słup (offset, prześwit) – przy różnych słupach dźwigar leży lekko skośnie.
+  `side` we wpisie zostaje (zapisywane 1), na razie bez znaczenia.
+- Tekstura wymienna bramki (pole „Tekstura”): słupy, dźwigar i zwisy nowej bramki; „Nadaj teksturę” dla zaznaczonej
+  (razem ze zwisami na dźwigarze).
+- „Prostopadle do toru”: drugi słup prostopadle do toru, przy którym postawiono pierwszy.
+- Wysokość słupów zaznaczonej bramki: pola „Słup 1/2 na wysokości” (zero słupa w główce szyny; teren bierze głowica
+  fundamentu wykonania -1…-4). Gizmo edytora nie działa na części sieci – są poza warstwami scenerii.
+- Przeciąganie: słup (zwykły) wzdłuż toru, bramka (za dźwigar) razem ze zwisami.

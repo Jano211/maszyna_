@@ -404,6 +404,25 @@ drop_parts( scene_suspension &Suspension ) {
     Suspension.parts.clear();
 }
 
+} // namespace
+
+// końce spodu dźwigara bramki: każdy przy ścianie swojego słupa (oś słupa przesunięta o jego offset w stronę drugiego słupa),
+// na prześwicie tego słupa (dolne albo górne mocowanie)
+void
+gantry_beam_ends( catenary::gantry const &Data, catenary::gantry_mast const &First, catenary::gantry_mast const &Second, double *From, double *To ) {
+    glm::dvec3 const a { Data.points[ 0 ][ 0 ], Data.points[ 0 ][ 1 ], Data.points[ 0 ][ 2 ] };
+    glm::dvec3 const b { Data.points[ 1 ][ 0 ], Data.points[ 1 ][ 1 ], Data.points[ 1 ][ 2 ] };
+    auto const plan { glm::dvec3 { b.x - a.x, 0.0, b.z - a.z } };
+    auto const length { std::max( glm::length( plan ), 1e-6 ) };
+    auto const inward { plan * ( 1.0 / length ) };
+    auto const from { a + inward * First.offset + glm::dvec3 { 0.0, Data.high ? First.mount_high : First.mount_low, 0.0 } };
+    auto const to { b - inward * Second.offset + glm::dvec3 { 0.0, Data.high ? Second.mount_high : Second.mount_low, 0.0 } };
+    From[ 0 ] = from.x; From[ 1 ] = from.y; From[ 2 ] = from.z;
+    To[ 0 ] = to.x; To[ 1 ] = to.y; To[ 2 ] = to.z;
+}
+
+namespace {
+
 // wstawia słupy i dźwigar bramki (albo usuwa, gdy bramka usunięta). zwraca liczbę wstawionych modeli
 std::size_t
 assemble_gantry( scene_gantry &Gantry ) {
@@ -426,36 +445,55 @@ assemble_gantry( scene_gantry &Gantry ) {
     auto const dx { b.x - a.x }, dz { b.z - a.z };
     auto const distance { std::sqrt( dx * dx + dz * dz ) };
     if( distance < 1.0 ) { ErrorLog( label + "has its masts less than 1 m apart" ); return 0; }
-    if( std::abs( distance - beam->span ) > 0.05 ) {
-        WriteLog( ( "Catenary: gantry \"" + data.name + "\" has its masts " + text_number( distance, 3 ) + " m apart, beam \"" + beam->name + "\" is for " + text_number( beam->span, 2 ) + " m" ).c_str() );
+    // dźwigar biegnie między ścianami słupów: osie słupów są o offset każdego słupa dalej niż końce dźwigara
+    if( std::abs( distance - ( beam->span + first->offset + second->offset ) ) > 0.05 ) {
+        WriteLog( ( "Catenary: gantry \"" + data.name + "\" has its masts " + text_number( distance, 3 ) + " m apart, beam \"" + beam->name + "\" with these masts needs "
+            + text_number( beam->span + first->offset + second->offset, 3 ) + " m" ).c_str() );
     }
     // układ jak wysięgnika: Y wzdłuż dźwigara (od pierwszego słupa do drugiego), X wzdłuż toru, Z w górę
     auto const heading { std::atan2( dx, dz ) };
     std::vector<catenary::cantilever_placement> placements;
-    auto const add = [ & ]( std::string const &Model, double const X, double const Y, double const Z, bool const Along ) {
+    auto const add = [ & ]( std::string const &Model, double const X, double const Y, double const Z ) {
         catenary::cantilever_placement placement;
         placement.model = Model;
         placement.position[ 0 ] = X;
         placement.position[ 1 ] = Y;
         placement.position[ 2 ] = Z;
-        if( Along ) {
-            // dźwigar: X modelu wzdłuż dźwigara
-            double const turned[ 9 ] { 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
-            std::copy( std::begin( turned ), std::end( turned ), placement.rotation );
-        }
+        // słup: X modelu (szerokość) wzdłuż dźwigara, jak dźwigar
+        double const turned[ 9 ] { 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+        std::copy( std::begin( turned ), std::end( turned ), placement.rotation );
         placements.push_back( placement );
     };
-    add( first->model, 0.0, 0.0, 0.0, false );
-    add( second->model, 0.0, distance, b.y - a.y, false );
-    add( beam->model, data.side * first->offset, 0.0, data.high ? first->mount_high : first->mount_low, true );
+    add( first->model, 0.0, 0.0, 0.0 );
+    add( second->model, 0.0, distance, b.y - a.y );
+    // dźwigar: każdy koniec na mocowaniu swojego słupa (przesunięcie wzdłuż toru i prześwit), więc przy słupach różnej
+    // szerokości albo prześwitu leży lekko skośnie
+    double from[ 3 ], to[ 3 ];
+    gantry_beam_ends( data, *first, *second, from, to );
+    glm::dvec3 const ends[ 2 ] { { from[ 0 ], from[ 1 ], from[ 2 ] }, { to[ 0 ], to[ 1 ], to[ 2 ] } };
+    auto const beamx { ends[ 1 ].x - ends[ 0 ].x }, beamz { ends[ 1 ].z - ends[ 0 ].z };
+    auto const beamheading { std::atan2( beamx, beamz ) };
+    auto const pitch { std::atan2( ends[ 1 ].y - ends[ 0 ].y, std::sqrt( beamx * beamx + beamz * beamz ) ) };
+    catenary::cantilever_placement beamplacement;
+    beamplacement.model = beam->model;
+    {
+        auto const c { std::cos( pitch ) }, s { std::sin( pitch ) };
+        double const turned[ 9 ] { 0.0, -1.0, 0.0, c, 0.0, -s, s, 0.0, c };
+        std::copy( std::begin( turned ), std::end( turned ), beamplacement.rotation );
+    }
     auto const skin { data.skin.empty() ? std::string( "none" ) : data.skin };
     std::size_t count { 0 };
-    for( auto const &placement : placements ) {
-        auto const part { catenary::cantilever_to_scene( placement, heading ) };
+    std::vector<std::pair<catenary::cantilever_placement, double>> all;
+    for( auto const &placement : placements ) { all.emplace_back( placement, heading ); }
+    all.emplace_back( beamplacement, beamheading );
+    for( auto const &item : all ) {
+        auto const &placement { item.first };
+        auto const part { catenary::cantilever_to_scene( placement, item.second ) };
         auto const entry {
             "node " + text_number( data.range_max, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 " + placement.model + ".t3d " + skin
             + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) + " endmodel" };
-        glm::dvec3 const position { a.x + part.offset[ 0 ], a.y + part.offset[ 1 ], a.z + part.offset[ 2 ] };
+        auto const &origin { &placement == &all.back().first ? ends[ 0 ] : a };
+        glm::dvec3 const position { origin.x + part.offset[ 0 ], origin.y + part.offset[ 1 ], origin.z + part.offset[ 2 ] };
         if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
             catenary_part_detach( model );
             Gantry.parts.push_back( model );

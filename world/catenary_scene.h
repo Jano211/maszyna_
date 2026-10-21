@@ -96,3 +96,5 @@ std::size_t catenary_gantry_add( std::string const &File, catenary::gantry const
 bool catenary_gantry_update( std::size_t Index, catenary::gantry const &Data );
 void catenary_gantry_remove( std::size_t Index );
 std::string catenary_scene_new_gantry_name( std::string const &File );
+// końce spodu dźwigara bramki (każdy na mocowaniu swojego słupa), tam gdzie wiszą zwisy
+void gantry_beam_ends( catenary::gantry const &Data, catenary::gantry_mast const &First, catenary::gantry_mast const &Second, double *From, double *To );

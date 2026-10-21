@@ -1422,7 +1422,10 @@ bool editor_mode::update()
             draw_signal_overlay();
         }
         if (m_track_tab == track_tab::catenary)
+        {
+            catenary_drag_update();
             draw_catenary_overlay();
+        }
         draw_parallel_preview();
         if (m_track_tab == track_tab::lineside)
         {
@@ -5715,6 +5718,8 @@ void editor_mode::on_mouse_button(int const Button, int const Action, int const 
                     turntable_finish_placement();
                 if (m_signal.placing || m_signal.moving)
                     signal_release();
+                if (m_catenary.dragging != 0)
+                    catenary_release();
             }
 
             m_dragging = false;
