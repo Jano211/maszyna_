@@ -1,0 +1,101 @@
+// Test części sieci trakcyjnej używanej przez edytor scenerii: tablice rozstawienia (traction_layout.txt), zapis wpisów
+// podwieszeń, dodawanie / zmiana / usuwanie podwieszeń na żywo z atrapą klas symulatora
+#include "stdafx.h"
+#include "world/catenary_scene.h"
+#include "world/catenary_network.h"
+#include "world/catenary_layout.h"
+#include "world/catenary_suspension.h"
+#include "simulation/simulation.h"
+#include "rendering/renderer.h"
+#include "utilities/Globals.h"
+#include "utilities/Logs.h"
+#include "utilities/parser.h"
+#include <cmath>
+#include <cstdio>
+#include <fstream>
+#include <sstream>
+
+mock_renderer Renderer, *GfxRenderer { &Renderer };
+mock_globals Global;
+namespace simulation { mock_table<TTraction> Traction; mock_table<TAnimModel> Instances; mock_state State; }
+std::vector<std::string> errors, logs;
+void ErrorLog( std::string const &Message ) { errors.push_back( Message ); }
+void WriteLog( const char *Message ) { logs.emplace_back( Message ); }
+extern int mock_deleted_parts;
+
+int failures { 0 };
+void check( bool const Good, char const *What ) { std::printf( "%s  %s\n", Good ? "OK  " : "BLAD", What ); if( false == Good ) { ++failures; } }
+
+int main( int, char *argv[] ) {
+    Global.asCurrentSceneryPath = "tests/catenary/";
+    catenary::types().directory( argv[ 1 ] );
+    catenary_scene_data( argv[ 1 ] );
+
+    // 1. tablice rozstawienia
+    auto const &tables { catenary_scene_layout() };
+    check( tables.nominal_span( "YwsC120-2C", 1 ) == 70.0 && tables.nominal_span( "YwsC120-2C", 2 ) == 66.0, "rozpietosc nominalna YwsC120-2C 70/66 (43-0002)" );
+    check( tables.nominal_span( "SKB70-C", 1 ) == 80.0 && tables.nominal_span( "nie ma", 1 ) == 0.0, "stara siec 5: 80 m, nieznana: 0" );
+    check( std::abs( catenary::curve_span( 500.0, 0.40 ) - 40.0 ) < 1e-9, "luk R 500, z 0,40: a = 40 m (wykres 0008)" );
+    check( catenary::span_limit( tables, "YwsC120-2C", 1, 2000.0, 0.40 ) == 70.0, "luk R 2000: ograniczenie nominalna 70 m" );
+    check( std::abs( catenary::span_limit( tables, "YwsC120-2C", 1, 600.0, 0.40 ) - 2.0 * std::sqrt( 480.0 ) ) < 1e-9, "luk R 600: z wykresu 0008" );
+    double a[ 2 ] { 0.0, 0.0 }, b[ 2 ] { 100.0, 0.0 }, c[ 2 ] { 200.0, 0.0 }, d[ 2 ] { 500.0, 500.0 }, e[ 2 ] { 0.0, 1000.0 };
+    check( catenary::plan_radius( a, b, c ) == 0.0 && std::abs( catenary::plan_radius( a, d, e ) - 500.0 ) < 1e-6, "promien przez trzy punkty (prosta = 0)" );
+    check( catenary::reach_digit( 1.50 ) == 0 && catenary::reach_digit( 2.50 ) == 3 && catenary::reach_digit( 4.20 ) == 9 && catenary::reach_digit( 1.40 ) == -1, "pasmo A -> ostatnia cyfra karty" );
+    catenary::suspension_family family;
+    check( catenary::family_decade( family ) == 1110, "przechylne, prosta, do slupa: 111x" );
+    family.toward_pole = false; family.curve = true; family.swinging = false;
+    check( catenary::family_decade( family ) == 1240, "nieprzechylne, luk, od slupa: 124x" );
+
+    // 2. zapis wpisu i ponowne odczytanie
+    catenary::suspension entry;
+    entry.range_max = 1000; entry.card = 1124; entry.execution = 1;
+    entry.has_at = true; entry.at[ 0 ] = 0.687; entry.at[ 1 ] = 5.8; entry.at[ 2 ] = 100.247;
+    entry.has_rope = true; entry.rope[ 0 ] = 0.687; entry.rope[ 1 ] = 7.5; entry.rope[ 2 ] = 100.247;
+    entry.has_pole = true; entry.pole_type = "1611-11"; entry.pole[ 0 ] = -2.313; entry.pole[ 1 ] = 0.2; entry.pole[ 2 ] = 100.247;
+    auto const text { catenary::write_suspension( entry ) };
+    check( text == "node 1000 0 none suspension scheme 1124 1 at 0.687 5.800 100.247 rope 0.687 7.500 100.247 pole 1611-11 -2.313 0.200 100.247 endsuspension", "zapis wpisu w skladni pliku sieci" );
+    {
+        std::vector<std::string> tokens; std::istringstream words { text }; for( std::string w; words >> w; ) { tokens.push_back( w ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( tokens, "zapis", parsed, problems );
+        check( problems.empty() && parsed.entries.size() == 1 && catenary::write_suspension( parsed.entries.front() ) == text, "odczyt zapisanego wpisu daje to samo" );
+    }
+
+    // 3. edytor: dodanie, zmiana, próba, usunięcie, zapis
+    catenary_scene_clear(); errors.clear(); logs.clear();
+    catenary_scene_resolve();   // sceneria wczytana, edytor dokłada wpisy
+    auto const before { simulation::State.created.size() };
+    auto const index { catenary_scene_add( "td_edytor_test.scm", entry ) };
+    auto const first { simulation::State.created.size() - before };
+    check( catenary_scene_get( index ) != nullptr && first > 10 && catenary_scene_parts( index ) == first && errors.empty(), "dodane podwieszenie: wysiegnik zlozony od razu" );
+    check( catenary_scene_changed() && catenary_scene_new_files().size() == 1, "nowy plik sieci do zapisania i do dolaczenia" );
+    auto moved { entry };
+    moved.pole[ 0 ] = -2.613; moved.card = 1125;   // słup 0,3 m dalej: A o 0,3 m większe, następna karta
+    mock_deleted_parts = 0;
+    check( catenary_scene_update( index, moved ) && mock_deleted_parts == static_cast<int>( first ) && catenary_scene_parts( index ) > 10, "zmiana: stare czesci usuniete, nowe wstawione" );
+    catenary::cantilever_result probe;
+    check( catenary_scene_probe( moved, probe ), "proba zlozenia bez wstawiania" );
+    auto wrong { moved }; wrong.card = 9999;
+    check( false == catenary_scene_probe( wrong, probe ) && false == probe.warnings.empty() && errors.empty(), "proba z karta spoza katalogu: przyczyna w wyniku, nie w logu" );
+    std::string message;
+    check( catenary_scene_save( message ) && false == catenary_scene_changed(), "zapis pliku sieci" );
+    {
+        std::ifstream saved { "tests/catenary/td_edytor_test.scm", std::ios::binary };
+        std::string content { std::istreambuf_iterator<char>( saved ), std::istreambuf_iterator<char>() };
+        check( content.find( "scheme 1125 1" ) != std::string::npos && content.find( "pole 1611-11 -2.613" ) != std::string::npos && content.find( "\r\n" ) != std::string::npos, "w pliku zmieniony wpis, CRLF" );
+    }
+    mock_deleted_parts = 0;
+    auto const parts { catenary_scene_parts( index ) };
+    catenary_scene_remove( index );
+    check( catenary_scene_get( index ) == nullptr && mock_deleted_parts == static_cast<int>( parts ) && catenary_scene_changed(), "usuniecie: czesci znikaja" );
+    catenary_scene_save( message );
+    {
+        std::ifstream saved { "tests/catenary/td_edytor_test.scm", std::ios::binary };
+        std::string content { std::istreambuf_iterator<char>( saved ), std::istreambuf_iterator<char>() };
+        check( content.find( "suspension" ) == std::string::npos && content.find( "zalozony w edytorze" ) != std::string::npos, "po usunieciu plik bez wpisow, naglowek zostaje" );
+    }
+    std::remove( "tests/catenary/td_edytor_test.scm" );
+    for( auto const &line : errors ) { std::printf( "  %s\n", line.c_str() ); }
+    std::printf( failures == 0 ? "wszystko OK\n" : "BLEDY: %d\n", failures );
+    return failures;
+}

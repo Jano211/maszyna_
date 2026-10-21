@@ -165,6 +165,34 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
     }
 }
 
+std::string write_suspension( suspension const &Entry ) {
+
+    auto const number = []( double const Value, int const Precision ) {
+        std::ostringstream stream;
+        stream.imbue( std::locale::classic() );
+        stream.setf( std::ios::fixed );
+        stream.precision( Precision );
+        stream << Value;
+        return stream.str();
+    };
+    auto const point = [ & ]( double const *Point ) { return number( Point[ 0 ], 3 ) + " " + number( Point[ 1 ], 3 ) + " " + number( Point[ 2 ], 3 ); };
+    auto const join = []( std::vector<std::string> const &Names ) { std::string list; for( auto const &name : Names ) { list += " " + name; } return list; };
+    std::string text { "node " + number( Entry.range_max, 0 ) + " " + number( Entry.range_min, 0 ) + " " + ( Entry.name.empty() ? std::string( "none" ) : Entry.name ) + " suspension" };
+    if( false == Entry.support.empty() ) { text += " support " + Entry.support; }
+    if( Entry.card != 0 ) { text += " scheme " + std::to_string( Entry.card ) + " " + std::to_string( Entry.execution ); }
+    if( false == Entry.messenger.empty() ) { text += " messenger" + join( Entry.messenger ); }
+    if( false == Entry.contact.empty() ) { text += " contact" + join( Entry.contact ); }
+    if( false == Entry.insulators.empty() ) { text += " insulators " + Entry.insulators; }
+    for( auto const &replacement : Entry.overrides ) { text += " override " + replacement.first + " " + replacement.second; }
+    if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
+    if( Entry.has_at ) { text += " at " + point( Entry.at ); }
+    if( Entry.has_rope ) { text += " rope " + point( Entry.rope ); }
+    if( Entry.has_attach ) { text += " attach " + point( Entry.attach ); }
+    if( Entry.has_pole ) { text += " pole " + Entry.pole_type + " " + point( Entry.pole ); }
+    if( false == Entry.umbrella.empty() ) { text += " umbrella " + Entry.umbrella; }
+    return text + " endsuspension";
+}
+
 double support_data::half_width( double const Height ) const {
     if( height <= 0.0 ) { return 0.5 * width_base; }
     auto const t { std::clamp( Height / height, 0.0, 1.0 ) };

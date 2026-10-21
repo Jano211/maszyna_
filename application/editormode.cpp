@@ -28,6 +28,7 @@ extern char **environ;
 #include "editor/editorIncludeInfo.hpp"
 #include "editor/editorGroundMesh.hpp"
 #include "editor/editorFormat.hpp"
+#include "world/catenary_scene.h"
 #include "editor/editorGeometry.hpp"
 #include "editor/editorIcons.hpp"
 #include "utilities/translation.h"
@@ -1420,6 +1421,8 @@ bool editor_mode::update()
             signal_move_update();
             draw_signal_overlay();
         }
+        if (m_track_tab == track_tab::catenary)
+            draw_catenary_overlay();
         draw_parallel_preview();
         if (m_track_tab == track_tab::lineside)
         {
@@ -2901,6 +2904,23 @@ bool editor_mode::save()
     if (m_profile.changed)
         profile_store();
     infra_store();
+    // the catenary (cantilevers on the poles) lives in files of its own; a file made in the editor needs the directive
+    std::vector<std::string> catenarynew;
+    if (catenary_scene_changed())
+    {
+        std::string message;
+        if (false == catenary_scene_save(message))
+        {
+            ui()->set_status(format(STR_C("The catenary couldn't be saved: %s"), message.c_str()), true);
+            return false;
+        }
+        WriteLog("Editor: catenary written: " + message, logtype::generic);
+    }
+    for (auto const &file : catenary_scene_new_files())
+    {
+        rootstatements.emplace_back("catenary " + file + " endcatenary");
+        catenarynew.push_back(file);
+    }
     if (false == m_saved_camera.has_value() || glm::distance(m_saved_camera->first, glm::dvec3{Camera.Pos}) > 0.5 || glm::distance(m_saved_camera->second, glm::vec3{Camera.Angle}) > 0.01f)
     {
         m_saved_camera = std::make_pair(glm::dvec3{Camera.Pos}, glm::vec3{Camera.Angle});
@@ -2926,6 +2946,9 @@ bool editor_mode::save()
     {
         scene::Layers.terrain_directive(true);
     }
+    if (result.success)
+        for (auto const &file : catenarynew)
+            catenary_scene_file_included(file);
     ui()->set_status(result.message, false == result.success);
     WriteLog("Editor: " + result.message, logtype::generic);
     return result.success;
@@ -5197,6 +5220,8 @@ void editor_mode::delete_selected()
 {
     // what's selected: a road piece or point, a signal, an include of a scenery template, a model, tracks
     if (road_delete())
+        return;
+    if (m_track_tab == track_tab::catenary && ui()->mode() == nodebank_panel::TRACK && catenary_delete_selected())
         return;
     if (m_instance != 0 && signal_delete(m_instance))
         return;
