@@ -1401,7 +1401,7 @@ void editor_mode::render_catenary_ui()
 			if (ImGui::SmallButton("+"))
 				step(1);
 			ImGui::SameLine();
-			if (ImGui::Button(STR_C("Square to the track")))
+			if (ImGui::Button((STR("Square to the track") + "##squareselected").c_str()))
 				catenary_gantry_reshape({}, 0.0, true);
 			ImGui::SameLine();
 			if (ImGui::Button(STR_C("Take the masts")))
