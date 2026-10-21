@@ -5585,3 +5585,15 @@ msgstr "Bramka %s: dźwigar %s, słupy %.3f m od siebie"
 
 msgid "Takes back the last change of the catenary (also Ctrl+Z while this tool is open)"
 msgstr "Cofa ostatnią zmianę sieci (także Ctrl+Z przy otwartym tym narzędziu)"
+
+msgid "the shortest which fits"
+msgstr "najkrótszy, który pasuje"
+
+msgid "Drop"
+msgstr "Zwis"
+
+msgid "Drop of the pole"
+msgstr "Zwis wysięgnika"
+
+msgid "Gantry at the height (m)"
+msgstr "Bramka na wysokości (m)"

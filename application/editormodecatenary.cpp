@@ -355,6 +355,12 @@ bool editor_mode::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3 con
 		catenary_compose(Spot, m_catenary.clearance, stagger, Spot.toward, Name);
 		Spot.data.pole[1] = bottom;
 	};
+	// the drop chosen in the panel, if it's one for this beam
+	if (false == m_catenary.drop_choice.empty() && std::any_of(drops.begin(), drops.end(), [&](auto const &Drop) { return Drop.second == m_catenary.drop_choice; }))
+	{
+		take(m_catenary.drop_choice);
+		return true;
+	}
 	for (auto const &drop : drops)
 	{
 		take(drop.second);
@@ -1276,6 +1282,30 @@ void editor_mode::render_catenary_ui()
 				ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.3f, 1.0f), "%s", STR_C("The cantilever doesn't assemble:"));
 			for (auto const &warning : tool.probe.warnings)
 				ImGui::TextWrapped("- %s", warning.c_str());
+			// a drop on a gantry: another length of it
+			if (auto const *own{catalog->pole(data->pole_type)}; own != nullptr && false == own->drop.empty())
+			{
+				ImGui::PushItemWidth(160.0f);
+				if (ImGui::BeginCombo(STR_C("Drop of the pole"), data->pole_type.c_str()))
+				{
+					for (auto const &pole : catalog->poles())
+						if (pole.second.drop == own->drop && ImGui::Selectable(format("%s  %.1f m", pole.first.c_str(), pole.second.length).c_str(), pole.first == data->pole_type))
+						{
+							auto changed{*data};
+							changed.pole_type = pole.first;
+							tool.undo.push_back({++tool.group, false, static_cast<std::size_t>(tool.selected), *data, std::nullopt, false});
+							catenary_scene_update(static_cast<std::size_t>(tool.selected), changed);
+							if (auto found{tool.spots.find(static_cast<std::size_t>(tool.selected))}; found != tool.spots.end())
+								found->second.data = changed;
+							tool.probed = false;
+						}
+					ImGui::EndCombo();
+				}
+				ImGui::PopItemWidth();
+				data = catenary_scene_get(static_cast<std::size_t>(tool.selected));
+				if (data == nullptr)
+					return;
+			}
 			// copying to the neighbours in the chain
 			std::size_t position{0};
 			auto const chain{catenary_chain_of(static_cast<std::size_t>(tool.selected), position)};
@@ -1420,7 +1450,37 @@ void editor_mode::render_catenary_ui()
 			gantry = catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected));
 			if (gantry == nullptr)
 				return;
-			// the heights of the masts: their zero is at the rail heads; the foundation head (variants -1...-4) takes the ground
+			// the heights of the masts: their zero is at the rail heads; the foundation head (variants -1...-4) takes the ground.
+			// both together, and each by itself no more than 0.20 m from the other
+			auto const heighten = [&](catenary::gantry const &Changed) {
+				auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
+				if (tool.undo.empty() || false == last.gantry || last.index != static_cast<std::size_t>(tool.gantry_selected) || false == last.gantry_before.has_value())
+				{
+					catenary_change change;
+					change.group = ++tool.group;
+					change.gantry = true;
+					change.index = static_cast<std::size_t>(tool.gantry_selected);
+					change.gantry_before = *gantry;
+					tool.undo.push_back(change);
+				}
+				catenary_gantry_update(static_cast<std::size_t>(tool.gantry_selected), Changed);
+			};
+			{
+				auto both{static_cast<float>(gantry->points[0][1])};
+				ImGui::PushItemWidth(120.0f);
+				if (ImGui::DragFloat(STR_C("Gantry at the height (m)"), &both, 0.01f, -1000.0f, 5000.0f, "%.2f"))
+				{
+					auto changed{*gantry};
+					auto const shift{static_cast<double>(both) - gantry->points[0][1]};
+					changed.points[0][1] += shift;
+					changed.points[1][1] += shift;
+					heighten(changed);
+				}
+				ImGui::PopItemWidth();
+				gantry = catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected));
+				if (gantry == nullptr)
+					return;
+			}
 			for (int mast = 0; mast < 2; ++mast)
 			{
 				auto height{static_cast<float>(gantry->points[mast][1])};
@@ -1429,19 +1489,10 @@ void editor_mode::render_catenary_ui()
 				auto const label{format(STR_C("Mast %d at the height (m)"), mast + 1)};
 				if (ImGui::DragFloat(label.c_str(), &height, 0.01f, -1000.0f, 5000.0f, "%.2f"))
 				{
-					auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
-					if (tool.undo.empty() || false == last.gantry || last.index != static_cast<std::size_t>(tool.gantry_selected) || false == last.gantry_before.has_value())
-					{
-						catenary_change change;
-						change.group = ++tool.group;
-						change.gantry = true;
-						change.index = static_cast<std::size_t>(tool.gantry_selected);
-						change.gantry_before = *gantry;
-						tool.undo.push_back(change);
-					}
 					auto changed{*gantry};
-					changed.points[mast][1] = height;
-					catenary_gantry_update(static_cast<std::size_t>(tool.gantry_selected), changed);
+					auto const other{gantry->points[1 - mast][1]};
+					changed.points[mast][1] = std::clamp(static_cast<double>(height), other - 0.20, other + 0.20);
+					heighten(changed);
 				}
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("%s", STR_C("The zero of the mast is at the rail heads (the clearance of the beam is counted from it); the ground is taken by the foundation head of the variant -1...-4. Drag or Ctrl+click to type"));
@@ -1500,6 +1551,22 @@ void editor_mode::render_catenary_ui()
 			ImGui::SameLine();
 			if (ImGui::Button(STR_C("Back to the poles")))
 				tool.gantry_selected = -1;
+			// which drop the next cantilevers hang on
+			if (auto const *beam{catalog->beam(gantry->beam)}; beam != nullptr)
+			{
+				ImGui::PushItemWidth(160.0f);
+				auto const automatic{STR("the shortest which fits")};
+				if (ImGui::BeginCombo(STR_C("Drop"), tool.drop_choice.empty() ? automatic.c_str() : tool.drop_choice.c_str()))
+				{
+					if (ImGui::Selectable(automatic.c_str(), tool.drop_choice.empty()))
+						tool.drop_choice.clear();
+					for (auto const &pole : catalog->poles())
+						if (pole.second.drop == beam->drop && ImGui::Selectable(format("%s  %.1f m", pole.first.c_str(), pole.second.length).c_str(), pole.first == tool.drop_choice))
+							tool.drop_choice = pole.first;
+					ImGui::EndCombo();
+				}
+				ImGui::PopItemWidth();
+			}
 		}
 	}
 	if (false == tool.undo.empty())
