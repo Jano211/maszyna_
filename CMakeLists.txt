@@ -205,6 +205,7 @@ set(SOURCES
 "application/editormodeselection.cpp"
 "application/editormodeviewport.cpp"
 "application/editormodesignal.cpp"
+"application/editormodecatenary.cpp"
 "application/editormodesweep.cpp"
 "application/editormodeturntable.cpp"
 "application/editormodeselftest.cpp"
