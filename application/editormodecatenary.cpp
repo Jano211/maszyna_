@@ -899,12 +899,25 @@ void editor_mode::catenary_press(track_intent const &Intent)
 		{
 			tool.gantry_first = point;
 			tool.gantry_track.reset();
-			// the track nearest to the first mast: the beam can go square to it
-			auto *track{m_hover.track};
-			if (track != nullptr && false == track->m_paths.empty())
+			// the track nearest to the first mast (within 20 m): the beam can go square to it
+			auto best{20.0};
+			for (auto *track : simulation::Paths.sequence())
 			{
-				auto const path{std::clamp(m_hover.path, 0, static_cast<int>(track->m_paths.size()) - 1)};
-				tool.gantry_track = forward_at(*track, path, nearest_parameter(*track, path, point));
+				if (track == nullptr || track->m_editorremoved || track->m_paths.empty())
+					continue;
+				for (int path = 0; path < static_cast<int>(track->m_paths.size()); ++path)
+				{
+					bezier const curve{track->m_paths[path]};
+					if (geometry::plan_distance(curve.point(0.5), point) > curve.plan_length() * 0.5 + best)
+						continue;
+					auto const parameter{nearest_parameter(*track, path, point)};
+					auto const distance{geometry::plan_distance(curve.point(parameter), point)};
+					if (distance < best)
+					{
+						best = distance;
+						tool.gantry_track = forward_at(*track, path, parameter);
+					}
+				}
 			}
 			return;
 		}
