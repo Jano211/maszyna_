@@ -175,6 +175,11 @@ struct gantry_beam {
     std::string drop;                   // rodzina pasujących zwisów
 };
 
+// rozstaw osi słupów bramki: między ścianami słupów o 0,20 m mniej niż numer dźwigara (E101: 9,9 m), do osi dochodzą offsety słupów
+inline double gantry_spacing( gantry_beam const &Beam, gantry_mast const &First, gantry_mast const &Second ) {
+    return Beam.span - 0.20 + First.offset + Second.offset;
+}
+
 class cantilever_catalog {
 public:
     // rozbiera plik podany jako kolejne słowa (już bez komentarzy); błędy trafiają do Errors

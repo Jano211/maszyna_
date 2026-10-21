@@ -164,7 +164,7 @@ int main( int, char *argv[] ) {
         line.name = "b1"; line.beam = "E100"; line.side = -1; line.high = true;
         line.masts[ 0 ] = "3031-1"; line.masts[ 1 ] = "3032-1";
         line.points[ 0 ][ 0 ] = 0.0; line.points[ 0 ][ 1 ] = 0.2; line.points[ 0 ][ 2 ] = 50.0;
-        line.points[ 1 ][ 0 ] = 10.192; line.points[ 1 ][ 1 ] = 0.2; line.points[ 1 ][ 2 ] = 50.0;
+        line.points[ 1 ][ 0 ] = 9.992; line.points[ 1 ][ 1 ] = 0.2; line.points[ 1 ][ 2 ] = 50.0;
         auto const written { catenary::write_gantry( line ) };
         std::vector<std::string> tokens; std::istringstream words { written };
         for( std::string word; words >> word; ) { tokens.push_back( word ); }
@@ -179,7 +179,7 @@ int main( int, char *argv[] ) {
         if( good ) {
             auto const &mastb { created[ before + 1 ] };
             auto const &beam { created[ before + 2 ] };
-            good = std::abs( mastb.position.x - 10.192 ) < 1e-6 && std::abs( mastb.position.z - 50.0 ) < 1e-6 && mastb.entry.find( "slupy/3032-1.t3d" ) != std::string::npos
+            good = std::abs( mastb.position.x - 9.992 ) < 1e-6 && std::abs( mastb.position.z - 50.0 ) < 1e-6 && mastb.entry.find( "slupy/3032-1.t3d" ) != std::string::npos
                 && std::abs( beam.position.y - ( 0.2 + 7.75 ) ) < 1e-6 && std::abs( beam.position.x - 0.121 ) < 1e-6 && std::abs( beam.position.z - 50.0 ) < 1e-6 && beam.entry.find( "dzwigary/10m.t3d" ) != std::string::npos;
             std::printf( "  %s @ %.3f %.3f %.3f\n", beam.entry.c_str(), beam.position.x, beam.position.y, beam.position.z );
         }

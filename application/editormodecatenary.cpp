@@ -413,7 +413,7 @@ bool editor_mode::catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3 &Se
 	// the beam runs between the faces of the masts: their axes are farther apart by the offsets of both
 	auto const *a{catalog->mast(tool.masts.empty() ? std::string{} : tool.masts[std::clamp(tool.mast_first, 0, static_cast<int>(tool.masts.size()) - 1)])};
 	auto const *b{catalog->mast(tool.masts.empty() ? std::string{} : tool.masts[std::clamp(tool.mast_second, 0, static_cast<int>(tool.masts.size()) - 1)])};
-	auto const offsets{(a != nullptr ? a->offset : 0.0) + (b != nullptr ? b->offset : 0.0)};
+	auto const offsets{(a != nullptr ? a->offset : 0.0) + (b != nullptr ? b->offset : 0.0) - 0.20}; // between the faces of the masts 0.20 m less than the beam
 	auto best{std::numeric_limits<double>::max()};
 	double span{0.0};
 	for (auto const &beam : catalog->beams())
@@ -1782,7 +1782,7 @@ void editor_mode::catenary_gantry_reshape(std::string const &Beam, double const 
 		auto const across{right_of(along)};
 		direction = glm::dot(across, direction) >= 0.0 ? across : -across;
 	}
-	auto const spacing{beam->span + a->offset + b->offset};
+	auto const spacing{catenary::gantry_spacing(*beam, *a, *b)};
 	// turned or squared: around its middle; a new beam or masts: the first mast stays
 	glm::dvec2 const start{(Turn != 0.0 || Square) ? centre - direction * (0.5 * spacing) : plan_of(first)};
 	auto const end{start + direction * spacing};
