@@ -226,6 +226,8 @@ float mouse_to_segment(screen_projection const &Projection, glm::dvec3 const &A,
 char const *const kExecutions[] = {"1 - two contact wires, light arms, hk 1.70", "2 - two contact wires, heavy arms, hk 1.70", "3 - one contact wire, heavy arms, hk 1.70",
                                    "4 - one contact wire, heavy arms, hk 1.30", "5 - one contact wire, light arms, hk 1.70"};
 char const *const kMaterials[] = {"cu", "al"};
+// replaceable textures of the gantries (the masts, beams and drops have none of their own)
+char const *const kGantrySkins[] = {"siec_trakcyjna/bramki_new1", "siec_trakcyjna/bramki_new2", "siec_trakcyjna/bramki_old1", "siec_trakcyjna/bramki_old2", "siec_trakcyjna/bramki_old3"};
 
 // a pole worked on by itself: for that while no gantry counts as selected (otherwise the spot would hang on a drop)
 struct without_gantry
@@ -1327,8 +1329,16 @@ void editor_mode::render_catenary_ui()
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("The beam goes square to the track the first mast is put by"));
 		ImGui::SameLine();
-		ImGui::PushItemWidth(160.0f);
-		ImGui::InputText(STR_C("Texture"), tool.gantry_skin, sizeof(tool.gantry_skin));
+		if (tool.gantry_skin[0] == '\0')
+			std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", kGantrySkins[0]);
+		ImGui::PushItemWidth(200.0f);
+		if (ImGui::BeginCombo(STR_C("Texture"), tool.gantry_skin))
+		{
+			for (auto const *skin : kGantrySkins)
+				if (ImGui::Selectable(skin, std::string{skin} == tool.gantry_skin))
+					std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", skin);
+			ImGui::EndCombo();
+		}
 		ImGui::PopItemWidth();
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("Replaceable texture of the masts, the beam and the drops of the new gantry (the models have none of their own)"));
