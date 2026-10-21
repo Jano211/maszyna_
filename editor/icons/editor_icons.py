@@ -321,6 +321,19 @@ def turntable(d):
         line(d, [(32 + math.cos(r) * 24, 32 + math.sin(r) * 24), (32 + math.cos(r) * 31, 32 + math.sin(r) * 31)], W - 4)
 
 
+def catenary(d):
+    # a lattice pole with a swinging cantilever, the wire under its end
+    line(d, [(10, 60), (12, 6)], W - 8)
+    line(d, [(22, 60), (20, 6)], W - 8)
+    for y0 in (8, 26, 44):
+        line(d, [(11, y0), (21, y0 + 16)], W - 12)
+        line(d, [(21, y0), (11, y0 + 16)], W - 12)
+    line(d, [(22, 12), (56, 12)], W - 8)
+    line(d, [(22, 40), (54, 14)], W - 6)
+    line(d, [(46, 20), (46, 36)], W - 10)
+    line(d, [(30, 38), (62, 38)], W - 6)
+
+
 # the fields of work of the editor, in the row over the toolbar
 
 
@@ -366,7 +379,7 @@ def work_terrain(d):
 ICONS = [select, insert, brush, area_fill, copy_to_bank, translate, rotate, scale,
          local_space, ortho, perspective, sculpt, smooth, chunks, orthophoto, road,
          place, lanes, lay_track, switch, straight, curve, signal, objects,
-         vehicle, profile, speed, joints, infra, gauge, turntable, work_surroundings,
+         vehicle, profile, speed, joints, infra, gauge, turntable, catenary, work_surroundings,
          work_tracks, work_roads, work_terrain]
 
 

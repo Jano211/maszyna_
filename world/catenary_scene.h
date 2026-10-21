@@ -24,3 +24,46 @@ void catenary_scene_resolve();
 void catenary_scene_clear();
 // zmienia katalog, z którego czytany jest katalog wysięgników (traction_cantilevers.txt i traction_supports.txt); domyślnie "data/"
 void catenary_scene_data( std::string const &Directory );
+
+// ---- edytor scenerii: podwieszenia zmieniane na żywo -----------------------------------------------------------------
+// Każde podwieszenie ma numer (miejsce na liście, stały do końca sesji; usunięte zostaje na liście jako puste).
+// Zmiany trafiają do plików sieci dopiero przy catenary_scene_save().
+
+#include <vector>
+#include "world/catenary_suspension.h"
+#include "world/catenary_cantilever.h"
+#include "world/catenary_layout.h"
+
+// katalog wysięgników (części, karty, słupy, mocowania); nullptr gdy nie dało się go wczytać
+catenary::cantilever_catalog const *catenary_scene_catalog();
+// zasady rozstawiania konstrukcji (data/traction_layout.txt); pusta tablica, gdy pliku nie ma
+catenary::layout_tables const &catenary_scene_layout();
+// liczba miejsc na liście podwieszeń (z usuniętymi)
+std::size_t catenary_scene_size();
+// podwieszenie o podanym numerze; nullptr gdy usunięte albo numer spoza listy
+catenary::suspension const *catenary_scene_get( std::size_t Index );
+// plik sieci, z którego pochodzi podwieszenie (albo do którego trafi)
+std::string catenary_scene_file_of( std::size_t Index );
+// liczba części wstawionych do scenerii dla podwieszenia; 0 gdy wysięgnik się nie złożył
+std::size_t catenary_scene_parts( std::size_t Index );
+// pliki sieci znane scenerii: dołączone dyrektywą i założone w edytorze
+std::vector<std::string> catenary_scene_files();
+// dodaje podwieszenie do podanego pliku (nowy plik jest zakładany) i od razu składa wysięgnik. zwraca numer
+std::size_t catenary_scene_add( std::string const &File, catenary::suspension const &Data );
+// zmienia podwieszenie i składa wysięgnik od nowa (w parasolu oba wysięgniki). false gdy numer jest zły
+bool catenary_scene_update( std::size_t Index, catenary::suspension const &Data );
+// usuwa podwieszenie razem z jego częściami
+void catenary_scene_remove( std::size_t Index );
+// przywraca usunięte podwieszenie (cofnięcie w edytorze) z podanymi danymi
+bool catenary_scene_restore( std::size_t Index, catenary::suspension const &Data );
+// próbne złożenie bez wstawiania części: wynik solvera z uwagami; false gdy wysięgnika nie da się złożyć
+// (przyczyna w Result.warnings)
+bool catenary_scene_probe( catenary::suspension const &Data, catenary::cantilever_result &Result );
+// czy są zmiany do zapisania
+bool catenary_scene_changed();
+// pliki założone w edytorze, których scenerii jeszcze nie dołączono dyrektywą "catenary"; po zapisie trzeba ją dopisać
+std::vector<std::string> catenary_scene_new_files();
+// sceneria dołącza już plik (edytor dopisał dyrektywę "catenary")
+void catenary_scene_file_included( std::string const &File );
+// zapisuje zmienione pliki sieci do katalogu scenerii. Message: co zapisano albo co poszło źle
+bool catenary_scene_save( std::string &Message );

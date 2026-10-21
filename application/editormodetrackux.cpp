@@ -220,6 +220,30 @@ editor_mode::track_intent editor_mode::track_intent_at(int const Mods)
 	}
 	if (m_track_tab == track_tab::turntable)
 		return turntable_intent(ground, shift);
+	if (m_track_tab == track_tab::catenary)
+	{
+		if (auto const hit{catenary_hit()}; hit >= 0)
+		{
+			intent.index = hit;
+			intent.action = STR("Click: select the pole");
+			intent.what = kind::catenary_select;
+			return intent;
+		}
+		if (m_hover.track != nullptr)
+		{
+			catenary_spot spot;
+			if (catenary_spot_at(*m_hover.track, m_hover.path, m_hover.point, cursor_level(m_hover.point.y), 0, spot))
+			{
+				intent.track = m_hover.track;
+				intent.path = m_hover.path;
+				intent.position = spot.axis;
+				intent.action = catenary_intent_label(spot);
+				intent.what = kind::catenary_place;
+				return intent;
+			}
+		}
+		return intent;
+	}
 	if (m_track_tab == track_tab::signals)
 	{
 		if (auto const hit{signal_hit()}; hit >= 0)
@@ -453,6 +477,8 @@ void editor_mode::track_press(track_intent const &Intent)
 	case kind::turntable_fit: turntable_press(Intent); return;
 	case kind::signal_place:
 	case kind::signal_move: signal_press(Intent); return;
+	case kind::catenary_place:
+	case kind::catenary_select: catenary_press(Intent); return;
 	case kind::select:
 	case kind::none:
 	{

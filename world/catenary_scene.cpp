@@ -13,6 +13,7 @@ http://mozilla.org/MPL/2.0/.
 #include "world/catenary_suspension.h"
 #include "world/catenary_cantilever.h"
 #include "world/catenary_span.h"
+#include "world/catenary_layout.h"
 #include "world/Traction.h"
 #include "model/AnimModel.h"
 #include "simulation/simulation.h"
@@ -24,9 +25,14 @@ http://mozilla.org/MPL/2.0/.
 #include "utilities/parser.h"
 
 #include <cmath>
+#include <fstream>
 #include <locale>
 #include <set>
 #include <sstream>
+
+// części wysięgników w scenerii (world/catenary_scene_objects.cpp, w testach atrapa): odłączenie od pliku scenerii i usunięcie
+void catenary_part_detach( TAnimModel *Model );
+void catenary_part_delete( TAnimModel *Model );
 
 namespace {
 
@@ -40,9 +46,28 @@ struct scene_suspension {
     TAnimModel *support { nullptr };    // konstrukcja wsporcza
     std::vector<TTraction *> messenger; // przęsła, których linę nośną trzyma
     std::vector<TTraction *> contact;   // przęsła, których przewód jezdny trzyma
+    std::string file;                   // plik sieci, z którego pochodzi wpis (albo do którego trafi)
+    std::vector<TAnimModel *> parts;    // części wysięgnika wstawione do scenerii
+    bool removed { false };             // usunięty w edytorze
 };
 
 std::vector<scene_suspension> Suspensions;
+
+// plik sieci znany scenerii
+struct scene_file {
+    std::string name;                   // tak, jak w dyrektywie (względem katalogu scenerii)
+    std::string skin;                   // domyślna tekstura z pliku
+    std::string header;                 // komentarze z początku pliku, zachowywane przy zapisie
+    bool created { false };             // założony w edytorze, sceneria go jeszcze nie dołącza
+    bool changed { false };             // są zmiany do zapisania
+};
+std::vector<scene_file> Files;
+
+scene_file *
+file_named( std::string const &Name ) {
+    for( auto &file : Files ) { if( file.name == Name ) { return &file; } }
+    return nullptr;
+}
 // ile podwieszeń z początku listy jest już powiązanych i złożonych
 std::size_t Resolved { 0 };
 // czy sceneria przeszła już inicjalizację (FirstInit); plik podwieszeń dołączony później jest wiązany od razu
@@ -80,6 +105,24 @@ cantilevers() {
     return ( good ? &catalog : nullptr );
 }
 
+// zasady rozstawiania konstrukcji (traction_layout.txt); czytane przy pierwszym użyciu, brak pliku = pusta tablica
+catenary::layout_tables const &
+layout() {
+
+    static catenary::layout_tables tables;
+    static bool loaded { false };
+    if( false == loaded ) {
+        loaded = true;
+        std::vector<std::string> errors;
+        auto const filename { Datadirectory + "traction_layout.txt" };
+        if( false == tables.load( filename, errors ) ) {
+            WriteLog( ( "Catenary: file \"" + filename + "\" is missing, spans won't be checked against the catalogue" ).c_str() );
+        }
+        for( auto const &error : errors ) { ErrorLog( error ); }
+    }
+    return tables;
+}
+
 std::string
 text_number( double const Value, int const Precision = 4 ) {
 
@@ -97,14 +140,19 @@ text_number( double const Value, int const Precision = 4 ) {
 // a przy wpisie ze słupem oś słupa na wysokości główki szyny. Umbrella: ustawienia strony parasola (tylko przy słupie);
 // Probe: tylko złożenie bez wstawiania części, wynik solvera trafia tam (zwraca 1, gdy się złożył)
 std::size_t
-assemble( scene_suspension const &Suspension, catenary::cantilever_catalog const &Catalog, glm::dvec3 const &Wire, glm::dvec3 const *Rope, glm::dvec3 const &Attach,
+assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Catalog, glm::dvec3 const &Wire, glm::dvec3 const *Rope, glm::dvec3 const &Attach,
     catenary::cantilever_umbrella const *Umbrella = nullptr, catenary::cantilever_result *Probe = nullptr ) {
 
     auto const &data { Suspension.data };
     auto const label { "Bad scenario: suspension \"" + ( data.name.empty() ? std::string( "none" ) : data.name ) + "\" " };
+    // przy próbnym złożeniu (edytor) przyczyna trafia do wyniku zamiast do logu
+    auto const report = [ & ]( std::string const &Reason ) {
+        if( Probe != nullptr ) { Probe->warnings.push_back( Reason ); }
+        else { ErrorLog( label + Reason ); }
+    };
     auto const *scheme { Catalog.scheme( data.card, data.execution ) };
     if( scheme == nullptr ) {
-        ErrorLog( label + "uses scheme " + std::to_string( data.card ) + " " + std::to_string( data.execution ) + " which isn't in the cantilever catalogue" );
+        report( "uses scheme " + std::to_string( data.card ) + " " + std::to_string( data.execution ) + " which isn't in the cantilever catalogue" );
         return 0;
     }
     // kierunek poziomy od przewodów do konstrukcji wyznacza płaszczyznę wysięgnika
@@ -112,7 +160,7 @@ assemble( scene_suspension const &Suspension, catenary::cantilever_catalog const
     auto const towardz { Attach.z - Wire.z };
     auto const reach { std::sqrt( towardx * towardx + towardz * towardz ) };
     if( reach < 0.5 ) {
-        ErrorLog( label + "has its attachment point less than 0.5 m from the contact wires" );
+        report( "has its attachment point less than 0.5 m from the contact wires" );
         return 0;
     }
     auto const heading { std::atan2( towardx, towardz ) };
@@ -139,7 +187,7 @@ assemble( scene_suspension const &Suspension, catenary::cantilever_catalog const
             auto const dash { role.second.find( '-' ) };
             auto const variant { role.second.substr( 0, dash == std::string::npos ? role.second.size() : dash ) + "-" + data.insulators };
             if( Catalog.part( variant ) != nullptr ) { input.overrides[ role.first ] = variant; }
-            else { ErrorLog( label + "asks for insulator set \"" + data.insulators + "\", but part \"" + variant + "\" isn't in the cantilever catalogue; \"" + role.second + "\" kept" ); }
+            else if( Probe == nullptr ) { ErrorLog( label + "asks for insulator set \"" + data.insulators + "\", but part \"" + variant + "\" isn't in the cantilever catalogue; \"" + role.second + "\" kept" ); }
         }
     }
     for( auto const &replacement : data.overrides ) {
@@ -150,7 +198,7 @@ assemble( scene_suspension const &Suspension, catenary::cantilever_catalog const
     if( data.has_pole ) {
         pole = Catalog.pole( data.pole_type );
         if( pole == nullptr ) {
-            ErrorLog( label + "uses pole \"" + data.pole_type + "\" which isn't in the cantilever catalogue" );
+            report( "uses pole \"" + data.pole_type + "\" which isn't in the cantilever catalogue" );
             return 0;
         }
     }
@@ -258,9 +306,90 @@ assemble( scene_suspension const &Suspension, catenary::cantilever_catalog const
         }
         entry += " endmodel";
         glm::dvec3 const position { Wire.x + part.offset[ 0 ], Wire.y + part.offset[ 1 ], Wire.z + part.offset[ 2 ] };
-        if( simulation::State.create_model( entry, "none", position ) != nullptr ) { ++count; }
+        if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
+            // części należą do pliku sieci, nie do pliku scenerii: zapis scenerii w edytorze ich nie przepisuje
+            catenary_part_detach( model );
+            Suspension.parts.push_back( model );
+            ++count;
+        }
     }
     return count;
+}
+
+
+// punkty wpisu z punktami podanymi wprost; Attach to oś słupa (wpis ze słupem) albo pion przez zaczepy
+void
+entry_points( catenary::suspension const &Data, glm::dvec3 &Wire, glm::dvec3 &Rope, glm::dvec3 &Attach ) {
+    Wire = { Data.at[ 0 ], Data.at[ 1 ], Data.at[ 2 ] };
+    Rope = { Data.rope[ 0 ], Data.rope[ 1 ], Data.rope[ 2 ] };
+    Attach = ( Data.has_pole ? glm::dvec3 { Data.pole[ 0 ], Data.pole[ 1 ], Data.pole[ 2 ] } : glm::dvec3 { Data.attach[ 0 ], Data.attach[ 1 ], Data.attach[ 2 ] } );
+}
+
+// składa wysięgnik wpisu z punktami, bez parasola; zwraca liczbę wstawionych części
+std::size_t
+assemble_alone( std::size_t const Index, catenary::cantilever_catalog const &Catalog ) {
+    auto &suspension { Suspensions[ Index ] };
+    glm::dvec3 wire, rope, attach;
+    entry_points( suspension.data, wire, rope, attach );
+    return assemble( suspension, Catalog, wire, ( suspension.data.has_rope ? &rope : nullptr ), attach );
+}
+
+// parasol: oba wysięgniki składane najpierw osobno, żeby poznać wysokości mocowań, potem razem na wspólnym słupie
+void
+assemble_umbrella( std::string const &Name, std::vector<std::size_t> const &List, catenary::cantilever_catalog const &Catalog, std::size_t &Assembled, std::size_t &Parts ) {
+    auto const alone = [ & ]( std::size_t const Index ) {
+        auto const count { assemble_alone( Index, Catalog ) };
+        if( count > 0 ) { ++Assembled; Parts += count; }
+    };
+    auto const &first { Suspensions[ List.front() ].data };
+    auto const *pole { Catalog.pole( first.pole_type ) };
+    auto paired { List.size() == 2 && pole != nullptr };
+    if( List.size() != 2 ) {
+        ErrorLog( "Bad scenario: umbrella \"" + Name + "\" has " + std::to_string( List.size() ) + " suspension(s), it needs exactly two; they're assembled separately" );
+    }
+    else {
+        auto const &second { Suspensions[ List.back() ].data };
+        auto const dx { second.pole[ 0 ] - first.pole[ 0 ] }, dy { second.pole[ 1 ] - first.pole[ 1 ] }, dz { second.pole[ 2 ] - first.pole[ 2 ] };
+        if( second.pole_type != first.pole_type || std::sqrt( dx * dx + dy * dy + dz * dz ) > 0.05 ) {
+            ErrorLog( "Bad scenario: umbrella \"" + Name + "\" has its suspensions on different poles; they're assembled separately" );
+            paired = false;
+        }
+    }
+    if( false == paired ) { for( auto const index : List ) { alone( index ); } return; }
+    glm::dvec3 wires[ 2 ], ropes[ 2 ], poles[ 2 ];
+    catenary::cantilever_result probes[ 2 ];
+    auto probed { true };
+    for( int side = 0; side < 2; ++side ) {
+        auto &suspension { Suspensions[ List[ side ] ] };
+        entry_points( suspension.data, wires[ side ], ropes[ side ], poles[ side ] );
+        probed = probed && assemble( suspension, Catalog, wires[ side ], ( suspension.data.has_rope ? &ropes[ side ] : nullptr ), poles[ 0 ], nullptr, &probes[ side ] ) > 0;
+    }
+    if( false == probed ) { for( auto const index : List ) { alone( index ); } return; }
+    catenary::cantilever_umbrella sides[ 2 ];
+    catenary::umbrella_mounts( Catalog, *pole, probes[ 0 ], probes[ 1 ], sides[ 0 ], sides[ 1 ] );
+    sides[ 1 ].pole = false;
+    for( int side = 0; side < 2; ++side ) {
+        auto &suspension { Suspensions[ List[ side ] ] };
+        auto const count { assemble( suspension, Catalog, wires[ side ], ( suspension.data.has_rope ? &ropes[ side ] : nullptr ), poles[ 0 ], &sides[ side ] ) };
+        if( count > 0 ) { ++Assembled; Parts += count; }
+    }
+}
+
+// usuwa ze scenerii części wysięgnika podwieszenia
+void
+drop_parts( scene_suspension &Suspension ) {
+    for( auto *part : Suspension.parts ) { catenary_part_delete( part ); }
+    Suspension.parts.clear();
+}
+
+// numery podwieszeń parasola o podanej nazwie (bez usuniętych)
+std::vector<std::size_t>
+umbrella_members( std::string const &Name ) {
+    std::vector<std::size_t> list;
+    for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
+        if( false == Suspensions[ index ].removed && Suspensions[ index ].data.has_at && Suspensions[ index ].data.umbrella == Name ) { list.push_back( index ); }
+    }
+    return list;
 }
 
 } // namespace
@@ -306,7 +435,24 @@ catenary_scene_load( cParser &Input ) {
         scene_suspension suspension;
         suspension.data = entry;
         suspension.skin = ( entry.skin.empty() ? file.skin : entry.skin );
+        suspension.file = filename;
         Suspensions.emplace_back( suspension );
+    }
+    if( file_named( filename ) == nullptr ) {
+        // komentarze z początku pliku, żeby zapis z edytora ich nie zgubił
+        scene_file known;
+        known.name = filename;
+        known.skin = file.skin;
+        std::ifstream source { Global.asCurrentSceneryPath + filename };
+        std::string line;
+        while( std::getline( source, line ) ) {
+            if( false == line.empty() && line.back() == '\r' ) { line.pop_back(); }
+            auto const first { line.find_first_not_of( " \t" ) };
+            if( first == std::string::npos ) { continue; }
+            if( line.compare( first, 2, "//" ) != 0 ) { break; }
+            known.header += line + "\n";
+        }
+        Files.emplace_back( known );
     }
     WriteLog( ( "Catenary: " + std::to_string( file.entries.size() ) + " suspension(s) loaded from file \"" + filename + "\"" ).c_str() );
     if( Initialized ) {
@@ -329,6 +475,7 @@ catenary_scene_resolve() {
     std::map<std::string, std::vector<std::size_t>> umbrellas;     // parasole: nazwa -> wpisy
     for( ; Resolved < Suspensions.size(); ++Resolved ) {
         auto &suspension { Suspensions[ Resolved ] };
+        if( suspension.removed ) { continue; }
         auto const &data { suspension.data };
         auto const label { "Bad scenario: suspension \"" + ( data.name.empty() ? std::string( "none" ) : data.name ) + "\" " };
         if( data.has_at ) {
@@ -336,11 +483,8 @@ catenary_scene_resolve() {
             ++complete;
             auto const *catalog { cantilevers() };
             if( catalog == nullptr ) { continue; }
-            glm::dvec3 const wire { data.at[ 0 ], data.at[ 1 ], data.at[ 2 ] };
-            glm::dvec3 const attach { data.has_pole ? glm::dvec3 { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] } : glm::dvec3 { data.attach[ 0 ], data.attach[ 1 ], data.attach[ 2 ] } };
-            glm::dvec3 const rope { data.rope[ 0 ], data.rope[ 1 ], data.rope[ 2 ] };
             if( false == data.umbrella.empty() ) { umbrellas[ data.umbrella ].push_back( Resolved ); continue; }   // parasole po pętli, parami
-            auto const count { assemble( suspension, *catalog, wire, ( data.has_rope ? &rope : nullptr ), attach ) };
+            auto const count { assemble_alone( Resolved, *catalog ) };
             if( count > 0 ) { ++assembled; parts += count; }
             continue;
         }
@@ -370,55 +514,9 @@ catenary_scene_resolve() {
         find_spans( data.contact, suspension.contact );
         if( good ) { ++complete; }
     }
-    // parasole: oba wysięgniki składane najpierw osobno, żeby poznać wysokości mocowań, potem razem na wspólnym słupie
     auto const *catalog { umbrellas.empty() ? nullptr : cantilevers() };
-    for( auto const &umbrella : umbrellas ) {
-        auto const points = [ & ]( std::size_t const Index, glm::dvec3 &Wire, glm::dvec3 &Rope, glm::dvec3 &Pole ) {
-            auto const &data { Suspensions[ Index ].data };
-            Wire = { data.at[ 0 ], data.at[ 1 ], data.at[ 2 ] };
-            Rope = { data.rope[ 0 ], data.rope[ 1 ], data.rope[ 2 ] };
-            Pole = { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
-            return ( data.has_rope ? 1 : 0 );
-        };
-        auto const alone = [ & ]( std::size_t const Index ) {
-            glm::dvec3 wire, rope, pole;
-            auto const hasrope { points( Index, wire, rope, pole ) };
-            auto const count { assemble( Suspensions[ Index ], *catalog, wire, ( hasrope ? &rope : nullptr ), pole ) };
-            if( count > 0 ) { ++assembled; parts += count; }
-        };
-        if( catalog == nullptr ) { break; }
-        auto const &list { umbrella.second };
-        auto const &first { Suspensions[ list.front() ].data };
-        auto const *pole { catalog->pole( first.pole_type ) };
-        auto paired { list.size() == 2 && pole != nullptr };
-        if( list.size() != 2 ) {
-            ErrorLog( "Bad scenario: umbrella \"" + umbrella.first + "\" has " + std::to_string( list.size() ) + " suspension(s), it needs exactly two; they're assembled separately" );
-        }
-        else {
-            auto const &second { Suspensions[ list.back() ].data };
-            auto const dx { second.pole[ 0 ] - first.pole[ 0 ] }, dy { second.pole[ 1 ] - first.pole[ 1 ] }, dz { second.pole[ 2 ] - first.pole[ 2 ] };
-            if( second.pole_type != first.pole_type || std::sqrt( dx * dx + dy * dy + dz * dz ) > 0.05 ) {
-                ErrorLog( "Bad scenario: umbrella \"" + umbrella.first + "\" has its suspensions on different poles; they're assembled separately" );
-                paired = false;
-            }
-        }
-        if( false == paired ) { for( auto const index : list ) { alone( index ); } continue; }
-        glm::dvec3 wires[ 2 ], ropes[ 2 ], poles[ 2 ];
-        int hasropes[ 2 ];
-        catenary::cantilever_result probes[ 2 ];
-        auto probed { true };
-        for( int side = 0; side < 2; ++side ) {
-            hasropes[ side ] = points( list[ side ], wires[ side ], ropes[ side ], poles[ side ] );
-            probed = probed && assemble( Suspensions[ list[ side ] ], *catalog, wires[ side ], ( hasropes[ side ] ? &ropes[ side ] : nullptr ), poles[ 0 ], nullptr, &probes[ side ] ) > 0;
-        }
-        if( false == probed ) { for( auto const index : list ) { alone( index ); } continue; }
-        catenary::cantilever_umbrella sides[ 2 ];
-        catenary::umbrella_mounts( *catalog, *pole, probes[ 0 ], probes[ 1 ], sides[ 0 ], sides[ 1 ] );
-        sides[ 1 ].pole = false;
-        for( int side = 0; side < 2; ++side ) {
-            auto const count { assemble( Suspensions[ list[ side ] ], *catalog, wires[ side ], ( hasropes[ side ] ? &ropes[ side ] : nullptr ), poles[ 0 ], &sides[ side ] ) };
-            if( count > 0 ) { ++assembled; parts += count; }
-        }
+    if( catalog != nullptr ) {
+        for( auto const &umbrella : umbrellas ) { assemble_umbrella( umbrella.first, umbrella.second, *catalog, assembled, parts ); }
     }
     WriteLog( ( "Catenary: " + std::to_string( complete ) + " of " + std::to_string( Suspensions.size() - first ) + " suspension(s) linked to supports and traction pieces" ).c_str() );
     if( assembled > 0 ) {
@@ -439,7 +537,211 @@ void
 catenary_scene_clear() {
 
     Suspensions.clear();
+    Files.clear();
     Notes.clear();
     Resolved = 0;
     Initialized = false;
+}
+
+// ---- edytor scenerii -------------------------------------------------------------------------------------------------
+
+catenary::cantilever_catalog const *
+catenary_scene_catalog() {
+    return cantilevers();
+}
+
+catenary::layout_tables const &
+catenary_scene_layout() {
+    return layout();
+}
+
+std::size_t
+catenary_scene_size() {
+    return Suspensions.size();
+}
+
+catenary::suspension const *
+catenary_scene_get( std::size_t const Index ) {
+    if( Index >= Suspensions.size() || Suspensions[ Index ].removed ) { return nullptr; }
+    return &Suspensions[ Index ].data;
+}
+
+std::string
+catenary_scene_file_of( std::size_t const Index ) {
+    return ( Index < Suspensions.size() ? Suspensions[ Index ].file : std::string() );
+}
+
+std::size_t
+catenary_scene_parts( std::size_t const Index ) {
+    return ( Index < Suspensions.size() ? Suspensions[ Index ].parts.size() : 0 );
+}
+
+std::vector<std::string>
+catenary_scene_files() {
+    std::vector<std::string> names;
+    for( auto const &file : Files ) { names.push_back( file.name ); }
+    return names;
+}
+
+namespace {
+
+// składa wysięgnik podwieszenia od nowa, w parasolu razem z drugim wysięgnikiem
+void
+reassemble( std::size_t const Index ) {
+    auto const *catalog { cantilevers() };
+    auto &suspension { Suspensions[ Index ] };
+    if( catalog == nullptr || suspension.removed || false == suspension.data.has_at ) { return; }
+    std::size_t assembled { 0 }, parts { 0 };
+    if( false == suspension.data.umbrella.empty() ) {
+        auto const members { umbrella_members( suspension.data.umbrella ) };
+        for( auto const index : members ) { drop_parts( Suspensions[ index ] ); }
+        assemble_umbrella( suspension.data.umbrella, members, *catalog, assembled, parts );
+        return;
+    }
+    drop_parts( suspension );
+    assemble_alone( Index, *catalog );
+}
+
+void
+mark_changed( std::string const &File ) {
+    if( auto *file { file_named( File ) }; file != nullptr ) { file->changed = true; }
+}
+
+} // namespace
+
+std::size_t
+catenary_scene_add( std::string const &File, catenary::suspension const &Data ) {
+
+    if( file_named( File ) == nullptr ) {
+        scene_file created;
+        created.name = File;
+        created.created = true;
+        created.header = "// Plik sieci trakcyjnej (podwieszenia), zalozony w edytorze scenerii.\n";
+        Files.emplace_back( created );
+    }
+    scene_suspension suspension;
+    suspension.data = Data;
+    suspension.file = File;
+    auto const *file { file_named( File ) };
+    suspension.skin = ( Data.skin.empty() ? file->skin : Data.skin );
+    Suspensions.emplace_back( suspension );
+    auto const index { Suspensions.size() - 1 };
+    // wpis dodany po wczytaniu scenerii nie przejdzie już przez catenary_scene_resolve()
+    if( Resolved == index ) { ++Resolved; }
+    mark_changed( File );
+    reassemble( index );
+    return index;
+}
+
+bool
+catenary_scene_update( std::size_t const Index, catenary::suspension const &Data ) {
+
+    if( Index >= Suspensions.size() || Suspensions[ Index ].removed ) { return false; }
+    auto &suspension { Suspensions[ Index ] };
+    // zmiana nazwy parasola: stary partner zostaje sam i też musi się złożyć od nowa
+    auto const before { suspension.data.umbrella };
+    suspension.data = Data;
+    auto const *file { file_named( suspension.file ) };
+    suspension.skin = ( Data.skin.empty() ? ( file != nullptr ? file->skin : std::string() ) : Data.skin );
+    mark_changed( suspension.file );
+    if( false == before.empty() && before != Data.umbrella ) {
+        drop_parts( suspension );
+        for( auto const index : umbrella_members( before ) ) { reassemble( index ); break; }
+    }
+    reassemble( Index );
+    return true;
+}
+
+void
+catenary_scene_remove( std::size_t const Index ) {
+
+    if( Index >= Suspensions.size() || Suspensions[ Index ].removed ) { return; }
+    auto &suspension { Suspensions[ Index ] };
+    auto const umbrella { suspension.data.umbrella };
+    drop_parts( suspension );
+    suspension.removed = true;
+    mark_changed( suspension.file );
+    if( false == umbrella.empty() ) {
+        for( auto const index : umbrella_members( umbrella ) ) { reassemble( index ); break; }
+    }
+}
+
+bool
+catenary_scene_restore( std::size_t const Index, catenary::suspension const &Data ) {
+
+    if( Index >= Suspensions.size() ) { return false; }
+    auto &suspension { Suspensions[ Index ] };
+    suspension.removed = false;
+    suspension.data = Data;
+    mark_changed( suspension.file );
+    reassemble( Index );
+    return true;
+}
+
+bool
+catenary_scene_probe( catenary::suspension const &Data, catenary::cantilever_result &Result ) {
+
+    Result = catenary::cantilever_result();
+    auto const *catalog { cantilevers() };
+    if( catalog == nullptr ) { Result.warnings.push_back( "the cantilever catalogue isn't loaded" ); return false; }
+    if( false == Data.has_at || false == ( Data.has_pole || Data.has_attach ) ) { Result.warnings.push_back( "the suspension has no explicit points" ); return false; }
+    scene_suspension probe;
+    probe.data = Data;
+    glm::dvec3 wire, rope, attach;
+    entry_points( Data, wire, rope, attach );
+    return assemble( probe, *catalog, wire, ( Data.has_rope ? &rope : nullptr ), attach, nullptr, &Result ) > 0;
+}
+
+bool
+catenary_scene_changed() {
+    return std::any_of( Files.begin(), Files.end(), []( scene_file const &File ) { return File.changed; } );
+}
+
+std::vector<std::string>
+catenary_scene_new_files() {
+    std::vector<std::string> names;
+    for( auto const &file : Files ) { if( file.created ) { names.push_back( file.name ); } }
+    return names;
+}
+
+void
+catenary_scene_file_included( std::string const &File ) {
+    if( auto *file { file_named( File ) }; file != nullptr ) { file->created = false; }
+}
+
+bool
+catenary_scene_save( std::string &Message ) {
+
+    std::vector<std::string> written;
+    for( auto &file : Files ) {
+        if( false == file.changed ) { continue; }
+        // wpisy w kolejności listy; usunięte pomijane. CRLF jak w pozostałych plikach scenerii
+        std::string text;
+        std::istringstream header { file.header };
+        for( std::string line; std::getline( header, line ); ) { text += line + "\r\n"; }
+        if( false == file.skin.empty() ) { text += "skin " + file.skin + "\r\n"; }
+        std::size_t count { 0 };
+        for( auto const &suspension : Suspensions ) {
+            if( suspension.removed || suspension.file != file.name ) { continue; }
+            text += catenary::write_suspension( suspension.data ) + "\r\n";
+            ++count;
+        }
+        auto const path { Global.asCurrentSceneryPath + file.name };
+        std::ofstream output { path, std::ios::binary | std::ios::trunc };
+        if( false == output.is_open() ) {
+            Message = "catenary file \"" + file.name + "\" can't be written";
+            return false;
+        }
+        output << text;
+        output.close();
+        if( output.fail() ) {
+            Message = "catenary file \"" + file.name + "\" wasn't written completely";
+            return false;
+        }
+        file.changed = false;
+        written.push_back( file.name + " (" + std::to_string( count ) + ")" );
+    }
+    Message.clear();
+    for( auto const &name : written ) { Message += ( Message.empty() ? "" : ", " ) + name; }
+    return true;
 }

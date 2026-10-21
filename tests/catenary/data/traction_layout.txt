@@ -1,0 +1,29 @@
+// Zasady rozstawiania konstrukcji wsporczych sieci trakcyjnej. TEN PLIK MOZNA EDYTOWAC RECZNIE.
+// Czyta go edytor scenerii (tryb Siec trakcyjna) - do sprawdzania rozpietosci przesel postawionych przez uzytkownika.
+// Jednostki: metry. Komentarz od "//" do konca linii.
+//
+// span <symbol sieci> <strefa wiatrowa I> <strefa wiatrowa II>
+//   rozpietosc nominalna przesla; na luku nie wiecej niz a = 2*sqrt(2*R*z) (karta 0008)
+// curve_stagger <z>
+//   odsuw sieci na luku przyjmowany do wykresu rozstawienia konstrukcji (karta 0008: 0,40 m)
+
+curve_stagger 0.40
+
+// karta 43-0002 (wersja z uzupelnienia 2010)
+span C120-2C        72 68
+span C95-2C         72 66
+span C95-C          72 66
+span YC120-2C150    70 70
+span YwsC120-2C     70 66
+span YwsC120-2C-M   62 62
+span 2C120-2C-3     65 62
+span 2C120-2C-4     62 62
+span YC150-2CS150   65 65
+span YC120-2CS150   62 62
+
+// stary katalog (13-0002, 13-0008): a max sieci 1 i 2 - 66 m, sieci 3 i 4 - 72 m, sieci 5 - 80 m; bez stref wiatrowych
+span YpC120-2C      66 66
+span YpC95-2C       66 66
+span YC120-2C       72 72
+span YC95-2C        72 72
+span SKB70-C        80 80

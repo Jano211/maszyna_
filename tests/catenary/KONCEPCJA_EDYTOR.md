@@ -60,6 +60,37 @@ zostaje narzędziem deweloperskim, `traction_cantilevers.txt` – częścią pac
 
 ## Do ustalenia z Janem
 
-- Tabele rozpiętości przęseł i zygzaka – z którego katalogu (tom 1?).
+- ~~Tabele rozpiętości przęseł i zygzaka~~ – ODCZYTANE 2026-10-21 (niżej).
 - ~~Czy słupy mają być osobnym plikiem~~ – USTALONE 2026-10-21: osobny ręczny `data/traction_supports.txt` (słupy i mocowania).
 - Radio: osobna gałąź od mastera (PR niezależny od sieci).
+
+## Zrobione 2026-10-21 wieczór – tryb „Sieć trakcyjna” w edytorze (Tory → Sieć trakcyjna, klawisz N)
+
+ZASADA (użytkownik): użytkownik stawia słupy tam, gdzie je widzi na podkładzie (ortofotomapa), często bez profilu
+pionowego. ŻADNYCH automatów rozstawiających/drutujących – edytor tylko dobiera kartę i SPRAWDZA (rozpiętości z tablic).
+
+- Klik przy torze stawia słup (typ z `traction_supports.txt`) po stronie kursora; czoło słupa w zadanej odległości od osi
+  toru (skrajnia, domyślnie 2,50), oś słupa = skrajnia + ½ głębokości słupa przy główce szyny; przewody na H (5,60) nad
+  główką, odsuw z ±z (prosta: na zmianę do/od słupa, „Na zmianę”; łuk R < 4000: na zewnątrz łuku, z ≥ 0,40).
+- Karta: dziesiątka z rodziny (przechylne 11xx / nieprzechylne 12xx, prosta 1x/2x, łuk 3x/4x, do słupa x1/x3, od słupa
+  x2/x4 – objaśnienia tomu 3), ostatnia cyfra z pasma A (`scheme_for_reach`, A = oś słupa − odsuw − ½ głębokości na
+  wysokości H); wykonanie 1–5 wybiera użytkownik. Brak karty = czerwony podgląd i komunikat.
+- Zaznaczony słup: suwaki (skrajnia, odsuw, H, wykonanie, typ słupa, izolatory 25 kV) zmieniają go NA ŻYWO – wysięgnik
+  składa się od nowa przy każdym ruchu suwaka, karta przeskakuje z pasmem A. Uwagi solvera w panelu. Usuń / Cofnij
+  (własne cofanie narzędzia; Ctrl+Z edytora go nie obejmuje).
+- Przęsła: pary sąsiednich podwieszeń tej samej linii (cięciwa między drutami odchylona od dwusiecznej kierunków
+  wysięgników o ≤ 1,5 m), promień z kąta między kierunkami, limit z `data/traction_layout.txt` (karta 43-0002 + uzupełnienie
+  2010, łuk a = 2√(2Rz), stary katalog: 66/72/80); zielone w limicie, czerwone ponad. Typ sieci i strefę wiatrową wybiera
+  użytkownik w panelu.
+- Zapis: przy zapisie scenerii pliki sieci (`catenary_scene_save`, CRLF, nagłówek z komentarzy zachowany); nowy plik
+  dostaje dyrektywę `catenary <plik> endcatenary` w pliku głównym scenerii.
+- Części wysięgników są odpięte od warstw scenerii (`catenary_part_detach`) – wcześniej w trybie -edit zapis scenerii
+  dopisałby każdą część jako zwykły model (ukryty błąd, poprawiony przy okazji).
+- Jeszcze nie ma: przęsła `node traction` stawiane z edytora, parasole z edytora, przesuwanie słupa wzdłuż toru
+  przeciąganiem, bramki. Części wysięgników da się zaznaczyć w trybie Otoczenie jak zwykłe modele (do zablokowania).
+
+Tablice (odczytane 2026-10-21): Katalog 1 (`z- KATALOG 1 -z.pdf`) s. 4 karta 43-0002 (rozpiętości), s. 6 karta 23-0007
+(pasma A dla skrajni 2,20/2,50, prosta z 0,30/0,15/0, łuk z ±0,40), s. 7 karta 33-0008 (wykres a = 2√(2Rz));
+`Kolprojekt_2010-1.PDF` s. 6–7 (0002 z sieciami 36, 37; 0008 także dla z = 0,30); stary `kolprojekt1.pdf` s. 11–13
+(13-0002, 13-0005 wykonania 2/3/4, 13-0008: a max sieci 1, 2 – 66 m, 3, 4 – 72 m, 5 – 80 m, potwierdzone przez użytkownika).
+Katalog 1 ma też dział 0300 (zespoły podwieszeń przewodu wzmacniającego) – do LPN-ów/linii wzmacniających.

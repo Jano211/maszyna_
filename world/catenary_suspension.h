@@ -50,6 +50,10 @@ struct suspension_file {
 // Błędne wpisy są pomijane, a opis każdego błędu trafia do Errors
 void parse_suspensions( std::vector<std::string> const &Tokens, std::string const &Source, suspension_file &Output, std::vector<std::string> &Errors );
 
+// wpis podwieszenia w postaci tekstu do pliku (jedna linia, bez znaku końca linii), w tej samej składni, którą czyta parse_suspensions.
+// punkty z dokładnością do milimetra
+std::string write_suspension( suspension const &Entry );
+
 // dane konstrukcji wsporczej z rejestru
 struct support_data {
     std::string type;                   // mast, gantry_mast, beam, drop

@@ -26,6 +26,8 @@ http://mozilla.org/MPL/2.0/.
 #include "editor/editorProfile.hpp"
 #include "editor/editorInfra.hpp"
 #include "editor/editorGauge.hpp"
+#include "world/catenary_suspension.h"
+#include "world/catenary_cantilever.h"
 #include "world/Sweep.h"
 
 #include <array>
@@ -1013,7 +1015,7 @@ class editor_mode : public application_mode, private editor_track::observer
 	void update_build_tools();
 	void draw_build_overlay() const;
 	// modes of the track editor, one at a time: path is the plain selection
-	enum class track_tab { straights, route, path, turnout, profile, speed, joints, infra, lay, lineside, turntable, signals };
+	enum class track_tab { straights, route, path, turnout, profile, speed, joints, infra, lay, lineside, turntable, signals, catenary };
 	struct track_mode
 	{
 		char const *label;
@@ -1021,7 +1023,7 @@ class editor_mode : public application_mode, private editor_track::observer
 		track_tab tab;
 		char const *tooltip;
 	};
-	static std::array<track_mode, 12> const &track_modes();
+	static std::array<track_mode, 13> const &track_modes();
 	// the objects along the track: a tab for each tool
 	int m_lineside_tab{0};
 	void render_lineside_ui();
@@ -1078,7 +1080,7 @@ class editor_mode : public application_mode, private editor_track::observer
 	void draw_track_hover() const;
 	struct track_intent
 	{
-		enum class kind { none, gizmo, select, point, box, straight_set, straight_break, detour, straight_tool, straight_handle, route_vertex, route_grip, switch_at, lay, lay_end, sweep, turntable_place, turntable_exit, turntable_fit, spread, extend_end, signal_place, signal_move };
+		enum class kind { none, gizmo, select, point, box, straight_set, straight_break, detour, straight_tool, straight_handle, route_vertex, route_grip, switch_at, lay, lay_end, sweep, turntable_place, turntable_exit, turntable_fit, spread, extend_end, signal_place, signal_move, catenary_place, catenary_select };
 		kind what{kind::none};
 		TTrack *track{nullptr};
 		int path{0};
@@ -1488,6 +1490,71 @@ class editor_mode : public application_mode, private editor_track::observer
 	void draw_signal_overlay() const;
 	std::string signal_intent_label(signal_template const &Template, signal_spot const &Spot) const;
 	std::string signal_variant(signal_template const &Template, signal_spot const &Spot) const;
+
+	// catenary: poles with cantilevers by the track, put where the user sees them (on the orthophoto), the cantilever card
+	// chosen from the catalogue by the distance from the face of the pole; spans checked against the catalogue tables
+	struct catenary_spot
+	{
+		TTrack *track{nullptr};
+		int path{0};
+		double parameter{0.0};
+		glm::dvec3 axis{0.0}; // the point of the path, under the rail heads
+		glm::dvec2 forward{0.0, 1.0};
+		int side{1}; // the pole on the right (+1) or on the left (-1) of the direction of the path
+		double radius{0.0}; // of the track there, 0 on a straight
+		bool curve{false};
+		bool toward{true}; // the wires are offset towards the pole
+		double reach{0.0}; // A: from the wires to the face of the pole
+		int card{0};
+		std::string problem; // why there's no card, empty when there is one
+		catenary::suspension data;
+	};
+	struct catenary_change
+	{
+		std::size_t index{0};
+		std::optional<catenary::suspension> before; // none: the suspension was added
+		bool removed{false}; // the suspension was removed
+	};
+	struct catenary_tool
+	{
+		std::vector<std::string> poles;
+		std::vector<std::string> networks;
+		int pole{0};
+		int network{0};
+		int zone{1};
+		int execution{1};
+		bool swinging{true};
+		bool toward{true};
+		bool alternate{true}; // on a straight the next one goes the other way
+		int bend{0}; // 0: from the track, 1: straight, 2: curve
+		float stagger{0.30f};
+		float clearance{2.50f}; // from the axis of the track to the face of the pole
+		float height{5.60f}; // of the contact wires over the rail heads
+		bool insulators25{false};
+		char file[128]{};
+		int selected{-1};
+		std::map<std::size_t, catenary_spot> spots; // where the suspensions put in the editor are, by their numbers
+		std::vector<catenary_change> undo;
+		catenary::cantilever_result probe;
+		bool probed{false};
+		bool probe_good{false};
+		int hover{-1};
+		std::string status;
+		bool scanned{false};
+	};
+	catenary_tool m_catenary;
+	void catenary_scan();
+	bool catenary_spot_at(TTrack &Track, int const Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor, int const Side, catenary_spot &Spot) const;
+	void catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward) const;
+	int catenary_hit() const;
+	void catenary_press(track_intent const &Intent);
+	void catenary_select(int const Index);
+	void catenary_apply(catenary_spot const &Spot);
+	bool catenary_delete_selected();
+	void catenary_undo();
+	void render_catenary_ui();
+	void draw_catenary_overlay() const;
+	std::string catenary_intent_label(catenary_spot const &Spot) const;
 
 	// a model laid along the track: bent to follow it, or repeated along it
 	struct sweep_tool
