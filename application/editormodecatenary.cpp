@@ -438,7 +438,8 @@ bool editor_mode::catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3 &Se
 		auto const across{right_of(*tool.gantry_track)};
 		direction = glm::dot(across, delta) >= 0.0 ? across : -across;
 	}
-	Second = {first.x + direction.x * (span + offsets), Point.y, first.z + direction.y * (span + offsets)};
+	// both masts at the height of the first one (the rail heads of the track by it); their heights can be changed by 0.20 m later
+	Second = {first.x + direction.x * (span + offsets), first.y, first.z + direction.y * (span + offsets)};
 	return true;
 }
 
@@ -922,6 +923,8 @@ void editor_mode::catenary_press(track_intent const &Intent)
 					{
 						best = distance;
 						tool.gantry_track = forward_at(*track, path, parameter);
+						// the gantry stands at the height of the rail heads of that track
+						tool.gantry_first->y = curve.point(parameter).y + kRailTop;
 					}
 				}
 			}
