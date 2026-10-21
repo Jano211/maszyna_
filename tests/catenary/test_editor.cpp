@@ -22,6 +22,8 @@ std::vector<std::string> errors, logs;
 void ErrorLog( std::string const &Message ) { errors.push_back( Message ); }
 void WriteLog( const char *Message ) { logs.emplace_back( Message ); }
 extern int mock_deleted_parts;
+extern int mock_deleted_spans;
+extern std::vector<std::string> mock_span_bodies, mock_span_names;
 
 int failures { 0 };
 void check( bool const Good, char const *What ) { std::printf( "%s  %s\n", Good ? "OK  " : "BLAD", What ); if( false == Good ) { ++failures; } }
@@ -95,6 +97,67 @@ int main( int, char *argv[] ) {
         check( content.find( "suspension" ) == std::string::npos && content.find( "zalozony w edytorze" ) != std::string::npos, "po usunieciu plik bez wpisow, naglowek zostaje" );
     }
     std::remove( "tests/catenary/td_edytor_test.scm" );
+
+    // 4. łańcuch: zapis i odczyt wpisu
+    {
+        catenary::chain line;
+        line.name = "l1"; line.power = "pwr01"; line.voltage = 3500; line.type = "YwsC120-2C"; line.state = 2;
+        line.suspensions = { "s0001", "s0002", "s0003" };
+        auto const written { catenary::write_chain( line ) };
+        std::vector<std::string> tokens;
+        for( auto const &item : { entry } ) { (void)item; }
+        auto a { entry }, b { entry }, c { entry };
+        a.name = "s0001"; b.name = "s0002"; c.name = "s0003";
+        b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] = 160.0; b.at[ 0 ] = b.rope[ 0 ] = 0.087;
+        c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 220.0;
+        std::string text { catenary::write_suspension( a ) + "\n" + catenary::write_suspension( b ) + "\n" + catenary::write_suspension( c ) + "\n" + written + "\n" };
+        std::istringstream words { text };
+        for( std::string word; words >> word; ) { tokens.push_back( word ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( tokens, "lancuch", parsed, problems );
+        check( problems.empty() && parsed.chains.size() == 1 && catenary::write_chain( parsed.chains.front() ) == written, "lancuch: zapis i odczyt daja to samo" );
+        auto broken { line }; broken.suspensions = { "s0001", "nie_ma" };
+        std::vector<std::string> tokens2;
+        std::istringstream words2 { catenary::write_suspension( a ) + "\n" + catenary::write_chain( broken ) };
+        for( std::string word; words2 >> word; ) { tokens2.push_back( word ); }
+        catenary::suspension_file parsed2; problems.clear();
+        catenary::parse_suspensions( tokens2, "lancuch", parsed2, problems );
+        check( parsed2.chains.empty() && problems.size() == 1, "lancuch z brakujacym podwieszeniem odrzucony z komunikatem" );
+
+        // wczytanie pliku z łańcuchem: przęsła powstają od razu
+        { std::ofstream out { "tests/catenary/td_lancuch_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear(); mock_deleted_spans = 0;
+        cParser directive( "td_lancuch_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        check( catenary_chain_size() == 1 && mock_span_bodies.size() == 2 && mock_span_names.front() == "l1_1" && mock_span_names.back() == "l1_2", "wczytany lancuch: dwa przesla l1_1, l1_2" );
+        check( mock_span_bodies.front().find( "pwr01 3500.0 4500.0 0.0100 cu 3.00 2" ) == 0 && mock_span_bodies.front().find( "type YwsC120-2C endtraction" ) != std::string::npos
+            && mock_span_bodies.front().find( "0.687 5.800 100.247\n0.087 5.800 160.000\n0.687 7.500 100.247\n0.087 7.500 160.000" ) != std::string::npos, "przeslo: zasilanie, stan, punkty drutu i liny, typ" );
+        // przesunięcie środkowego słupa: dwa przęsła przy nim od nowa
+        mock_span_bodies.clear();
+        auto moved2 { *catenary_scene_get( 1 ) };
+        moved2.at[ 0 ] = moved2.rope[ 0 ] = -0.3;
+        catenary_scene_update( 1, moved2 );
+        check( mock_deleted_spans == 2 && mock_span_bodies.size() == 2 && mock_span_bodies.front().find( "-0.300 5.800 160.000" ) != std::string::npos, "przesuniety slup: oba przesla przy nim od nowa" );
+        std::size_t position { 0 };
+        check( catenary_chain_of( 1, position ) == 0 && position == 1 && catenary_chain_members( 0 ).size() == 3, "slup w lancuchu: miejsce 2 z 3" );
+        // zmiana typu całego łańcucha jednym wpisem
+        mock_span_bodies.clear();
+        auto changed { *catenary_chain_get( 0 ) };
+        changed.type = "C120-2C"; changed.material = "al"; changed.state = 0;
+        catenary_chain_update( 0, changed );
+        check( mock_span_bodies.size() == 2 && mock_span_bodies.back().find( " al 3.00 0" ) != std::string::npos && mock_span_bodies.back().find( "type C120-2C" ) != std::string::npos, "typ, material i stan calego lancucha jednym wpisem" );
+        // usunięcie środkowego: łańcuch łączy sąsiednie
+        mock_span_bodies.clear();
+        catenary_scene_remove( 1 );
+        check( catenary_chain_get( 0 ) != nullptr && catenary_chain_get( 0 )->suspensions.size() == 2 && mock_span_bodies.size() == 1 && mock_span_bodies.front().find( "0.687 5.800 220.000" ) != std::string::npos, "usuniety slup: lancuch przez sasiednie" );
+        check( catenary_scene_new_name( "td_lancuch_test.scm" ) == "s0002" && catenary_scene_new_chain_name( "td_lancuch_test.scm" ) == "td_lancuch_test_l1", "nowe nazwy: pierwsza wolna" );
+        catenary_scene_save( message );
+        std::ifstream saved { "tests/catenary/td_lancuch_test.scm", std::ios::binary };
+        std::string content { std::istreambuf_iterator<char>( saved ), std::istreambuf_iterator<char>() };
+        check( content.find( "chain power pwr01" ) != std::string::npos && content.find( "suspensions s0001 s0003 endchain" ) != std::string::npos, "zapis: lancuch z nowa lista" );
+        std::remove( "tests/catenary/td_lancuch_test.scm" );
+    }
     for( auto const &line : errors ) { std::printf( "  %s\n", line.c_str() ); }
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDY: %d\n", failures );
     return failures;

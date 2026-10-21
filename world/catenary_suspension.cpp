@@ -73,6 +73,44 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
         auto const type { Tokens[ index + 3 ] };
         index += 4;
         if( false == good ) { report( entry.name, "visibility range isn't a number" ); }
+        if( type == "chain" ) {
+            // łańcuch: słowa kluczowe z wartościami do endchain
+            chain line;
+            line.name = ( entry.name == "none" ? std::string() : entry.name );
+            line.range_max = entry.range_max;
+            line.range_min = entry.range_min;
+            auto closed { false };
+            while( index < count ) {
+                auto const key { Tokens[ index++ ] };
+                if( key == "endchain" ) { closed = true; break; }
+                if( key == "node" ) { --index; break; }
+                auto const one = [ & ]( std::string &Value ) {
+                    if( index < count && Tokens[ index ] != "endchain" ) { Value = Tokens[ index++ ]; return true; }
+                    report( line.name, "\"" + key + "\" needs a value" ); good = false; return false; };
+                auto const number = [ & ]( double &Value ) {
+                    std::string text;
+                    if( one( text ) && false == to_number( text, Value ) ) { report( line.name, "\"" + key + "\" needs a number" ); good = false; } };
+                if( key == "power" ) { one( line.power ); }
+                else if( key == "voltage" ) { number( line.voltage ); }
+                else if( key == "current" ) { number( line.current ); }
+                else if( key == "resistivity" ) { number( line.resistivity ); }
+                else if( key == "material" ) { one( line.material ); }
+                else if( key == "thickness" ) { number( line.thickness ); }
+                else if( key == "state" ) { double value { 0.0 }; number( value ); line.state = static_cast<int>( value ); }
+                else if( key == "type" ) { one( line.type ); }
+                else if( key == "parallel" ) { one( line.parallel ); }
+                else if( key == "hangers" ) { for( auto &value : line.hangers ) { number( value ); } }
+                else if( key == "suspensions" ) {
+                    while( index < count && Tokens[ index ] != "endchain" && Tokens[ index ] != "node" ) { line.suspensions.push_back( Tokens[ index++ ] ); }
+                }
+                else { report( line.name, "unexpected token \"" + key + "\" in a chain" ); good = false; }
+            }
+            if( false == closed ) { report( line.name, "missing \"endchain\"" ); good = false; }
+            if( line.power.empty() ) { report( line.name, "the chain has no \"power\"" ); good = false; }
+            if( line.suspensions.size() < 2 ) { report( line.name, "a chain needs at least two suspensions" ); good = false; }
+            if( good ) { Output.chains.push_back( line ); }
+            continue;
+        }
         if( type != "suspension" ) {
             // inny rodzaj wpisu: jeden komunikat i pominięcie całej jego treści, do następnego wpisu
             report( entry.name, "node type \"" + type + "\" isn't supported in a catenary file, only \"suspension\" is" );
@@ -163,6 +201,16 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
         }
         if( good ) { Output.entries.push_back( entry ); }
     }
+    // łańcuchy wskazują podwieszenia z tego samego pliku: brakujące nazwy to błąd całego łańcucha
+    for( auto chain { Output.chains.begin() }; chain != Output.chains.end(); ) {
+        std::string missing;
+        for( auto const &name : chain->suspensions ) {
+            if( std::none_of( Output.entries.begin(), Output.entries.end(), [ & ]( suspension const &Entry ) { return Entry.name == name; } ) ) { missing = name; break; }
+        }
+        if( missing.empty() ) { ++chain; continue; }
+        report( chain->name, "chain refers to suspension \"" + missing + "\" which isn't in the file; the chain is left out" );
+        chain = Output.chains.erase( chain );
+    }
 }
 
 std::string write_suspension( suspension const &Entry ) {
@@ -191,6 +239,25 @@ std::string write_suspension( suspension const &Entry ) {
     if( Entry.has_pole ) { text += " pole " + Entry.pole_type + " " + point( Entry.pole ); }
     if( false == Entry.umbrella.empty() ) { text += " umbrella " + Entry.umbrella; }
     return text + " endsuspension";
+}
+
+std::string write_chain( chain const &Entry ) {
+
+    auto const number = []( double const Value ) {
+        std::ostringstream stream;
+        stream.imbue( std::locale::classic() );
+        stream << Value;
+        return stream.str();
+    };
+    std::string text { "node " + number( Entry.range_max ) + " " + number( Entry.range_min ) + " " + ( Entry.name.empty() ? std::string( "none" ) : Entry.name ) + " chain" };
+    text += " power " + Entry.power + " voltage " + number( Entry.voltage ) + " current " + number( Entry.current ) + " resistivity " + number( Entry.resistivity );
+    text += " material " + Entry.material + " thickness " + number( Entry.thickness ) + " state " + std::to_string( Entry.state );
+    if( false == Entry.type.empty() ) { text += " type " + Entry.type; }
+    text += " hangers " + number( Entry.hangers[ 0 ] ) + " " + number( Entry.hangers[ 1 ] ) + " " + number( Entry.hangers[ 2 ] ) + " " + number( Entry.hangers[ 3 ] );
+    if( false == Entry.parallel.empty() ) { text += " parallel " + Entry.parallel; }
+    text += " suspensions";
+    for( auto const &name : Entry.suspensions ) { text += " " + name; }
+    return text + " endchain";
 }
 
 double support_data::half_width( double const Height ) const {

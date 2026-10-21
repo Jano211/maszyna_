@@ -94,3 +94,22 @@ Tablice (odczytane 2026-10-21): Katalog 1 (`z- KATALOG 1 -z.pdf`) s. 4 karta 43-
 `Kolprojekt_2010-1.PDF` s. 6–7 (0002 z sieciami 36, 37; 0008 także dla z = 0,30); stary `kolprojekt1.pdf` s. 11–13
 (13-0002, 13-0005 wykonania 2/3/4, 13-0008: a max sieci 1, 2 – 66 m, 3, 4 – 72 m, 5 – 80 m, potwierdzone przez użytkownika).
 Katalog 1 ma też dział 0300 (zespoły podwieszeń przewodu wzmacniającego) – do LPN-ów/linii wzmacniających.
+
+## Łańcuchy (2026-10-21 noc) – format `chain` w pliku sieci
+
+- Wpis: `node -1 0 <nazwa> chain power <zasilacz> voltage <V> current <A> resistivity <..> material cu|al thickness <..>
+  state 0|2|1 type <symbol> hangers <najniższy wieszak> <odstęp> <druty> <odstęp drutów> [parallel <przęsło>]
+  suspensions <nazwy podwieszeń po kolei> endchain`. Przęsło k = TTraction od podwieszenia k do k+1 (drut przez `at`,
+  lina przez `rope`), nazwy `<łańcuch>_<k>`. Przęsła robione przy wczytaniu pliku sieci (przed InitTraction – łączą się
+  z resztą sieci jak zwykłe), w edytorze robione/przebudowywane na żywo i łączone z sąsiadami i zasilaczem od razu.
+  Nie należą do żadnej warstwy scenerii (zapis scenerii ich nie przepisuje); pliki .scn zostają bez zmian.
+- Podwieszenia w łańcuchach muszą mieć nazwy (edytor nadaje s0001, s0002, …). Tokeny pliku sieci czytane teraz z
+  zachowaniem wielkości liter (symbol typu sieci, nazwy).
+- Edytor: stawianie łańcuchowe (każdy słup łączy się przęsłem z poprzednim; „Zakończ łańcuch”, „Ciągnij od końca /
+  od początku”); zygzak: następny w drugą stronę niż ostatni, po trzech z rzędu w tę samą stronę (wymuszone przez
+  użytkownika) zostaje tak, aż któryś pójdzie w drugą (zasada użytkownika: L, K, L, L → K; L, L, L → dalej L);
+  łuk sam rozstrzyga odsuw. Klik na przęśle zaznacza łańcuch: typ sieci, materiał, stan drutów, zasilacz, napięcie –
+  zmiana od razu na całym łańcuchu. Przy zaznaczonym słupie: kopiuj na poprzedni / następny / oba / cały łańcuch
+  (słup, skrajnia, wykonanie, wysokość drutów, izolatory; odsuw zostaje). Cofanie grupami (jedna akcja = jedno cofnięcie).
+- Jeszcze nie ma: kotwy na końcach łańcucha (solver), wstawianie słupa w środek łańcucha, przęsła naprężenia (dwa
+  łańcuchy na jednym słupie).

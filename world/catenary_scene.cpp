@@ -33,6 +33,10 @@ http://mozilla.org/MPL/2.0/.
 // części wysięgników w scenerii (world/catenary_scene_objects.cpp, w testach atrapa): odłączenie od pliku scenerii i usunięcie
 void catenary_part_detach( TAnimModel *Model );
 void catenary_part_delete( TAnimModel *Model );
+// przęsła łańcuchów (tamże): Body to treść wpisu node traction od nazwy zasilacza do endtraction włącznie.
+// Link: od razu połączyć z sąsiednimi przęsłami i zasilaczem (po inicjalizacji scenerii; wcześniej robi to InitTraction)
+TTraction *catenary_span_create( std::string const &Name, double RangeMax, double RangeMin, std::string const &Body, bool Link );
+void catenary_span_delete( TTraction *Span );
 
 namespace {
 
@@ -62,6 +66,15 @@ struct scene_file {
     bool changed { false };             // są zmiany do zapisania
 };
 std::vector<scene_file> Files;
+
+// łańcuch sieci z pliku: przęsła od podwieszenia do podwieszenia
+struct scene_chain {
+    catenary::chain data;
+    std::string file;
+    std::vector<TTraction *> spans;     // przęsło k: od podwieszenia k do k+1; nullptr gdy nie dało się go zrobić
+    bool removed { false };
+};
+std::vector<scene_chain> Chains;
 
 scene_file *
 file_named( std::string const &Name ) {
@@ -382,6 +395,81 @@ drop_parts( scene_suspension &Suspension ) {
     Suspension.parts.clear();
 }
 
+// numer podwieszenia o podanej nazwie z podanego pliku; Suspensions.size() gdy nie ma
+std::size_t
+suspension_named( std::string const &File, std::string const &Name ) {
+    for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
+        auto const &suspension { Suspensions[ index ] };
+        if( false == suspension.removed && suspension.file == File && suspension.data.name == Name ) { return index; }
+    }
+    return Suspensions.size();
+}
+
+std::string
+point_text( double const *Point ) {
+    return text_number( Point[ 0 ], 3 ) + " " + text_number( Point[ 1 ], 3 ) + " " + text_number( Point[ 2 ], 3 );
+}
+
+// lina nośna podwieszenia: podana wprost albo nad przewodem na wysokości konstrukcyjnej karty
+void
+rope_of( catenary::suspension const &Data, double *Rope ) {
+    if( Data.has_rope ) { for( int i = 0; i < 3; ++i ) { Rope[ i ] = Data.rope[ i ]; } return; }
+    auto const *catalog { cantilevers() };
+    auto const *scheme { catalog != nullptr ? catalog->scheme( Data.card, Data.execution ) : nullptr };
+    Rope[ 0 ] = Data.at[ 0 ];
+    Rope[ 1 ] = Data.at[ 1 ] + ( scheme != nullptr ? scheme->height : 1.70 );
+    Rope[ 2 ] = Data.at[ 2 ];
+}
+
+// treść wpisu node traction dla przęsła k łańcucha; pusta, gdy brakuje podwieszenia
+std::string
+span_body( scene_chain const &Chain, std::size_t const Span ) {
+    auto const &data { Chain.data };
+    if( Span + 1 >= data.suspensions.size() ) { return {}; }
+    auto const from { suspension_named( Chain.file, data.suspensions[ Span ] ) };
+    auto const to { suspension_named( Chain.file, data.suspensions[ Span + 1 ] ) };
+    if( from >= Suspensions.size() || to >= Suspensions.size() ) { return {}; }
+    auto const &a { Suspensions[ from ].data };
+    auto const &b { Suspensions[ to ].data };
+    if( false == a.has_at || false == b.has_at ) { return {}; }
+    double ropea[ 3 ], ropeb[ 3 ];
+    rope_of( a, ropea );
+    rope_of( b, ropeb );
+    std::string body { data.power + " " + text_number( data.voltage, 1 ) + " " + text_number( data.current, 1 ) + " " + text_number( data.resistivity, 4 ) + " "
+        + data.material + " " + text_number( data.thickness, 2 ) + " " + std::to_string( data.state ) + "\n" };
+    body += point_text( a.at ) + "\n" + point_text( b.at ) + "\n" + point_text( ropea ) + "\n" + point_text( ropeb ) + "\n";
+    body += text_number( data.hangers[ 0 ], 3 ) + " " + text_number( data.hangers[ 1 ], 3 ) + " " + std::to_string( static_cast<int>( data.hangers[ 2 ] ) ) + " " + text_number( data.hangers[ 3 ], 3 ) + " vis";
+    if( false == data.type.empty() ) { body += " type " + data.type; }
+    if( false == data.parallel.empty() ) { body += " parallel " + data.parallel; }
+    return body + " endtraction";
+}
+
+std::string
+span_name( scene_chain const &Chain, std::size_t const Span ) {
+    return ( Chain.data.name.empty() ? std::string( "none" ) : Chain.data.name + "_" + std::to_string( Span + 1 ) );
+}
+
+// robi od nowa przęsło k łańcucha (przy podwieszeniu przesuniętym w edytorze tylko dwa przęsła przy nim)
+void
+rebuild_span( scene_chain &Chain, std::size_t const Span ) {
+    if( Span >= Chain.spans.size() ) { return; }
+    if( Chain.spans[ Span ] != nullptr ) {
+        catenary_span_delete( Chain.spans[ Span ] );
+        Chain.spans[ Span ] = nullptr;
+    }
+    auto const body { span_body( Chain, Span ) };
+    if( body.empty() ) { return; }
+    Chain.spans[ Span ] = catenary_span_create( span_name( Chain, Span ), Chain.data.range_max, Chain.data.range_min, body, Initialized );
+}
+
+// wszystkie przęsła łańcucha od nowa (zmiana typu, materiału, listy podwieszeń)
+void
+rebuild_chain( scene_chain &Chain ) {
+    for( auto *span : Chain.spans ) { if( span != nullptr ) { catenary_span_delete( span ); } }
+    Chain.spans.assign( Chain.removed || Chain.data.suspensions.size() < 2 ? 0 : Chain.data.suspensions.size() - 1, nullptr );
+    for( std::size_t span = 0; span < Chain.spans.size(); ++span ) { rebuild_span( Chain, span ); }
+}
+
 // numery podwieszeń parasola o podanej nazwie (bez usuniętych)
 std::vector<std::size_t>
 umbrella_members( std::string const &Name ) {
@@ -415,10 +503,10 @@ catenary_scene_load( cParser &Input ) {
     std::vector<std::string> tokens;
     {
         cParser parser( filename, cParser::buffer_FILE, Global.asCurrentSceneryPath, Global.bLoadTraction );
-        auto token { parser.getToken<std::string>() };
+        auto token { parser.getToken<std::string>( false ) };
         while( false == token.empty() ) {
             tokens.emplace_back( token );
-            token = parser.getToken<std::string>();
+            token = parser.getToken<std::string>( false );
         }
     }
     if( tokens.empty() ) {
@@ -437,6 +525,14 @@ catenary_scene_load( cParser &Input ) {
         suspension.skin = ( entry.skin.empty() ? file.skin : entry.skin );
         suspension.file = filename;
         Suspensions.emplace_back( suspension );
+    }
+    // przęsła łańcuchów powstają od razu: przed inicjalizacją scenerii łączy je InitTraction razem z resztą sieci
+    for( auto const &line : file.chains ) {
+        scene_chain chain;
+        chain.data = line;
+        chain.file = filename;
+        Chains.emplace_back( chain );
+        rebuild_chain( Chains.back() );
     }
     if( file_named( filename ) == nullptr ) {
         // komentarze z początku pliku, żeby zapis z edytora ich nie zgubił
@@ -537,6 +633,7 @@ void
 catenary_scene_clear() {
 
     Suspensions.clear();
+    Chains.clear();
     Files.clear();
     Notes.clear();
     Resolved = 0;
@@ -602,6 +699,22 @@ reassemble( std::size_t const Index ) {
     assemble_alone( Index, *catalog );
 }
 
+// przęsła łańcuchów przy podwieszeniu idą za nim
+void
+follow_chains( std::size_t const Index ) {
+    auto const &suspension { Suspensions[ Index ] };
+    if( suspension.data.name.empty() ) { return; }
+    for( auto &chain : Chains ) {
+        if( chain.removed || chain.file != suspension.file ) { continue; }
+        auto const &names { chain.data.suspensions };
+        for( std::size_t position = 0; position < names.size(); ++position ) {
+            if( names[ position ] != suspension.data.name ) { continue; }
+            if( position > 0 ) { rebuild_span( chain, position - 1 ); }
+            rebuild_span( chain, position );
+        }
+    }
+}
+
 void
 mark_changed( std::string const &File ) {
     if( auto *file { file_named( File ) }; file != nullptr ) { file->changed = true; }
@@ -649,6 +762,7 @@ catenary_scene_update( std::size_t const Index, catenary::suspension const &Data
         for( auto const index : umbrella_members( before ) ) { reassemble( index ); break; }
     }
     reassemble( Index );
+    follow_chains( Index );
     return true;
 }
 
@@ -664,6 +778,18 @@ catenary_scene_remove( std::size_t const Index ) {
     if( false == umbrella.empty() ) {
         for( auto const index : umbrella_members( umbrella ) ) { reassemble( index ); break; }
     }
+    // z łańcuchów wypada; łańcuch z jednym podwieszeniem przestaje istnieć
+    if( false == suspension.data.name.empty() ) {
+        for( auto &chain : Chains ) {
+            if( chain.removed || chain.file != suspension.file ) { continue; }
+            auto &names { chain.data.suspensions };
+            auto const before { names.size() };
+            names.erase( std::remove( names.begin(), names.end(), suspension.data.name ), names.end() );
+            if( names.size() == before ) { continue; }
+            if( names.size() < 2 ) { chain.removed = true; }
+            rebuild_chain( chain );
+        }
+    }
 }
 
 bool
@@ -675,6 +801,7 @@ catenary_scene_restore( std::size_t const Index, catenary::suspension const &Dat
     suspension.data = Data;
     mark_changed( suspension.file );
     reassemble( Index );
+    follow_chains( Index );
     return true;
 }
 
@@ -726,6 +853,10 @@ catenary_scene_save( std::string &Message ) {
             text += catenary::write_suspension( suspension.data ) + "\r\n";
             ++count;
         }
+        for( auto const &chain : Chains ) {
+            if( chain.removed || chain.file != file.name ) { continue; }
+            text += catenary::write_chain( chain.data ) + "\r\n";
+        }
         auto const path { Global.asCurrentSceneryPath + file.name };
         std::ofstream output { path, std::ios::binary | std::ios::trunc };
         if( false == output.is_open() ) {
@@ -744,4 +875,99 @@ catenary_scene_save( std::string &Message ) {
     Message.clear();
     for( auto const &name : written ) { Message += ( Message.empty() ? "" : ", " ) + name; }
     return true;
+}
+
+// ---- łańcuchy ----------------------------------------------------------------------------------------------------------
+
+std::string
+catenary_scene_new_name( std::string const &File ) {
+    // s0001, s0002, ... pierwsza wolna w pliku
+    for( int number = 1; ; ++number ) {
+        auto name { std::to_string( number ) };
+        name = "s" + std::string( name.size() < 4 ? 4 - name.size() : 0, '0' ) + name;
+        auto const taken { std::any_of( Suspensions.begin(), Suspensions.end(), [ & ]( scene_suspension const &Suspension ) { return false == Suspension.removed && Suspension.file == File && Suspension.data.name == name; } ) };
+        if( false == taken ) { return name; }
+    }
+}
+
+std::string
+catenary_scene_new_chain_name( std::string const &File ) {
+    auto stem { File };
+    if( auto const slash { stem.find_last_of( "/\\" ) }; slash != std::string::npos ) { stem.erase( 0, slash + 1 ); }
+    if( auto const dot { stem.rfind( '.' ) }; dot != std::string::npos ) { stem.erase( dot ); }
+    for( int number = 1; ; ++number ) {
+        auto const name { stem + "_l" + std::to_string( number ) };
+        auto const taken { std::any_of( Chains.begin(), Chains.end(), [ & ]( scene_chain const &Chain ) { return Chain.data.name == name; } ) };
+        if( false == taken ) { return name; }
+    }
+}
+
+std::size_t
+catenary_chain_size() {
+    return Chains.size();
+}
+
+catenary::chain const *
+catenary_chain_get( std::size_t const Index ) {
+    if( Index >= Chains.size() || Chains[ Index ].removed ) { return nullptr; }
+    return &Chains[ Index ].data;
+}
+
+std::string
+catenary_chain_file( std::size_t const Index ) {
+    return ( Index < Chains.size() ? Chains[ Index ].file : std::string() );
+}
+
+std::vector<std::size_t>
+catenary_chain_members( std::size_t const Index ) {
+    std::vector<std::size_t> members;
+    if( Index >= Chains.size() || Chains[ Index ].removed ) { return members; }
+    for( auto const &name : Chains[ Index ].data.suspensions ) { members.push_back( suspension_named( Chains[ Index ].file, name ) ); }
+    return members;
+}
+
+std::size_t
+catenary_chain_add( std::string const &File, catenary::chain const &Data ) {
+    scene_chain chain;
+    chain.data = Data;
+    chain.file = File;
+    Chains.emplace_back( chain );
+    rebuild_chain( Chains.back() );
+    mark_changed( File );
+    return Chains.size() - 1;
+}
+
+bool
+catenary_chain_update( std::size_t const Index, catenary::chain const &Data ) {
+    if( Index >= Chains.size() ) { return false; }
+    auto &chain { Chains[ Index ] };
+    chain.data = Data;
+    chain.removed = Data.suspensions.size() < 2;
+    rebuild_chain( chain );
+    mark_changed( chain.file );
+    return true;
+}
+
+void
+catenary_chain_remove( std::size_t const Index ) {
+    if( Index >= Chains.size() || Chains[ Index ].removed ) { return; }
+    Chains[ Index ].removed = true;
+    rebuild_chain( Chains[ Index ] );
+    mark_changed( Chains[ Index ].file );
+}
+
+int
+catenary_chain_of( std::size_t const Suspension, std::size_t &Position ) {
+    if( Suspension >= Suspensions.size() || Suspensions[ Suspension ].data.name.empty() ) { return -1; }
+    auto const &suspension { Suspensions[ Suspension ] };
+    for( std::size_t index = 0; index < Chains.size(); ++index ) {
+        auto const &chain { Chains[ index ] };
+        if( chain.removed || chain.file != suspension.file ) { continue; }
+        auto const found { std::find( chain.data.suspensions.begin(), chain.data.suspensions.end(), suspension.data.name ) };
+        if( found != chain.data.suspensions.end() ) {
+            Position = static_cast<std::size_t>( found - chain.data.suspensions.begin() );
+            return static_cast<int>( index );
+        }
+    }
+    return -1;
 }

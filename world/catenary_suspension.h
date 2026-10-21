@@ -40,10 +40,31 @@ struct suspension {
     std::string umbrella;
 };
 
+// łańcuch sieci: kolejne przęsła między podwieszeniami z listy (od kotwy do kotwy), wpis
+// "node <max> <min> <nazwa> chain ... suspensions <nazwy podwieszeń> endchain". Exe robi z niego zwykłe przęsła (TTraction):
+// przęsło k idzie od podwieszenia k do k+1, przewód jezdny przez punkty "at", lina nośna przez punkty "rope"
+struct chain {
+    std::string name;                       // nazwa łańcucha; przęsła dostają nazwy <nazwa>_<numer od 1>
+    double      range_max { -1.0 };
+    double      range_min { 0.0 };
+    std::string power;                      // zasilacz (jak w node traction)
+    double      voltage { 3000.0 };         // napięcie nominalne, V
+    double      current { 4500.0 };         // prąd maksymalny, A
+    double      resistivity { 0.01 };       // jak w node traction (0,01 = wartość domyślna scenerii)
+    std::string material { "cu" };          // cu, al
+    double      thickness { 3.0 };          // grubość rysowanego drutu (rysowanie bez typu sieci)
+    int         state { 0 };                // stan drutów: 0 nowe, 2 przejściowe, 1 zaśniedziałe
+    std::string type;                       // symbol typu sieci, np. YwsC120-2C
+    double      hangers[ 4 ] { 0.4, 4.0, 3.0, 0.04 }; // jak w node traction: najniższy wieszak, odstęp, liczba drutów, odstęp drutów
+    std::string parallel;                   // przęsło bieżni wspólnej (jak "parallel" w node traction); puste = brak
+    std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
+};
+
 // zawartość pliku podwieszeń
 struct suspension_file {
     std::string skin;                       // domyślna wymienna tekstura dla wpisów bez własnej
     std::vector<suspension> entries;
+    std::vector<chain> chains;
 };
 
 // rozbiera plik podwieszeń podany jako kolejne słowa (już bez komentarzy). Source: nazwa pliku do komunikatów.
@@ -53,6 +74,8 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
 // wpis podwieszenia w postaci tekstu do pliku (jedna linia, bez znaku końca linii), w tej samej składni, którą czyta parse_suspensions.
 // punkty z dokładnością do milimetra
 std::string write_suspension( suspension const &Entry );
+// wpis łańcucha w postaci tekstu do pliku (jedna linia)
+std::string write_chain( chain const &Entry );
 
 // dane konstrukcji wsporczej z rejestru
 struct support_data {
