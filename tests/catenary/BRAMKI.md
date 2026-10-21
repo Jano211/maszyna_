@@ -47,3 +47,22 @@ Parametry do składania są w komentarzach w nagłówku jako `//$e_<klucz>=<wart
    malowane osobno, więc mogą służyć za dodatkowy wariant tekstury.
 4. Półbramkom bez tagów trzeba dopisać brakujące parametry (W, L, H, Hk, Beam_out, Drop_type).
 5. Zapis docelowo w `traction_supports.txt` jako nowe bloki (np. `mast`, `beam`, `drop`, `semi_gantry`) – tak.
+
+## Zrobione 2026-10-22 – bramki jednoprzęsłowe z dźwigarem E i zwisy 4850
+
+- `traction_supports.txt`: `mast` (38 słupów 30xx/31xx z tagów `$e_`), `beam` (261 dźwigarów E90…E349, E385; rozstaw osi słupów
+  = numer/10 m, zero w osi pierwszego słupa – użytkownik), zwisy `pole 4850-1…5` jako „pływające słupy”: zero w spodzie
+  dźwigara (`top 0`), mocowania wyk. 05 (karta 53-0501 – użytkownik), w pełnym zakresie długości (`mount_max -0.001`,
+  `mount_min -długość`), `turn 90` (profil 0,12 m w stronę toru), `drop 4850`.
+- Solver: `mount_max` może być ujemne (warunek `!= 0`), nowe `mount_min` (uwaga, gdy mocowanie wypada pod końcem zwisu),
+  `turn` obraca model słupa wokół pionu.
+- Plik sieci: wpis `gantry` (beam, level low|high, side ±1, dwa `mast <typ> x y z`); exe wstawia słupy i dźwigar jako modele.
+  Zwisy z wysięgnikami to zwykłe podwieszenia z `pole 4850-N x y z` (y = spód dźwigara) – działają z nimi łańcuchy, parasole itd.
+- Edytor (Sieć trakcyjna): „Postaw bramkę” – LPM pierwszy słup, LPM drugi (dźwigar z katalogu najbliższy odległości,
+  drugi słup dosunięty na jego rozstaw), dolne/górne mocowanie, strona dźwigara. Klik na dźwigar = bramka zaznaczona:
+  LPM nad torem wiesza zwis z wysięgnikiem (najkrótszy zwis, przy którym mocowania mieszczą się na zwisie; zwis
+  przesunięty wzdłuż toru na linię dźwigara). „Wróć do słupów” kończy.
+- Solver na zwisach (drut 5,6, środek pasm, karty 11xx/12xx): dźwigar 7,35 – większość z uwagą „odciąg ścięty do spodu
+  dźwigara” (przy hk 1,70 odciąg chce być nad dźwigarem); 7,75 – zwis 4850-4/-5 prawie wszystko bez uwag.
+- Jeszcze nie ma: półbramki, dźwigary środkowe 30xx (wiele przęseł), zwisy 4840 i ESN-544, przesuwanie zwisu po dźwigarze
+  przeciąganiem.

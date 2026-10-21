@@ -111,6 +111,39 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
             if( good ) { Output.chains.push_back( line ); }
             continue;
         }
+        if( type == "gantry" ) {
+            gantry line;
+            line.name = ( entry.name == "none" ? std::string() : entry.name );
+            line.range_max = entry.range_max;
+            line.range_min = entry.range_min;
+            auto closed { false };
+            int masts { 0 };
+            while( index < count ) {
+                auto const key { Tokens[ index++ ] };
+                if( key == "endgantry" ) { closed = true; break; }
+                if( key == "node" ) { --index; break; }
+                auto const one = [ & ]() -> std::string {
+                    if( index < count && Tokens[ index ] != "endgantry" ) { return Tokens[ index++ ]; }
+                    report( line.name, "\"" + key + "\" needs a value" ); good = false; return {}; };
+                if( key == "beam" ) { line.beam = one(); }
+                else if( key == "level" ) { line.high = ( one() == "high" ); }
+                else if( key == "side" ) { line.side = ( one() == "-1" ? -1 : 1 ); }
+                else if( key == "skin" ) { line.skin = one(); }
+                else if( key == "mast" ) {
+                    if( masts >= 2 ) { report( line.name, "a gantry has two masts" ); good = false; break; }
+                    line.masts[ masts ] = one();
+                    for( auto &coordinate : line.points[ masts ] ) {
+                        if( false == to_number( one(), coordinate ) ) { report( line.name, "\"mast\" needs a type and three numbers" ); good = false; break; }
+                    }
+                    ++masts;
+                }
+                else { report( line.name, "unexpected token \"" + key + "\" in a gantry" ); good = false; }
+            }
+            if( false == closed ) { report( line.name, "missing \"endgantry\"" ); good = false; }
+            if( masts != 2 || line.beam.empty() ) { report( line.name, "a gantry needs a beam and two masts" ); good = false; }
+            if( good ) { Output.gantries.push_back( line ); }
+            continue;
+        }
         if( type != "suspension" ) {
             // inny rodzaj wpisu: jeden komunikat i pominięcie całej jego treści, do następnego wpisu
             report( entry.name, "node type \"" + type + "\" isn't supported in a catenary file, only \"suspension\" is" );
@@ -258,6 +291,25 @@ std::string write_chain( chain const &Entry ) {
     text += " suspensions";
     for( auto const &name : Entry.suspensions ) { text += " " + name; }
     return text + " endchain";
+}
+
+std::string write_gantry( gantry const &Entry ) {
+
+    auto const number = []( double const Value, int const Precision ) {
+        std::ostringstream stream;
+        stream.imbue( std::locale::classic() );
+        stream.setf( std::ios::fixed );
+        stream.precision( Precision );
+        stream << Value;
+        return stream.str();
+    };
+    std::string text { "node " + number( Entry.range_max, 0 ) + " " + number( Entry.range_min, 0 ) + " " + ( Entry.name.empty() ? std::string( "none" ) : Entry.name ) + " gantry" };
+    text += " beam " + Entry.beam + " level " + ( Entry.high ? "high" : "low" ) + " side " + std::to_string( Entry.side );
+    if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
+    for( int mast = 0; mast < 2; ++mast ) {
+        text += " mast " + Entry.masts[ mast ] + " " + number( Entry.points[ mast ][ 0 ], 3 ) + " " + number( Entry.points[ mast ][ 1 ], 3 ) + " " + number( Entry.points[ mast ][ 2 ], 3 );
+    }
+    return text + " endgantry";
 }
 
 double support_data::half_width( double const Height ) const {

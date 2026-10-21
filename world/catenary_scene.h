@@ -85,3 +85,14 @@ bool catenary_chain_update( std::size_t Index, catenary::chain const &Data );
 void catenary_chain_remove( std::size_t Index );
 // łańcuch, do którego należy podwieszenie, i jego miejsce w łańcuchu; -1 gdy żaden
 int catenary_chain_of( std::size_t Suspension, std::size_t &Position );
+
+// ---- bramki (wpisy "gantry" w pliku sieci): słupy i dźwigar; zwisy z wysięgnikami to zwykłe podwieszenia -----------------
+std::size_t catenary_gantry_size();
+catenary::gantry const *catenary_gantry_get( std::size_t Index );
+std::string catenary_gantry_file( std::size_t Index );
+std::size_t catenary_gantry_parts( std::size_t Index );
+std::size_t catenary_gantry_add( std::string const &File, catenary::gantry const &Data );
+// zmienia bramkę (także przywraca usuniętą) i wstawia jej modele od nowa
+bool catenary_gantry_update( std::size_t Index, catenary::gantry const &Data );
+void catenary_gantry_remove( std::size_t Index );
+std::string catenary_scene_new_gantry_name( std::string const &File );

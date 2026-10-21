@@ -114,7 +114,11 @@ struct cantilever_pole {
     double length { 0.0 };              // długość, na której biegnie zbieżność, liczona od góry
     double depth_top { 0.0 };           // wymiar od toru w głąb (prostopadle do toru) u góry
     double depth_base { 0.0 };          // to samo na końcu długości zbieżności
-    double mount_max { 0.0 };           // najwyżej położona oś śrub mocowania; 0 = bez ograniczenia
+    double mount_max { 0.0 };           // najwyżej położona oś śrub mocowania; 0 = bez ograniczenia (zwis na bramce: ujemna, pod dźwigarem)
+    double mount_min { 0.0 };           // najniżej położona oś śrub mocowania (zwis: nad jego końcem); tylko gdy has_mount_min
+    bool   has_mount_min { false };
+    double turn { 0.0 };                // obrót modelu wokół pionu względem płaszczyzny wysięgnika [stopnie] (zwis: 90)
+    std::string drop;                   // zwis na bramce: rodzina zwisów (np. 4850), do której pasuje dźwigar; pusta = zwykły słup
     std::string strut;                  // mocowanie ukośnika (część z punktem axis i zawiasem)
     std::string stay;                   // mocowanie izolatora odciągu
     std::string steady;                 // mocowanie izolatora wysięgu pomocniczego (schematy z trzema zaczepami)
@@ -151,6 +155,26 @@ struct cantilever_assembly {
 };
 
 // katalog wysięgników wczytany z pliku danych
+// słup bramki: model z zerem w osi słupa na wysokości główki szyny, Y modelu wzdłuż dźwigara, X wzdłuż toru
+struct gantry_mast {
+    std::string name;
+    std::string model;
+    double width { 0.0 };               // wzdłuż toru
+    double length { 0.0 };              // wzdłuż dźwigara
+    double height { 0.0 };
+    double mount_low { 0.0 };           // prześwit (spód dźwigara nad główką szyny) w dolnym i górnym mocowaniu
+    double mount_high { 0.0 };
+    double offset { 0.0 };              // przesunięcie dźwigara wzdłuż toru względem osi słupa
+    bool   through { false };           // przelotowy (dźwigary z obu stron); false = końcowy
+};
+// dźwigar bramki: model z zerem w osi pierwszego słupa na spodzie dźwigara, X modelu wzdłuż dźwigara
+struct gantry_beam {
+    std::string name;
+    std::string model;
+    double span { 0.0 };                // rozstaw osi słupów
+    std::string drop;                   // rodzina pasujących zwisów
+};
+
 class cantilever_catalog {
 public:
     // rozbiera plik podany jako kolejne słowa (już bez komentarzy); błędy trafiają do Errors
@@ -165,6 +189,10 @@ public:
     cantilever_assembly const *assembly( std::string const &Name ) const;
     // karta z tej samej dziesiątki co Card, której pasmo A obejmuje podaną odległość; nullptr gdy żadna
     cantilever_scheme const *scheme_for_reach( int Card, int Execution, double Reach ) const;
+    gantry_mast const *mast( std::string const &Name ) const;
+    gantry_beam const *beam( std::string const &Name ) const;
+    std::map<std::string, gantry_mast> const &masts() const { return m_masts; }
+    std::map<std::string, gantry_beam> const &beams() const { return m_beams; }
     // katalog modeli części względem katalogu modeli symulatora, z ukośnikiem na końcu (wpis "models" w pliku danych)
     std::string const &models() const { return m_models; }
     std::size_t part_count() const { return m_parts.size(); }
@@ -183,6 +211,8 @@ private:
     std::map<std::string, cantilever_pole> m_poles;
     std::map<std::string, cantilever_mount> m_mounts;
     std::map<std::string, cantilever_assembly> m_assemblies;
+    std::map<std::string, gantry_mast> m_masts;
+    std::map<std::string, gantry_beam> m_beams;
 };
 
 // punkt w płaszczyźnie wysięgnika

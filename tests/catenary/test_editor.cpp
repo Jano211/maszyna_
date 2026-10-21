@@ -158,6 +158,43 @@ int main( int, char *argv[] ) {
         check( content.find( "chain power pwr01" ) != std::string::npos && content.find( "suspensions s0001 s0003 endchain" ) != std::string::npos, "zapis: lancuch z nowa lista" );
         std::remove( "tests/catenary/td_lancuch_test.scm" );
     }
+    // 5. bramka: zapis, odczyt, słupy i dźwigar w scenerii
+    {
+        catenary::gantry line;
+        line.name = "b1"; line.beam = "E100"; line.side = -1; line.high = true;
+        line.masts[ 0 ] = "3031-1"; line.masts[ 1 ] = "3032-1";
+        line.points[ 0 ][ 0 ] = 0.0; line.points[ 0 ][ 1 ] = 0.2; line.points[ 0 ][ 2 ] = 50.0;
+        line.points[ 1 ][ 0 ] = 10.0; line.points[ 1 ][ 1 ] = 0.2; line.points[ 1 ][ 2 ] = 50.0;
+        auto const written { catenary::write_gantry( line ) };
+        std::vector<std::string> tokens; std::istringstream words { written };
+        for( std::string word; words >> word; ) { tokens.push_back( word ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( tokens, "bramka", parsed, problems );
+        check( problems.empty() && parsed.gantries.size() == 1 && catenary::write_gantry( parsed.gantries.front() ) == written, "bramka: zapis i odczyt daja to samo" );
+        catenary_scene_clear(); catenary_scene_resolve(); errors.clear();
+        auto const before { simulation::State.created.size() };
+        auto const index { catenary_gantry_add( "td_bramka_test.scm", line ) };
+        auto const &created { simulation::State.created };
+        auto good { catenary_gantry_parts( index ) == 3 && created.size() == before + 3 && errors.empty() };
+        if( good ) {
+            auto const &mastb { created[ before + 1 ] };
+            auto const &beam { created[ before + 2 ] };
+            good = std::abs( mastb.position.x - 10.0 ) < 1e-6 && std::abs( mastb.position.z - 50.0 ) < 1e-6 && mastb.entry.find( "slupy/3032-1.t3d" ) != std::string::npos
+                && std::abs( beam.position.y - ( 0.2 + 7.75 ) ) < 1e-6 && std::abs( std::abs( beam.position.z - 50.0 ) - 0.121 ) < 1e-6 && beam.entry.find( "dzwigary/10m.t3d" ) != std::string::npos;
+            std::printf( "  %s @ %.3f %.3f %.3f\n", beam.entry.c_str(), beam.position.x, beam.position.y, beam.position.z );
+        }
+        check( good, "bramka: slupy w punktach, dzwigar na przeswicie gornym, przesuniety o offset wzdluz toru" );
+        // zwis 4850 na dźwigarze jako "pływający słup"
+        catenary::suspension drop;
+        drop.card = 1112; drop.execution = 1; drop.range_max = 1000;
+        drop.has_at = true; drop.at[ 0 ] = 4.0; drop.at[ 1 ] = 5.8; drop.at[ 2 ] = 50.1;
+        drop.has_rope = true; drop.rope[ 0 ] = 4.0; drop.rope[ 1 ] = 7.5; drop.rope[ 2 ] = 50.1;
+        drop.has_pole = true; drop.pole_type = "4850-3"; drop.pole[ 0 ] = 2.0; drop.pole[ 1 ] = 0.2 + 7.75; drop.pole[ 2 ] = 50.1;
+        catenary::cantilever_result probe;
+        auto const assembled { catenary_scene_probe( drop, probe ) };
+        for( auto const &warning : probe.warnings ) { std::printf( "  uwaga: %s\n", warning.c_str() ); }
+        check( assembled, "wysiegnik na zwisie 4850-3 sklada sie" );
+    }
     for( auto const &line : errors ) { std::printf( "  %s\n", line.c_str() ); }
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDY: %d\n", failures );
     return failures;
