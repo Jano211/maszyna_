@@ -5069,8 +5069,11 @@ void editor_mode::draw_build_overlay() const
 		}
 	};
 	auto const &display{ImGui::GetIO().DisplaySize};
+	// the ends of all the paths; not in the catenary, where they're of no use and cost a lot in a big scenery
 	for (auto const *track : simulation::Paths.sequence())
 	{
+		if (m_track_tab == track_tab::catenary)
+			break;
 		if (track == nullptr || track->m_editorremoved || track->m_paths.empty())
 			continue;
 		for (auto const &path : track->m_paths)
