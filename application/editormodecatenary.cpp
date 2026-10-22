@@ -1070,6 +1070,113 @@ void catenary_editor::catenary_place(catenary_spot const &Spot)
 		tool.toward = toward;
 }
 
+// the span from the suspension the wires are being hung from (tool.connect_from) to To: To goes on the chain at its end,
+// From goes on the chain of To at its end, the two chains become one, or the two make a new chain
+void catenary_editor::catenary_connect(std::size_t const To)
+{
+	auto &tool{m_catenary};
+	auto const from{static_cast<std::size_t>(tool.connect_from)};
+	auto const *a{catenary_scene_get(from)};
+	auto const *b{catenary_scene_get(To)};
+	if (a == nullptr)
+	{
+		tool.connect_from = -1;
+		return;
+	}
+	if (b == nullptr || To == from)
+		return;
+	auto const file{catenary_scene_file_of(from)};
+	if (catenary_scene_file_of(To) != file)
+	{
+		tool.status = STR("The poles are in different files: a chain can't join them");
+		return;
+	}
+	std::size_t pa{0}, pb{0};
+	auto const ca{catenary_chain_of(from, pa)};
+	auto const cb{catenary_chain_of(To, pb)};
+	auto const *chaina{ca >= 0 ? catenary_chain_get(static_cast<std::size_t>(ca)) : nullptr};
+	auto const *chainb{cb >= 0 ? catenary_chain_get(static_cast<std::size_t>(cb)) : nullptr};
+	if (chaina != nullptr && ca == cb)
+	{
+		tool.status = STR("Both poles are in this chain already");
+		return;
+	}
+	auto const end = [](catenary::chain const *Chain, std::size_t const Position) {
+		return Chain == nullptr || Position == 0 || Position + 1 == Chain->suspensions.size();
+	};
+	if (false == end(chaina, pa) || false == end(chainb, pb))
+	{
+		tool.status = STR("The pole is in the middle of a chain: the spans go on from the ends of a chain only");
+		return;
+	}
+	++tool.group;
+	// a pole from before the editor had no name, a chain needs it
+	auto const named = [&](std::size_t const Index) {
+		auto data{*catenary_scene_get(Index)};
+		if (false == data.name.empty())
+			return data.name;
+		tool.undo.push_back({tool.group, false, Index, data, std::nullopt, false});
+		data.name = catenary_scene_new_name(file);
+		catenary_scene_update(Index, data);
+		return data.name;
+	};
+	auto const namea{named(from)};
+	auto const nameb{named(To)};
+	int result{-1};
+	if (chaina != nullptr)
+	{
+		// From's chain with From last, then To (and To's chain from To on)
+		auto changed{*chaina};
+		if (pa == 0 && changed.suspensions.size() > 1)
+			std::reverse(changed.suspensions.begin(), changed.suspensions.end());
+		if (chainb != nullptr)
+		{
+			auto other{chainb->suspensions};
+			if (pb != 0)
+				std::reverse(other.begin(), other.end());
+			changed.suspensions.insert(changed.suspensions.end(), other.begin(), other.end());
+			tool.undo.push_back({tool.group, true, static_cast<std::size_t>(cb), std::nullopt, *chainb, false});
+			catenary_chain_remove(static_cast<std::size_t>(cb));
+		}
+		else
+			changed.suspensions.push_back(nameb);
+		tool.undo.push_back({tool.group, true, static_cast<std::size_t>(ca), std::nullopt, *chaina, false});
+		catenary_chain_update(static_cast<std::size_t>(ca), changed);
+		result = ca;
+	}
+	else if (chainb != nullptr)
+	{
+		// From before To on To's chain
+		auto changed{*chainb};
+		if (pb == 0)
+			changed.suspensions.insert(changed.suspensions.begin(), namea);
+		else
+			changed.suspensions.push_back(namea);
+		tool.undo.push_back({tool.group, true, static_cast<std::size_t>(cb), std::nullopt, *chainb, false});
+		catenary_chain_update(static_cast<std::size_t>(cb), changed);
+		result = cb;
+	}
+	else
+	{
+		catenary::chain created;
+		created.name = catenary_scene_new_chain_name(file);
+		created.power = tool.power;
+		created.voltage = tool.voltage;
+		created.material = kMaterials[std::clamp(tool.material, 0, 1)];
+		created.state = kStateValues[std::clamp(tool.state, 0, 2)];
+		created.type = tool.networks.empty() ? std::string{} : tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
+		created.suspensions = {namea, nameb};
+		result = static_cast<int>(catenary_chain_add(file, created));
+		tool.undo.push_back({tool.group, true, static_cast<std::size_t>(result), std::nullopt, std::nullopt, false});
+	}
+	tool.chain_selected = result;
+	// the next click goes on from this pole
+	tool.connect_from = static_cast<int>(To);
+	tool.selected = static_cast<int>(To);
+	tool.probed = false;
+	tool.status = format(STR_C("Span %s - %s hung; LMB the next pole, or stop with the button"), namea.c_str(), nameb.c_str());
+}
+
 // what hangs on a span of a gantry: the drops on its beam and the cantilevers straight on its masts
 void catenary_editor::catenary_gantry_hangers(std::size_t const Gantry, std::vector<std::pair<std::size_t, catenary::suspension>> &Hangers) const
 {
@@ -1113,6 +1220,12 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 	tool.pressed = {mouse.x, mouse.y};
 	if (is_intent(Intent, intent_detail::select))
 	{
+		if (tool.connect_from >= 0)
+		{
+			// hanging the wires on: the span from the last pole to this one
+			catenary_connect(static_cast<std::size_t>(Intent.index));
+			return;
+		}
 		catenary_select(Intent.index);
 		// held and dragged: the pole goes along the track
 		tool.dragging = tool.selected >= 0 ? 1 : 0;
@@ -1256,6 +1369,7 @@ void catenary_editor::catenary_chain_apply()
 bool catenary_editor::catenary_delete_selected()
 {
 	auto &tool{m_catenary};
+	tool.connect_from = -1;
 	if (tool.selected < 0)
 		return false;
 	auto const index{static_cast<std::size_t>(tool.selected)};
@@ -1283,6 +1397,7 @@ bool catenary_editor::catenary_delete_selected()
 bool catenary_editor::catenary_undo()
 {
 	auto &tool{m_catenary};
+	tool.connect_from = -1;
 	// in the middle of a drag, or with nothing of its own: the editor takes back its own changes
 	if (tool.dragging != 0 || tool.undo.empty())
 		return false;
@@ -1717,6 +1832,14 @@ void catenary_editor::render_catenary_ui()
 				if (data == nullptr)
 					return;
 			}
+			// the wires from this pole to others already standing
+			if (ImGui::Button(tool.connect_from >= 0 ? STR_C("Stop hanging the wires") : STR_C("Hang the wires to another pole")))
+			{
+				tool.connect_from = tool.connect_from >= 0 ? -1 : tool.selected;
+				tool.status = tool.connect_from >= 0 ? STR("LMB the next pole: the span from this one is hung to it; then the next one, and so on") : std::string{};
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Joins this pole with the poles clicked after it: it goes on the chain at its end, a new chain of the two, or two chains become one"));
 			// copying to the neighbours in the chain
 			std::size_t position{0};
 			auto const chain{catenary_chain_of(static_cast<std::size_t>(tool.selected), position)};
@@ -1769,9 +1892,20 @@ void catenary_editor::render_catenary_ui()
 				ImGui::EndCombo();
 			}
 		};
-		combo(STR_C("First mast"), tool.mast_first);
+		{
+			// the second mast follows the first until the user picks it himself
+			auto const before{tool.mast_first};
+			combo(STR_C("First mast"), tool.mast_first);
+			if (tool.mast_first != before && false == tool.mast_second_own)
+				tool.mast_second = tool.mast_first;
+		}
 		ImGui::SameLine();
-		combo(STR_C("Second mast"), tool.mast_second);
+		{
+			auto const before{tool.mast_second};
+			combo(STR_C("Second mast"), tool.mast_second);
+			if (tool.mast_second != before)
+				tool.mast_second_own = true;
+		}
 		ImGui::PopItemWidth();
 		ImGui::TextUnformatted(STR_C("Beam:"));
 		ImGui::SameLine();
@@ -1821,6 +1955,74 @@ void catenary_editor::render_catenary_ui()
 		if (auto const *gantry{tool.gantry_selected >= 0 ? catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected)) : nullptr}; gantry != nullptr)
 		{
 			ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Gantry %s, beam %s: the cantilevers go on drops on it"), gantry->name.c_str(), gantry->beam.c_str()).c_str());
+			{
+				// the mount of the beam of this span, changed in place (the drops and the cantilevers on them follow)
+				auto high{gantry->high};
+				ImGui::TextUnformatted(STR_C("Beam of this gantry:"));
+				ImGui::SameLine();
+				if (ImGui::RadioButton((std::string{STR_C("lower mount")} + "##selected").c_str(), false == high))
+					high = false;
+				ImGui::SameLine();
+				if (ImGui::RadioButton((std::string{STR_C("upper mount")} + "##selected").c_str(), high))
+					high = true;
+				if (high != gantry->high)
+				{
+					auto const selected{static_cast<std::size_t>(tool.gantry_selected)};
+					// the drops on the beam: where along it they hang, to hang them again on it at its new level
+					std::vector<std::pair<std::size_t, catenary::suspension>> hangers;
+					catenary_gantry_hangers(selected, hangers);
+					glm::dvec3 from, to;
+					double bottom{0.0};
+					catenary_gantry_beam(selected, from, to, bottom);
+					std::vector<std::pair<std::size_t, double>> along;
+					for (auto const &[index, data] : hangers)
+					{
+						auto const *pole{catalog->pole(data.pole_type)};
+						if (pole == nullptr || pole->gantry)
+							continue; // the cantilevers on the masts follow the beam by themselves
+						auto const u{plan_of(to) - plan_of(from)};
+						along.emplace_back(index, std::clamp(glm::dot(plan_of(glm::dvec3{data.pole[0], 0.0, data.pole[2]}) - plan_of(from), u) / std::max(glm::dot(u, u), 1e-9), 0.0, 1.0));
+					}
+					auto changed{*gantry};
+					changed.high = high;
+					++tool.group;
+					catenary_change change;
+					change.group = tool.group;
+					change.gantry = true;
+					change.index = selected;
+					change.gantry_before = *gantry;
+					tool.undo.push_back(change);
+					catenary_gantry_update(selected, changed);
+					auto const *beam{catalog->beam(changed.beam)};
+					std::vector<std::pair<double, std::string>> drops;
+					for (auto const &pole : catalog->poles())
+						if (beam != nullptr && pole.second.drop == beam->drop)
+							drops.emplace_back(pole.second.length, pole.first);
+					std::sort(drops.begin(), drops.end());
+					if (catenary_gantry_beam(selected, from, to, bottom) && false == drops.empty())
+						for (auto const &[index, t] : along)
+						{
+							auto const *before{catenary_scene_get(index)};
+							if (before == nullptr)
+								continue;
+							tool.undo.push_back({tool.group, false, index, *before, std::nullopt, false});
+							auto data{*before};
+							data.pole[1] = from.y + (to.y - from.y) * t;
+							// the shortest drop which still reaches down to the lowest mount of the cantilever
+							for (auto const &drop : drops)
+							{
+								data.pole_type = drop.second;
+								catenary::cantilever_result probe;
+								catenary_scene_probe(data, probe);
+								if (std::none_of(probe.warnings.begin(), probe.warnings.end(), [](std::string const &Warning) { return Warning.find("below the lowest mount") != std::string::npos; }))
+									break;
+							}
+							catenary_scene_update(index, data);
+							tool.spots.erase(index);
+						}
+					tool.status = format(high ? STR_C("Gantry %s: the beam on the upper mount") : STR_C("Gantry %s: the beam on the lower mount"), changed.name.c_str());
+				}
+			}
 			// another beam: the first mast stays, the second goes as far as the beam spans
 			ImGui::PushItemWidth(120.0f);
 			if (ImGui::BeginCombo(STR_C("Beam"), gantry->beam.c_str()))
@@ -1884,7 +2086,6 @@ void catenary_editor::render_catenary_ui()
 					auto const out{glm::normalize(plan_of(from) - plan_of(other))};
 					tool.gantry_track = glm::dvec2{out.y, -out.x};
 					tool.gantry_square = true;
-					tool.gantry_high = gantry->high;
 					std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", gantry->skin.c_str());
 					if (auto const found{std::find(tool.masts.begin(), tool.masts.end(), gantry->masts[k])}; found != tool.masts.end())
 						tool.mast_first = static_cast<int>(found - tool.masts.begin());
@@ -1905,7 +2106,6 @@ void catenary_editor::render_catenary_ui()
 					auto const out{glm::normalize(plan_of(from) - plan_of(other))};
 					tool.gantry_track = glm::dvec2{out.y, -out.x};
 					tool.gantry_square = true;
-					tool.gantry_high = gantry->high;
 					std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", gantry->skin.c_str());
 					if (auto const found{std::find(tool.masts.begin(), tool.masts.end(), gantry->masts[k])}; found != tool.masts.end())
 						tool.mast_first = static_cast<int>(found - tool.masts.begin());
@@ -2451,7 +2651,7 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 	if (auto const hit{catenary_hit()}; hit >= 0)
 	{
 		Intent.index = hit;
-		Intent.action = STR("Click: select the pole");
+		Intent.action = m_catenary.connect_from >= 0 ? STR("Click: hang the span to this pole") : STR("Click: select the pole");
 		Intent.what = kind::catenary;
 		Intent.detail = static_cast<int>(intent_detail::select);
 		return true;

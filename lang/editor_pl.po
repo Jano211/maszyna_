@@ -5714,3 +5714,39 @@ msgstr "Wyłączone: wysokość konstrukcyjna z karty (1,70 / 1,30 ...). Włącz
 
 msgid "hk (m)"
 msgstr "hk (m)"
+
+msgid "Beam of this gantry:"
+msgstr "Dźwigar tej bramki:"
+
+msgid "Gantry %s: the beam on the upper mount"
+msgstr "Bramka %s: dźwigar na górnym mocowaniu"
+
+msgid "Gantry %s: the beam on the lower mount"
+msgstr "Bramka %s: dźwigar na dolnym mocowaniu"
+
+msgid "Stop hanging the wires"
+msgstr "Zakończ rozwieszanie"
+
+msgid "Hang the wires to another pole"
+msgstr "Rozwieś druty do innego słupa"
+
+msgid "LMB the next pole: the span from this one is hung to it; then the next one, and so on"
+msgstr "LPM na następny słup: rozwiesza się do niego przęsło od tego; potem kolejny i tak dalej"
+
+msgid "Joins this pole with the poles clicked after it: it goes on the chain at its end, a new chain of the two, or two chains become one"
+msgstr "Łączy ten słup z klikniętymi po nim: dołącza do końca łańcucha, tworzy nowy łańcuch z dwóch słupów albo skleja dwa łańcuchy w jeden"
+
+msgid "The poles are in different files: a chain can't join them"
+msgstr "Słupy są w różnych plikach: łańcuch ich nie połączy"
+
+msgid "Both poles are in this chain already"
+msgstr "Oba słupy są już w tym łańcuchu"
+
+msgid "The pole is in the middle of a chain: the spans go on from the ends of a chain only"
+msgstr "Słup jest w środku łańcucha: przęsła dokłada się tylko od końców łańcucha"
+
+msgid "Span %s - %s hung; LMB the next pole, or stop with the button"
+msgstr "Przęsło %s - %s rozwieszone; LPM na następny słup albo zakończ przyciskiem"
+
+msgid "Click: hang the span to this pole"
+msgstr "Klik: rozwieś przęsło do tego słupa"
