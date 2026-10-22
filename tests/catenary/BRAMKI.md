@@ -81,3 +81,8 @@ Parametry do składania są w komentarzach w nagłówku jako `//$e_<klucz>=<wart
 - Poprawka (użytkownik 2026-10-22 23:48): między słupami jest o 0,20 m mniej niż numer dźwigara (E101 = 9,9 m), drugiego słupa
   nie obracamy. Rozstaw osi = numer/10 − 0,20 + offsetA + offsetB (`catenary::gantry_spacing`). Edycja postawionej bramki:
   dźwigar z listy / ±0,1 m, obrót wokół środka, „Prostopadle do toru”, „Weź słupy”. Zwisy idą za bramką tylko przy przeciąganiu.
+
+## Bramki wieloprzęsłowe (2026-10-22 wieczór)
+- Słupy końcowe (`end`) kończą bramkę, przelotowe (`through`) mogą kończyć albo stać w środku z dźwigarami z obu stron.
+- Każde przęsło to osobny wpis `gantry`; przęsła na wspólnym słupie (ten sam punkt) tworzą jedną bramkę; słup stawia przęsło o najniższym numerze.
+- Dźwigary 30xx (pojedyncze elementy na jednym słupie przelotowym albo 1901) i 1910 (zewnętrzne półbramek) – jeszcze nie, pytania w PRZEKAZANIE.md.

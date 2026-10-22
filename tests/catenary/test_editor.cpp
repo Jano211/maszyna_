@@ -225,6 +225,35 @@ int main( int, char *argv[] ) {
             }
             check( good, "wysiegnik na slupie bramki 3031-1: bez modelu slupa, mocowania z wyk. 04 pod dzwigarem" );
         }
+        // bramka wieloprzęsłowa: dwa przęsła na wspólnym słupie przelotowym - słup stawia tylko pierwsze; po usunięciu
+        // pierwszego przęsła stawia go drugie
+        {
+            catenary::gantry a;
+            a.name = "w1"; a.beam = "E100"; a.side = 1; a.high = false;
+            a.masts[ 0 ] = "3031-1"; a.masts[ 1 ] = "3031-1";
+            a.points[ 0 ][ 0 ] = 0.0; a.points[ 0 ][ 1 ] = 0.2; a.points[ 0 ][ 2 ] = 80.0;
+            a.points[ 1 ][ 0 ] = 10.042; a.points[ 1 ][ 1 ] = 0.2; a.points[ 1 ][ 2 ] = 80.0;
+            auto b { a };
+            b.name = "w2"; b.masts[ 1 ] = "3032-1";
+            b.points[ 0 ][ 0 ] = 10.042; b.points[ 1 ][ 0 ] = 20.034;
+            errors.clear();
+            auto const ia { catenary_gantry_add( "td_bramka_test.scm", a ) };
+            auto const ib { catenary_gantry_add( "td_bramka_test.scm", b ) };
+            auto good { catenary_gantry_parts( ia ) == 3 && catenary_gantry_parts( ib ) == 2 && errors.empty() };
+            catenary_gantry_remove( ia );
+            good = good && catenary_gantry_parts( ia ) == 0 && catenary_gantry_parts( ib ) == 3;
+            catenary_gantry_update( ia, a );
+            good = good && catenary_gantry_parts( ia ) == 3 && catenary_gantry_parts( ib ) == 2;
+            // słup końcowy z dźwigarami z obu stron: błąd w logu
+            auto c { b };
+            c.name = "w3"; c.masts[ 0 ] = "3032-1"; c.points[ 0 ][ 0 ] = 20.034; c.points[ 1 ][ 0 ] = 29.976;
+            errors.clear();
+            catenary_gantry_add( "td_bramka_test.scm", c );
+            good = good && false == errors.empty();
+            for( auto const &line : errors ) { std::printf( "  (oczekiwany) %s\n", line.c_str() ); }
+            errors.clear();
+            check( good, "bramka wieloprzeslowa: wspolny slup przelotowy stawiany raz, po usunieciu przesla przejmuje go sasiednie" );
+        }
     }
     for( auto const &line : errors ) { std::printf( "  %s\n", line.c_str() ); }
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDY: %d\n", failures );

@@ -5666,3 +5666,18 @@ msgstr ", na peronie"
 
 msgid "Other (not described in traction_catalog.txt)"
 msgstr "Inne (bez opisu w traction_catalog.txt)"
+
+msgid "Next span from mast %d"
+msgstr "Następne przęsło od słupa %d"
+
+msgid "LMB: the next mast of the gantry, as far as the nearest beam spans (the mast type: the second one above)"
+msgstr "LPM: następny słup bramki, tak daleko, jak sięga najbliższy dźwigar (typ słupa: drugi z wybranych wyżej)"
+
+msgid "An end mast: a beam can go on one side of it only; a through mast is needed"
+msgstr "Słup końcowy: dźwigar może być tylko z jednej strony; potrzebny słup przelotowy"
+
+msgid "This mast has beams on both sides already"
+msgstr "Ten słup ma już dźwigary z obu stron"
+
+msgid "The beam of the next span on the other side of this through mast, in line with this span"
+msgstr "Dźwigar następnego przęsła po drugiej stronie tego słupa przelotowego, w linii z tym przęsłem"

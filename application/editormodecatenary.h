@@ -116,7 +116,8 @@ struct catenary_editor
 		int dragging{0}; // 1: the selected pole along the track, 2: the selected gantry along the track
 		glm::vec2 pressed{0.f};
 		glm::dvec3 drag_start{0.0}; // the point of the ground the drag started at
-		std::optional<catenary::gantry> drag_gantry; // the gantry as it was when the drag started
+		std::vector<std::pair<std::size_t, catenary::gantry>> drag_group; // the spans of the dragged gantry as they were when the drag started
+		int drag_undo{0}; // the undo group of the drag, opened at its first move
 		std::vector<std::pair<std::size_t, catenary::suspension>> drag_drops; // the drops of the gantry, as they were
 		int gantry_selected{-1}; // the gantry the drops go to
 		std::string drop_choice; // the drop for the next cantilevers on a gantry; empty: the shortest one which fits
@@ -152,6 +153,7 @@ struct catenary_editor
 	// the selected gantry anew: another beam, masts, turned around its middle (degrees), or square to the nearest track
 	void catenary_gantry_reshape(std::string const &Beam, double const Turn, bool const Square);
 	void catenary_release();
+	void catenary_gantry_hangers(std::size_t const Gantry, std::vector<std::pair<std::size_t, catenary::suspension>> &Hangers) const;
 	bool catenary_delete_selected();
 	bool catenary_undo();
 	void render_catenary_ui();
