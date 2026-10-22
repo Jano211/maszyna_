@@ -91,6 +91,7 @@ struct catenary_editor
 		int last{-1}; // the pole the next span starts at
 		bool append{true}; // the next pole goes after the last one of the chain, otherwise before the first
 		int chain_selected{-1}; // the chain shown in the panel
+		int connect_from{-1}; // hanging the wires on from this suspension: the next poles clicked get the spans
 		char power[64]{"none"};
 		float voltage{3000.0f};
 		int material{0}; // 0 cu, 1 al
@@ -107,6 +108,7 @@ struct catenary_editor
 		std::vector<std::string> masts;
 		int mast_first{0};
 		int mast_second{0};
+		bool mast_second_own{false}; // the second mast was picked by the user: it no longer follows the first
 		bool gantry_high{false};
 		int gantry_side{1};
 		bool gantry_placing{false}; // the next two clicks put the masts
@@ -146,6 +148,7 @@ struct catenary_editor
 	bool catenary_propose_toward(bool &Toward);
 	void catenary_place(catenary_spot const &Spot);
 	void catenary_chain_apply();
+	void catenary_connect(std::size_t const To);
 	int catenary_gantry_hit() const;
 	bool catenary_gantry_beam(std::size_t const Index, glm::dvec3 &From, glm::dvec3 &To, double &Bottom) const;
 	bool catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3 &Second, std::string &Beam) const;
