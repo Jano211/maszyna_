@@ -221,6 +221,16 @@ int main( int, char *argv[] ) {
                         good = good && stay->second <= 7.75 - 0.15 + 1e-6;
                     }
                     for( auto const &warning : probe.warnings ) { if( warning.find( "above the highest mount" ) != std::string::npos ) { good = false; } }
+                    // edycja postawionego: inny odsuw - podwieszenie składa się od nowa (zgłoszenie 2026-10-22: "nic się nie dzieje")
+                    auto const placed { catenary_scene_add( "td_edytor_test.scm", onmast ) };
+                    auto const partsbefore { catenary_scene_parts( placed ) };
+                    auto edited { onmast };
+                    edited.at[ 0 ] -= 0.2; edited.rope[ 0 ] -= 0.2;
+                    auto const deletedbefore { mock_deleted_parts };
+                    auto const updated { catenary_scene_update( placed, edited ) };
+                    std::printf( "  edycja na slupie bramki: czesci %zu -> %zu, usuniete %d, at %.2f\n", partsbefore, catenary_scene_parts( placed ), mock_deleted_parts - deletedbefore, catenary_scene_get( placed )->at[ 0 ] );
+                    good = good && updated && partsbefore > 0 && catenary_scene_parts( placed ) > 0 && mock_deleted_parts - deletedbefore == static_cast<int>( partsbefore );
+                    catenary_scene_remove( placed );
                 }
             }
             check( good, "wysiegnik na slupie bramki 3031-1: bez modelu slupa, mocowania z wyk. 04 pod dzwigarem" );
