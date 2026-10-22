@@ -33,11 +33,14 @@ void catenary_scene_data( std::string const &Directory );
 #include "world/catenary_suspension.h"
 #include "world/catenary_cantilever.h"
 #include "world/catenary_layout.h"
+#include "world/catenary_catalog.h"
 
 // katalog wysięgników (części, karty, słupy, mocowania); nullptr gdy nie dało się go wczytać
 catenary::cantilever_catalog const *catenary_scene_catalog();
 // zasady rozstawiania konstrukcji (data/traction_layout.txt); pusta tablica, gdy pliku nie ma
 catenary::layout_tables const &catenary_scene_layout();
+// opisany katalog konstrukcji dla edytora (traction_catalog.txt): kategorie, grupy, rodziny kart, grupy słupów; pusty gdy brak pliku
+catenary::structure_catalog const &catenary_scene_structures();
 // liczba miejsc na liście podwieszeń (z usuniętymi)
 std::size_t catenary_scene_size();
 // podwieszenie o podanym numerze; nullptr gdy usunięte albo numer spoza listy

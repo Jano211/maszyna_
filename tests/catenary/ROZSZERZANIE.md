@@ -11,6 +11,7 @@ są w `PRZEKAZANIE.md` (sekcja START TUTAJ), koncepcja edytora w `KONCEPCJA_EDYT
 | Generator | `etap0/gen_cantilevers.py` (+ `etap0/zlozenia.json` ze złożeń z Blendera) | człowiek / Claude | raz, przed grą |
 | Katalog wysięgników | `data/traction_cantilevers.txt` | **tylko generator** | czytany przez exe |
 | Konstrukcje wsporcze | `data/traction_supports.txt` | **ręcznie** (docelowo panel w edytorze exe) | czytany przez exe |
+| Katalog dla edytora | `data/traction_catalog.txt` (kategorie, grupy, rodziny kart, grupy słupów, opisy) | **ręcznie** | czytany przez edytor |
 | Składanie | `world/catenary_cantilever.cpp` (solver), `world/catenary_scene.cpp` (sceneria, 25 kV, dobór rur) | C++ | przy wczytaniu scenerii |
 
 Exe czyta oba pliki danych do jednego katalogu. Python w grze nie bierze udziału.
@@ -22,6 +23,7 @@ Exe czyta oba pliki danych do jednego katalogu. Python w grze nie bierze udział
 - **Wymiar albo punkt części, nowa część, karta, zestaw ramion, przepis składania (`assembly`)** → `gen_cantilevers.py`,
   potem wygenerować. **Nigdy ręcznie w `traction_cantilevers.txt`** – zginie przy następnym generowaniu.
   (Wyjątek: ręczna zmiana w katalogu symulatora na próbę – po potwierdzeniu przenieść wartość do generatora.)
+- **Nowa karta albo nowy słup** → dopisać też do `data/traction_catalog.txt` (rodzina / grupa słupów), inaczej edytor go nie zaproponuje; test `tk` wypisuje karty i słupy bez opisu.
 - **Nowy rodzaj kroku w przepisie, nowe słowo w danych, nowe zachowanie** (np. `foundation`, `clearance`) → C++.
   Nowe słowo zawsze z wartością domyślną, przy której stare dane działają jak dotąd.
 

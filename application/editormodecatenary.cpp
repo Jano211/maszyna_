@@ -259,6 +259,15 @@ void catenary_editor::catenary_scan()
 		for (auto const &mast : catalog->masts())
 			tool.masts.push_back(mast.first);
 	}
+	// the first group of the described catalogue to start with: the tubular swinging ones, if they're there
+	if (auto const &structures{catenary_scene_structures()}; false == structures.empty() && structures.group(tool.catalog_group) == nullptr)
+	{
+		auto const *start{structures.group("t_tube_swing")};
+		if (start == nullptr)
+			start = &structures.groups().front();
+		tool.catalog_group = start->id;
+		tool.catalog_kind = start->category;
+	}
 	tool.networks = catenary_scene_layout().symbols();
 	auto const preferred{std::find(tool.networks.begin(), tool.networks.end(), std::string{"YwsC120-2C"})};
 	tool.network = preferred != tool.networks.end() ? static_cast<int>(preferred - tool.networks.begin()) : 0;
@@ -533,12 +542,32 @@ void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearan
 	auto const polepoint{glm::dvec3{Spot.axis.x, railhead, Spot.axis.z} + out * axisdistance};
 	auto const wire{glm::dvec3{Spot.axis.x, railhead + height, Spot.axis.z} + out * offset};
 	Spot.reach = axisdistance - offset - 0.5 * pole->depth(height);
-	catenary::suspension_family family;
-	family.swinging = tool.swinging;
-	family.curve = Spot.curve;
-	family.toward_pole = Toward;
-	auto const decade{catenary::family_decade(family)};
-	auto const *scheme{catalog->scheme_for_reach(decade, tool.execution, Spot.reach)};
+	// the card: from the group of the described catalogue, or (without it) from the tubular families 11xx/12xx
+	catenary::cantilever_scheme const *scheme{nullptr};
+	auto const &structures{catenary_scene_structures()};
+	auto const described{false == structures.empty() && structures.group(tool.catalog_group) != nullptr};
+	int decade{0};
+	std::string pickproblem;
+	Spot.family.clear();
+	Spot.execution_changed = false;
+	if (described)
+	{
+		auto const pick{catenary::pick_card(structures, *catalog, tool.catalog_group, tool.catalog_family, tool.catalog_card, Spot.curve, Toward, tool.execution, Spot.reach)};
+		scheme = pick.scheme;
+		if (pick.family != nullptr)
+			Spot.family = pick.family->id;
+		Spot.execution_changed = pick.execution_changed;
+		pickproblem = pick.problem;
+	}
+	else
+	{
+		catenary::suspension_family family;
+		family.swinging = tool.swinging;
+		family.curve = Spot.curve;
+		family.toward_pole = Toward;
+		decade = catenary::family_decade(family);
+		scheme = catalog->scheme_for_reach(decade, tool.execution, Spot.reach);
+	}
 	auto &data{Spot.data};
 	data = catenary::suspension();
 	data.range_max = 1000.0;
@@ -556,11 +585,15 @@ void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearan
 		data.insulators = "25";
 	if (scheme == nullptr)
 	{
-		Spot.problem = format(STR_C("No card %d0-%d9 in execution %d for A = %.2f m (cards cover A 1.45-4.45 m, not all of them are in every family)"), decade / 10, decade / 10, tool.execution, Spot.reach);
+		if (described)
+			Spot.problem = pickproblem.find("no group") == 0 ? pickproblem : format(STR_C("No card of the group for A = %.2f m"), Spot.reach);
+		else
+			Spot.problem = format(STR_C("No card %d0-%d9 in execution %d for A = %.2f m (cards cover A 1.45-4.45 m, not all of them are in every family)"), decade / 10, decade / 10, tool.execution, Spot.reach);
 		return;
 	}
 	Spot.card = scheme->card;
 	data.card = scheme->card;
+	data.execution = scheme->execution;
 	data.has_rope = true;
 	data.rope[0] = wire.x;
 	data.rope[1] = wire.y + scheme->height;
@@ -623,7 +656,11 @@ std::string catenary_editor::catenary_intent_label(catenary_spot const &Spot) co
 	auto const offset{Spot.toward ? STR("towards the pole") : STR("away from the pole")};
 	if (Spot.card == 0)
 		return format(STR_C("Pole here, %s, wires %s: %s"), where.c_str(), offset.c_str(), Spot.problem.c_str());
-	auto label{format(STR_C("Click: pole %s, card %d execution %d, A = %.2f m (%s, wires %s)"), Spot.data.pole_type.c_str(), Spot.card, Spot.data.execution, Spot.reach, where.c_str(), offset.c_str())};
+	auto label{format(STR_C("Click: pole %s, card %04d execution %d, A = %.2f m (%s, wires %s)"), Spot.data.pole_type.c_str(), Spot.card, Spot.data.execution, Spot.reach, where.c_str(), offset.c_str())};
+	if (auto const *family{catenary_scene_structures().family(Spot.family)}; family != nullptr)
+		label += "\n" + family->title;
+	if (Spot.execution_changed)
+		label += "\n" + format(STR_C("execution %d has no card for this A, execution %d taken"), m_catenary.execution, Spot.data.execution);
 	if (m_catenary.chaining && m_catenary.last >= 0 && catenary_scene_get(static_cast<std::size_t>(m_catenary.last)) != nullptr)
 		label += "\n" + format(STR_C("with the span from the last pole, %.1f m"), glm::length(plan_of(wire_of(Spot.data)) - plan_of(wire_of(*catenary_scene_get(static_cast<std::size_t>(m_catenary.last))))));
 	return label;
@@ -701,6 +738,15 @@ void catenary_editor::catenary_select(int const Index)
 		tool.pole = static_cast<int>(found - tool.poles.begin());
 	tool.execution = std::clamp(data->execution, 1, 5);
 	tool.swinging = data->card / 100 != 12;
+	// the group of its card in the described catalogue: changing the settings keeps it in that group
+	if (auto const *family{catenary_scene_structures().family_of(data->card)}; family != nullptr)
+	{
+		tool.catalog_group = family->group;
+		if (auto const *group{catenary_scene_structures().group(family->group)}; group != nullptr)
+			tool.catalog_kind = group->category;
+		tool.catalog_family.clear();
+		tool.catalog_card = 0;
+	}
 	tool.insulators25 = data->insulators == "25";
 	auto const decade{(data->card / 10) % 10};
 	if (data->card / 100 == 11 || data->card / 100 == 12)
@@ -1234,6 +1280,146 @@ void catenary_editor::render_catenary_chain_ui()
 	}
 }
 
+// the cantilever from the described catalogue: category, group, family (automatic by the track), card (automatic by A),
+// execution. Returns true when anything changed
+bool catenary_editor::render_catenary_catalog_ui()
+{
+	auto &tool{m_catenary};
+	auto const &structures{catenary_scene_structures()};
+	auto const *catalog{catenary_scene_catalog()};
+	auto changed{false};
+	auto const *group{structures.group(tool.catalog_group)};
+	std::string categorytitle;
+	for (auto const &category : structures.categories())
+		if (category.id == tool.catalog_kind)
+			categorytitle = category.title;
+	if (ImGui::BeginCombo(STR_C("Kind"), categorytitle.c_str()))
+	{
+		for (auto const &category : structures.categories())
+		{
+			if (ImGui::Selectable(category.title.c_str(), category.id == tool.catalog_kind) && category.id != tool.catalog_kind)
+			{
+				tool.catalog_kind = category.id;
+				// the first group of the kind
+				for (auto const &candidate : structures.groups())
+					if (candidate.category == category.id)
+					{
+						tool.catalog_group = candidate.id;
+						break;
+					}
+				tool.catalog_family.clear();
+				tool.catalog_card = 0;
+				changed = true;
+			}
+			if (ImGui::IsItemHovered() && false == category.text.empty())
+				ImGui::SetTooltip("%s", category.text.c_str());
+		}
+		ImGui::EndCombo();
+	}
+	group = structures.group(tool.catalog_group);
+	ImGui::PushItemWidth(320.0f);
+	if (ImGui::BeginCombo(STR_C("Group"), group != nullptr ? group->title.c_str() : ""))
+	{
+		for (auto const &candidate : structures.groups())
+		{
+			if (candidate.category != tool.catalog_kind)
+				continue;
+			if (ImGui::Selectable(candidate.title.c_str(), candidate.id == tool.catalog_group) && candidate.id != tool.catalog_group)
+			{
+				tool.catalog_group = candidate.id;
+				tool.catalog_family.clear();
+				tool.catalog_card = 0;
+				changed = true;
+			}
+			if (ImGui::IsItemHovered() && false == candidate.text.empty())
+				ImGui::SetTooltip("%s", candidate.text.c_str());
+		}
+		ImGui::EndCombo();
+	}
+	group = structures.group(tool.catalog_group);
+	if (group != nullptr && false == group->text.empty())
+	{
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 480.0f);
+		ImGui::TextDisabled("%s", group->text.c_str());
+		ImGui::PopTextWrapPos();
+	}
+	// the family: by the track and the stagger, or the one chosen
+	auto const *family{structures.family(tool.catalog_family)};
+	auto const automatic{STR("by the track and the stagger")};
+	if (ImGui::BeginCombo(STR_C("Family"), family != nullptr ? family->title.c_str() : automatic.c_str()))
+	{
+		if (ImGui::Selectable(automatic.c_str(), family == nullptr))
+		{
+			tool.catalog_family.clear();
+			tool.catalog_card = 0;
+			changed = true;
+		}
+		for (auto const &candidate : structures.families())
+		{
+			if (candidate.group != tool.catalog_group)
+				continue;
+			if (ImGui::Selectable(candidate.title.c_str(), candidate.id == tool.catalog_family))
+			{
+				tool.catalog_family = candidate.id;
+				tool.catalog_card = 0;
+				changed = true;
+			}
+			if (ImGui::IsItemHovered() && false == candidate.text.empty())
+				ImGui::SetTooltip("%s", candidate.text.c_str());
+		}
+		ImGui::EndCombo();
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("Automatic: the family for a straight or a curve and for the wires towards or away from the pole, as the place by the track has it"));
+	// the card: by the distance A, or the one chosen (of the chosen family)
+	family = structures.family(tool.catalog_family);
+	if (family != nullptr && family->cards.size() > 1)
+	{
+		auto const byreach{STR("by the distance A")};
+		if (ImGui::BeginCombo(STR_C("Card"), tool.catalog_card > 0 ? format("%04d", tool.catalog_card).c_str() : byreach.c_str()))
+		{
+			if (ImGui::Selectable(byreach.c_str(), tool.catalog_card <= 0))
+			{
+				tool.catalog_card = 0;
+				changed = true;
+			}
+			for (auto const card : family->cards)
+			{
+				if (catalog == nullptr || std::none_of(catalog->schemes().begin(), catalog->schemes().end(), [card](auto const &Scheme) { return Scheme.first.first == card; }))
+					continue;
+				if (ImGui::Selectable(format("%04d", card).c_str(), card == tool.catalog_card))
+				{
+					tool.catalog_card = card;
+					changed = true;
+				}
+			}
+			ImGui::EndCombo();
+		}
+	}
+	// the execution: chosen, or from the band A
+	if (group != nullptr && group->execution_user)
+	{
+		std::string current{format(STR_C("execution %d"), tool.execution)};
+		for (auto const &execution : group->executions)
+			if (execution.first == tool.execution)
+				current = execution.second;
+		if (ImGui::BeginCombo(STR_C("Execution"), current.c_str()))
+		{
+			for (auto const &execution : group->executions)
+				if (ImGui::Selectable(execution.second.c_str(), execution.first == tool.execution))
+				{
+					tool.execution = execution.first;
+					changed = true;
+				}
+			ImGui::EndCombo();
+		}
+	}
+	else if (group != nullptr)
+		ImGui::TextDisabled("%s", STR_C("Execution: from the distance A (the band of the card)"));
+	ImGui::PopItemWidth();
+	return changed;
+}
+
 void catenary_editor::render_catenary_ui()
 {
 	auto &tool{m_catenary};
@@ -1269,12 +1455,48 @@ void catenary_editor::render_catenary_ui()
 
 	if (ImGui::BeginCombo(STR_C("Pole"), tool.poles[std::clamp(tool.pole, 0, static_cast<int>(tool.poles.size()) - 1)].c_str()))
 	{
-		for (int i = 0; i < static_cast<int>(tool.poles.size()); ++i)
-			if (ImGui::Selectable(tool.poles[i].c_str(), i == tool.pole))
+		// the poles by the groups of the described catalogue (foundation, where they stand), the rest at the end
+		auto const &structures{catenary_scene_structures()};
+		auto const item = [&](int const Index) {
+			if (ImGui::Selectable(("  " + tool.poles[Index]).c_str(), Index == tool.pole))
 			{
-				tool.pole = i;
+				tool.pole = Index;
 				changed = true;
 			}
+		};
+		std::vector<bool> shown(tool.poles.size(), false);
+		for (auto const &group : structures.polegroups())
+		{
+			std::string tags;
+			if (group.foundation == "piles")
+				tags += STR(", on piles");
+			else if (group.foundation == "cast")
+				tags += STR(", on a cast foundation");
+			if (group.site == "line")
+				tags += STR(", on the line");
+			else if (group.site == "station")
+				tags += STR(", in a station");
+			else if (group.site == "platform")
+				tags += STR(", on a platform");
+			ImGui::TextDisabled("%s%s", group.title.c_str(), tags.c_str());
+			if (ImGui::IsItemHovered() && false == group.text.empty())
+				ImGui::SetTooltip("%s", group.text.c_str());
+			for (auto const &name : group.poles)
+				if (auto const found{std::find(tool.poles.begin(), tool.poles.end(), name)}; found != tool.poles.end())
+				{
+					auto const index{static_cast<int>(found - tool.poles.begin())};
+					shown[index] = true;
+					item(index);
+				}
+		}
+		if (std::find(shown.begin(), shown.end(), false) != shown.end())
+		{
+			if (false == structures.polegroups().empty())
+				ImGui::TextDisabled("%s", STR_C("Other (not described in traction_catalog.txt)"));
+			for (int i = 0; i < static_cast<int>(tool.poles.size()); ++i)
+				if (false == shown[i])
+					item(i);
+		}
 		ImGui::EndCombo();
 	}
 	changed |= ImGui::SliderFloat(STR_C("Face of the pole from the track axis (m)"), &tool.clearance, 1.60f, 4.50f, "%.2f");
@@ -1293,19 +1515,24 @@ void catenary_editor::render_catenary_ui()
 	char const *const bends[] = {bendnames[0].c_str(), bendnames[1].c_str(), bendnames[2].c_str()};
 	if (ImGui::Combo(STR_C("Cards for"), &tool.bend, bends, 3))
 		changed = true;
-	if (ImGui::Checkbox(STR_C("Swinging cantilever (11xx)"), &tool.swinging))
-		changed = true;
-	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("%s", STR_C("Off: the fixed ones (12xx)"));
-	if (ImGui::BeginCombo(STR_C("Execution"), STR(kExecutions[std::clamp(tool.execution, 1, 5) - 1]).c_str()))
+	if (false == catenary_scene_structures().empty())
+		changed |= render_catenary_catalog_ui();
+	else
 	{
-		for (int i = 1; i <= 5; ++i)
-			if (ImGui::Selectable(STR(kExecutions[i - 1]).c_str(), i == tool.execution))
-			{
-				tool.execution = i;
-				changed = true;
-			}
-		ImGui::EndCombo();
+		if (ImGui::Checkbox(STR_C("Swinging cantilever (11xx)"), &tool.swinging))
+			changed = true;
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("Off: the fixed ones (12xx)"));
+		if (ImGui::BeginCombo(STR_C("Execution"), STR(kExecutions[std::clamp(tool.execution, 1, 5) - 1]).c_str()))
+		{
+			for (int i = 1; i <= 5; ++i)
+				if (ImGui::Selectable(STR(kExecutions[i - 1]).c_str(), i == tool.execution))
+				{
+					tool.execution = i;
+					changed = true;
+				}
+			ImGui::EndCombo();
+		}
 	}
 	changed |= ImGui::SliderFloat(STR_C("Contact wires over the rails (m)"), &tool.height, 4.90f, 6.50f, "%.2f");
 	changed |= ImGui::Checkbox(STR_C("25 kV insulators"), &tool.insulators25);

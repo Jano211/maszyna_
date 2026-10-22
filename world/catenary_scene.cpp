@@ -794,6 +794,22 @@ catenary_scene_layout() {
     return layout();
 }
 
+catenary::structure_catalog const &
+catenary_scene_structures() {
+    static catenary::structure_catalog catalog;
+    static bool loaded { false };
+    if( false == loaded ) {
+        loaded = true;
+        std::vector<std::string> errors;
+        auto const filename { Datadirectory + "traction_catalog.txt" };
+        if( false == catalog.load( filename, errors ) ) {
+            WriteLog( ( "Catenary: file \"" + filename + "\" is missing, the editor picks the cards without the described catalogue" ).c_str() );
+        }
+        for( auto const &error : errors ) { ErrorLog( error ); }
+    }
+    return catalog;
+}
+
 std::size_t
 catenary_scene_size() {
     return Suspensions.size();
