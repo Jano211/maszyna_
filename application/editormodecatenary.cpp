@@ -237,6 +237,50 @@ struct without_gantry
 	explicit without_gantry(int &Selected) : selected{Selected}, saved{Selected} { selected = -1; }
 	~without_gantry() { selected = saved; }
 };
+// two mast points of gantries are one mast (a gantry of many spans) when they're this close in the plan
+bool same_mast(double const *A, double const *B)
+{
+	auto const dx{A[0] - B[0]}, dz{A[2] - B[2]};
+	return dx * dx + dz * dz < 0.0025;
+}
+
+// the spans of the gantry: Gantry and all joined with it on shared masts, Gantry first
+std::vector<std::size_t> gantry_group(std::size_t const Gantry, std::size_t const Without = std::numeric_limits<std::size_t>::max())
+{
+	std::vector<std::size_t> group;
+	if (catenary_gantry_get(Gantry) == nullptr)
+		return group;
+	group.push_back(Gantry);
+	for (std::size_t next = 0; next < group.size(); ++next)
+	{
+		auto const *span{catenary_gantry_get(group[next])};
+		for (std::size_t other = 0; span != nullptr && other < catenary_gantry_size(); ++other)
+		{
+			auto const *candidate{catenary_gantry_get(other)};
+			if (candidate == nullptr || other == Without || std::find(group.begin(), group.end(), other) != group.end())
+				continue;
+			for (int a = 0; a < 2; ++a)
+				for (int b = 0; b < 2; ++b)
+					if (same_mast(span->points[a], candidate->points[b]) && std::find(group.begin(), group.end(), other) == group.end())
+						group.push_back(other);
+		}
+	}
+	return group;
+}
+
+// how many other spans stand on this mast point
+int spans_at(double const *Point, std::size_t const Except)
+{
+	int count{0};
+	for (std::size_t other = 0; other < catenary_gantry_size(); ++other)
+	{
+		auto const *candidate{catenary_gantry_get(other)};
+		if (candidate != nullptr && other != Except && (same_mast(candidate->points[0], Point) || same_mast(candidate->points[1], Point)))
+			++count;
+	}
+	return count;
+}
+
 // the states of the wires in the panel, and as they're written in the entries
 char const *const kStates[] = {"new", "worn", "tarnished"};
 int const kStateValues[] = {0, 2, 1};
@@ -956,6 +1000,41 @@ void catenary_editor::catenary_place(catenary_spot const &Spot)
 		tool.toward = toward;
 }
 
+// what hangs on a span of a gantry: the drops on its beam and the cantilevers straight on its masts
+void catenary_editor::catenary_gantry_hangers(std::size_t const Gantry, std::vector<std::pair<std::size_t, catenary::suspension>> &Hangers) const
+{
+	glm::dvec3 from, to;
+	double bottom{0.0};
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *gantry{catenary_gantry_get(Gantry)};
+	if (catalog == nullptr || gantry == nullptr || false == catenary_gantry_beam(Gantry, from, to, bottom))
+		return;
+	for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+	{
+		auto const *data{catenary_scene_get(index)};
+		auto const *pole{data != nullptr && data->has_pole ? catalog->pole(data->pole_type) : nullptr};
+		if (pole == nullptr || std::any_of(Hangers.begin(), Hangers.end(), [index](auto const &Hanger) { return Hanger.first == index; }))
+			continue;
+		glm::dvec3 const point{data->pole[0], data->pole[1], data->pole[2]};
+		if (pole->gantry)
+		{
+			for (int k = 0; k < 2; ++k)
+				if (gantry->masts[k] == data->pole_type && glm::length(plan_of(point) - plan_of(glm::dvec3{gantry->points[k][0], 0.0, gantry->points[k][2]})) < 0.1)
+				{
+					Hangers.emplace_back(index, *data);
+					break;
+				}
+			continue;
+		}
+		if (pole->drop.empty())
+			continue;
+		auto const u{to - from};
+		auto const along{std::clamp(glm::dot(point - from, u) / std::max(glm::dot(u, u), 1e-9), 0.0, 1.0)};
+		if (glm::distance(point, from + u * along) < 0.3)
+			Hangers.emplace_back(index, *data);
+	}
+}
+
 void catenary_editor::catenary_press(track_intent const &Intent)
 {
 	auto &tool{m_catenary};
@@ -977,39 +1056,15 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		// held and dragged: the whole gantry goes with the cursor
 		tool.dragging = 2;
 		tool.drag_start = e.cursor_ground();
-		tool.drag_gantry = *catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected));
-		// the drops hanging from its beam go with it
+		// a gantry of many spans goes whole: all the spans joined on their masts, with what hangs on them
+		tool.drag_group.clear();
+		tool.drag_undo = 0;
 		tool.drag_drops.clear();
-		glm::dvec3 from, to;
-		double bottom{0.0};
-		auto const *catalog{catenary_scene_catalog()};
-		if (catalog != nullptr && catenary_gantry_beam(static_cast<std::size_t>(tool.gantry_selected), from, to, bottom))
-			for (std::size_t index = 0; index < catenary_scene_size(); ++index)
-			{
-				auto const *data{catenary_scene_get(index)};
-				auto const *pole{data != nullptr && data->has_pole ? catalog->pole(data->pole_type) : nullptr};
-				if (pole == nullptr)
-					continue;
-				glm::dvec3 const point{data->pole[0], data->pole[1], data->pole[2]};
-				if (pole->gantry)
-				{
-					// a cantilever straight on one of its masts
-					auto const *gantry{catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected))};
-					for (int k = 0; gantry != nullptr && k < 2; ++k)
-						if (gantry->masts[k] == data->pole_type && glm::length(plan_of(point) - plan_of(glm::dvec3{gantry->points[k][0], 0.0, gantry->points[k][2]})) < 0.1)
-						{
-							tool.drag_drops.emplace_back(index, *data);
-							break;
-						}
-					continue;
-				}
-				if (pole->drop.empty())
-					continue;
-				auto const u{to - from};
-				auto const along{std::clamp(glm::dot(point - from, u) / std::max(glm::dot(u, u), 1e-9), 0.0, 1.0)};
-				if (glm::distance(point, from + u * along) < 0.3)
-					tool.drag_drops.emplace_back(index, *data);
-			}
+		for (auto const span : gantry_group(static_cast<std::size_t>(tool.gantry_selected)))
+		{
+			tool.drag_group.emplace_back(span, *catenary_gantry_get(span));
+			catenary_gantry_hangers(span, tool.drag_drops);
+		}
 		return;
 	}
 	if (is_intent(Intent, intent_detail::mast))
@@ -1745,6 +1800,34 @@ void catenary_editor::render_catenary_ui()
 				catenary_gantry_reshape({}, 0.0, false);
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("The masts chosen above go to this gantry; the first mast stays, the second goes as far as the beam needs"));
+			// a gantry of many spans: the next span from a through mast at an end of this one, in line with it
+			for (int k = 0; k < 2; ++k)
+			{
+				auto const *type{catalog->mast(gantry->masts[k])};
+				auto const free{spans_at(gantry->points[k], static_cast<std::size_t>(tool.gantry_selected)) == 0};
+				if (k == 1)
+					ImGui::SameLine();
+				ImGui::BeginDisabled(type == nullptr || false == type->through || false == free);
+				if (ImGui::Button(format(STR_C("Next span from mast %d"), k + 1).c_str()))
+				{
+					tool.gantry_placing = true;
+					glm::dvec3 const from{gantry->points[k][0], gantry->points[k][1], gantry->points[k][2]};
+					glm::dvec3 const other{gantry->points[1 - k][0], gantry->points[1 - k][1], gantry->points[1 - k][2]};
+					tool.gantry_first = from;
+					// in line: "square to the track" with a track along which right_of() is the way out of this span
+					auto const out{glm::normalize(plan_of(from) - plan_of(other))};
+					tool.gantry_track = glm::dvec2{out.y, -out.x};
+					tool.gantry_square = true;
+					tool.gantry_high = gantry->high;
+					std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", gantry->skin.c_str());
+					if (auto const found{std::find(tool.masts.begin(), tool.masts.end(), gantry->masts[k])}; found != tool.masts.end())
+						tool.mast_first = static_cast<int>(found - tool.masts.begin());
+					tool.status = STR("LMB: the next mast of the gantry, as far as the nearest beam spans (the mast type: the second one above)");
+				}
+				ImGui::EndDisabled();
+				if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+					ImGui::SetTooltip("%s", type != nullptr && false == type->through ? STR_C("An end mast: a beam can go on one side of it only; a through mast is needed") : false == free ? STR_C("This mast has beams on both sides already") : STR_C("The beam of the next span on the other side of this through mast, in line with this span"));
+			}
 			{
 				float turn{0.0f};
 				ImGui::PushItemWidth(120.0f);
@@ -2046,39 +2129,40 @@ void catenary_editor::catenary_drag_update()
 			catenary_apply(spot);
 		return;
 	}
-	if (tool.dragging == 2 && tool.drag_gantry.has_value() && tool.gantry_selected >= 0)
+	if (tool.dragging == 2 && false == tool.drag_group.empty() && tool.gantry_selected >= 0)
 	{
 		auto const now{e.cursor_ground()};
-		auto moved{*tool.drag_gantry};
-		for (auto &point : moved.points)
-		{
-			point[0] += now.x - tool.drag_start.x;
-			point[2] += now.z - tool.drag_start.z;
-		}
-		auto const *current{catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected))};
-		if (current == nullptr)
-			return;
-		auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
-		if (tool.undo.empty() || false == last.gantry || last.index != static_cast<std::size_t>(tool.gantry_selected) || false == last.gantry_before.has_value())
-		{
-			catenary_change change;
-			change.group = ++tool.group;
-			change.gantry = true;
-			change.index = static_cast<std::size_t>(tool.gantry_selected);
-			change.gantry_before = *current;
-			tool.undo.push_back(change);
-		}
-		catenary_gantry_update(static_cast<std::size_t>(tool.gantry_selected), moved);
-		auto const group{tool.undo.back().group};
 		auto const dx{now.x - tool.drag_start.x}, dz{now.z - tool.drag_start.z};
+		// the first move of the drag opens one undo group for all the spans and what hangs on them
+		if (tool.drag_undo == 0)
+		{
+			tool.drag_undo = ++tool.group;
+			for (auto const &[span, before] : tool.drag_group)
+			{
+				catenary_change change;
+				change.group = tool.drag_undo;
+				change.gantry = true;
+				change.index = span;
+				change.gantry_before = before;
+				tool.undo.push_back(change);
+			}
+			for (auto const &[index, before] : tool.drag_drops)
+				tool.undo.push_back({tool.drag_undo, false, index, before, std::nullopt, false});
+		}
+		for (auto const &[span, before] : tool.drag_group)
+		{
+			auto moved{before};
+			for (auto &point : moved.points)
+			{
+				point[0] += dx;
+				point[2] += dz;
+			}
+			catenary_gantry_update(span, moved);
+		}
 		for (auto const &[index, before] : tool.drag_drops)
 		{
-			auto const *current{catenary_scene_get(index)};
-			if (current == nullptr)
+			if (catenary_scene_get(index) == nullptr)
 				continue;
-			// once per drag in the undo of the gantry
-			if (std::none_of(tool.undo.begin(), tool.undo.end(), [&, index = index](catenary_change const &Change) { return Change.group == group && false == Change.chain && false == Change.gantry && Change.index == index; }))
-				tool.undo.push_back({group, false, index, *current, std::nullopt, false});
 			auto shifted{before};
 			for (auto *point : {shifted.at, shifted.rope, shifted.pole, shifted.attach})
 			{
@@ -2095,7 +2179,8 @@ void catenary_editor::catenary_release()
 {
 	auto &tool{m_catenary};
 	tool.dragging = 0;
-	tool.drag_gantry.reset();
+	tool.drag_group.clear();
+	tool.drag_undo = 0;
 	tool.drag_drops.clear();
 	tool.probed = false;
 }
@@ -2172,16 +2257,86 @@ void catenary_editor::catenary_gantry_reshape(std::string const &Beam, double co
 	changed.points[0][2] = start.y;
 	changed.points[1][0] = end.x;
 	changed.points[1][2] = end.y;
-	catenary_change change;
-	change.group = ++tool.group;
-	change.gantry = true;
-	change.index = static_cast<std::size_t>(tool.gantry_selected);
-	change.gantry_before = *gantry;
+	auto const selected{static_cast<std::size_t>(tool.gantry_selected)};
+	// the new places of the spans: this one, and in a gantry of many spans the others joined with it
+	std::vector<std::pair<std::size_t, catenary::gantry>> moves;
+	auto const group{gantry_group(selected)};
+	if (group.size() > 1 && (Turn != 0.0 || Square))
+	{
+		// turned or squared: the whole gantry around its middle, by the angle this span turns
+		auto const before{plan_of(second) - plan_of(first)};
+		auto const after{direction};
+		auto const angle{std::atan2(before.x * after.y - before.y * after.x, glm::dot(before, after))};
+		glm::dvec2 middle{0.0};
+		std::size_t count{0};
+		for (auto const span : group)
+			for (int k = 0; k < 2; ++k)
+			{
+				middle += glm::dvec2{catenary_gantry_get(span)->points[k][0], catenary_gantry_get(span)->points[k][2]};
+				++count;
+			}
+		middle /= static_cast<double>(count);
+		auto const c{std::cos(angle)}, si{std::sin(angle)};
+		for (auto const span : group)
+		{
+			auto turned{*catenary_gantry_get(span)};
+			for (auto &point : turned.points)
+			{
+				glm::dvec2 const p{point[0] - middle.x, point[2] - middle.y};
+				point[0] = middle.x + p.x * c - p.y * si;
+				point[2] = middle.y + p.x * si + p.y * c;
+			}
+			moves.emplace_back(span, turned);
+		}
+	}
+	else
+	{
+		moves.emplace_back(selected, changed);
+		// another beam or masts: the spans beyond a mast which moved go with it
+		for (int k = 0; k < 2; ++k)
+		{
+			glm::dvec2 const shift{changed.points[k][0] - gantry->points[k][0], changed.points[k][2] - gantry->points[k][2]};
+			if (glm::length(shift) < 1e-4)
+				continue;
+			// the spans joined at this mast, and everything joined with them except through this span
+			for (std::size_t other = 0; other < catenary_gantry_size(); ++other)
+			{
+				auto const *candidate{catenary_gantry_get(other)};
+				if (candidate == nullptr || other == selected || false == (same_mast(candidate->points[0], gantry->points[k]) || same_mast(candidate->points[1], gantry->points[k])))
+					continue;
+				for (auto const span : gantry_group(other, selected))
+				{
+					if (std::any_of(moves.begin(), moves.end(), [span](auto const &Move) { return Move.first == span; }))
+						continue;
+					auto shifted{*catenary_gantry_get(span)};
+					for (auto &point : shifted.points)
+					{
+						point[0] += shift.x;
+						point[2] += shift.y;
+					}
+					moves.emplace_back(span, shifted);
+				}
+			}
+		}
+	}
 	auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
 	// turning in small steps is taken back at once
-	if (Turn == 0.0 || tool.undo.empty() || false == last.gantry || last.index != change.index || false == last.gantry_before.has_value())
-		tool.undo.push_back(change);
-	catenary_gantry_update(static_cast<std::size_t>(tool.gantry_selected), changed);
+	if (Turn == 0.0 || tool.undo.empty() || false == last.gantry || last.index != selected || false == last.gantry_before.has_value())
+	{
+		++tool.group;
+		// the selected span last: the next small turn finds it at the top of the undo and joins this group
+		for (auto move{moves.rbegin()}; move != moves.rend(); ++move)
+		{
+			catenary_change change;
+			change.group = tool.group;
+			change.gantry = true;
+			change.index = move->first;
+			change.gantry_before = *catenary_gantry_get(move->first);
+			tool.undo.push_back(change);
+		}
+	}
+	for (auto const &move : moves)
+		catenary_gantry_update(move.first, move.second);
 	tool.status = format(STR_C("Gantry %s: beam %s, masts %.3f m apart"), changed.name.c_str(), changed.beam.c_str(), spacing);
 }
 

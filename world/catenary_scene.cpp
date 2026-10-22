@@ -85,6 +85,35 @@ struct scene_gantry {
 };
 std::vector<scene_gantry> Gantries;
 
+// bramka wieloprzęsłowa: przęsła (wpisy gantry) stykają się na wspólnych słupach - ten sam punkt (w planie do 0,05 m).
+// Model wspólnego słupa stawia przęsło o najniższym numerze; true, gdy słup K przęsła Index stawia inne przęsło
+bool
+mast_shared_earlier( std::size_t const Index, int const K ) {
+    auto const &point { Gantries[ Index ].data.points[ K ] };
+    for( std::size_t other = 0; other < Index && other < Gantries.size(); ++other ) {
+        if( Gantries[ other ].removed ) { continue; }
+        for( int k = 0; k < 2; ++k ) {
+            auto const dx { Gantries[ other ].data.points[ k ][ 0 ] - point[ 0 ] }, dz { Gantries[ other ].data.points[ k ][ 2 ] - point[ 2 ] };
+            if( dx * dx + dz * dz < 0.0025 ) { return true; }
+        }
+    }
+    return false;
+}
+
+// przęsła, które mają słup we wskazanym punkcie (poza Except)
+std::vector<std::size_t>
+gantries_at( double const *Point, std::size_t const Except ) {
+    std::vector<std::size_t> result;
+    for( std::size_t other = 0; other < Gantries.size(); ++other ) {
+        if( other == Except || Gantries[ other ].removed ) { continue; }
+        for( int k = 0; k < 2; ++k ) {
+            auto const dx { Gantries[ other ].data.points[ k ][ 0 ] - Point[ 0 ] }, dz { Gantries[ other ].data.points[ k ][ 2 ] - Point[ 2 ] };
+            if( dx * dx + dz * dz < 0.0025 ) { result.push_back( other ); break; }
+        }
+    }
+    return result;
+}
+
 // bramka, której słup Mast stoi w punkcie Point (oś słupa na wysokości główki szyny, w planie do 0,10 m); nullptr gdy żadna
 catenary::gantry const *
 gantry_at_mast( std::string const &Mast, double const *Point ) {
@@ -490,8 +519,17 @@ assemble_gantry( scene_gantry &Gantry ) {
         std::copy( std::begin( turned ), std::end( turned ), placement.rotation );
         placements.push_back( placement );
     };
-    add( first->model, 0.0, 0.0, 0.0 );
-    add( second->model, 0.0, distance, b.y - a.y );
+    // bramka wieloprzęsłowa: wspólny słup stawia tylko jedno przęsło; dźwigary z obu stron może mieć tylko słup przelotowy
+    auto const index { static_cast<std::size_t>( &Gantry - Gantries.data() ) };
+    auto const shared = [ & ]( int const K ) { return index < Gantries.size() && mast_shared_earlier( index, K ); };
+    for( int k = 0; k < 2; ++k ) {
+        auto const *type { k == 0 ? first : second };
+        if( index < Gantries.size() && false == type->through && false == gantries_at( data.points[ k ], index ).empty() ) {
+            ErrorLog( label + "has beams on both sides of mast \"" + type->name + "\", which is an end mast; a through mast is needed there" );
+        }
+    }
+    if( false == shared( 0 ) ) { add( first->model, 0.0, 0.0, 0.0 ); }
+    if( false == shared( 1 ) ) { add( second->model, 0.0, distance, b.y - a.y ); }
     // dźwigar: każdy koniec na mocowaniu swojego słupa (przesunięcie wzdłuż toru i prześwit), więc przy słupach różnej
     // szerokości albo prześwitu leży lekko skośnie
     double from[ 3 ], to[ 3 ];
@@ -1157,6 +1195,22 @@ catenary_gantry_parts( std::size_t const Index ) {
     return ( Index < Gantries.size() ? Gantries[ Index ].parts.size() : 0 );
 }
 
+namespace {
+// przęsła bramki wieloprzęsłowej stykające się z przęsłem Index w jego starych (Before) albo obecnych słupach - składane od
+// nowa, bo wspólny słup stawia przęsło o najniższym numerze
+void
+reassemble_gantry_neighbours( std::size_t const Index, catenary::gantry const &Before ) {
+    std::set<std::size_t> touched;
+    for( int k = 0; k < 2; ++k ) {
+        for( auto const other : gantries_at( Before.points[ k ], Index ) ) { touched.insert( other ); }
+        if( false == Gantries[ Index ].removed ) {
+            for( auto const other : gantries_at( Gantries[ Index ].data.points[ k ], Index ) ) { touched.insert( other ); }
+        }
+    }
+    for( auto const other : touched ) { assemble_gantry( Gantries[ other ] ); }
+}
+} // namespace
+
 std::size_t
 catenary_gantry_add( std::string const &File, catenary::gantry const &Data ) {
     if( file_named( File ) == nullptr ) {
@@ -1179,10 +1233,12 @@ bool
 catenary_gantry_update( std::size_t const Index, catenary::gantry const &Data ) {
     if( Index >= Gantries.size() ) { return false; }
     auto &gantry { Gantries[ Index ] };
+    auto const before { gantry.data };
     gantry.data = Data;
     gantry.removed = false;
     assemble_gantry( gantry );
     mark_changed( gantry.file );
+    reassemble_gantry_neighbours( Index, before );
     // wysięgniki na słupach tej bramki: mocowania pod dźwigarem na jej (może zmienionym) poziomie
     if( auto const *catalog { cantilevers() }; catalog != nullptr ) {
         for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
@@ -1201,6 +1257,8 @@ catenary_gantry_remove( std::size_t const Index ) {
     Gantries[ Index ].removed = true;
     assemble_gantry( Gantries[ Index ] );
     mark_changed( Gantries[ Index ].file );
+    // wspólny słup, który stawiało to przęsło, stawia teraz sąsiednie
+    reassemble_gantry_neighbours( Index, Gantries[ Index ].data );
 }
 
 std::string
