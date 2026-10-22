@@ -51,6 +51,8 @@ struct catenary_editor
 		double reach{0.0}; // A: from the wires to the face of the pole
 		int card{0};
 		std::string problem; // why there's no card, empty when there is one
+		std::string family; // the family of the card in the described catalogue; empty without it
+		bool execution_changed{false}; // the execution chosen in the panel has no card for this A, another one was taken
 		catenary::suspension data;
 	};
 	struct catenary_change
@@ -118,6 +120,12 @@ struct catenary_editor
 		std::vector<std::pair<std::size_t, catenary::suspension>> drag_drops; // the drops of the gantry, as they were
 		int gantry_selected{-1}; // the gantry the drops go to
 		std::string drop_choice; // the drop for the next cantilevers on a gantry; empty: the shortest one which fits
+		// the described catalogue (data/traction_catalog.txt): the group the user picks, the family and the card in it
+		// (empty / 0: chosen by the track, the stagger and the distance A)
+		std::string catalog_kind;
+		std::string catalog_group;
+		std::string catalog_family;
+		int catalog_card{0};
 		int gantry_hang{0}; // the next cantilevers on the selected gantry: 0 on drops of the beam, 1 straight on its masts
 	};
 	catenary_tool m_catenary;
@@ -147,6 +155,7 @@ struct catenary_editor
 	bool catenary_delete_selected();
 	bool catenary_undo();
 	void render_catenary_ui();
+	bool render_catenary_catalog_ui();
 	void render_catenary_chain_ui();
 	void draw_catenary_overlay() const;
 	std::string catenary_intent_label(catenary_spot const &Spot) const;

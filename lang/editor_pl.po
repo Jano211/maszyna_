@@ -5615,3 +5615,54 @@ msgstr "Po tej stronie toru nie ma słupa tej bramki"
 
 msgid "Mast %s has no mounts for a cantilever (strut/stay in its entry in traction_supports.txt)"
 msgstr "Słup %s nie ma mocowań wysięgnika (strut/stay w jego wpisie w traction_supports.txt)"
+
+msgid "Click: pole %s, card %04d execution %d, A = %.2f m (%s, wires %s)"
+msgstr "Klik: słup %s, karta %04d wykonanie %d, A = %.2f m (%s, odsuw %s)"
+
+msgid "No card of the group for A = %.2f m"
+msgstr "W tej grupie nie ma karty dla A = %.2f m"
+
+msgid "execution %d has no card for this A, execution %d taken"
+msgstr "wykonanie %d nie ma karty dla tego A, wzięte wykonanie %d"
+
+msgid "Kind"
+msgstr "Rodzaj"
+
+msgid "Family"
+msgstr "Rodzina"
+
+msgid "Card"
+msgstr "Karta"
+
+msgid "by the track and the stagger"
+msgstr "z toru i odsuwu"
+
+msgid "by the distance A"
+msgstr "z odległości A"
+
+msgid "Automatic: the family for a straight or a curve and for the wires towards or away from the pole, as the place by the track has it"
+msgstr "Automatycznie: rodzina na prostą albo łuk i do odsuwu do słupa albo od słupa, tak jak wypada w tym miejscu toru"
+
+msgid "execution %d"
+msgstr "wykonanie %d"
+
+msgid "Execution: from the distance A (the band of the card)"
+msgstr "Wykonanie: z odległości A (pasmo karty)"
+
+msgid ", on piles"
+msgstr ", na palach"
+
+msgid ", on a cast foundation"
+msgstr ", na fundamencie wylewanym"
+
+msgid ", on the line"
+msgstr ", na szlaku"
+
+msgid ", in a station"
+msgstr ", na stacji"
+
+msgid ", on a platform"
+msgstr ", na peronie"
+
+msgid "Other (not described in traction_catalog.txt)"
+msgstr "Inne (bez opisu w traction_catalog.txt)"
