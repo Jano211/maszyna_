@@ -124,7 +124,9 @@ struct catenary_editor
 		glm::vec2 pressed{0.f};
 		glm::dvec3 drag_start{0.0}; // the point of the ground the drag started at
 		std::vector<std::pair<std::size_t, catenary::gantry>> drag_group; // the spans of the dragged gantry as they were when the drag started
-		int drag_undo{0}; // the undo group of the drag, opened at its first move
+		int drag_undo{0};
+		glm::dvec3 drag_anchor{0.0}; // the first mast of the dragged gantry where the drag started
+		double drag_axis{0.0}; // its axis from the axis of the track then: the drag keeps it there ("first mast from the track") // the undo group of the drag, opened at its first move
 		std::vector<std::pair<std::size_t, catenary::suspension>> drag_drops; // the drops of the gantry, as they were
 		int gantry_selected{-1}; // the gantry the drops go to
 		std::string drop_choice; // the drop for the next cantilevers on a gantry; empty: the shortest one which fits
@@ -161,6 +163,8 @@ struct catenary_editor
 	bool catenary_mast_face(std::string const &Mast, glm::dvec3 const &Point, double &Face, glm::dvec2 &Away) const;
 	// the selected gantry (all its spans and what hangs on them) moved in the plan
 	void catenary_gantry_shift(glm::dvec2 const &Shift);
+	// the place of the first mast at Axis from the axis of the track nearest to Point, on the side of Point; false: no track near
+	bool catenary_along_track(glm::dvec3 const &Point, double const Axis, glm::dvec3 &Place) const;
 	bool catenary_on_gantry(catenary_spot &Spot);
 	void catenary_drag_update();
 	// the selected gantry anew: another beam, masts, turned around its middle (degrees), or square to the nearest track

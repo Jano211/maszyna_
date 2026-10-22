@@ -565,6 +565,40 @@ bool catenary_editor::catenary_mast_face(std::string const &Mast, glm::dvec3 con
 	return found;
 }
 
+bool catenary_editor::catenary_along_track(glm::dvec3 const &Point, double const Axis, glm::dvec3 &Place) const
+{
+	// of the tracks near, the one the point is nearest to the wanted distance from: the same track as before, also over its joints
+	auto best{std::numeric_limits<double>::max()};
+	auto found{false};
+	for (auto *track : simulation::Paths.sequence())
+	{
+		if (track == nullptr || track->m_editorremoved || track->m_paths.empty())
+			continue;
+		for (int path = 0; path < static_cast<int>(track->m_paths.size()); ++path)
+		{
+			bezier const curve{track->m_paths[path]};
+			if (geometry::plan_distance(curve.point(0.5), Point) > curve.plan_length() * 0.5 + Axis + 10.0)
+				continue;
+			auto const parameter{nearest_parameter(*track, path, Point)};
+			auto const axis{curve.point(parameter)};
+			auto const distance{geometry::plan_distance(axis, Point)};
+			// off the end of the path: the point isn't square to it
+			auto const forward{forward_at(*track, path, parameter)};
+			if ((parameter <= 1e-6 || parameter >= 1.0 - 1e-6) && std::abs(glm::dot(plan_of(Point) - plan_of(axis), forward)) > 0.05)
+				continue;
+			if (std::abs(distance - Axis) >= best)
+				continue;
+			best = std::abs(distance - Axis);
+			auto const right{right_of(forward)};
+			auto const side{glm::dot(plan_of(Point) - plan_of(axis), right) >= 0.0 ? 1.0 : -1.0};
+			auto const at{plan_of(axis) + right * side * Axis};
+			Place = {at.x, Point.y, at.y};
+			found = true;
+		}
+	}
+	return found && best < 10.0;
+}
+
 void catenary_editor::catenary_gantry_shift(glm::dvec2 const &Shift)
 {
 	auto &tool{m_catenary};
@@ -1346,6 +1380,15 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		// held and dragged: the whole gantry goes with the cursor
 		tool.dragging = 2;
 		tool.drag_start = e.cursor_ground();
+		// held at its distance from the track: the first mast goes along the track, at the axis distance it has now
+		if (auto const *gantry{catenary_gantry_get(static_cast<std::size_t>(Intent.index))}; gantry != nullptr)
+		{
+			tool.drag_anchor = {gantry->points[0][0], gantry->points[0][1], gantry->points[0][2]};
+			double face{0.0};
+			glm::dvec2 away{0.0};
+			auto const *mast{catenary_scene_catalog() != nullptr ? catenary_scene_catalog()->mast(gantry->masts[0]) : nullptr};
+			tool.drag_axis = catenary_mast_face(gantry->masts[0], tool.drag_anchor, face, away) ? face + (mast != nullptr ? mast->offset : 0.0) : 0.0;
+		}
 		// a gantry of many spans goes whole: all the spans joined on their masts, with what hangs on them
 		tool.drag_group.clear();
 		tool.drag_undo = 0;
@@ -2086,8 +2129,23 @@ void catenary_editor::render_catenary_ui()
 			{
 				ImGui::SameLine();
 				ImGui::PushItemWidth(120.0f);
-				ImGui::DragFloat(STR_C("Face from the track axis (m)##placing"), &tool.gantry_face, 0.01f, 1.60f, 20.0f, "%.2f");
+				// a gantry selected: the distance of its first mast, changed here it moves the whole gantry square to that track
+				auto const *selected{tool.gantry_selected >= 0 && false == tool.gantry_placing ? catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected)) : nullptr};
+				double face{0.0};
+				glm::dvec2 away{0.0};
+				auto const measured{selected != nullptr && catenary_mast_face(selected->masts[0], glm::dvec3{selected->points[0][0], selected->points[0][1], selected->points[0][2]}, face, away)};
+				if (measured)
+					tool.gantry_face = static_cast<float>(face);
+				if (ImGui::DragFloat(STR_C("Face from the track axis (m)##placing"), &tool.gantry_face, 0.01f, 0.5f, 20.0f, "%.2f") && measured && std::abs(tool.gantry_face - face) > 1e-4)
+				{
+					catenary_gantry_shift(away * (static_cast<double>(tool.gantry_face) - face));
+					tool.status = format(STR_C("Gantry %s: mast %d %.2f m from the track axis"), selected->name.c_str(), 1, tool.gantry_face);
+				}
+				if (ImGui::IsItemActivated())
+					tool.shift_group = 0;
 				ImGui::PopItemWidth();
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("From the axis of the track to the face of the first mast. Placing: the first mast goes there. A gantry selected: drag or Ctrl+click and type, the gantry moves square to the track; dragged with the mouse it goes only along the track, at this distance"));
 			}
 			ImGui::SameLine();
 			if (tool.gantry_skin[0] == '\0')
@@ -2287,29 +2345,6 @@ void catenary_editor::render_catenary_ui()
 					if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 						ImGui::SetTooltip("%s", STR_C("A single beam element (3017-3025, 1910) on the other side of this through mast, in line with this span"));
 				}
-				// the face of each mast from the axis of its nearest track: dragged, the whole gantry goes along that line
-				for (int k = 0; k < 2; ++k)
-				{
-					if (gantry->masts[k].empty())
-						continue;
-					glm::dvec3 const point{gantry->points[k][0], gantry->points[k][1], gantry->points[k][2]};
-					double face{0.0};
-					glm::dvec2 away{0.0};
-					if (false == catenary_mast_face(gantry->masts[k], point, face, away))
-						continue;
-					auto value{static_cast<float>(face)};
-					ImGui::PushItemWidth(120.0f);
-					if (ImGui::DragFloat(format(STR_C("Mast %d: face from the track axis (m)"), k + 1).c_str(), &value, 0.01f, 0.5f, 20.0f, "%.2f") && std::abs(value - face) > 1e-4)
-					{
-						catenary_gantry_shift(away * (static_cast<double>(value) - face));
-						tool.status = format(STR_C("Gantry %s: mast %d %.2f m from the track axis"), gantry->name.c_str(), k + 1, value);
-					}
-					if (ImGui::IsItemActivated())
-						tool.shift_group = 0;
-					ImGui::PopItemWidth();
-					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("From the axis of the nearest track to the face of the mast; drag or Ctrl+click and type: the whole gantry moves square to that track"));
-				}
 				{
 					float turn{0.0f};
 					ImGui::PushItemWidth(120.0f);
@@ -2317,7 +2352,7 @@ void catenary_editor::render_catenary_ui()
 						catenary_gantry_reshape({}, turn, false);
 					ImGui::PopItemWidth();
 					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("Drag sideways: turns the gantry around its middle"));
+						ImGui::SetTooltip("%s", STR_C("Drag sideways: turns the gantry around its first mast"));
 				}
 				gantry = catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected));
 				if (gantry == nullptr)
@@ -2633,7 +2668,13 @@ void catenary_editor::catenary_drag_update()
 	if (tool.dragging == 2 && false == tool.drag_group.empty() && tool.gantry_selected >= 0)
 	{
 		auto const now{e.cursor_ground()};
-		auto const dx{now.x - tool.drag_start.x}, dz{now.z - tool.drag_start.z};
+		auto dx{now.x - tool.drag_start.x}, dz{now.z - tool.drag_start.z};
+		// held at its distance from the track: the first mast only along the track
+		if (glm::dvec3 place; tool.gantry_snap && tool.drag_axis > 0.0 && catenary_along_track(tool.drag_anchor + glm::dvec3{dx, 0.0, dz}, tool.drag_axis, place))
+		{
+			dx = place.x - tool.drag_anchor.x;
+			dz = place.z - tool.drag_anchor.z;
+		}
 		// the first move of the drag opens one undo group for all the spans and what hangs on them
 		if (tool.drag_undo == 0)
 		{
@@ -2714,7 +2755,6 @@ void catenary_editor::catenary_gantry_reshape(std::string const &Beam, double co
 	auto direction{plan_of(second) - plan_of(first)};
 	direction = glm::length(direction) > 1e-6 ? glm::normalize(direction) : glm::dvec2{1.0, 0.0};
 	auto const middle{0.5 * (plan_of(first) + plan_of(second))};
-	auto centre{middle};
 	if (Turn != 0.0)
 	{
 		auto const angle{glm::radians(Turn)};
@@ -2754,8 +2794,8 @@ void catenary_editor::catenary_gantry_reshape(std::string const &Beam, double co
 	}
 	// a single element: the tip point at its length from the face of the mast (only its direction matters)
 	auto const spacing{single ? beam->span + a->offset : catenary::gantry_spacing(*beam, *a, *b)};
-	// turned or squared: around its middle; a new beam or masts: the first mast stays
-	glm::dvec2 const start{(Turn != 0.0 || Square) && false == single ? centre - direction * (0.5 * spacing) : plan_of(first)};
+	// turned or squared: around its first mast (the gantry is set out from it on the ground); a new beam or masts: the first mast stays
+	glm::dvec2 const start{plan_of(first)};
 	auto const end{start + direction * spacing};
 	changed.points[0][0] = start.x;
 	changed.points[0][2] = start.y;
@@ -2771,15 +2811,9 @@ void catenary_editor::catenary_gantry_reshape(std::string const &Beam, double co
 		auto const before{plan_of(second) - plan_of(first)};
 		auto const after{direction};
 		auto const angle{std::atan2(before.x * after.y - before.y * after.x, glm::dot(before, after))};
-		glm::dvec2 middle{0.0};
-		std::size_t count{0};
-		for (auto const span : group)
-			for (int k = 0; k < 2; ++k)
-			{
-				middle += glm::dvec2{catenary_gantry_get(span)->points[k][0], catenary_gantry_get(span)->points[k][2]};
-				++count;
-			}
-		middle /= static_cast<double>(count);
+		// around the first mast of the gantry: the first mast of its first span (they're all in one line, at one angle)
+		auto const firstspan{*std::min_element(group.begin(), group.end())};
+		glm::dvec2 const middle{catenary_gantry_get(firstspan)->points[0][0], catenary_gantry_get(firstspan)->points[0][2]};
 		auto const c{std::cos(angle)}, si{std::sin(angle)};
 		for (auto const span : group)
 		{

@@ -5813,3 +5813,9 @@ msgstr "Druty: LPM na przęśle zaznacza łańcuch, LPM na słupie zaznacza słu
 
 msgid "Wires: LMB on the next pole hangs the span to it"
 msgstr "Druty: LPM na następnym słupie rozwiesza do niego przęsło"
+
+msgid "From the axis of the track to the face of the first mast. Placing: the first mast goes there. A gantry selected: drag or Ctrl+click and type, the gantry moves square to the track; dragged with the mouse it goes only along the track, at this distance"
+msgstr "Od osi toru do lica pierwszego słupa. Przy wstawianiu: tam staje pierwszy słup. Przy zaznaczonej bramce: przeciągnij albo Ctrl+klik i wpisz – bramka przesuwa się prostopadle do toru; przeciągana myszą jedzie tylko wzdłuż toru, w tej odległości"
+
+msgid "Drag sideways: turns the gantry around its first mast"
+msgstr "Przeciągnij w bok: obraca bramkę wokół pierwszego słupa"
