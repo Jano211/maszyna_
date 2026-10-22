@@ -5750,3 +5750,66 @@ msgstr "Przęsło %s - %s rozwieszone; LPM na następny słup albo zakończ przy
 
 msgid "Click: hang the span to this pole"
 msgstr "Klik: rozwieś przęsło do tego słupa"
+
+msgid " (second mast %.2f m from the track axis)"
+msgstr " (drugi słup %.2f m od osi toru)"
+
+msgid "Cantilevers"
+msgstr "Wysięgniki"
+
+msgid "Face from the track axis (m)##placing"
+msgstr "Lico od osi toru (m)##placing"
+
+msgid "First mast from the track"
+msgstr "Pierwszy słup od toru"
+
+msgid "From the axis of the nearest track to the face of the mast; drag or Ctrl+click and type: the whole gantry moves square to that track"
+msgstr "Od osi najbliższego toru do lica słupa; przeciągnij albo Ctrl+klik i wpisz: cała bramka przesuwa się prostopadle do tego toru"
+
+msgid "Gantries"
+msgstr "Bramki"
+
+msgid "Gantries: LMB by a track puts a cantilever on the selected gantry, drag the beam to move it"
+msgstr "Bramki: LPM przy torze wstawia wysięgnik na zaznaczonej bramce, przeciągnij dźwigar, żeby ją przesunąć"
+
+msgid "Gantries: LMB on a gantry selects it, or place a new one below"
+msgstr "Bramki: LPM na bramce ją zaznacza, albo postaw nową niżej"
+
+msgid "Gantries: LMB the masts"
+msgstr "Bramki: LPM – słupy"
+
+msgid "Gantries: masts and beams, the cantilevers on their drops and masts"
+msgstr "Bramki: słupy i dźwigary, wysięgniki na zwisach i na słupach"
+
+msgid "Gantry %s: mast %d %.2f m from the track axis"
+msgstr "Bramka %s: słup %d %.2f m od osi toru"
+
+msgid "LMB on a pole selects it: the wires can then be hung from it to the next poles; LMB on a span selects its chain"
+msgstr "LPM na słupie go zaznacza: potem można od niego rozwiesić druty do kolejnych słupów; LPM na przęśle zaznacza jego łańcuch"
+
+msgid "Mast %d: face from the track axis (m)"
+msgstr "Słup %d: lico od osi toru (m)"
+
+msgid "Pole %s"
+msgstr "Słup %s"
+
+msgid "Poles"
+msgstr "Słupy"
+
+msgid "Poles with cantilevers: LMB by a track places one, LMB on a pole selects it"
+msgstr "Słupy z wysięgnikami: LPM przy torze stawia słup, LPM na słupie go zaznacza"
+
+msgid "The chains: the type of the network, the wires, the spans between the poles"
+msgstr "Łańcuchy: typ sieci, druty, przęsła między słupami"
+
+msgid "The first mast goes with its face at this distance from the axis of the track under the cursor, on the side of the cursor; the second one as far as the beam spans"
+msgstr "Pierwszy słup staje licem w tej odległości od osi toru pod kursorem, po stronie kursora; drugi tak daleko, jak sięga dźwigar"
+
+msgid "The overhead catenary: poles with cantilevers, gantries, the wires of the chains"
+msgstr "Sieć trakcyjna: słupy z wysięgnikami, bramki, druty łańcuchów"
+
+msgid "Wires: LMB on a span selects its chain, LMB on a pole selects it"
+msgstr "Druty: LPM na przęśle zaznacza łańcuch, LPM na słupie zaznacza słup"
+
+msgid "Wires: LMB on the next pole hangs the span to it"
+msgstr "Druty: LPM na następnym słupie rozwiesza do niego przęsło"
