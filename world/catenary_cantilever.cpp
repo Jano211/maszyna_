@@ -366,7 +366,9 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     pole.gantry = true;
                     pole.top = mast.height;
                     pole.length = mast.height;
-                    pole.depth_top = pole.depth_base = mast.length;
+                    // ściana słupa od strony toru tam, gdzie kończy się dźwigar (gantry_beam_ends: oś + offset) - zgłoszenie 2026-10-22:
+                    // z length (0,60) mocowania stały ~0,18 m przed ścianą słupa
+                    pole.depth_top = pole.depth_base = mast.offset > 0.0 ? 2.0 * mast.offset : mast.length;
                     pole.mast_low = mast.mount_low;
                     pole.mast_high = mast.mount_high > 0.0 ? mast.mount_high : mast.mount_low;
                     pole.below_beam = mast.below_beam;
