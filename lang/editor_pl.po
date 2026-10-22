@@ -5681,3 +5681,9 @@ msgstr "Ten słup ma już dźwigary z obu stron"
 
 msgid "The beam of the next span on the other side of this through mast, in line with this span"
 msgstr "Dźwigar następnego przęsła po drugiej stronie tego słupa przelotowego, w linii z tym przęsłem"
+
+msgid "(through)"
+msgstr " (przelotowy)"
+
+msgid " (end)"
+msgstr " (końcowy)"
