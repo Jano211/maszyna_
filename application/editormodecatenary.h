@@ -109,6 +109,7 @@ struct catenary_editor
 		bool gantry_high{false};
 		int gantry_side{1};
 		bool gantry_placing{false}; // the next two clicks put the masts
+		bool gantry_single{false}; // what's placed is a single beam element on one through mast: the second click sets its direction
 		std::optional<glm::dvec3> gantry_first; // the first mast, waiting for the second
 		std::optional<glm::dvec2> gantry_track; // the direction of the track by the first mast, for the beam square to it
 		bool gantry_square{true}; // the beam goes square to the track

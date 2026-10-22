@@ -253,6 +253,25 @@ int main( int, char *argv[] ) {
             for( auto const &line : errors ) { std::printf( "  (oczekiwany) %s\n", line.c_str() ); }
             errors.clear();
             check( good, "bramka wieloprzeslowa: wspolny slup przelotowy stawiany raz, po usunieciu przesla przejmuje go sasiednie" );
+            // pojedynczy element dźwigara (3021) na wolnej stronie słupa przelotowego pierwszego przęsła: tylko dźwigar
+            catenary::gantry single { a };
+            single.name = "w4"; single.beam = "3021"; single.masts[ 1 ].clear();
+            single.points[ 1 ][ 0 ] = -5.0; single.points[ 1 ][ 1 ] = 0.2; single.points[ 1 ][ 2 ] = 80.0;
+            auto const written { catenary::write_gantry( single ) };
+            std::vector<std::string> tokens; std::istringstream words { written };
+            for( std::string word; words >> word; ) { tokens.push_back( word ); }
+            catenary::suspension_file parsed; std::vector<std::string> problems;
+            catenary::parse_suspensions( tokens, "element", parsed, problems );
+            auto singlegood { problems.empty() && parsed.gantries.size() == 1 && parsed.gantries.front().masts[ 1 ].empty() && written.find( " tip " ) != std::string::npos };
+            errors.clear();
+            auto const is { catenary_gantry_add( "td_bramka_test.scm", single ) };
+            singlegood = singlegood && catenary_gantry_parts( is ) == 1 && errors.empty();
+            double from[ 3 ], to[ 3 ];
+            auto const *catalog { catenary_scene_catalog() };
+            gantry_beam_ends( single, *catalog->mast( "3031-1" ), nullptr, catalog->beam( "3021" )->span, from, to );
+            singlegood = singlegood && std::abs( from[ 0 ] + 0.121 ) < 1e-6 && std::abs( to[ 0 ] + 0.121 + 7.1 ) < 1e-6 && std::abs( from[ 1 ] - ( 0.2 + 7.35 ) ) < 1e-6;
+            for( auto const &line : errors ) { std::printf( "  %s\n", line.c_str() ); }
+            check( singlegood, "pojedynczy element 3021 na slupie przelotowym: zapis z tip, sam dzwigar (slup stawia przeslo), 7,1 m od sciany slupa" );
         }
     }
     for( auto const &line : errors ) { std::printf( "  %s\n", line.c_str() ); }

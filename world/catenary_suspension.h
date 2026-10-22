@@ -64,7 +64,9 @@ struct chain {
 // "node <max> <min> <nazwa> gantry beam <dźwigar> level low|high side 1|-1 mast <słup> x y z mast <słup> x y z endgantry".
 // Punkty to osie słupów na wysokości główki szyny; dźwigar biegnie od pierwszego do drugiego, na prześwicie dolnego albo górnego
 // mocowania pierwszego słupa, przesunięty wzdłuż toru o offset słupa na stronę "side". Zwisy z wysięgnikami to zwykłe podwieszenia
-// ze "pole <zwis> x y z" (punkt w spodzie dźwigara)
+// ze "pole <zwis> x y z" (punkt w spodzie dźwigara).
+// Pojedynczy element dźwigara (wspornik na jednym słupie przelotowym, np. 3017-3025): "mast <słup> x y z tip x y z" -
+// masts[1] puste, points[1] to punkt w kierunku końca wspornika
 struct gantry {
     std::string name;
     double      range_max { 1000.0 };

@@ -137,10 +137,19 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                     }
                     ++masts;
                 }
+                else if( key == "tip" ) {
+                    // pojedynczy element dźwigara na jednym słupie: koniec wspornika zamiast drugiego słupa
+                    if( masts != 1 ) { report( line.name, "\"tip\" goes after the one mast of a single beam element" ); good = false; break; }
+                    line.masts[ 1 ].clear();
+                    for( auto &coordinate : line.points[ 1 ] ) {
+                        if( false == to_number( one(), coordinate ) ) { report( line.name, "\"tip\" needs three numbers" ); good = false; break; }
+                    }
+                    ++masts;
+                }
                 else { report( line.name, "unexpected token \"" + key + "\" in a gantry" ); good = false; }
             }
             if( false == closed ) { report( line.name, "missing \"endgantry\"" ); good = false; }
-            if( masts != 2 || line.beam.empty() ) { report( line.name, "a gantry needs a beam and two masts" ); good = false; }
+            if( masts != 2 || line.beam.empty() ) { report( line.name, "a gantry needs a beam and two masts (or one mast and the tip of a single beam element)" ); good = false; }
             if( good ) { Output.gantries.push_back( line ); }
             continue;
         }
@@ -307,7 +316,8 @@ std::string write_gantry( gantry const &Entry ) {
     text += " beam " + Entry.beam + " level " + ( Entry.high ? "high" : "low" ) + " side " + std::to_string( Entry.side );
     if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
     for( int mast = 0; mast < 2; ++mast ) {
-        text += " mast " + Entry.masts[ mast ] + " " + number( Entry.points[ mast ][ 0 ], 3 ) + " " + number( Entry.points[ mast ][ 1 ], 3 ) + " " + number( Entry.points[ mast ][ 2 ], 3 );
+        // pojedynczy element dźwigara: zamiast drugiego słupa koniec wspornika
+        text += ( Entry.masts[ mast ].empty() ? std::string( " tip" ) : " mast " + Entry.masts[ mast ] ) + " " + number( Entry.points[ mast ][ 0 ], 3 ) + " " + number( Entry.points[ mast ][ 1 ], 3 ) + " " + number( Entry.points[ mast ][ 2 ], 3 );
     }
     return text + " endgantry";
 }

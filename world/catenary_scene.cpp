@@ -90,9 +90,11 @@ std::vector<scene_gantry> Gantries;
 bool
 mast_shared_earlier( std::size_t const Index, int const K ) {
     auto const &point { Gantries[ Index ].data.points[ K ] };
+    if( Gantries[ Index ].data.masts[ K ].empty() ) { return false; }
     for( std::size_t other = 0; other < Index && other < Gantries.size(); ++other ) {
         if( Gantries[ other ].removed ) { continue; }
         for( int k = 0; k < 2; ++k ) {
+            if( Gantries[ other ].data.masts[ k ].empty() ) { continue; }
             auto const dx { Gantries[ other ].data.points[ k ][ 0 ] - point[ 0 ] }, dz { Gantries[ other ].data.points[ k ][ 2 ] - point[ 2 ] };
             if( dx * dx + dz * dz < 0.0025 ) { return true; }
         }
@@ -107,6 +109,7 @@ gantries_at( double const *Point, std::size_t const Except ) {
     for( std::size_t other = 0; other < Gantries.size(); ++other ) {
         if( other == Except || Gantries[ other ].removed ) { continue; }
         for( int k = 0; k < 2; ++k ) {
+            if( Gantries[ other ].data.masts[ k ].empty() ) { continue; }
             auto const dx { Gantries[ other ].data.points[ k ][ 0 ] - Point[ 0 ] }, dz { Gantries[ other ].data.points[ k ][ 2 ] - Point[ 2 ] };
             if( dx * dx + dz * dz < 0.0025 ) { result.push_back( other ); break; }
         }
@@ -464,14 +467,15 @@ drop_parts( scene_suspension &Suspension ) {
 // końce spodu dźwigara bramki: każdy przy ścianie swojego słupa (oś słupa przesunięta o jego offset w stronę drugiego słupa),
 // na prześwicie tego słupa (dolne albo górne mocowanie)
 void
-gantry_beam_ends( catenary::gantry const &Data, catenary::gantry_mast const &First, catenary::gantry_mast const &Second, double *From, double *To ) {
+gantry_beam_ends( catenary::gantry const &Data, catenary::gantry_mast const &First, catenary::gantry_mast const *Second, double const Span, double *From, double *To ) {
     glm::dvec3 const a { Data.points[ 0 ][ 0 ], Data.points[ 0 ][ 1 ], Data.points[ 0 ][ 2 ] };
     glm::dvec3 const b { Data.points[ 1 ][ 0 ], Data.points[ 1 ][ 1 ], Data.points[ 1 ][ 2 ] };
     auto const plan { glm::dvec3 { b.x - a.x, 0.0, b.z - a.z } };
     auto const length { std::max( glm::length( plan ), 1e-6 ) };
     auto const inward { plan * ( 1.0 / length ) };
     auto const from { a + inward * First.offset + glm::dvec3 { 0.0, Data.high ? First.mount_high : First.mount_low, 0.0 } };
-    auto const to { b - inward * Second.offset + glm::dvec3 { 0.0, Data.high ? Second.mount_high : Second.mount_low, 0.0 } };
+    // pojedynczy element (bez drugiego słupa): poziomo od ściany słupa na swoją długość
+    auto const to { Second != nullptr ? b - inward * Second->offset + glm::dvec3 { 0.0, Data.high ? Second->mount_high : Second->mount_low, 0.0 } : from + inward * Span };
     From[ 0 ] = from.x; From[ 1 ] = from.y; From[ 2 ] = from.z;
     To[ 0 ] = to.x; To[ 1 ] = to.y; To[ 2 ] = to.z;
 }
@@ -489,19 +493,27 @@ assemble_gantry( scene_gantry &Gantry ) {
     auto const &data { Gantry.data };
     auto const label { "Bad scenario: gantry \"" + ( data.name.empty() ? std::string( "none" ) : data.name ) + "\" " };
     auto const *first { catalog->mast( data.masts[ 0 ] ) };
-    auto const *second { catalog->mast( data.masts[ 1 ] ) };
+    auto const single { data.masts[ 1 ].empty() };
+    auto const *second { single ? nullptr : catalog->mast( data.masts[ 1 ] ) };
     auto const *beam { catalog->beam( data.beam ) };
-    if( first == nullptr || second == nullptr || beam == nullptr ) {
+    if( first == nullptr || ( second == nullptr && false == single ) || beam == nullptr ) {
         ErrorLog( label + "uses a mast or a beam which isn't in the supports catalogue (traction_supports.txt)" );
         return 0;
+    }
+    if( single != beam->single ) {
+        ErrorLog( label + ( single ? "has one mast, but beam \"" + beam->name + "\" isn't a single element" : "has two masts, but beam \"" + beam->name + "\" is a single element" ) );
+        return 0;
+    }
+    if( single && false == first->through ) {
+        ErrorLog( label + "has a single beam element on mast \"" + first->name + "\", which is an end mast; it goes on a through mast" );
     }
     glm::dvec3 const a { data.points[ 0 ][ 0 ], data.points[ 0 ][ 1 ], data.points[ 0 ][ 2 ] };
     glm::dvec3 const b { data.points[ 1 ][ 0 ], data.points[ 1 ][ 1 ], data.points[ 1 ][ 2 ] };
     auto const dx { b.x - a.x }, dz { b.z - a.z };
     auto const distance { std::sqrt( dx * dx + dz * dz ) };
-    if( distance < 1.0 ) { ErrorLog( label + "has its masts less than 1 m apart" ); return 0; }
+    if( distance < ( single ? 0.1 : 1.0 ) ) { ErrorLog( label + ( single ? "has no direction of its single beam element" : "has its masts less than 1 m apart" ) ); return 0; }
     // między ścianami słupów jest o 0,20 m mniej niż numer dźwigara (E101: 9,9 m - użytkownik), osie słupów o offset każdego dalej
-    if( std::abs( distance - catenary::gantry_spacing( *beam, *first, *second ) ) > 0.05 ) {
+    if( false == single && std::abs( distance - catenary::gantry_spacing( *beam, *first, *second ) ) > 0.05 ) {
         WriteLog( ( "Catenary: gantry \"" + data.name + "\" has its masts " + text_number( distance, 3 ) + " m apart, beam \"" + beam->name + "\" with these masts needs "
             + text_number( catenary::gantry_spacing( *beam, *first, *second ), 3 ) + " m" ).c_str() );
     }
@@ -524,16 +536,17 @@ assemble_gantry( scene_gantry &Gantry ) {
     auto const shared = [ & ]( int const K ) { return index < Gantries.size() && mast_shared_earlier( index, K ); };
     for( int k = 0; k < 2; ++k ) {
         auto const *type { k == 0 ? first : second };
+        if( type == nullptr ) { continue; }
         if( index < Gantries.size() && false == type->through && false == gantries_at( data.points[ k ], index ).empty() ) {
             ErrorLog( label + "has beams on both sides of mast \"" + type->name + "\", which is an end mast; a through mast is needed there" );
         }
     }
     if( false == shared( 0 ) ) { add( first->model, 0.0, 0.0, 0.0 ); }
-    if( false == shared( 1 ) ) { add( second->model, 0.0, distance, b.y - a.y ); }
+    if( second != nullptr && false == shared( 1 ) ) { add( second->model, 0.0, distance, b.y - a.y ); }
     // dźwigar: każdy koniec na mocowaniu swojego słupa (przesunięcie wzdłuż toru i prześwit), więc przy słupach różnej
     // szerokości albo prześwitu leży lekko skośnie
     double from[ 3 ], to[ 3 ];
-    gantry_beam_ends( data, *first, *second, from, to );
+    gantry_beam_ends( data, *first, second, beam->span, from, to );
     glm::dvec3 const ends[ 2 ] { { from[ 0 ], from[ 1 ], from[ 2 ] }, { to[ 0 ], to[ 1 ], to[ 2 ] } };
     auto const beamx { ends[ 1 ].x - ends[ 0 ].x }, beamz { ends[ 1 ].z - ends[ 0 ].z };
     auto const beamheading { std::atan2( beamx, beamz ) };
