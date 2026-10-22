@@ -13,7 +13,7 @@ http://mozilla.org/MPL/2.0/.
 // automatically: the spans between the poles the user put are only checked against the tables of the catalogue.
 
 #include "stdafx.h"
-#include "application/editormode.h"
+#include "application/editormodecatenary.h"
 #include "application/editoruilayer.h"
 #include "application/editorprojection.h"
 #include "editor/editorFormat.hpp"
@@ -243,7 +243,7 @@ int const kStateValues[] = {0, 2, 1};
 
 } // namespace
 
-void editor_mode::catenary_scan()
+void catenary_editor::catenary_scan()
 {
 	auto &tool{m_catenary};
 	if (tool.scanned)
@@ -272,7 +272,7 @@ void editor_mode::catenary_scan()
 	}
 }
 
-bool editor_mode::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor, int const Side, catenary_spot &Spot) const
+bool catenary_editor::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor, int const Side, catenary_spot &Spot) const
 {
 	if (Track.m_paths.empty() || Track.m_editorremoved)
 		return false;
@@ -376,7 +376,7 @@ bool editor_mode::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3 con
 }
 
 // the line of the beam of the gantry at its bottom (where the drops hang from)
-bool editor_mode::catenary_gantry_beam(std::size_t const Index, glm::dvec3 &From, glm::dvec3 &To, double &Bottom) const
+bool catenary_editor::catenary_gantry_beam(std::size_t const Index, glm::dvec3 &From, glm::dvec3 &To, double &Bottom) const
 {
 	auto const *gantry{catenary_gantry_get(Index)};
 	auto const *catalog{catenary_scene_catalog()};
@@ -393,17 +393,17 @@ bool editor_mode::catenary_gantry_beam(std::size_t const Index, glm::dvec3 &From
 	return true;
 }
 
-glm::dvec3 editor_mode::catenary_mast_point() const
+glm::dvec3 catenary_editor::catenary_mast_point() const
 {
 	// on the ground, at the height of the rail heads of the track under the cursor if there's one
-	auto point{cursor_ground()};
-	if (m_hover.track != nullptr)
-		point.y = m_hover.point.y + kRailTop;
+	auto point{e.cursor_ground()};
+	if (e.m_hover.track != nullptr)
+		point.y = e.m_hover.point.y + kRailTop;
 	return point;
 }
 
 // the second mast: towards the cursor, as far as the nearest beam of the catalogue spans
-bool editor_mode::catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3 &Second, std::string &Beam) const
+bool catenary_editor::catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3 &Second, std::string &Beam) const
 {
 	auto const &tool{m_catenary};
 	auto const *catalog{catenary_scene_catalog()};
@@ -443,7 +443,7 @@ bool editor_mode::catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3 &Se
 	return true;
 }
 
-int editor_mode::catenary_gantry_hit() const
+int catenary_editor::catenary_gantry_hit() const
 {
 	screen_projection const projection;
 	auto best{kPolePick * kPolePick};
@@ -464,7 +464,7 @@ int editor_mode::catenary_gantry_hit() const
 	return result;
 }
 
-void editor_mode::catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole) const
+void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole) const
 {
 	auto const &tool{m_catenary};
 	Spot.card = 0;
@@ -521,7 +521,7 @@ void editor_mode::catenary_compose(catenary_spot &Spot, double const Clearance, 
 }
 
 // where the suspension stands by the track: the place it was put at in this session, or the nearest path to its wires
-editor_mode::catenary_spot const *editor_mode::catenary_spot_of(std::size_t const Index)
+catenary_editor::catenary_spot const *catenary_editor::catenary_spot_of(std::size_t const Index)
 {
 	auto &tool{m_catenary};
 	if (auto const found{tool.spots.find(Index)}; found != tool.spots.end())
@@ -570,7 +570,7 @@ editor_mode::catenary_spot const *editor_mode::catenary_spot_of(std::size_t cons
 	return &(tool.spots[Index] = spot);
 }
 
-std::string editor_mode::catenary_intent_label(catenary_spot const &Spot) const
+std::string catenary_editor::catenary_intent_label(catenary_spot const &Spot) const
 {
 	auto const where{Spot.curve ? format(STR_C("curve R %.0f m"), Spot.radius) : std::string{STR("straight")}};
 	auto const offset{Spot.toward ? STR("towards the pole") : STR("away from the pole")};
@@ -582,7 +582,7 @@ std::string editor_mode::catenary_intent_label(catenary_spot const &Spot) const
 	return label;
 }
 
-int editor_mode::catenary_hit() const
+int catenary_editor::catenary_hit() const
 {
 	screen_projection const projection;
 	auto best{kPolePick * kPolePick};
@@ -607,7 +607,7 @@ int editor_mode::catenary_hit() const
 }
 
 // the chain whose span is under the cursor; -1 if none
-int editor_mode::catenary_span_hit() const
+int catenary_editor::catenary_span_hit() const
 {
 	screen_projection const projection;
 	auto best{kPolePick * kPolePick * 0.5f};
@@ -635,7 +635,7 @@ int editor_mode::catenary_span_hit() const
 	return result;
 }
 
-void editor_mode::catenary_select(int const Index)
+void catenary_editor::catenary_select(int const Index)
 {
 	auto &tool{m_catenary};
 	tool.selected = Index;
@@ -676,7 +676,7 @@ void editor_mode::catenary_select(int const Index)
 		tool.clearance = static_cast<float>(glm::dot(plan_of(pole_of(*data)) - plan_of(spot->axis), right) - 0.5 * pole->depth(0.0));
 }
 
-void editor_mode::catenary_apply(catenary_spot const &Spot)
+void catenary_editor::catenary_apply(catenary_spot const &Spot)
 {
 	auto &tool{m_catenary};
 	if (tool.selected < 0)
@@ -705,7 +705,7 @@ void editor_mode::catenary_apply(catenary_spot const &Spot)
 
 // the poles of the chain get the settings of the selected one: pole, its face from the track, execution, height of the wires,
 // insulators. Each keeps its own stagger, so the zigzag stays as it is
-void editor_mode::catenary_copy(std::vector<std::size_t> const &Targets)
+void catenary_editor::catenary_copy(std::vector<std::size_t> const &Targets)
 {
 	auto &tool{m_catenary};
 	++tool.group;
@@ -753,7 +753,7 @@ void editor_mode::catenary_copy(std::vector<std::size_t> const &Targets)
 
 // the stagger the next pole of the chain gets: the other way than the last one on a straight; after the user put three the same
 // way in a row they're kept that way, until one goes the other way again
-bool editor_mode::catenary_propose_toward(bool &Toward)
+bool catenary_editor::catenary_propose_toward(bool &Toward)
 {
 	auto &tool{m_catenary};
 	if (false == tool.alternate || tool.last < 0)
@@ -792,7 +792,7 @@ bool editor_mode::catenary_propose_toward(bool &Toward)
 	return true;
 }
 
-void editor_mode::catenary_place(catenary_spot const &Spot)
+void catenary_editor::catenary_place(catenary_spot const &Spot)
 {
 	auto &tool{m_catenary};
 	++tool.group;
@@ -857,27 +857,27 @@ void editor_mode::catenary_place(catenary_spot const &Spot)
 		tool.toward = toward;
 }
 
-void editor_mode::catenary_press(track_intent const &Intent)
+void catenary_editor::catenary_press(track_intent const &Intent)
 {
 	auto &tool{m_catenary};
 	tool.status.clear();
 	auto const &mouse{ImGui::GetIO().MousePos};
 	tool.pressed = {mouse.x, mouse.y};
-	if (Intent.what == track_intent::kind::catenary_select)
+	if (is_intent(Intent, intent_detail::select))
 	{
 		catenary_select(Intent.index);
 		// held and dragged: the pole goes along the track
 		tool.dragging = tool.selected >= 0 ? 1 : 0;
 		return;
 	}
-	if (Intent.what == track_intent::kind::catenary_gantry)
+	if (is_intent(Intent, intent_detail::gantry))
 	{
 		tool.gantry_selected = Intent.index;
 		tool.selected = -1;
 		tool.status = STR("The cantilevers now go on drops on this gantry: LMB over a track; drag the beam to move the gantry");
 		// held and dragged: the whole gantry goes with the cursor
 		tool.dragging = 2;
-		tool.drag_start = cursor_ground();
+		tool.drag_start = e.cursor_ground();
 		tool.drag_gantry = *catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected));
 		// the drops hanging from its beam go with it
 		tool.drag_drops.clear();
@@ -899,7 +899,7 @@ void editor_mode::catenary_press(track_intent const &Intent)
 			}
 		return;
 	}
-	if (Intent.what == track_intent::kind::catenary_mast)
+	if (is_intent(Intent, intent_detail::mast))
 	{
 		auto const point{catenary_mast_point()};
 		if (false == tool.gantry_first.has_value())
@@ -962,7 +962,7 @@ void editor_mode::catenary_press(track_intent const &Intent)
 		tool.status = format(STR_C("Gantry %s with beam %s placed; LMB over a track puts a drop with a cantilever on it"), gantry.name.c_str(), beam.c_str());
 		return;
 	}
-	if (Intent.what == track_intent::kind::catenary_chain)
+	if (is_intent(Intent, intent_detail::chain))
 	{
 		tool.selected = -1;
 		tool.chain_selected = Intent.index;
@@ -981,7 +981,7 @@ void editor_mode::catenary_press(track_intent const &Intent)
 	if (Intent.track == nullptr)
 		return;
 	catenary_spot spot;
-	if (false == catenary_spot_at(*Intent.track, Intent.path, m_hover.point, cursor_level(m_hover.point.y), 0, spot))
+	if (false == catenary_spot_at(*Intent.track, Intent.path, e.m_hover.point, e.cursor_level(e.m_hover.point.y), 0, spot))
 		return;
 	if (spot.card == 0)
 	{
@@ -992,7 +992,7 @@ void editor_mode::catenary_press(track_intent const &Intent)
 }
 
 // the panel settings of the chain go to the selected chain
-void editor_mode::catenary_chain_apply()
+void catenary_editor::catenary_chain_apply()
 {
 	auto &tool{m_catenary};
 	if (tool.chain_selected < 0)
@@ -1014,7 +1014,7 @@ void editor_mode::catenary_chain_apply()
 	catenary_chain_update(index, changed);
 }
 
-bool editor_mode::catenary_delete_selected()
+bool catenary_editor::catenary_delete_selected()
 {
 	auto &tool{m_catenary};
 	if (tool.selected < 0)
@@ -1041,11 +1041,12 @@ bool editor_mode::catenary_delete_selected()
 	return true;
 }
 
-void editor_mode::catenary_undo()
+bool catenary_editor::catenary_undo()
 {
 	auto &tool{m_catenary};
-	if (tool.undo.empty())
-		return;
+	// in the middle of a drag, or with nothing of its own: the editor takes back its own changes
+	if (tool.dragging != 0 || tool.undo.empty())
+		return false;
 	auto const group{tool.undo.back().group};
 	while (false == tool.undo.empty() && tool.undo.back().group == group)
 	{
@@ -1098,9 +1099,10 @@ void editor_mode::catenary_undo()
 	tool.selected = -1;
 	tool.probed = false;
 	tool.status = STR("Taken back");
+	return true;
 }
 
-void editor_mode::render_catenary_chain_ui()
+void catenary_editor::render_catenary_chain_ui()
 {
 	auto &tool{m_catenary};
 	auto const *chain{tool.chain_selected >= 0 ? catenary_chain_get(static_cast<std::size_t>(tool.chain_selected)) : nullptr};
@@ -1165,7 +1167,7 @@ void editor_mode::render_catenary_chain_ui()
 	}
 }
 
-void editor_mode::render_catenary_ui()
+void catenary_editor::render_catenary_ui()
 {
 	auto &tool{m_catenary};
 	catenary_scan();
@@ -1585,7 +1587,7 @@ void editor_mode::render_catenary_ui()
 		ImGui::TextWrapped("%s", tool.status.c_str());
 }
 
-void editor_mode::draw_catenary_overlay() const
+void catenary_editor::draw_catenary_overlay() const
 {
 	auto const &tool{m_catenary};
 	screen_projection const projection;
@@ -1610,7 +1612,7 @@ void editor_mode::draw_catenary_overlay() const
 		if (gantry == nullptr || false == catenary_gantry_beam(index, from, to, bottom) || glm::distance(from, camera) > kCatenaryRange)
 			continue;
 		auto const selected{static_cast<int>(index) == tool.gantry_selected};
-		auto const hovered{m_intent.what == track_intent::kind::catenary_gantry && m_intent.index == static_cast<int>(index)};
+		auto const hovered{is_intent(e.m_intent, intent_detail::gantry) && e.m_intent.index == static_cast<int>(index)};
 		auto const broken{catenary_gantry_parts(index) == 0};
 		auto const colour{selected ? overlay_color::selected : hovered ? overlay_color::highlight : broken ? overlay_color::invalid : IM_COL32(255, 160, 60, 170)};
 		projection.line(drawlist, from, to, colour, selected || hovered ? 3.0f : 1.5f);
@@ -1646,7 +1648,7 @@ void editor_mode::draw_catenary_overlay() const
 		if (data == nullptr || false == data->has_at || glm::distance(pole_of(*data), camera) > kCatenaryRange)
 			continue;
 		auto const selected{static_cast<int>(index) == tool.selected};
-		auto const hovered{m_intent.what == track_intent::kind::catenary_select && m_intent.index == static_cast<int>(index)};
+		auto const hovered{is_intent(e.m_intent, intent_detail::select) && e.m_intent.index == static_cast<int>(index)};
 		auto const broken{catenary_scene_parts(index) == 0};
 		auto const last{static_cast<int>(index) == tool.last && tool.chaining};
 		auto const colour{selected ? overlay_color::selected : hovered ? overlay_color::highlight : broken ? overlay_color::invalid : last ? overlay_color::grip : IM_COL32(255, 210, 60, 150)};
@@ -1665,7 +1667,7 @@ void editor_mode::draw_catenary_overlay() const
 		auto const a{wire_of(*catenary_scene_get(span.from))};
 		auto const b{wire_of(*catenary_scene_get(span.to))};
 		auto const over{span.limit > 0.0 && span.length > span.limit + 0.05};
-		auto const chosen{span.chain >= 0 && (span.chain == tool.chain_selected || (m_intent.what == track_intent::kind::catenary_chain && m_intent.index == span.chain))};
+		auto const chosen{span.chain >= 0 && (span.chain == tool.chain_selected || (is_intent(e.m_intent, intent_detail::chain) && e.m_intent.index == span.chain))};
 		auto const colour{over ? overlay_color::invalid : chosen ? overlay_color::selected : span.chain >= 0 ? IM_COL32(90, 230, 120, 200) : IM_COL32(90, 230, 120, 110)};
 		projection.line(drawlist, a, b, colour, over || chosen ? 2.5f : 1.2f);
 		ImVec2 middle;
@@ -1677,10 +1679,10 @@ void editor_mode::draw_catenary_overlay() const
 		}
 	}
 	// what a click puts there, with the span from the last pole
-	if (m_intent.what == track_intent::kind::catenary_place && m_hover.track != nullptr)
+	if (is_intent(e.m_intent, intent_detail::place) && e.m_hover.track != nullptr)
 	{
 		catenary_spot spot;
-		if (catenary_spot_at(*m_hover.track, m_hover.path, m_hover.point, cursor_level(m_hover.point.y), 0, spot))
+		if (catenary_spot_at(*e.m_hover.track, e.m_hover.path, e.m_hover.point, e.cursor_level(e.m_hover.point.y), 0, spot))
 		{
 			auto const colour{spot.card != 0 ? overlay_color::marked : overlay_color::invalid};
 			draw_pole(spot.data, colour, 3.0f);
@@ -1694,7 +1696,7 @@ void editor_mode::draw_catenary_overlay() const
 
 float const kDragStart{6.0f};
 
-void editor_mode::catenary_drag_update()
+void catenary_editor::catenary_drag_update()
 {
 	auto &tool{m_catenary};
 	if (tool.dragging == 0)
@@ -1714,13 +1716,13 @@ void editor_mode::catenary_drag_update()
 		auto const *current{tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr};
 		if (found == nullptr || current == nullptr || found->track == nullptr || found->track->m_editorremoved)
 			return;
-		auto *track{m_hover.track != nullptr ? m_hover.track : found->track};
-		auto const path{m_hover.track != nullptr ? m_hover.path : found->path};
+		auto *track{e.m_hover.track != nullptr ? e.m_hover.track : found->track};
+		auto const path{e.m_hover.track != nullptr ? e.m_hover.path : found->path};
 		auto const side{found->side};
 		catenary_spot spot;
 		{
 			without_gantry const plain{tool.gantry_selected};
-			if (false == catenary_spot_at(*track, path, cursor_level(found->axis.y), cursor_level(found->axis.y), side, spot))
+			if (false == catenary_spot_at(*track, path, e.cursor_level(found->axis.y), e.cursor_level(found->axis.y), side, spot))
 				return;
 		}
 		auto const *catalog{catenary_scene_catalog()};
@@ -1736,7 +1738,7 @@ void editor_mode::catenary_drag_update()
 	}
 	if (tool.dragging == 2 && tool.drag_gantry.has_value() && tool.gantry_selected >= 0)
 	{
-		auto const now{cursor_ground()};
+		auto const now{e.cursor_ground()};
 		auto moved{*tool.drag_gantry};
 		for (auto &point : moved.points)
 		{
@@ -1779,7 +1781,7 @@ void editor_mode::catenary_drag_update()
 	}
 }
 
-void editor_mode::catenary_release()
+void catenary_editor::catenary_release()
 {
 	auto &tool{m_catenary};
 	tool.dragging = 0;
@@ -1788,7 +1790,7 @@ void editor_mode::catenary_release()
 	tool.probed = false;
 }
 
-void editor_mode::catenary_gantry_reshape(std::string const &Beam, double const Turn, bool const Square)
+void catenary_editor::catenary_gantry_reshape(std::string const &Beam, double const Turn, bool const Square)
 {
 	auto &tool{m_catenary};
 	auto const *catalog{catenary_scene_catalog()};
@@ -1871,4 +1873,106 @@ void editor_mode::catenary_gantry_reshape(std::string const &Beam, double const 
 		tool.undo.push_back(change);
 	catenary_gantry_update(static_cast<std::size_t>(tool.gantry_selected), changed);
 	tool.status = format(STR_C("Gantry %s: beam %s, masts %.3f m apart"), changed.name.c_str(), changed.beam.c_str(), spacing);
+}
+
+// the hooks of editor_mode (editormode.h), and what they did in the editor before the tool got a file of its own
+
+bool catenary_editor::catenary_intent(track_intent &Intent)
+{
+	using kind = track_intent::kind;
+	if (m_catenary.gantry_placing)
+	{
+		Intent.position = catenary_mast_point();
+		Intent.action = m_catenary.gantry_first.has_value() ? STR("Click: the second mast, as far as the nearest beam spans") : STR("Click: the first mast of the gantry");
+		Intent.what = kind::catenary;
+		Intent.detail = static_cast<int>(intent_detail::mast);
+		return true;
+	}
+	if (auto const hit{catenary_hit()}; hit >= 0)
+	{
+		Intent.index = hit;
+		Intent.action = STR("Click: select the pole");
+		Intent.what = kind::catenary;
+		Intent.detail = static_cast<int>(intent_detail::select);
+		return true;
+	}
+	if (auto const hit{catenary_gantry_hit()}; hit >= 0)
+	{
+		Intent.index = hit;
+		Intent.action = hit == m_catenary.gantry_selected ? STR("Drag: move the gantry") : STR("Click: put the cantilevers on drops on this gantry, drag: move it");
+		Intent.what = kind::catenary;
+		Intent.detail = static_cast<int>(intent_detail::gantry);
+		return true;
+	}
+	if (auto const hit{catenary_span_hit()}; hit >= 0)
+	{
+		Intent.index = hit;
+		Intent.action = STR("Click: select the chain of this span");
+		Intent.what = kind::catenary;
+		Intent.detail = static_cast<int>(intent_detail::chain);
+		return true;
+	}
+	if (e.m_hover.track != nullptr)
+	{
+		catenary_spot spot;
+		if (catenary_spot_at(*e.m_hover.track, e.m_hover.path, e.m_hover.point, e.cursor_level(e.m_hover.point.y), 0, spot))
+		{
+			Intent.track = e.m_hover.track;
+			Intent.path = e.m_hover.path;
+			Intent.position = spot.axis;
+			Intent.action = catenary_intent_label(spot);
+			Intent.what = kind::catenary;
+			Intent.detail = static_cast<int>(intent_detail::place);
+			return true;
+		}
+	}
+	return false;
+}
+
+std::string catenary_editor::catenary_mode_name() const
+{
+	if (m_catenary.selected >= 0)
+		return STR_C("Catenary: the selected pole follows the settings below");
+	return STR_C("Catenary: LMB by the track places a pole on that side, LMB on a pole selects it");
+}
+
+void catenary_editor::catenary_key_hints(std::vector<key_hint> &Hints) const
+{
+	Hints = {{"LMB by a track", "places a pole on that side, with the card for its distance"}, {"LMB on a pole", "selects it: the settings then change it at once"}};
+	if (m_catenary.selected >= 0)
+		Hints.push_back({"Del", "removes the selected pole"});
+}
+
+bool catenary_editor::catenary_on_key(int const Key, int const Action, int const Mods)
+{
+	return false;
+}
+
+catenary_editor &editor_mode::catenary_tool()
+{
+	if (false == static_cast<bool>(m_catenary_editor))
+		m_catenary_editor = std::make_shared<catenary_editor>(*this);
+	return *m_catenary_editor;
+}
+
+void editor_mode::catenary_scan() { catenary_tool().catenary_scan(); }
+bool editor_mode::catenary_intent(track_intent &Intent) { return catenary_tool().catenary_intent(Intent); }
+void editor_mode::catenary_press(track_intent const &Intent) { catenary_tool().catenary_press(Intent); }
+void editor_mode::catenary_release() { catenary_tool().catenary_release(); }
+bool editor_mode::catenary_dragging() const { return m_catenary_editor && m_catenary_editor->m_catenary.dragging != 0; }
+void editor_mode::catenary_drag_update() { catenary_tool().catenary_drag_update(); }
+void editor_mode::draw_catenary_overlay() const
+{
+	if (m_catenary_editor)
+		m_catenary_editor->draw_catenary_overlay();
+}
+void editor_mode::render_catenary_ui() { catenary_tool().render_catenary_ui(); }
+bool editor_mode::catenary_delete_selected() { return catenary_tool().catenary_delete_selected(); }
+bool editor_mode::catenary_undo() { return catenary_tool().catenary_undo(); }
+bool editor_mode::catenary_on_key(int const Key, int const Action, int const Mods) { return catenary_tool().catenary_on_key(Key, Action, Mods); }
+std::string editor_mode::catenary_mode_name() const { return m_catenary_editor ? m_catenary_editor->catenary_mode_name() : STR_C("Catenary: LMB by the track places a pole on that side, LMB on a pole selects it"); }
+void editor_mode::catenary_key_hints(std::vector<key_hint> &Hints) const
+{
+	if (m_catenary_editor)
+		m_catenary_editor->catenary_key_hints(Hints);
 }

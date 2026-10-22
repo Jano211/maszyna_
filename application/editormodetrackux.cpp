@@ -181,7 +181,7 @@ void editor_mode::draw_track_hover() const
 bool editor_mode::track_gesture_on() const
 {
 	return mouseHold || m_track_set_using || m_track_box.active || m_input.mouse.button(GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS || m_track_gizmo_using || m_route_gizmo_using || m_extend.active || m_switch.placing || m_straights.dragging || m_straights.tool_mouse ||
-	       m_point_drag.active || m_handle_drag.active || m_sweep.dragging || m_turntable.placing || m_signal.placing || m_signal.moving || m_catenary.dragging != 0 || ImGuizmo::IsUsing();
+	       m_point_drag.active || m_handle_drag.active || m_sweep.dragging || m_turntable.placing || m_signal.placing || m_signal.moving || catenary_dragging() || ImGuizmo::IsUsing();
 }
 
 editor_mode::track_intent editor_mode::track_intent_at(int const Mods)
@@ -222,47 +222,7 @@ editor_mode::track_intent editor_mode::track_intent_at(int const Mods)
 		return turntable_intent(ground, shift);
 	if (m_track_tab == track_tab::catenary)
 	{
-		if (m_catenary.gantry_placing)
-		{
-			intent.position = catenary_mast_point();
-			intent.action = m_catenary.gantry_first.has_value() ? STR("Click: the second mast, as far as the nearest beam spans") : STR("Click: the first mast of the gantry");
-			intent.what = kind::catenary_mast;
-			return intent;
-		}
-		if (auto const hit{catenary_hit()}; hit >= 0)
-		{
-			intent.index = hit;
-			intent.action = STR("Click: select the pole");
-			intent.what = kind::catenary_select;
-			return intent;
-		}
-		if (auto const hit{catenary_gantry_hit()}; hit >= 0)
-		{
-			intent.index = hit;
-			intent.action = hit == m_catenary.gantry_selected ? STR("Drag: move the gantry") : STR("Click: put the cantilevers on drops on this gantry, drag: move it");
-			intent.what = kind::catenary_gantry;
-			return intent;
-		}
-		if (auto const hit{catenary_span_hit()}; hit >= 0)
-		{
-			intent.index = hit;
-			intent.action = STR("Click: select the chain of this span");
-			intent.what = kind::catenary_chain;
-			return intent;
-		}
-		if (m_hover.track != nullptr)
-		{
-			catenary_spot spot;
-			if (catenary_spot_at(*m_hover.track, m_hover.path, m_hover.point, cursor_level(m_hover.point.y), 0, spot))
-			{
-				intent.track = m_hover.track;
-				intent.path = m_hover.path;
-				intent.position = spot.axis;
-				intent.action = catenary_intent_label(spot);
-				intent.what = kind::catenary_place;
-				return intent;
-			}
-		}
+		catenary_intent(intent);
 		return intent;
 	}
 	if (m_track_tab == track_tab::signals)
@@ -498,11 +458,7 @@ void editor_mode::track_press(track_intent const &Intent)
 	case kind::turntable_fit: turntable_press(Intent); return;
 	case kind::signal_place:
 	case kind::signal_move: signal_press(Intent); return;
-	case kind::catenary_place:
-	case kind::catenary_select:
-	case kind::catenary_chain:
-	case kind::catenary_gantry:
-	case kind::catenary_mast: catenary_press(Intent); return;
+	case kind::catenary: catenary_press(Intent); return;
 	case kind::select:
 	case kind::none:
 	{

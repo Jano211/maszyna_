@@ -26,8 +26,6 @@ http://mozilla.org/MPL/2.0/.
 #include "editor/editorProfile.hpp"
 #include "editor/editorInfra.hpp"
 #include "editor/editorGauge.hpp"
-#include "world/catenary_suspension.h"
-#include "world/catenary_cantilever.h"
 #include "world/Sweep.h"
 
 #include <array>
@@ -49,6 +47,8 @@ class vehicles_bank;
 struct vehicle_desc;
 struct skin_set;
 }
+
+struct catenary_editor; // application/editormodecatenary.h
 
 class editor_mode : public application_mode, private editor_track::observer
 {
@@ -1080,7 +1080,7 @@ class editor_mode : public application_mode, private editor_track::observer
 	void draw_track_hover() const;
 	struct track_intent
 	{
-		enum class kind { none, gizmo, select, point, box, straight_set, straight_break, detour, straight_tool, straight_handle, route_vertex, route_grip, switch_at, lay, lay_end, sweep, turntable_place, turntable_exit, turntable_fit, spread, extend_end, signal_place, signal_move, catenary_place, catenary_select, catenary_chain, catenary_gantry, catenary_mast };
+		enum class kind { none, gizmo, select, point, box, straight_set, straight_break, detour, straight_tool, straight_handle, route_vertex, route_grip, switch_at, lay, lay_end, sweep, turntable_place, turntable_exit, turntable_fit, spread, extend_end, signal_place, signal_move, catenary };
 		kind what{kind::none};
 		TTrack *track{nullptr};
 		int path{0};
@@ -1089,6 +1089,7 @@ class editor_mode : public application_mode, private editor_track::observer
 		glm::dvec3 position{0.0};
 		editor_track::snap_target snap;
 		std::string action;
+		int detail{0}; // what the tool of the intent means by it (catenary: what was hit)
 	};
 	track_intent m_intent;
 	track_intent track_intent_at(int const Mods);
@@ -1491,119 +1492,24 @@ class editor_mode : public application_mode, private editor_track::observer
 	std::string signal_intent_label(signal_template const &Template, signal_spot const &Spot) const;
 	std::string signal_variant(signal_template const &Template, signal_spot const &Spot) const;
 
-	// catenary: poles with cantilevers by the track, put where the user sees them (on the orthophoto), the cantilever card
-	// chosen from the catalogue by the distance from the face of the pole; spans checked against the catalogue tables
-	struct catenary_spot
-	{
-		TTrack *track{nullptr};
-		int path{0};
-		double parameter{0.0};
-		glm::dvec3 axis{0.0}; // the point of the path, under the rail heads
-		glm::dvec2 forward{0.0, 1.0};
-		int side{1}; // the pole on the right (+1) or on the left (-1) of the direction of the path
-		double radius{0.0}; // of the track there, 0 on a straight
-		bool curve{false};
-		bool toward{true}; // the wires are offset towards the pole
-		double reach{0.0}; // A: from the wires to the face of the pole
-		int card{0};
-		std::string problem; // why there's no card, empty when there is one
-		catenary::suspension data;
-	};
-	struct catenary_change
-	{
-		int group{0}; // changes of one action are taken back together
-		bool chain{false}; // a change of a chain, otherwise of a suspension
-		std::size_t index{0};
-		std::optional<catenary::suspension> before; // none: the suspension was added
-		std::optional<catenary::chain> chain_before; // none: the chain was added
-		bool removed{false}; // the suspension was removed
-		bool gantry{false}; // a change of a gantry
-		std::optional<catenary::gantry> gantry_before; // none: the gantry was added
-	};
-	struct catenary_tool
-	{
-		std::vector<std::string> poles;
-		std::vector<std::string> networks;
-		int pole{0};
-		int network{0};
-		int zone{1};
-		int execution{1};
-		bool swinging{true};
-		bool toward{true};
-		bool alternate{true}; // on a straight the next one goes the other way
-		int bend{0}; // 0: from the track, 1: straight, 2: curve
-		float stagger{0.30f};
-		float clearance{2.50f}; // from the axis of the track to the face of the pole
-		float height{5.60f}; // of the contact wires over the rails
-		bool insulators25{false};
-		char file[128]{};
-		int selected{-1};
-		// chains: the poles placed one after another are joined by spans
-		bool chaining{true};
-		int chain{-1}; // the chain the next pole is added to
-		int last{-1}; // the pole the next span starts at
-		bool append{true}; // the next pole goes after the last one of the chain, otherwise before the first
-		int chain_selected{-1}; // the chain shown in the panel
-		char power[64]{"none"};
-		float voltage{3000.0f};
-		int material{0}; // 0 cu, 1 al
-		int state{0}; // 0 new, 1 worn, 2 tarnished (state 0, 2, 1 in the entry)
-		std::map<std::size_t, catenary_spot> spots; // where the suspensions are by the track, by their numbers
-		std::vector<catenary_change> undo;
-		int group{0};
-		catenary::cantilever_result probe;
-		bool probed{false};
-		bool probe_good{false};
-		std::string status;
-		bool scanned{false};
-		// gantries: two masts and the beam between them, drops with cantilevers on the beam
-		std::vector<std::string> masts;
-		int mast_first{0};
-		int mast_second{0};
-		bool gantry_high{false};
-		int gantry_side{1};
-		bool gantry_placing{false}; // the next two clicks put the masts
-		std::optional<glm::dvec3> gantry_first; // the first mast, waiting for the second
-		std::optional<glm::dvec2> gantry_track; // the direction of the track by the first mast, for the beam square to it
-		bool gantry_square{true}; // the beam goes square to the track
-		char gantry_skin[128]{}; // the replaceable texture of the masts, the beam and the drops
-		int dragging{0}; // 1: the selected pole along the track, 2: the selected gantry along the track
-		glm::vec2 pressed{0.f};
-		glm::dvec3 drag_start{0.0}; // the point of the ground the drag started at
-		std::optional<catenary::gantry> drag_gantry; // the gantry as it was when the drag started
-		std::vector<std::pair<std::size_t, catenary::suspension>> drag_drops; // the drops of the gantry, as they were
-		int gantry_selected{-1}; // the gantry the drops go to
-		std::string drop_choice; // the drop for the next cantilevers on a gantry; empty: the shortest one which fits
-	};
-	catenary_tool m_catenary;
+	// catenary (sieć trakcyjna): the whole tool, its state and its workings are in application/editormodecatenary.h/.cpp;
+	// here only the fixed hooks the rest of the editor calls, so changes of the tool rebuild only its own file
+	friend struct catenary_editor;
+	std::shared_ptr<catenary_editor> m_catenary_editor;
+	catenary_editor &catenary_tool();
 	void catenary_scan();
-	bool catenary_spot_at(TTrack &Track, int const Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor, int const Side, catenary_spot &Spot) const;
-	void catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole = {}) const;
-	catenary_spot const *catenary_spot_of(std::size_t const Index);
-	int catenary_hit() const;
-	int catenary_span_hit() const;
+	bool catenary_intent(track_intent &Intent); // in the catenary tab: what a click would do; false: nothing
 	void catenary_press(track_intent const &Intent);
-	void catenary_select(int const Index);
-	void catenary_apply(catenary_spot const &Spot);
-	void catenary_copy(std::vector<std::size_t> const &Targets);
-	bool catenary_propose_toward(bool &Toward);
-	void catenary_place(catenary_spot const &Spot);
-	void catenary_chain_apply();
-	int catenary_gantry_hit() const;
-	bool catenary_gantry_beam(std::size_t const Index, glm::dvec3 &From, glm::dvec3 &To, double &Bottom) const;
-	bool catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3 &Second, std::string &Beam) const;
-	glm::dvec3 catenary_mast_point() const;
-	bool catenary_on_gantry(catenary_spot &Spot);
-	void catenary_drag_update();
-	// the selected gantry anew: another beam, masts, turned around its middle (degrees), or square to the nearest track
-	void catenary_gantry_reshape(std::string const &Beam, double const Turn, bool const Square);
 	void catenary_release();
-	bool catenary_delete_selected();
-	void catenary_undo();
-	void render_catenary_ui();
-	void render_catenary_chain_ui();
+	bool catenary_dragging() const;
+	void catenary_drag_update();
 	void draw_catenary_overlay() const;
-	std::string catenary_intent_label(catenary_spot const &Spot) const;
+	void render_catenary_ui();
+	bool catenary_delete_selected();
+	bool catenary_undo(); // false: nothing of its own to take back
+	bool catenary_on_key(int const Key, int const Action, int const Mods); // true: the key was used by the tool
+	std::string catenary_mode_name() const;
+	void catenary_key_hints(std::vector<key_hint> &Hints) const;
 
 	// a model laid along the track: bent to follow it, or repeated along it
 	struct sweep_tool

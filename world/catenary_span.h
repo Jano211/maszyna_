@@ -40,6 +40,10 @@ struct catenary_solid {
 };
 // bryły tworzone są, gdy kamera jest blisko przęsła, i zwalniane, gdy się oddali
 catenary_solid catenary_span_solid( TTraction &Traction, glm::dvec3 const &Camera );
+// przęsło po zmianie sąsiadów (np. w edytorze): linie liczone od nowa, bryły zrobią się od nowa
+void catenary_span_refresh( TTraction &Traction );
+// zwalnia linie i bryły przęsła przed jego usunięciem
+void catenary_span_release( TTraction &Traction );
 
 // wygląd metalu brył: kolor własny (sRGB), metaliczność, połysk i siła odbicia otoczenia, każde w zakresie 0–1
 struct catenary_metal {
