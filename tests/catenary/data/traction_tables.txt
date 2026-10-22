@@ -6,6 +6,8 @@ wire L10    0.091  0
 wire L25    0.226  6.39
 wire L35    0.316  0
 wire L95    0.859  0
+# LB70: lina brazowa 70 CuSi (siec SKB70-C); masa 625-635 kg/km wg uzytkownika, zgodna z ~8,9 g/m na mm2 lin Cu
+wire LB70   0.630  0
 wire L120   1.060  14.0
 wire L150   1.345  15.8
 wire Djp100 0.890  12.0
