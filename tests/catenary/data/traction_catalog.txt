@@ -219,11 +219,19 @@ family 078x s_tube_vol2 cards 0780-0785 : 078x - przechylne, hk 1,90 (?)
 family 079x s_tube_vol2 cards 0790-0795 : 079x - poziome, hk 1,00 (?)
 
 // ===================================================================================================================
-// Slupy. Miejsce (szlak / rownia stacyjna / peron) zwyklych slupow - DO UZUPELNIENIA przez uzytkownika.
+// Slupy.
+// Wysokosc slupa 8,2 / 7,8 / 7,4 m = szlak / rownia stacyjna / peron (uzytkownik 2026-10-22: prawdopodobnie). Betonowe tej zaleznosci nie maja.
 polegroup p_concrete poles 1701 : Betonowe (1701)
-polegroup p_ibeam foundation piles poles 1665 1666 1667 : Dwuteowe 200x200 na fundamentach palowych (166x: 8,2 / 7,8 / 7,4 m)
-polegroup p_lattice161 foundation piles poles 1611-11 1611-11-1 1611-12 1611-13 1611-14 1611-15 1613-11 1613-11-1 1613-12 1613-13 1613-14 1613-15 1614-11 1614-11-1 1614-12 1614-13 : Kratowe 161x na fundamentach palowych (1611 8,2 m, 1613 7,8 m, 1614 7,4 m)
+text Słupy betonowe: wysokość nie zależy od miejsca.
+polegroup p_ibeam_line foundation piles site line poles 1665 : Dwuteowe 200x200 na palach, 8,2 m (szlak?)
+polegroup p_ibeam_station foundation piles site station poles 1666 : Dwuteowe 200x200 na palach, 7,8 m (równia stacyjna?)
+polegroup p_ibeam_platform foundation piles site platform poles 1667 : Dwuteowe 200x200 na palach, 7,4 m (peron?)
+polegroup p_lattice_line foundation piles site line poles 1611-11 1611-11-1 1611-12 1611-13 1611-14 1611-15 : Kratowe 1611 na palach, 8,2 m (szlak?)
 text Dopisek -11 ... -15 = nośność C120 ... C200E (większa = grubsza kratownica i większy pal).
+polegroup p_lattice_station foundation piles site station poles 1613-11 1613-11-1 1613-12 1613-13 1613-14 1613-15 : Kratowe 1613 na palach, 7,8 m (równia stacyjna?)
+text Dopisek -11 ... -15 = nośność C120 ... C200E (większa = grubsza kratownica i większy pal).
+polegroup p_lattice_platform foundation piles site platform poles 1614-11 1614-11-1 1614-12 1614-13 : Kratowe 1614 na palach, 7,4 m (peron?)
+text Dopisek -11 ... -13 = nośność C120 ... C160E (większa = grubsza kratownica i większy pal).
 
 // Slupy bramek. 31xx - miejsce z komentarzy w .inc. 303x - dopisek -1...-4 = wykonanie fundamentu (glowica 25 / 54 / 110 / 170 cm);
 // przypisanie do miejsca (-1 szlak, -2 rownia stacyjna, -3 i -4 perony wg wysokosci peronu) PRAWDOPODOBNE - do sprawdzenia w starym Kolprojekcie.
