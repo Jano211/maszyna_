@@ -81,6 +81,7 @@ struct catenary_editor
 		float stagger{0.30f};
 		float clearance{2.50f}; // from the axis of the track to the face of the pole
 		float height{5.60f}; // of the contact wires over the rails
+		float system_height{0.0f}; // hk: of the messenger over the contact wires; 0 = the card's
 		bool insulators25{false};
 		char file[128]{};
 		int selected{-1};

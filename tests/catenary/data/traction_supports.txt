@@ -87,7 +87,7 @@ pole 1614-13 model siec_trakcyjna/slupy/1614-13 foundation siec_trakcyjna/slupy/
 //   zero w osi slupa na wysokosci glowki szyny, Y modelu wzdluz dzwigara; offset = przesuniecie dzwigara wzdluz toru (wg tagow $e_ w .inc)
 //   [strut <mocowanie> stay <mocowanie> steady <mocowanie>] [below_beam <m>] - wysiegnik wprost na slupie bramki: mocowania jak
 //   we wpisie pole (karta 53-0501 wyk. 04: slupy bramek o rozstawie 400x600) i odstep najwyzszej osi srub od spodu dzwigara
-//   (domyslnie 0,15 - ZALOZENIE, do potwierdzenia). Taki slup jest tez "pole" o tej samej nazwie: glebokosc w strone toru =
+//   (domyslnie 0,15 - potwierdzone przez uzytkownika 2026-10-22). Taki slup jest tez "pole" o tej samej nazwie: glebokosc w strone toru =
 //   length (wymiar wzdluz dzwigara), model stawia bramka. W scenerii: "pole <slup> x y z" w osi slupa postawionej bramki
 // beam <nazwa> model <sciezka> span <rozstaw osi slupow> drop <rodzina zwisow> endbeam
 //   zero w osi pierwszego slupa na spodzie dzwigara, X modelu wzdluz dzwigara

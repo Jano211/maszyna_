@@ -702,7 +702,8 @@ void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearan
 	data.execution = scheme->execution;
 	data.has_rope = true;
 	data.rope[0] = wire.x;
-	data.rope[1] = wire.y + scheme->height;
+	// the system height: the card's, or the one set in the panel (the solver raises the stay mount with the messenger)
+	data.rope[1] = wire.y + (tool.system_height > 0.0f ? static_cast<double>(tool.system_height) : scheme->height);
 	data.rope[2] = wire.z;
 }
 
@@ -871,6 +872,13 @@ void catenary_editor::catenary_select(int const Index)
 	tool.stagger = static_cast<float>(std::abs(offset));
 	tool.toward = offset >= 0.0;
 	tool.height = static_cast<float>(data->at[1] - railhead);
+	// its system height: own when it differs from the card's
+	if (auto const *catalog{catenary_scene_catalog()}; catalog != nullptr && data->has_rope)
+	{
+		auto const *scheme{catalog->scheme(data->card, data->execution)};
+		auto const hk{data->rope[1] - data->at[1]};
+		tool.system_height = scheme != nullptr && std::abs(hk - scheme->height) > 0.005 ? static_cast<float>(hk) : 0.0f;
+	}
 	if (pole != nullptr)
 		tool.clearance = static_cast<float>(glm::dot(plan_of(pole_of(*data)) - plan_of(spot->axis), right) - 0.5 * pole->depth(0.0));
 }
@@ -1613,6 +1621,24 @@ void catenary_editor::render_catenary_ui()
 		}
 	}
 	changed |= ImGui::SliderFloat(STR_C("Contact wires over the rails (m)"), &tool.height, 4.90f, 6.50f, "%.2f");
+	{
+		// the system height (hk): from the card, or set by hand
+		auto own{tool.system_height > 0.0f};
+		if (ImGui::Checkbox(STR_C("Own system height"), &own))
+		{
+			tool.system_height = own ? 1.70f : 0.0f;
+			changed = true;
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("Off: the system height of the card (1.70 / 1.30 ...). On: the messenger at the height set here over the contact wires; the stay mount goes with it, the solver warns when the cantilever can't take it"));
+		if (own)
+		{
+			ImGui::SameLine();
+			ImGui::PushItemWidth(100.0f);
+			changed |= ImGui::SliderFloat(STR_C("hk (m)"), &tool.system_height, 0.25f, 2.50f, "%.2f");
+			ImGui::PopItemWidth();
+		}
+	}
 	changed |= ImGui::Checkbox(STR_C("25 kV insulators"), &tool.insulators25);
 	ImGui::RadioButton(STR_C("Wind zone I"), &tool.zone, 1);
 	ImGui::SameLine();
