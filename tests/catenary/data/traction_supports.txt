@@ -393,6 +393,24 @@ beam E349 model siec_trakcyjna/dzwigary/34.9m span 34.9 drop 4850 endbeam
 beam E385 model siec_trakcyjna/dzwigary/38.5m span 38.5 drop 4850 endbeam
 // zwisy 4850 (bramki i nowe polbramki): profil 0,12 m w strone toru; mocowania wyk. 05 (karta 53-0501: wsporniki-zwisy bramek
 // i polbramek), wysiegnik w pelnym zakresie dlugosci zwisu (uzytkownik 2026-10-22)
+
+// ---- pojedyncze elementy dzwigara (2026-10-22) -----------------------------------------------------------------
+// beam ... single: z jednej strony mocowanie do slupa przelotowego, z drugiej do konsoli regulacyjnej; w pliku sieci
+// "mast <slup> x y z tip x y z". span = dlugosc elementu od sciany slupa ($e_W z .inc). Zero modelu jak w dzwigarach E.
+// 3011-3014 (dzwigary srodkowe, tylko do konsoli) - na pozniej (skladanie bramek > 34,9 m z klockow, tryb ekspert).
+beam 3017 model siec_trakcyjna/dzwigary/3017 span 11.7 drop 4850 single endbeam   // dzwigar boczny 11.7 m
+beam 3018 model siec_trakcyjna/dzwigary/3018 span 10.8 drop 4850 single endbeam   // dzwigar boczny 10.8 m
+beam 3019 model siec_trakcyjna/dzwigary/3019 span 9.9 drop 4850 single endbeam   // dzwigar boczny 9.9 m
+beam 3020 model siec_trakcyjna/dzwigary/3020 span 7.6 drop 4850 single endbeam   // dzwigar boczny 7.6 m
+beam 3021 model siec_trakcyjna/dzwigary/3021 span 7.1 drop 4850 single endbeam   // dzwigar boczny 7.1 m
+beam 3022 model siec_trakcyjna/dzwigary/3022 span 6.2 drop 4850 single endbeam   // dzwigar boczny 6.2 m
+beam 3023 model siec_trakcyjna/dzwigary/3023 span 5.3 drop 4850 single endbeam   // dzwigar boczny 5.3 m
+beam 3024 model siec_trakcyjna/dzwigary/3024 span 4.8 drop 4850 single endbeam   // dzwigar boczny 4.8 m
+beam 3025 model siec_trakcyjna/dzwigary/3025 span 3.9 drop 4850 single endbeam   // dzwigar boczny 3.9 m
+// dzwigary zewnetrzne polbramek (do slupow 1901 - ich wpisu mast jeszcze nie ma, wymiary dopisze uzytkownik)
+beam 1910-1 model siec_trakcyjna/dzwigary/1910-1 span 6.5 drop 4850 single endbeam   // dzwigar polbramki 6,5 m
+beam 1910-2 model siec_trakcyjna/dzwigary/1910-2 span 10.2 drop 4850 single endbeam   // dzwigar polbramki 10,2 m
+
 pole 4850-1 model siec_trakcyjna/zwisy/4850/4850-1 top 0.0000 length 1.8000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -1.8000 turn 90 drop 4850 strut 4610-05 stay 4620-05 steady 4630-05 endpole   // zwis 1.8 m
 pole 4850-2 model siec_trakcyjna/zwisy/4850/4850-2 top 0.0000 length 2.1000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -2.1000 turn 90 drop 4850 strut 4610-05 stay 4620-05 steady 4630-05 endpole   // zwis 2.1 m
 pole 4850-3 model siec_trakcyjna/zwisy/4850/4850-3 top 0.0000 length 2.4000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -2.4000 turn 90 drop 4850 strut 4610-05 stay 4620-05 steady 4630-05 endpole   // zwis 2.4 m

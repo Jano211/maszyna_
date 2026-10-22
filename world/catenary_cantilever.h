@@ -183,8 +183,10 @@ struct gantry_mast {
 struct gantry_beam {
     std::string name;
     std::string model;
-    double span { 0.0 };                // rozstaw osi słupów
+    double span { 0.0 };                // rozstaw osi słupów; pojedynczy element: długość od ściany słupa
     std::string drop;                   // rodzina pasujących zwisów
+    bool single { false };              // pojedynczy element na jednym słupie przelotowym (3017-3025, 1910): z jednej strony
+                                        // mocowanie do słupa, z drugiej do konsoli
 };
 
 // rozstaw osi słupów bramki: między ścianami słupów o 0,20 m mniej niż numer dźwigara (E101: 9,9 m), do osi dochodzą offsety słupów

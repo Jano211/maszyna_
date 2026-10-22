@@ -262,7 +262,7 @@ std::vector<std::size_t> gantry_group(std::size_t const Gantry, std::size_t cons
 				continue;
 			for (int a = 0; a < 2; ++a)
 				for (int b = 0; b < 2; ++b)
-					if (same_mast(span->points[a], candidate->points[b]) && std::find(group.begin(), group.end(), other) == group.end())
+					if (false == span->masts[a].empty() && false == candidate->masts[b].empty() && same_mast(span->points[a], candidate->points[b]) && std::find(group.begin(), group.end(), other) == group.end())
 						group.push_back(other);
 		}
 	}
@@ -276,7 +276,7 @@ int spans_at(double const *Point, std::size_t const Except)
 	for (std::size_t other = 0; other < catenary_gantry_size(); ++other)
 	{
 		auto const *candidate{catenary_gantry_get(other)};
-		if (candidate != nullptr && other != Except && (same_mast(candidate->points[0], Point) || same_mast(candidate->points[1], Point)))
+		if (candidate != nullptr && other != Except && ((false == candidate->masts[0].empty() && same_mast(candidate->points[0], Point)) || (false == candidate->masts[1].empty() && same_mast(candidate->points[1], Point))))
 			++count;
 	}
 	return count;
@@ -493,12 +493,14 @@ bool catenary_editor::catenary_gantry_beam(std::size_t const Index, glm::dvec3 &
 	auto const *gantry{catenary_gantry_get(Index)};
 	auto const *catalog{catenary_scene_catalog()};
 	auto const *first{gantry != nullptr && catalog != nullptr ? catalog->mast(gantry->masts[0]) : nullptr};
-	auto const *second{gantry != nullptr && catalog != nullptr ? catalog->mast(gantry->masts[1]) : nullptr};
-	if (first == nullptr || second == nullptr)
+	auto const single{gantry != nullptr && gantry->masts[1].empty()};
+	auto const *second{gantry != nullptr && catalog != nullptr && false == single ? catalog->mast(gantry->masts[1]) : nullptr};
+	auto const *beam{gantry != nullptr && catalog != nullptr ? catalog->beam(gantry->beam) : nullptr};
+	if (first == nullptr || (second == nullptr && false == single) || beam == nullptr)
 		return false;
-	// each end on the mount of its own mast
+	// each end on the mount of its own mast; a single element from the face of its mast for its length
 	double from[3], to[3];
-	gantry_beam_ends(*gantry, *first, *second, from, to);
+	gantry_beam_ends(*gantry, *first, second, beam->span, from, to);
 	From = {from[0], from[1], from[2]};
 	To = {to[0], to[1], to[2]};
 	Bottom = From.y;
@@ -531,11 +533,12 @@ bool catenary_editor::catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3
 	// the beam runs between the faces of the masts: their axes are farther apart by the offsets of both
 	auto const *a{catalog->mast(tool.masts.empty() ? std::string{} : tool.masts[std::clamp(tool.mast_first, 0, static_cast<int>(tool.masts.size()) - 1)])};
 	auto const *b{catalog->mast(tool.masts.empty() ? std::string{} : tool.masts[std::clamp(tool.mast_second, 0, static_cast<int>(tool.masts.size()) - 1)])};
-	auto const offsets{(a != nullptr ? a->offset : 0.0) + (b != nullptr ? b->offset : 0.0) - 0.20}; // between the faces of the masts 0.20 m less than the beam
+	// a single element: from the face of its one mast for its length; otherwise between the faces of the masts 0.20 m less than the beam
+	auto const offsets{tool.gantry_single ? (a != nullptr ? a->offset : 0.0) : (a != nullptr ? a->offset : 0.0) + (b != nullptr ? b->offset : 0.0) - 0.20};
 	auto best{std::numeric_limits<double>::max()};
 	double span{0.0};
 	for (auto const &beam : catalog->beams())
-		if (std::abs(beam.second.span + offsets - distance) < best)
+		if (beam.second.single == tool.gantry_single && std::abs(beam.second.span + offsets - distance) < best)
 		{
 			best = std::abs(beam.second.span + offsets - distance);
 			span = beam.second.span;
@@ -586,6 +589,8 @@ bool catenary_editor::catenary_on_mast(catenary::gantry const &Gantry, double co
 	auto nearest{std::numeric_limits<double>::max()};
 	for (int k = 0; k < 2; ++k)
 	{
+		if (Gantry.masts[k].empty())
+			continue;
 		glm::dvec3 const mast{Gantry.points[k][0], Gantry.points[k][1], Gantry.points[k][2]};
 		auto const across{glm::dot(plan_of(mast) - plan_of(Spot.axis), right)};
 		if (across > 0.3 && across < nearest)
@@ -1167,7 +1172,7 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		gantry.side = 1;
 		gantry.skin = tool.gantry_skin;
 		gantry.masts[0] = tool.masts[std::clamp(tool.mast_first, 0, static_cast<int>(tool.masts.size()) - 1)];
-		gantry.masts[1] = tool.masts[std::clamp(tool.mast_second, 0, static_cast<int>(tool.masts.size()) - 1)];
+		gantry.masts[1] = tool.gantry_single ? std::string{} : tool.masts[std::clamp(tool.mast_second, 0, static_cast<int>(tool.masts.size()) - 1)];
 		auto const first{*tool.gantry_first};
 		gantry.points[0][0] = first.x;
 		gantry.points[0][1] = first.y;
@@ -1183,6 +1188,7 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		tool.undo.push_back(change);
 		tool.gantry_selected = static_cast<int>(index);
 		tool.gantry_placing = false;
+		tool.gantry_single = false;
 		tool.gantry_first.reset();
 		tool.status = format(STR_C("Gantry %s with beam %s placed; LMB over a track puts a drop with a cantilever on it"), gantry.name.c_str(), beam.c_str());
 		return;
@@ -1768,10 +1774,24 @@ void catenary_editor::render_catenary_ui()
 		if (ImGui::Button(tool.gantry_placing ? STR_C("Cancel the gantry") : STR_C("Place a gantry")))
 		{
 			tool.gantry_placing = false == tool.gantry_placing;
+			tool.gantry_single = false;
 			tool.gantry_first.reset();
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("LMB the first mast, LMB the second: the beam is the one of the catalogue nearest to that distance"));
+		if (false == tool.gantry_placing)
+		{
+			ImGui::SameLine();
+			if (ImGui::Button(STR_C("Place a single beam element")))
+			{
+				tool.gantry_placing = true;
+				tool.gantry_single = true;
+				tool.gantry_first.reset();
+				tool.status = STR("LMB the through mast (the first mast above), LMB where the element points: the element of the catalogue nearest to that length");
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("A single beam element (3017-3025, 1910) on one through mast: on one side fixed to the mast, on the other end to a console"));
+		}
 		if (auto const *gantry{tool.gantry_selected >= 0 ? catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected)) : nullptr}; gantry != nullptr)
 		{
 			ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Gantry %s, beam %s: the cantilevers go on drops on it"), gantry->name.c_str(), gantry->beam.c_str()).c_str());
@@ -1780,7 +1800,7 @@ void catenary_editor::render_catenary_ui()
 			if (ImGui::BeginCombo(STR_C("Beam"), gantry->beam.c_str()))
 			{
 				for (auto const &beam : catalog->beams())
-					if (ImGui::Selectable(format("%s  %.1f m", beam.first.c_str(), beam.second.span).c_str(), beam.first == gantry->beam))
+					if (beam.second.single == gantry->masts[1].empty() && ImGui::Selectable(format("%s  %.1f m", beam.first.c_str(), beam.second.span).c_str(), beam.first == gantry->beam))
 						catenary_gantry_reshape(beam.first, 0.0, false);
 				ImGui::EndCombo();
 			}
@@ -1795,6 +1815,8 @@ void catenary_editor::render_catenary_ui()
 				auto best{std::numeric_limits<double>::max()};
 				for (auto const &beam : catalog->beams())
 				{
+					if (beam.second.single != current->single)
+						continue;
 					auto const difference{(beam.second.span - current->span) * Direction};
 					if (difference > 0.01 && difference < best)
 					{
@@ -1845,6 +1867,27 @@ void catenary_editor::render_catenary_ui()
 				ImGui::EndDisabled();
 				if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 					ImGui::SetTooltip("%s", type != nullptr && false == type->through ? STR_C("An end mast: a beam can go on one side of it only; a through mast is needed") : false == free ? STR_C("This mast has beams on both sides already") : STR_C("The beam of the next span on the other side of this through mast, in line with this span"));
+				ImGui::SameLine();
+				ImGui::BeginDisabled(type == nullptr || false == type->through || false == free || gantry->masts[k].empty());
+				if (ImGui::Button(format(STR_C("Single element from mast %d"), k + 1).c_str()))
+				{
+					tool.gantry_placing = true;
+					tool.gantry_single = true;
+					glm::dvec3 const from{gantry->points[k][0], gantry->points[k][1], gantry->points[k][2]};
+					glm::dvec3 const other{gantry->points[1 - k][0], gantry->points[1 - k][1], gantry->points[1 - k][2]};
+					tool.gantry_first = from;
+					auto const out{glm::normalize(plan_of(from) - plan_of(other))};
+					tool.gantry_track = glm::dvec2{out.y, -out.x};
+					tool.gantry_square = true;
+					tool.gantry_high = gantry->high;
+					std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", gantry->skin.c_str());
+					if (auto const found{std::find(tool.masts.begin(), tool.masts.end(), gantry->masts[k])}; found != tool.masts.end())
+						tool.mast_first = static_cast<int>(found - tool.masts.begin());
+					tool.status = STR("LMB: as far as the single element should reach, in line with this span");
+				}
+				ImGui::EndDisabled();
+				if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+					ImGui::SetTooltip("%s", STR_C("A single beam element (3017-3025, 1910) on the other side of this through mast, in line with this span"));
 			}
 			{
 				float turn{0.0f};
@@ -1891,6 +1934,8 @@ void catenary_editor::render_catenary_ui()
 			}
 			for (int mast = 0; mast < 2; ++mast)
 			{
+				if (gantry->masts[mast].empty())
+					continue; // a single element has no second mast
 				auto height{static_cast<float>(gantry->points[mast][1])};
 				ImGui::PushItemWidth(120.0f);
 				ImGui::PushID(mast);
@@ -2029,6 +2074,8 @@ void catenary_editor::draw_catenary_overlay() const
 		projection.line(drawlist, from, to, colour, selected || hovered ? 3.0f : 1.5f);
 		for (int mast = 0; mast < 2; ++mast)
 		{
+			if (gantry->masts[mast].empty())
+				continue; // the tip of a single element
 			auto const *type{catalog != nullptr ? catalog->mast(gantry->masts[mast]) : nullptr};
 			glm::dvec3 const foot{gantry->points[mast][0], gantry->points[mast][1], gantry->points[mast][2]};
 			projection.line(drawlist, foot, foot + glm::dvec3{0.0, type != nullptr ? type->height : 8.0, 0.0}, colour, selected || hovered ? 3.0f : 1.5f);
@@ -2046,7 +2093,8 @@ void catenary_editor::draw_catenary_overlay() const
 		std::string beam;
 		if (catenary_gantry_second(catenary_mast_point(), second, beam))
 		{
-			projection.line(drawlist, second, second + glm::dvec3{0.0, 8.0, 0.0}, overlay_color::marked, 3.0f);
+			if (false == tool.gantry_single)
+				projection.line(drawlist, second, second + glm::dvec3{0.0, 8.0, 0.0}, overlay_color::marked, 3.0f);
 			projection.line(drawlist, first + glm::dvec3{0.0, 7.5, 0.0}, second + glm::dvec3{0.0, 7.5, 0.0}, overlay_color::marked, 2.0f);
 			ImVec2 middle;
 			if (projection.project(0.5 * (first + second) + glm::dvec3{0.0, 8.2, 0.0}, middle))
@@ -2217,12 +2265,14 @@ void catenary_editor::catenary_gantry_reshape(std::string const &Beam, double co
 	{
 		// the masts chosen in the panel
 		changed.masts[0] = tool.masts[std::clamp(tool.mast_first, 0, static_cast<int>(tool.masts.size()) - 1)];
-		changed.masts[1] = tool.masts[std::clamp(tool.mast_second, 0, static_cast<int>(tool.masts.size()) - 1)];
+		if (false == gantry->masts[1].empty())
+			changed.masts[1] = tool.masts[std::clamp(tool.mast_second, 0, static_cast<int>(tool.masts.size()) - 1)];
 	}
+	auto const single{changed.masts[1].empty()};
 	auto const *beam{catalog->beam(changed.beam)};
 	auto const *a{catalog->mast(changed.masts[0])};
-	auto const *b{catalog->mast(changed.masts[1])};
-	if (beam == nullptr || a == nullptr || b == nullptr)
+	auto const *b{single ? nullptr : catalog->mast(changed.masts[1])};
+	if (beam == nullptr || a == nullptr || (b == nullptr && false == single))
 		return;
 	glm::dvec3 const first{gantry->points[0][0], gantry->points[0][1], gantry->points[0][2]};
 	glm::dvec3 const second{gantry->points[1][0], gantry->points[1][1], gantry->points[1][2]};
@@ -2267,9 +2317,10 @@ void catenary_editor::catenary_gantry_reshape(std::string const &Beam, double co
 		auto const across{right_of(along)};
 		direction = glm::dot(across, direction) >= 0.0 ? across : -across;
 	}
-	auto const spacing{catenary::gantry_spacing(*beam, *a, *b)};
+	// a single element: the tip point at its length from the face of the mast (only its direction matters)
+	auto const spacing{single ? beam->span + a->offset : catenary::gantry_spacing(*beam, *a, *b)};
 	// turned or squared: around its middle; a new beam or masts: the first mast stays
-	glm::dvec2 const start{(Turn != 0.0 || Square) ? centre - direction * (0.5 * spacing) : plan_of(first)};
+	glm::dvec2 const start{(Turn != 0.0 || Square) && false == single ? centre - direction * (0.5 * spacing) : plan_of(first)};
 	auto const end{start + direction * spacing};
 	changed.points[0][0] = start.x;
 	changed.points[0][2] = start.y;

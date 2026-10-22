@@ -347,6 +347,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 else if( ismast && key == "below_beam" ) { number( mast.below_beam, good ); }
                 else if( false == ismast && key == "span" ) { number( beam.span, good ); }
                 else if( false == ismast && key == "drop" ) { text( beam.drop ); }
+                else if( false == ismast && key == "single" ) { beam.single = true; }
                 else { report( entry, "unknown keyword \"" + key + "\"" ); good = false; --index; }
             }
             if( false == good || false == closed ) {

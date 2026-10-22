@@ -5687,3 +5687,21 @@ msgstr " (przelotowy)"
 
 msgid " (end)"
 msgstr " (końcowy)"
+
+msgid "Place a single beam element"
+msgstr "Postaw pojedynczy element dźwigara"
+
+msgid "LMB the through mast (the first mast above), LMB where the element points: the element of the catalogue nearest to that length"
+msgstr "LPM: słup przelotowy (pierwszy słup wybrany wyżej), LPM: dokąd sięga element - element z katalogu najbliższy tej długości"
+
+msgid "A single beam element (3017-3025, 1910) on one through mast: on one side fixed to the mast, on the other end to a console"
+msgstr "Pojedynczy element dźwigara (3017-3025, 1910) na jednym słupie przelotowym: z jednej strony mocowany do słupa, z drugiej do konsoli"
+
+msgid "Single element from mast %d"
+msgstr "Pojedynczy element od słupa %d"
+
+msgid "LMB: as far as the single element should reach, in line with this span"
+msgstr "LPM: dokąd ma sięgać pojedynczy element, w linii z tym przęsłem"
+
+msgid "A single beam element (3017-3025, 1910) on the other side of this through mast, in line with this span"
+msgstr "Pojedynczy element dźwigara (3017-3025, 1910) po drugiej stronie tego słupa przelotowego, w linii z tym przęsłem"
