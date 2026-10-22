@@ -5705,3 +5705,12 @@ msgstr "LPM: dokąd ma sięgać pojedynczy element, w linii z tym przęsłem"
 
 msgid "A single beam element (3017-3025, 1910) on the other side of this through mast, in line with this span"
 msgstr "Pojedynczy element dźwigara (3017-3025, 1910) po drugiej stronie tego słupa przelotowego, w linii z tym przęsłem"
+
+msgid "Own system height"
+msgstr "Własna wysokość konstrukcyjna"
+
+msgid "Off: the system height of the card (1.70 / 1.30 ...). On: the messenger at the height set here over the contact wires; the stay mount goes with it, the solver warns when the cantilever can't take it"
+msgstr "Wyłączone: wysokość konstrukcyjna z karty (1,70 / 1,30 ...). Włączone: lina nośna na podanej wysokości nad przewodami jezdnymi; mocowanie odciągu idzie za nią, solver ostrzega, gdy wysięgnik się nie złoży"
+
+msgid "hk (m)"
+msgstr "hk (m)"
