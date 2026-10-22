@@ -724,9 +724,7 @@ std::string editor_mode::track_mode_name() const
 			return STR_C("Signal: drag along the track sets the direction of the trains, release to place it");
 		return signal_armed() != nullptr ? STR_C("Signal: LMB by the track places it on that side") : STR_C("Signal: choose its type below");
 	case track_tab::catenary:
-		if (m_catenary.selected >= 0)
-			return STR_C("Catenary: the selected pole follows the settings below");
-		return STR_C("Catenary: LMB by the track places a pole on that side, LMB on a pole selects it");
+		return catenary_mode_name();
 	case track_tab::turntable:
 		if (m_turntable.placing)
 			return STR_C("Turntable: drag to turn the bridge, release to place it");
@@ -3526,9 +3524,7 @@ std::vector<editor_mode::key_hint> editor_mode::track_key_hints(bool const All) 
 	}
 	else if (m_track_window_open && m_track_tab == track_tab::catenary)
 	{
-		hints = {{"LMB by a track", "places a pole on that side, with the card for its distance"}, {"LMB on a pole", "selects it: the settings then change it at once"}};
-		if (m_catenary.selected >= 0)
-			hints.push_back({"Del", "removes the selected pole"});
+		catenary_key_hints(hints);
 	}
 	else if (m_track_window_open && m_track_tab == track_tab::joints)
 		hints = {{"LMB on a row", "show the place"}, {"Fix", "joins the ends, aligns them"}};

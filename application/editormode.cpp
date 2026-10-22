@@ -5293,6 +5293,10 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
     if (ui()->mode() == nodebank_panel::TRACK && is_press(Action) && (Mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0 && typed_key(Key))
         return;
 
+    // the catenary tool may have keys of its own
+    if (ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::catenary && catenary_on_key(Key, Action, Mods))
+        return;
+
     // gizmo transform shortcuts (Q/W/E/R) — only when the camera isn't being flown (RMB up).
     // handled before the camera keyboard step because Q/W/E are also the fly-mode movement keys,
     // which would otherwise consume them.
@@ -5384,11 +5388,8 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
     if (Global.ctrlState && Key == GLFW_KEY_Z && is_press(Action))
     {
         // in the catenary tool its own changes are taken back first
-        if (ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::catenary && m_catenary.dragging == 0 && false == m_catenary.undo.empty())
-        {
-            catenary_undo();
+        if (ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::catenary && catenary_undo())
             return;
-        }
         undo_last();
         return;
     }
@@ -5724,7 +5725,7 @@ void editor_mode::on_mouse_button(int const Button, int const Action, int const 
                     turntable_finish_placement();
                 if (m_signal.placing || m_signal.moving)
                     signal_release();
-                if (m_catenary.dragging != 0)
+                if (catenary_dragging())
                     catenary_release();
             }
 

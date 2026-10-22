@@ -20,6 +20,7 @@ http://mozilla.org/MPL/2.0/.
 #include "utilities/parser.h"
 #include "world/Traction.h"
 #include "world/TractionPower.h"
+#include "world/catenary_span.h"
 
 // część należy do pliku sieci, nie do pliku scenerii, w którym akurat jest dyrektywa: bez warstwy zapis scenerii
 // w edytorze jej nie przepisuje (inaczej każda część wysięgnika trafiłaby do scenerii jako zwykły model)
@@ -60,17 +61,21 @@ catenary_span_create( std::string const &Name, double const RangeMax, double con
     if( auto *powersource { simulation::Powergrid.find( span->asPowerSupplyName ) }; powersource != nullptr ) {
         span->PowerSet( powersource );
     }
+    std::vector<TTraction *> neighbours;
     for( int end = 0; end < 2; ++end ) {
         auto const [ matching, connection ] = simulation::Region->find_traction( end == 0 ? span->pPoint1 : span->pPoint2, span );
         if( matching != nullptr && ( connection == 0 || connection == 1 ) && matching->hvNext[ connection ] == nullptr ) {
             span->Connect( end, matching, connection );
             if( span->psSection == nullptr && matching->psSection != nullptr ) { span->PowerSet( matching->psSection ); }
+            neighbours.push_back( matching );
         }
     }
     auto &section { simulation::Region->section( span->location() ) };
     if( section.m_geometrycreated ) {
         span->create_geometry( section.m_geometrybank );
     }
+    // sąsiedzi mają teraz z tej strony przęsło (np. wspólną linkę Y): ich linie i bryły od nowa
+    for( auto *neighbour : neighbours ) { catenary_span_refresh( *neighbour ); }
     return span;
 }
 
@@ -78,7 +83,8 @@ void
 catenary_span_delete( TTraction *Span ) {
 
     if( Span == nullptr ) { return; }
-    // sąsiednie przęsła tracą połączenie z tym
+    // sąsiednie przęsła tracą połączenie z tym, a z nim np. wspólną linkę Y: ich linie i bryły od nowa
+    std::vector<TTraction *> neighbours;
     for( int end = 0; end < 2; ++end ) {
         auto *neighbour { Span->hvNext[ end ] };
         if( neighbour == nullptr ) { continue; }
@@ -88,7 +94,10 @@ catenary_span_delete( TTraction *Span ) {
                 neighbour->iLast = 1;
             }
         }
+        neighbours.push_back( neighbour );
     }
+    for( auto *neighbour : neighbours ) { catenary_span_refresh( *neighbour ); }
+    catenary_span_release( *Span );
     simulation::Region->erase_and_unregister( Span );
     auto const name { Span->name() };
     simulation::Traction.purge( Span );

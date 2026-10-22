@@ -55,4 +55,4 @@ Exe czyta oba pliki danych do jednego katalogu. Python w grze nie bierze udział
   push `wszystko` (gałąź zbiorcza, z której buduje się exe do testów).
 - Dane do katalogu `data\` symulatora: **oba pliki**, w CRLF; po zapisie sprawdzić md5 (pobrać z powrotem i porównać).
   Scenerie do `scenery\`. Cudzych scenerii nie nadpisywać – nowa nazwa pliku (np. `td_wys25`).
-- `Traction.h` i `Globals.h` – nie ruszać bez wyraźnej zgody użytkownika (pliki wspólne z resztą exe, konflikty przy merge).
+- `Traction.h`, `Globals.h`, `editormode.h` – ruszać tylko, gdy naprawdę trzeba (pliki wspólne z resztą exe: długa przebudowa, konflikty przy merge). Narzędzie sieci w edytorze rozwijać w `application/editormodecatenary.h/.cpp` – zmiana tam przebudowuje jeden plik.

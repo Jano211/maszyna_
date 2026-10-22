@@ -347,3 +347,39 @@ catenary_span_solid( TTraction &Traction, glm::dvec3 const &Camera ) {
     span.solidloaded = ( span.solid.wires != null_handle );
     return ( span.solidloaded ? span.solid : catenary_solid() );
 }
+
+namespace {
+
+// bryły przęsła zwolnione; zrobią się od nowa, gdy kamera podejdzie
+void
+drop_solid( TTraction &Traction ) {
+    if( false == static_cast<bool>( Traction.m_catenaryspan ) ) { return; }
+    auto &span { *Traction.m_catenaryspan };
+    if( false == span.solidloaded ) { return; }
+    release( span.solid.wires );
+    release( span.solid.fittings );
+    span.solid = {};
+    span.solidloaded = false;
+}
+
+} // namespace
+
+// przęsło po zmianie sąsiadów (przęsło obok zrobione albo usunięte w edytorze): linie liczone od nowa, bryły do zrobienia
+// od nowa. kształt przęsła zależy od sąsiadów (wspólne linki Y), a linie powstają raz, przy tworzeniu geometrii sekcji,
+// i bryły też są trzymane, dopóki kamera jest blisko – bez tego zostawały policzone dla poprzednich sąsiadów
+void
+catenary_span_refresh( TTraction &Traction ) {
+    drop_solid( Traction );
+    if( Traction.m_geometry == null_handle ) { return; }
+    gfx::vertex_array vertices;
+    if( false == catenary_span_lines( Traction, vertices ) ) { return; }
+    gfx::userdata_array userdata;
+    GfxRenderer->Replace( vertices, userdata, Traction.m_geometry, GL_LINES );
+}
+
+// zwalnia linie i bryły usuwanego przęsła
+void
+catenary_span_release( TTraction &Traction ) {
+    drop_solid( Traction );
+    release( Traction.m_geometry );
+}
