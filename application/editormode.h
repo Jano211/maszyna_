@@ -608,7 +608,8 @@ class editor_mode : public application_mode, private editor_track::observer
 		surroundings,
 		tracks,
 		roads,
-		terrain
+		terrain,
+		catenary // the catenary tool of the tracks, as a field of work of its own
 	};
 	work_area current_work_area() const;
 	void choose_work_area(work_area const Area);
@@ -1510,6 +1511,9 @@ class editor_mode : public application_mode, private editor_track::observer
 	bool catenary_on_key(int const Key, int const Action, int const Mods); // true: the key was used by the tool
 	std::string catenary_mode_name() const;
 	void catenary_key_hints(std::vector<key_hint> &Hints) const;
+	// the page of the catenary field of work: 0 poles, 1 gantries, 2 wires
+	int catenary_page();
+	void catenary_choose_page(int const Page);
 
 	// a model laid along the track: bent to follow it, or repeated along it
 	struct sweep_tool

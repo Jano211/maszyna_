@@ -173,7 +173,6 @@ void editor_mode::work_area_tools(std::vector<tool_button> &Buttons)
 		add(track_tab::turntable, icon::turntable, false);
 		add(track_tab::signals, icon::signal, true);
 		add(track_tab::lineside, icon::objects, false);
-		add(track_tab::catenary, icon::catenary, false);
 		Buttons.push_back({icon::vehicle, STR_C("Vehicle"), nullptr, STR_C("A vehicle to drive, put on the selected track; it isn't written to the scenery files"), vehicle, [this, vehicle]() {
 			                   show_track_tab(vehicle ? track_tab::path : track_tab::lineside);
 			                   m_vehicle.expand = false == vehicle;
@@ -184,6 +183,15 @@ void editor_mode::work_area_tools(std::vector<tool_button> &Buttons)
 		add(track_tab::infra, icon::infra, false);
 		Buttons.push_back({icon::gauge, STR_C("Structure gauge"), nullptr, STR_C("Checks which models enter the structure gauge of the tracks and the clearance over the roads (skrajnia budowli)"), m_gauge.open,
 		                   [this]() { m_gauge.open = !m_gauge.open; }});
+		break;
+	}
+	case work_area::catenary:
+	{
+		// the pages of the catenary: poles with cantilevers, gantries, the wires of the chains
+		auto const page{catenary_page()};
+		Buttons.push_back({icon::catenary, STR_C("Poles"), nullptr, STR_C("Poles with cantilevers: LMB by a track places one, LMB on a pole selects it"), page == 0, [this]() { catenary_choose_page(0); }});
+		Buttons.push_back({icon::gantry, STR_C("Gantries"), nullptr, STR_C("Gantries: masts and beams, the cantilevers on their drops and masts"), page == 1, [this]() { catenary_choose_page(1); }});
+		Buttons.push_back({icon::wires, STR_C("Wires"), nullptr, STR_C("The chains: the type of the network, the wires, the spans between the poles"), page == 2, [this]() { catenary_choose_page(2); }});
 		break;
 	}
 	case work_area::roads:

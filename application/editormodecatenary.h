@@ -116,6 +116,9 @@ struct catenary_editor
 		std::optional<glm::dvec3> gantry_first; // the first mast, waiting for the second
 		std::optional<glm::dvec2> gantry_track; // the direction of the track by the first mast, for the beam square to it
 		bool gantry_square{true}; // the beam goes square to the track
+		bool gantry_snap{true}; // the first mast goes at gantry_face from the axis of the track under the cursor
+		int shift_group{0}; // the undo group of the distance of a mast being dragged; 0: the next change opens one
+		float gantry_face{2.50f}; // from the axis of the track to the face of the mast (towards the track)
 		char gantry_skin[128]{}; // the replaceable texture of the masts, the beam and the drops
 		int dragging{0}; // 1: the selected pole along the track, 2: the selected gantry along the track
 		glm::vec2 pressed{0.f};
@@ -131,6 +134,7 @@ struct catenary_editor
 		std::string catalog_group;
 		std::string catalog_family;
 		int catalog_card{0};
+		int page{0}; // the page of the catenary field of work: 0 poles, 1 gantries, 2 wires
 		int gantry_hang{0}; // the next cantilevers on the selected gantry: 0 on drops of the beam, 1 straight on its masts
 	};
 	catenary_tool m_catenary;
@@ -153,6 +157,10 @@ struct catenary_editor
 	bool catenary_gantry_beam(std::size_t const Index, glm::dvec3 &From, glm::dvec3 &To, double &Bottom) const;
 	bool catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3 &Second, std::string &Beam) const;
 	glm::dvec3 catenary_mast_point() const;
+	// the face of the mast from the axis of the nearest track (within 20 m); false: no track near
+	bool catenary_mast_face(std::string const &Mast, glm::dvec3 const &Point, double &Face, glm::dvec2 &Away) const;
+	// the selected gantry (all its spans and what hangs on them) moved in the plan
+	void catenary_gantry_shift(glm::dvec2 const &Shift);
 	bool catenary_on_gantry(catenary_spot &Spot);
 	void catenary_drag_update();
 	// the selected gantry anew: another beam, masts, turned around its middle (degrees), or square to the nearest track
@@ -164,6 +172,9 @@ struct catenary_editor
 	void render_catenary_ui();
 	bool render_catenary_catalog_ui();
 	void render_catenary_chain_ui();
+	void render_catenary_cantilever_ui();
+	void render_catenary_wires_ui();
+	void catenary_choose_page(int const Page);
 	void draw_catenary_overlay() const;
 	std::string catenary_intent_label(catenary_spot const &Spot) const;
 	// the hooks of editor_mode

@@ -743,6 +743,7 @@ void editor_mode::render_track_inspector()
 	if (false == m_track_window_open || m_track_tab != track_tab::lineside)
 		m_sweep.open = m_hekto.open = m_fouling.open = m_parallel.open = m_vehicle.open = false;
 	ui()->set_track(m_track_window_open);
+	ui()->set_track_title(m_track_tab == track_tab::catenary ? STR("Catenary") : std::string{});
 	if (false == m_track_window_open)
 	{
 		// a closed window takes its mode with it
@@ -780,9 +781,13 @@ void editor_mode::render_track_tool_options()
 {
 	auto *track{selected_track()};
 	// the tools themselves are in the toolbar
-	render_track_search();
-	ImGui::Spacing();
-	render_track_guide();
+	if (m_track_tab != track_tab::catenary)
+	{
+		// the catenary is a field of work of its own: no search of the paths there
+		render_track_search();
+		ImGui::Spacing();
+		render_track_guide();
+	}
 	switch (m_track_tab)
 	{
 	case track_tab::lay:

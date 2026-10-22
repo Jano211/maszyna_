@@ -1265,7 +1265,7 @@ void editor_mode::redo_one()
 
 bool editor_mode::update()
 {
-    Global.editor_tracks = (current_work_area() == work_area::tracks);
+    Global.editor_tracks = (current_work_area() == work_area::tracks || current_work_area() == work_area::catenary);
     selftest_step();
     if (m_vehicle.leave)
     {
@@ -4421,7 +4421,7 @@ editor_mode::work_area editor_mode::current_work_area() const
 	if (m_terrain_open)
 		return work_area::terrain;
 	if (m_track_window_open)
-		return work_area::tracks;
+		return m_track_tab == track_tab::catenary ? work_area::catenary : work_area::tracks;
 	if (m_roadtool.window)
 		return work_area::roads;
 	return work_area::surroundings;
@@ -4437,7 +4437,11 @@ void editor_mode::choose_work_area(work_area const Area)
 		break;
 	case work_area::tracks:
 		terrain_workspace(false);
-		show_track_tab(m_track_tab);
+		show_track_tab(m_track_tab == track_tab::catenary ? track_tab::path : m_track_tab);
+		break;
+	case work_area::catenary:
+		terrain_workspace(false);
+		show_track_tab(track_tab::catenary);
 		break;
 	case work_area::roads:
 		m_track_window_open = false;
@@ -4466,8 +4470,9 @@ void editor_mode::render_workspaces()
 	    {STR_C("Tracks"), work_area::tracks, editor_icons::icon::work_tracks, STR_C("Tracks and switches, signals, objects along the track, checks of the line")},
 	    {STR_C("Roads"), work_area::roads, editor_icons::icon::work_roads, STR_C("Roads and junctions, level crossings, the points where the traffic comes and goes")},
 	    {STR_C("Terrain"), work_area::terrain, editor_icons::icon::work_terrain, STR_C("Heightmap terrain: chunks, sculpting, painting, water, orthophoto")},
+	    {STR_C("Catenary"), work_area::catenary, editor_icons::icon::work_catenary, STR_C("The overhead catenary: poles with cantilevers, gantries, the wires of the chains")},
 	};
-	char const *const keys[] = {"F2", "F3", "F4", "F5"};
+	char const *const keys[] = {"F2", "F3", "F4", "F5", "F6"};
 	auto const current{current_work_area()};
 	auto const &style{ImGui::GetStyle()};
 	auto *list{ImGui::GetWindowDrawList()};
@@ -4607,7 +4612,7 @@ void editor_mode::render_shortcuts_window()
 	      {"Ctrl+Shift+F11", "Export scenery dump"},
 	      {"F11", "Leave the editor"},
 	      {"F10", "Quit"}}},
-	    {"Fields of work", {{"F2", "Surroundings"}, {"F3", "Tracks"}, {"F4", "Roads"}, {"F5", "Terrain"}}},
+	    {"Fields of work", {{"F2", "Surroundings"}, {"F3", "Tracks"}, {"F4", "Roads"}, {"F5", "Terrain"}, {"F6", "Catenary"}}},
 	    {"Camera",
 	     {{"RMB held, mouse", "Look around"},
 	      {"RMB held, W S A D", "Fly forwards, back, left, right (arrows in the legacy scheme)"},
@@ -5320,6 +5325,7 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
         case GLFW_KEY_F3: choose_work_area(work_area::tracks); break;
         case GLFW_KEY_F4: choose_work_area(work_area::roads); break;
         case GLFW_KEY_F5: choose_work_area(work_area::terrain); break;
+        case GLFW_KEY_F6: choose_work_area(work_area::catenary); break;
         // the edit modes in the order of the toolbar; in the track mode the digits typed as a value were taken already
         case GLFW_KEY_1: choose_edit_mode(nodebank_panel::MODIFY); break;
         case GLFW_KEY_2: choose_edit_mode(nodebank_panel::ADD); break;

@@ -56,6 +56,9 @@ enum class icon
 	work_tracks,
 	work_roads,
 	work_terrain,
+	work_catenary,
+	gantry,
+	wires,
 	count
 };
 
