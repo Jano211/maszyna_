@@ -19,4 +19,6 @@ g++ $F -I. $T/test_cantilever.cpp world/catenary_cantilever.cpp -o $T/tc
 g++ $F -I$T/mock -I. $T/test_editor.cpp $T/mock_objects.cpp world/catenary_scene.cpp world/catenary_layout.cpp world/catenary_catalog.cpp world/catenary_suspension.cpp world/catenary_cantilever.cpp world/catenary_span.cpp world/catenary_network.cpp world/catenary_solver.cpp -o $T/te
 # 7. katalog konstrukcji dla edytora (traction_catalog.txt): pokrycie kart, dobor karty z grupy
 g++ $F -I. $T/test_catalog.cpp world/catenary_catalog.cpp world/catenary_cantilever.cpp -o $T/tk
-echo "zbudowane: t ts sim tsc tc te tk"
+# 8. konwersja starej sieci: dobor karty i zlozenie solverem (tests/catenary/konwersja)
+g++ $F -I$T/mock -I. $T/conv_pick.cpp $T/mock_objects.cpp world/catenary_scene.cpp world/catenary_layout.cpp world/catenary_catalog.cpp world/catenary_suspension.cpp world/catenary_cantilever.cpp world/catenary_span.cpp world/catenary_network.cpp world/catenary_solver.cpp -o $T/conv_pick
+echo "zbudowane: t ts sim tsc tc te tk conv_pick"
