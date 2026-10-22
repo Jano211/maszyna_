@@ -1,0 +1,18 @@
+{
+traction_code: 5
+symbol: SKB70-C
+// stary katalog Kolprojektu (kolprojekt1.pdf): karta 13-0002 (tablica podstawowych parametrow sieci jezdnych, wyd. 1978)
+// siec 5; wieszaki karta 13-0010-5 (siec jednodrutowa)
+// przewody jezdne (nazwa przewodu z pliku traction_tables.txt)
+contact_wire_num: 1
+contact_wire: Djp100
+contact_tension: 953            // daN (karta 13-0002)
+// liny nosne; naciag laczny wszystkich lin w daN
+catenary_wire_num: 1
+catenary_wire: LB70             // 70 CuSi (braz krzemowy)
+catenary_tension: 1165
+// wieszaki
+hanger_table: 5                 // tablica rozstawu z pliku traction_tables.txt
+hanger_mass: 0.3                // kg, z uchwytami (jak w C95-C)
+height: 1.30                    // m, wysokosc konstrukcyjna (karta 13-0002); w scenerii decyduja punkty przesla
+}
