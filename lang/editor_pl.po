@@ -5597,3 +5597,21 @@ msgstr "Zwis wysięgnika"
 
 msgid "Gantry at the height (m)"
 msgstr "Bramka na wysokości (m)"
+
+msgid "On drops"
+msgstr "Na zwisach"
+
+msgid "On the masts"
+msgstr "Na słupach bramki"
+
+msgid "LMB over a track hangs the cantilever on a drop moved along the beam to the track"
+msgstr "LPM nad torem wiesza wysięgnik na zwisie przesuniętym po dźwigarze nad tor"
+
+msgid "LMB by a track puts the cantilever straight on the mast of the gantry on that side; the card from the distance of the mast"
+msgstr "LPM przy torze stawia wysięgnik wprost na słupie bramki po tej stronie; karta z odległości słupa"
+
+msgid "No mast of this gantry on that side of the track"
+msgstr "Po tej stronie toru nie ma słupa tej bramki"
+
+msgid "Mast %s has no mounts for a cantilever (strut/stay in its entry in traction_supports.txt)"
+msgstr "Słup %s nie ma mocowań wysięgnika (strut/stay w jego wpisie w traction_supports.txt)"

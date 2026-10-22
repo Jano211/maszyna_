@@ -85,6 +85,20 @@ struct scene_gantry {
 };
 std::vector<scene_gantry> Gantries;
 
+// bramka, której słup Mast stoi w punkcie Point (oś słupa na wysokości główki szyny, w planie do 0,10 m); nullptr gdy żadna
+catenary::gantry const *
+gantry_at_mast( std::string const &Mast, double const *Point ) {
+    for( auto const &gantry : Gantries ) {
+        if( gantry.removed ) { continue; }
+        for( int k = 0; k < 2; ++k ) {
+            if( gantry.data.masts[ k ] != Mast ) { continue; }
+            auto const dx { gantry.data.points[ k ][ 0 ] - Point[ 0 ] }, dz { gantry.data.points[ k ][ 2 ] - Point[ 2 ] };
+            if( dx * dx + dz * dz < 0.01 ) { return &gantry.data; }
+        }
+    }
+    return nullptr;
+}
+
 scene_file *
 file_named( std::string const &Name ) {
     for( auto &file : Files ) { if( file.name == Name ) { return &file; } }
@@ -217,11 +231,23 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     }
 
     catenary::cantilever_pole const *pole { nullptr };
+    catenary::cantilever_pole onmast;
     if( data.has_pole ) {
         pole = Catalog.pole( data.pole_type );
         if( pole == nullptr ) {
             report( "uses pole \"" + data.pole_type + "\" which isn't in the cantilever catalogue" );
             return 0;
+        }
+        if( pole->gantry ) {
+            // wysięgnik na słupie bramki: mocowania najwyżej pod dźwigarem, na poziomie tej bramki, której słup tu stoi
+            onmast = *pole;
+            if( auto const *gantry { gantry_at_mast( data.pole_type, data.pole ) }; gantry != nullptr ) {
+                onmast.mount_max = ( gantry->high ? pole->mast_high : pole->mast_low ) - pole->below_beam;
+            }
+            else {
+                report( "stands on mast \"" + data.pole_type + "\", but no gantry has that mast there; the mounts go under the lower beam level" );
+            }
+            pole = &onmast;
         }
     }
     // Drop: obniżenie dolnego zaczepu ukośnika (dobór przy innym zestawie izolatorów, niżej)
@@ -1141,6 +1167,15 @@ catenary_gantry_update( std::size_t const Index, catenary::gantry const &Data ) 
     gantry.removed = false;
     assemble_gantry( gantry );
     mark_changed( gantry.file );
+    // wysięgniki na słupach tej bramki: mocowania pod dźwigarem na jej (może zmienionym) poziomie
+    if( auto const *catalog { cantilevers() }; catalog != nullptr ) {
+        for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
+            auto const &data { Suspensions[ index ].data };
+            if( Suspensions[ index ].removed || false == data.has_pole ) { continue; }
+            auto const *pole { catalog->pole( data.pole_type ) };
+            if( pole != nullptr && pole->gantry && gantry_at_mast( data.pole_type, data.pole ) == &gantry.data ) { reassemble( index ); }
+        }
+    }
     return true;
 }
 

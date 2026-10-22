@@ -194,6 +194,37 @@ int main( int, char *argv[] ) {
         auto const assembled { catenary_scene_probe( drop, probe ) };
         for( auto const &warning : probe.warnings ) { std::printf( "  uwaga: %s\n", warning.c_str() ); }
         check( assembled, "wysiegnik na zwisie 4850-3 sklada sie" );
+        // wysięgnik wprost na słupie bramki (mocowania wyk. 04): słupa nie stawia (stawia go bramka), mocowania pod dźwigarem
+        // na poziomie tej bramki (górny: 7,75 - 0,15 nad główką szyny)
+        {
+            auto const *catalog { catenary_scene_catalog() };
+            auto const *mast { catalog != nullptr ? catalog->pole( "3031-1" ) : nullptr };
+            auto good { mast != nullptr && mast->gantry && mast->strut == "4610-04" };
+            if( good ) {
+                catenary::suspension onmast;
+                double const reach { 2.0 };
+                auto const *scheme { catalog->scheme_for_reach( 1110, 1, reach ) };
+                good = scheme != nullptr;
+                if( good ) {
+                    onmast.card = scheme->card; onmast.execution = 1; onmast.range_max = 1000;
+                    auto const wirex { 0.5 * mast->depth( 0.0 ) + reach };
+                    onmast.has_at = true; onmast.at[ 0 ] = wirex; onmast.at[ 1 ] = 0.2 + 5.6; onmast.at[ 2 ] = 50.0;
+                    onmast.has_rope = true; onmast.rope[ 0 ] = wirex; onmast.rope[ 1 ] = 0.2 + 5.6 + scheme->height; onmast.rope[ 2 ] = 50.0;
+                    onmast.has_pole = true; onmast.pole_type = "3031-1"; onmast.pole[ 0 ] = 0.0; onmast.pole[ 1 ] = 0.2; onmast.pole[ 2 ] = 50.0;
+                    catenary::cantilever_result probe;
+                    good = catenary_scene_probe( onmast, probe );
+                    for( auto const &warning : probe.warnings ) { std::printf( "  uwaga (slup bramki): %s\n", warning.c_str() ); }
+                    good = good && probe.find( "pole" ) == nullptr && probe.find( "strut_mount" ) != nullptr;
+                    auto const stay { probe.values.find( "mount.stay" ) };
+                    if( stay != probe.values.end() ) {
+                        std::printf( "  karta %d, os srub mocowania odciagu %.3f m nad glowka szyny (dzwigar gorny 7,75)\n", scheme->card, stay->second );
+                        good = good && stay->second <= 7.75 - 0.15 + 1e-6;
+                    }
+                    for( auto const &warning : probe.warnings ) { if( warning.find( "above the highest mount" ) != std::string::npos ) { good = false; } }
+                }
+            }
+            check( good, "wysiegnik na slupie bramki 3031-1: bez modelu slupa, mocowania z wyk. 04 pod dzwigarem" );
+        }
     }
     for( auto const &line : errors ) { std::printf( "  %s\n", line.c_str() ); }
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDY: %d\n", failures );
