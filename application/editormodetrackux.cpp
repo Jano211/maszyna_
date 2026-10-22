@@ -40,6 +40,7 @@ namespace
 using geometry::bezier;
 
 float const kHoverPixels{12.0f};
+double const kCatenaryHoverRange{1500.0}; // m from the camera: the paths the catenary looks at under the cursor
 double const kHoverLabelDelay{0.35}; // s the cursor rests on a path before its data shows up
 double const kFocusDistance{25.0};
 auto const kContextClick{std::chrono::milliseconds(350)};
@@ -106,6 +107,9 @@ editor_mode::track_hover editor_mode::track_under_cursor() const
 		for (int i = 0; i < static_cast<int>(track->m_paths.size()); ++i)
 		{
 			bezier const curve{track->m_paths[i]};
+			// the catenary works close to the camera: the paths far away aren't looked at (in a big scenery they cost a lot)
+			if (m_track_tab == track_tab::catenary && glm::distance(curve.point(0.5), glm::dvec3{Global.pCamera.Pos}) > curve.plan_length() * 0.5 + kCatenaryHoverRange)
+				continue;
 			auto const count{std::clamp(static_cast<int>(curve.plan_length() / 3.0), 6, 64)};
 			auto previous{curve.point(0.0)};
 			ImVec2 from;

@@ -1265,7 +1265,8 @@ void editor_mode::redo_one()
 
 bool editor_mode::update()
 {
-    Global.editor_tracks = (current_work_area() == work_area::tracks || current_work_area() == work_area::catenary);
+    // the catenary doesn't need the far tracks drawn (50 km of them cost a lot in a big scenery)
+    Global.editor_tracks = (current_work_area() == work_area::tracks);
     selftest_step();
     if (m_vehicle.leave)
     {
