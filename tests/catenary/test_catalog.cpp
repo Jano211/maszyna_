@@ -31,10 +31,10 @@ int main( int, char *argv[] ) {
     // słupy w grupach
     std::size_t loose { 0 };
     for( auto const &pole : cantilevers.poles() ) {
-        if( pole.second.gantry || false == pole.second.drop.empty() ) { continue; }
+        if( false == pole.second.drop.empty() ) { continue; }
         if( catalog.polegroup_of( pole.first ) == nullptr ) { std::printf( "  slup %s bez grupy\n", pole.first.c_str() ); ++loose; }
     }
-    check( loose == 0, "kazdy slup w grupie" );
+    check( loose == 0, "kazdy slup (takze slupy bramek) w grupie" );
     // dobór
     auto const p1 { pick_card( catalog, cantilevers, "t_tube_swing", "", 0, false, true, 3, 2.0 ) };
     check( p1.scheme != nullptr && p1.scheme->card == 1111 && p1.scheme->execution == 3, "rurowe przechylne, prosta, do slupa, A 2,00, wyk. 3 -> 1111-3" );

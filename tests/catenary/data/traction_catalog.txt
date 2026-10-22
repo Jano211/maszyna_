@@ -202,8 +202,8 @@ family 0971 s_tee5_low cards 0971-0978 toward card : 0971-0978 - hk 1,70
 family 0981 s_tee5_low cards 0981-0984 toward card : 0981-0984 - hk 1,70-2,10
 family 0985 s_tee5_low cards 0985-0988 toward card : 0985-0988 - hk od 2,10
 
-group s_tube_vol2 special execution user : Rurowe, tom 2 (07xx) - niska wysokość konstrukcyjna (?)
-text Opis do uzupełnienia przez użytkownika: przeznaczenie kart tomu 2.
+group s_tube_vol2 special execution user : Rurowe, tom 2 (07xx) - niestandardowe wysokości konstrukcyjne (niskie i wysokie hk)
+text Podwieszenia dla sieci o hk innej niż normalna: są niskie i wysokie. Opisy rodzin do uzupełnienia przez użytkownika.
 exec 1 : wyk. 1
 exec 2 : wyk. 2
 exec 3 : wyk. 3
@@ -219,8 +219,26 @@ family 078x s_tube_vol2 cards 0780-0785 : 078x - przechylne, hk 1,90 (?)
 family 079x s_tube_vol2 cards 0790-0795 : 079x - poziome, hk 1,00 (?)
 
 // ===================================================================================================================
-// Slupy. Miejsce (szlak / rownia stacyjna / peron) - DO UZUPELNIENIA przez uzytkownika.
+// Slupy. Miejsce (szlak / rownia stacyjna / peron) zwyklych slupow - DO UZUPELNIENIA przez uzytkownika.
 polegroup p_concrete poles 1701 : Betonowe (1701)
 polegroup p_ibeam foundation piles poles 1665 1666 1667 : Dwuteowe 200x200 na fundamentach palowych (166x: 8,2 / 7,8 / 7,4 m)
 polegroup p_lattice161 foundation piles poles 1611-11 1611-11-1 1611-12 1611-13 1611-14 1611-15 1613-11 1613-11-1 1613-12 1613-13 1613-14 1613-15 1614-11 1614-11-1 1614-12 1614-13 : Kratowe 161x na fundamentach palowych (1611 8,2 m, 1613 7,8 m, 1614 7,4 m)
 text Dopisek -11 ... -15 = nośność C120 ... C200E (większa = grubsza kratownica i większy pal).
+
+// Slupy bramek. 31xx - miejsce z komentarzy w .inc. 303x - dopisek -1...-4 = wykonanie fundamentu (glowica 25 / 54 / 110 / 170 cm);
+// przypisanie do miejsca (-1 szlak, -2 rownia stacyjna, -3 i -4 perony wg wysokosci peronu) PRAWDOPODOBNE - do sprawdzenia w starym Kolprojekcie.
+polegroup g_3113 foundation piles site line poles 3113 : Słup bramki przelotowo-końcowy 3113 (jeden fundament palowy, prześwit 7,65/8,05)
+polegroup g_3123 foundation piles site line poles 3123 : Słup bramki przelotowo-końcowy 3123 (dwa fundamenty palowe, prześwit 7,65/8,05)
+polegroup g_3112 foundation piles site station poles 3112 : Słup bramki przelotowo-końcowy 3112 (jeden fundament palowy, prześwit 7,65/8,05)
+polegroup g_3122 foundation piles site station poles 3122 : Słup bramki przelotowo-końcowy 3122 (dwa fundamenty palowe, prześwit 7,65/8,05)
+polegroup g_3111 foundation piles site platform poles 3111 : Słup bramki przelotowo-końcowy 3111 (jeden fundament palowy, prześwit 7,65/8,05)
+polegroup g_3121 foundation piles site platform poles 3121 : Słup bramki przelotowo-końcowy 3121 (dwa fundamenty palowe, prześwit 7,65/8,05)
+polegroup g_3031 poles 3031-1 3031-2 3031-3 3031-4 : 3031 przelotowo-końcowy, prześwit 7,35/7,75 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3032 poles 3032-1 3032-2 3032-3 3032-4 : 3032 końcowy, prześwit 7,35/7,75 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3033 poles 3033-1 3033-2 3033-3 3033-4 : 3033 przelotowo-końcowy, prześwit 8,15/8,55 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3034 poles 3034-1 3034-2 3034-3 3034-4 : 3034 końcowy, prześwit 8,15/8,55 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3035 poles 3035-1 3035-2 3035-3 3035-4 : 3035 przelotowo-końcowy, prześwit 5,35/5,75 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3036 poles 3036-1 3036-2 3036-3 3036-4 : 3036 końcowy, prześwit 5,35/5,75 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3037 poles 3037-1 3037-2 3037-3 3037-4 : 3037 przelotowo-końcowy, prześwit 7,55/7,95 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3038 poles 3038-1 3038-2 3038-3 3038-4 : 3038 końcowy, prześwit 7,55/7,95 (-1 szlak?, -2 równia?, -3/-4 peron?)
+text Dopisek -1...-4: wykonanie fundamentu, głowica 25 / 54 / 110 / 170 cm.

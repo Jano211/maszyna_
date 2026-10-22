@@ -30,6 +30,7 @@ http://mozilla.org/MPL/2.0/.
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <functional>
 #include <limits>
 
 namespace
@@ -279,6 +280,62 @@ int spans_at(double const *Point, std::size_t const Except)
 			++count;
 	}
 	return count;
+}
+
+// the items of a combo of poles or masts, by the groups of the described catalogue (foundation, where they stand), the
+// rest at the end; Tag gives a word added to a name (e.g. through / end mast). Returns true when another one was chosen
+bool grouped_items(std::vector<std::string> const &Names, int &Chosen, std::function<std::string(std::string const &)> const &Tag = {})
+{
+	auto const &structures{catenary_scene_structures()};
+	auto changed{false};
+	auto const item = [&](int const Index) {
+		auto label{"  " + Names[Index]};
+		if (Tag)
+			label += Tag(Names[Index]);
+		if (ImGui::Selectable(label.c_str(), Index == Chosen))
+		{
+			changed = Index != Chosen;
+			Chosen = Index;
+		}
+	};
+	std::vector<bool> shown(Names.size(), false);
+	for (auto const &group : structures.polegroups())
+	{
+		std::vector<int> members;
+		for (auto const &name : group.poles)
+			if (auto const found{std::find(Names.begin(), Names.end(), name)}; found != Names.end())
+				members.push_back(static_cast<int>(found - Names.begin()));
+		if (members.empty())
+			continue;
+		std::string tags;
+		if (group.foundation == "piles")
+			tags += STR(", on piles");
+		else if (group.foundation == "cast")
+			tags += STR(", on a cast foundation");
+		if (group.site == "line")
+			tags += STR(", on the line");
+		else if (group.site == "station")
+			tags += STR(", in a station");
+		else if (group.site == "platform")
+			tags += STR(", on a platform");
+		ImGui::TextDisabled("%s%s", group.title.c_str(), tags.c_str());
+		if (ImGui::IsItemHovered() && false == group.text.empty())
+			ImGui::SetTooltip("%s", group.text.c_str());
+		for (auto const index : members)
+		{
+			shown[index] = true;
+			item(index);
+		}
+	}
+	if (std::find(shown.begin(), shown.end(), false) != shown.end())
+	{
+		if (false == structures.polegroups().empty())
+			ImGui::TextDisabled("%s", STR_C("Other (not described in traction_catalog.txt)"));
+		for (int i = 0; i < static_cast<int>(Names.size()); ++i)
+			if (false == shown[i])
+				item(i);
+	}
+	return changed;
 }
 
 // the states of the wires in the panel, and as they're written in the entries
@@ -1510,48 +1567,8 @@ void catenary_editor::render_catenary_ui()
 
 	if (ImGui::BeginCombo(STR_C("Pole"), tool.poles[std::clamp(tool.pole, 0, static_cast<int>(tool.poles.size()) - 1)].c_str()))
 	{
-		// the poles by the groups of the described catalogue (foundation, where they stand), the rest at the end
-		auto const &structures{catenary_scene_structures()};
-		auto const item = [&](int const Index) {
-			if (ImGui::Selectable(("  " + tool.poles[Index]).c_str(), Index == tool.pole))
-			{
-				tool.pole = Index;
-				changed = true;
-			}
-		};
-		std::vector<bool> shown(tool.poles.size(), false);
-		for (auto const &group : structures.polegroups())
-		{
-			std::string tags;
-			if (group.foundation == "piles")
-				tags += STR(", on piles");
-			else if (group.foundation == "cast")
-				tags += STR(", on a cast foundation");
-			if (group.site == "line")
-				tags += STR(", on the line");
-			else if (group.site == "station")
-				tags += STR(", in a station");
-			else if (group.site == "platform")
-				tags += STR(", on a platform");
-			ImGui::TextDisabled("%s%s", group.title.c_str(), tags.c_str());
-			if (ImGui::IsItemHovered() && false == group.text.empty())
-				ImGui::SetTooltip("%s", group.text.c_str());
-			for (auto const &name : group.poles)
-				if (auto const found{std::find(tool.poles.begin(), tool.poles.end(), name)}; found != tool.poles.end())
-				{
-					auto const index{static_cast<int>(found - tool.poles.begin())};
-					shown[index] = true;
-					item(index);
-				}
-		}
-		if (std::find(shown.begin(), shown.end(), false) != shown.end())
-		{
-			if (false == structures.polegroups().empty())
-				ImGui::TextDisabled("%s", STR_C("Other (not described in traction_catalog.txt)"));
-			for (int i = 0; i < static_cast<int>(tool.poles.size()); ++i)
-				if (false == shown[i])
-					item(i);
-		}
+		if (grouped_items(tool.poles, tool.pole))
+			changed = true;
 		ImGui::EndCombo();
 	}
 	changed |= ImGui::SliderFloat(STR_C("Face of the pole from the track axis (m)"), &tool.clearance, 1.60f, 4.50f, "%.2f");
@@ -1709,13 +1726,14 @@ void catenary_editor::render_catenary_ui()
 	ImGui::Separator();
 	if (false == tool.masts.empty())
 	{
-		ImGui::PushItemWidth(120.0f);
+		ImGui::PushItemWidth(160.0f);
 		auto const combo = [&](char const *Label, int &Chosen) {
 			if (ImGui::BeginCombo(Label, tool.masts[std::clamp(Chosen, 0, static_cast<int>(tool.masts.size()) - 1)].c_str()))
 			{
-				for (int i = 0; i < static_cast<int>(tool.masts.size()); ++i)
-					if (ImGui::Selectable(tool.masts[i].c_str(), i == Chosen))
-						Chosen = i;
+				grouped_items(tool.masts, Chosen, [&](std::string const &Name) {
+					auto const *mast{catalog->mast(Name)};
+					return mast == nullptr ? std::string{} : mast->through ? STR(" (through)") : STR(" (end)");
+				});
 				ImGui::EndCombo();
 			}
 		};
