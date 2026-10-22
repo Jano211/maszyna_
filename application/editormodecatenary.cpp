@@ -253,7 +253,7 @@ void catenary_editor::catenary_scan()
 	if (auto const *catalog{catenary_scene_catalog()}; catalog != nullptr)
 	{
 		for (auto const &pole : catalog->poles())
-			if (pole.second.drop.empty())
+			if (pole.second.drop.empty() && false == pole.second.gantry)
 				tool.poles.push_back(pole.first);
 		tool.masts.clear();
 		for (auto const &mast : catalog->masts())
@@ -314,6 +314,8 @@ bool catenary_editor::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3
 	if (m_catenary.gantry_placing || m_catenary.gantry_selected < 0 || catalog == nullptr || false == catenary_gantry_beam(static_cast<std::size_t>(m_catenary.gantry_selected), from, to, bottom))
 		return true;
 	auto const *gantry{catenary_gantry_get(static_cast<std::size_t>(m_catenary.gantry_selected))};
+	if (gantry != nullptr && m_catenary.gantry_hang == 1)
+		return catenary_on_mast(*gantry, stagger, Spot);
 	auto const *beam{gantry != nullptr ? catalog->beam(gantry->beam) : nullptr};
 	std::vector<std::pair<double, std::string>> drops;
 	for (auto const &pole : catalog->poles())
@@ -462,6 +464,51 @@ int catenary_editor::catenary_gantry_hit() const
 		}
 	}
 	return result;
+}
+
+// the cantilever straight on a mast of the gantry: the mast on the side of the cursor, the cantilever across the track at the
+// mast (the spot moved along the track to it), the card from the distance of the face of the mast
+bool catenary_editor::catenary_on_mast(catenary::gantry const &Gantry, double const Stagger, catenary_spot &Spot) const
+{
+	auto const *catalog{catenary_scene_catalog()};
+	auto const right{right_of(Spot.forward) * static_cast<double>(Spot.side)};
+	int best{-1};
+	auto nearest{std::numeric_limits<double>::max()};
+	for (int k = 0; k < 2; ++k)
+	{
+		glm::dvec3 const mast{Gantry.points[k][0], Gantry.points[k][1], Gantry.points[k][2]};
+		auto const across{glm::dot(plan_of(mast) - plan_of(Spot.axis), right)};
+		if (across > 0.3 && across < nearest)
+		{
+			nearest = across;
+			best = k;
+		}
+	}
+	Spot.card = 0;
+	if (best < 0)
+	{
+		Spot.problem = STR("No mast of this gantry on that side of the track");
+		return true;
+	}
+	auto const &name{Gantry.masts[best]};
+	auto const *pole{catalog != nullptr ? catalog->pole(name) : nullptr};
+	if (pole == nullptr || false == pole->gantry)
+	{
+		Spot.problem = format(STR_C("Mast %s has no mounts for a cantilever (strut/stay in its entry in traction_supports.txt)"), name.c_str());
+		return true;
+	}
+	glm::dvec3 const mast{Gantry.points[best][0], Gantry.points[best][1], Gantry.points[best][2]};
+	// along the track onto the mast
+	Spot.parameter = nearest_parameter(*Spot.track, Spot.path, mast);
+	Spot.axis = bezier{Spot.track->m_paths[Spot.path]}.point(Spot.parameter);
+	Spot.forward = forward_at(*Spot.track, Spot.path, Spot.parameter);
+	auto const out{right_of(Spot.forward) * static_cast<double>(Spot.side)};
+	auto const clearance{glm::dot(plan_of(mast) - plan_of(Spot.axis), out) - 0.5 * pole->depth(0.0)};
+	catenary_compose(Spot, clearance, Stagger, Spot.toward, name);
+	Spot.data.pole[0] = mast.x;
+	Spot.data.pole[1] = mast.y;
+	Spot.data.pole[2] = mast.z;
+	return true;
 }
 
 void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole) const
@@ -727,7 +774,13 @@ void catenary_editor::catenary_copy(std::vector<std::size_t> const &Targets)
 		auto const *catalog{catenary_scene_catalog()};
 		auto const *own{catalog != nullptr ? catalog->pole(current->pole_type) : nullptr};
 		auto const drop{own != nullptr && false == own->drop.empty()};
-		catenary_compose(spot, tool.clearance, std::abs(offset), offset >= 0.0, drop ? current->pole_type : std::string{});
+		if (own != nullptr && own->gantry)
+		{
+			catenary_compose(spot, glm::dot(plan_of(pole_of(*current)) - plan_of(spot.axis), right) - 0.5 * own->depth(0.0), std::abs(offset), offset >= 0.0, current->pole_type);
+			std::copy(std::begin(current->pole), std::end(current->pole), spot.data.pole);
+		}
+		else
+			catenary_compose(spot, tool.clearance, std::abs(offset), offset >= 0.0, drop ? current->pole_type : std::string{});
 		if (drop)
 			spot.data.pole[1] = current->pole[1];
 		if (spot.card == 0)
@@ -889,9 +942,23 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 			{
 				auto const *data{catenary_scene_get(index)};
 				auto const *pole{data != nullptr && data->has_pole ? catalog->pole(data->pole_type) : nullptr};
-				if (pole == nullptr || pole->drop.empty())
+				if (pole == nullptr)
 					continue;
 				glm::dvec3 const point{data->pole[0], data->pole[1], data->pole[2]};
+				if (pole->gantry)
+				{
+					// a cantilever straight on one of its masts
+					auto const *gantry{catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected))};
+					for (int k = 0; gantry != nullptr && k < 2; ++k)
+						if (gantry->masts[k] == data->pole_type && glm::length(plan_of(point) - plan_of(glm::dvec3{gantry->points[k][0], 0.0, gantry->points[k][2]})) < 0.1)
+						{
+							tool.drag_drops.emplace_back(index, *data);
+							break;
+						}
+					continue;
+				}
+				if (pole->drop.empty())
+					continue;
 				auto const u{to - from};
 				auto const along{std::clamp(glm::dot(point - from, u) / std::max(glm::dot(u, u), 1e-9), 0.0, 1.0)};
 				if (glm::distance(point, from + u * along) < 0.3)
@@ -1260,7 +1327,15 @@ void catenary_editor::render_catenary_ui()
 			auto const *current{catenary_scene_get(static_cast<std::size_t>(tool.selected))};
 			auto const *own{current != nullptr ? catalog->pole(current->pole_type) : nullptr};
 			auto const drop{own != nullptr && false == own->drop.empty()};
-			catenary_compose(spot, tool.clearance, tool.stagger, tool.toward, drop ? current->pole_type : std::string{});
+			if (own != nullptr && own->gantry)
+			{
+				// on a mast of a gantry: the mast stays, the distance is its own
+				auto const right{right_of(spot.forward) * static_cast<double>(spot.side)};
+				catenary_compose(spot, glm::dot(plan_of(pole_of(*current)) - plan_of(spot.axis), right) - 0.5 * own->depth(0.0), tool.stagger, tool.toward, current->pole_type);
+				std::copy(std::begin(current->pole), std::end(current->pole), spot.data.pole);
+			}
+			else
+				catenary_compose(spot, tool.clearance, tool.stagger, tool.toward, drop ? current->pole_type : std::string{});
 			if (drop)
 				spot.data.pole[1] = current->pole[1];
 			if (spot.card != 0)
@@ -1556,8 +1631,16 @@ void catenary_editor::render_catenary_ui()
 			ImGui::SameLine();
 			if (ImGui::Button(STR_C("Back to the poles")))
 				tool.gantry_selected = -1;
+			// the next cantilevers: on drops of the beam, or straight on the masts
+			ImGui::RadioButton(STR_C("On drops"), &tool.gantry_hang, 0);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("LMB over a track hangs the cantilever on a drop moved along the beam to the track"));
+			ImGui::SameLine();
+			ImGui::RadioButton(STR_C("On the masts"), &tool.gantry_hang, 1);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("LMB by a track puts the cantilever straight on the mast of the gantry on that side; the card from the distance of the mast"));
 			// which drop the next cantilevers hang on
-			if (auto const *beam{catalog->beam(gantry->beam)}; beam != nullptr)
+			if (auto const *beam{tool.gantry_hang == 0 ? catalog->beam(gantry->beam) : nullptr}; beam != nullptr)
 			{
 				ImGui::PushItemWidth(160.0f);
 				auto const automatic{STR("the shortest which fits")};
@@ -1728,8 +1811,8 @@ void catenary_editor::catenary_drag_update()
 		auto const *catalog{catenary_scene_catalog()};
 		auto const *own{catalog != nullptr ? catalog->pole(current->pole_type) : nullptr};
 		auto const drop{own != nullptr && false == own->drop.empty()};
-		if (drop)
-			return; // a drop goes with its gantry
+		if (drop || (own != nullptr && own->gantry))
+			return; // a drop, or a cantilever on a mast, goes with its gantry
 		spot.curve = tool.bend == 2 || (tool.bend == 0 && spot.radius > 0.0 && spot.radius < kCurveRadius);
 		catenary_compose(spot, tool.clearance, tool.stagger, tool.toward);
 		if (spot.card != 0)

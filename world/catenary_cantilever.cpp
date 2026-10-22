@@ -341,6 +341,10 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 else if( ismast && key == "offset" ) { number( mast.offset, good ); }
                 else if( ismast && key == "through" ) { mast.through = true; }
                 else if( ismast && key == "end" ) { mast.through = false; }
+                else if( ismast && key == "strut" ) { text( mast.strut ); }
+                else if( ismast && key == "stay" ) { text( mast.stay ); }
+                else if( ismast && key == "steady" ) { text( mast.steady ); }
+                else if( ismast && key == "below_beam" ) { number( mast.below_beam, good ); }
                 else if( false == ismast && key == "span" ) { number( beam.span, good ); }
                 else if( false == ismast && key == "drop" ) { text( beam.drop ); }
                 else { report( entry, "unknown keyword \"" + key + "\"" ); good = false; --index; }
@@ -352,7 +356,25 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
             }
             if( ismast ) {
                 if( mast.model.empty() || mast.mount_low <= 0.0 ) { report( entry, "needs \"model\" and \"mount\"" ); continue; }
-                if( false == m_masts.emplace( name, mast ).second ) { report( entry, "defined more than once, the first definition stays" ); }
+                if( false == m_masts.emplace( name, mast ).second ) { report( entry, "defined more than once, the first definition stays" ); continue; }
+                // słup bramki z mocowaniami wysięgnika to też słup dla wysięgników (pod tą samą nazwą): bez modelu - stawia go
+                // bramka; głębokość w stronę toru to wymiar wzdłuż dźwigara, mocowania najwyżej pod dźwigarem dolnego poziomu
+                if( false == mast.strut.empty() && false == mast.stay.empty() ) {
+                    cantilever_pole pole;
+                    pole.name = name;
+                    pole.gantry = true;
+                    pole.top = mast.height;
+                    pole.length = mast.height;
+                    pole.depth_top = pole.depth_base = mast.length;
+                    pole.mast_low = mast.mount_low;
+                    pole.mast_high = mast.mount_high > 0.0 ? mast.mount_high : mast.mount_low;
+                    pole.below_beam = mast.below_beam;
+                    pole.mount_max = mast.mount_low - mast.below_beam;
+                    pole.strut = mast.strut;
+                    pole.stay = mast.stay;
+                    pole.steady = mast.steady;
+                    if( false == m_poles.emplace( name, pole ).second ) { report( entry, "has the name of a pole, it can't carry cantilevers" ); }
+                }
             }
             else {
                 if( beam.model.empty() || beam.span <= 0.0 ) { report( entry, "needs \"model\" and \"span\"" ); continue; }
@@ -2152,7 +2174,8 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
         return cantilever_point { face + Mount.attach_y(), Bolts + Mount.attach_z() };
     };
 
-    if( Umbrella.pole ) {
+    // słup bramki stawia bramka
+    if( Umbrella.pole && false == Pole.gantry ) {
         add( "pole", Pole.name, Pole.model, Distance, RailHead );
         if( Pole.turn != 0.0 ) {
             // model obrócony wokół pionu (zwis na bramce: profil szerszym bokiem wzdłuż toru)

@@ -118,11 +118,13 @@ struct catenary_editor
 		std::vector<std::pair<std::size_t, catenary::suspension>> drag_drops; // the drops of the gantry, as they were
 		int gantry_selected{-1}; // the gantry the drops go to
 		std::string drop_choice; // the drop for the next cantilevers on a gantry; empty: the shortest one which fits
+		int gantry_hang{0}; // the next cantilevers on the selected gantry: 0 on drops of the beam, 1 straight on its masts
 	};
 	catenary_tool m_catenary;
 	void catenary_scan();
 	bool catenary_spot_at(TTrack &Track, int const Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor, int const Side, catenary_spot &Spot) const;
 	void catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole = {}) const;
+	bool catenary_on_mast(catenary::gantry const &Gantry, double const Stagger, catenary_spot &Spot) const;
 	catenary_spot const *catenary_spot_of(std::size_t const Index);
 	int catenary_hit() const;
 	int catenary_span_hit() const;

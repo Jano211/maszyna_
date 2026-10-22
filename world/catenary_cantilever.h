@@ -122,6 +122,12 @@ struct cantilever_pole {
     std::string strut;                  // mocowanie ukośnika (część z punktem axis i zawiasem)
     std::string stay;                   // mocowanie izolatora odciągu
     std::string steady;                 // mocowanie izolatora wysięgu pomocniczego (schematy z trzema zaczepami)
+    // słup bramki z wysięgnikiem (zrobiony z wpisu "mast" z mocowaniami): model stawia bramka, nie wysięgnik; mount_max pod
+    // dźwigarem bramki liczy sceneria wg jej poziomu (mast_low/mast_high minus below_beam), tu - pod dolnym mocowaniem
+    bool   gantry { false };
+    double mast_low { 0.0 };
+    double mast_high { 0.0 };
+    double below_beam { 0.15 };
     // głębokość słupa na wysokości Height nad główką szyny
     double depth( double Height ) const;
 };
@@ -166,6 +172,12 @@ struct gantry_mast {
     double mount_high { 0.0 };
     double offset { 0.0 };              // przesunięcie dźwigara wzdłuż toru względem osi słupa
     bool   through { false };           // przelotowy (dźwigary z obu stron); false = końcowy
+    // wysięgnik wprost na słupie bramki: mocowania (karta 53-0501 wyk. 04 - słupy bramek o rozstawie 400x600) i odstęp
+    // najwyższej osi śrub od spodu dźwigara; bez mocowań na słupie bramki nie da się postawić wysięgnika
+    std::string strut;
+    std::string stay;
+    std::string steady;
+    double below_beam { 0.15 };
 };
 // dźwigar bramki: model z zerem w osi pierwszego słupa na spodzie dźwigara, X modelu wzdłuż dźwigara
 struct gantry_beam {
