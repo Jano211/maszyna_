@@ -26,7 +26,9 @@ http://mozilla.org/MPL/2.0/.
 // Ułożenie modeli (w układzie części):
 //   rolka 4460          zero w osi, koło w płaszczyźnie X-Z, oś wzdłuż Y
 //   części liniowe      (uchwyty 4440/4450, łączniki, izolatory, śruby, wyrównywacz, uchwyty krańcowe, łączniki na linie)
-//                       zero w sworzniu od strony konstrukcji/dźwigni, biegną w +X do drugiego sworznia (długość z danych)
+//                       zero w sworzniu od strony konstrukcji/dźwigni, biegną w -X do drugiego sworznia (pusty węzeł,
+//                       np. hole_1 uchwytu 4440; długość z danych); "~część" w łańcuchu - postawiona odwrotnie (4440: zero
+//                       w wąskim końcu, widełki z osią rolki na -X; przy rolce ruchomej widełki są od strony słupa)
 //   dźwignia 6406       zero w otworze I, otwory w +Z (I na dole), otwór III odsunięty w +X; przy otworze liny poniżej
 //                       otworu przewodów dźwignia odwrócona (obrót o 180 stopni wokół Y)
 //   pręt 6401/6402      zero na dole (pod stosem), w +Z do zaczepu na górze (długość z danych)
