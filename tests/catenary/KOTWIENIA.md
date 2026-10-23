@@ -45,3 +45,23 @@ Odczytane 2026-10-23 (skany bez tekstu; numery stron PDF). Typy sieci w tabelach
 ## Braki (stan 2026-10-23)
 - Modeli części kotwień w `models/siec_trakcyjna/components` brak (4410, 4420, 4440, 4450, 4460, 4600, 4720, 5120,
   6321, 6401, 6406, 6411, 7150, 45xx/50xx mocowania). Karty części – tom 5.
+
+## Części (tom 5 `z- KATALOG 5 -z.pdf`, strony PDF) i Uzupełnienie nr 2 (`UZUPEŁNIENIE nr 2 - skan.pdf`, 57 s.)
+- t5 s. 22 4410 wyrównywacz przewodów, s. 23 4420 śruba rzymska, s. 24 4430 przegubowy uchwyt kotwienia przewodów,
+  s. 25 4440 uchwyty rolek (SKREŚLONA → Uzup. 2 s. 48: 4440-1…7; L 270/270/270/320/703/703/410, a 16/11/16/41/20/20/41,
+  b 82/107/82/62/50/50/62 mm; wyk. 1–3 rolki równoległe, 4–7 szeregowe), s. 26 4450 przegubowy uchwyt rolki,
+  s. 27 **4460 rolki linowe: wyk. 1 podwójna D 220 a 80 mm (13,5 kg), wyk. 2 pojedyncza D 220 a 44, wyk. 3 D 320 a 44**
+  (D = średnica po dnie rowka), s. 28 4470 prowadnice ciężarów, s. 29 **4490 cięgła linowe (lina stalowa z kauszami
+  na obu końcach, zaciski co ≤ 50 mm): L 8,70 / 10,00 / 10,40 m** – średnicy liny brak na karcie (BN-77/9317-111),
+  s. 39 4600 zabezpieczenia urządzenia naprężającego, s. 31–36 uchwyty do kotwień 4510/4520/4550/4560/4570,
+  s. 50 4720 łączniki podwójne, s. 70–75 5040 uchwyty rolek wydłużone, 5050/5060/5070/5080 prowadnice i pierścienie,
+  s. 77–78 5110/5120 uchwyty krańcowe.
+- t5 s. 153 6321 ciężar żeliwny, s. 154 6322 Ø400 betonowy, s. 155 6323 Ø306 polimerobetonowy (Uzup. 2 s. 54–55
+  nowsze 6322/6323), s. 164 6401 pręty ciężarów żeliwnych, s. 165 6402 betonowych, s. 166 6403 dźwignia równoramienna,
+  s. 167 **6406 dźwignia: płaskownik 810 mm, otwory Ø21 na osi: I (0), II 280, IV 572, V 665, VI 732 mm od I;
+  III 365 mm od I, 50 mm obok osi** (wymiary 280/85/292/385/452 od II); s. 205–206 7100/7150 izolatory.
+- **Uzup. 2 s. 16 karta 23-0461** (zastępuje 0401: kotwienie ciężarowe z izolacją, rolki równoległe, ciężary
+  polimerobetonowe i żeliwne Ø306, „żeliwne w dolnej części stosu”): stos = 6321 żeliwne + 6323 Ø306:
+  typ 3: 8 + 18, typ 4: 4 + 20, typ 10: 0 + 20, typ 26: 14 + 19. Pręt 6402-1 (typ 26: 6402-3). Reszta jak 0401.
+  s. 17 bez izolacji; s. 8–11 usytuowanie ciężarów (wspólne/rozdzielone, Ø306/Ø400); s. 13–15, 18, 21–22 zamocowania;
+  s. 19–32 kotwienia szeregowe i osobne liny/przewody (Ø306, Ø400).
