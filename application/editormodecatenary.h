@@ -53,7 +53,7 @@ struct catenary_editor
 		std::string problem; // why there's no card, empty when there is one
 		std::string family; // the family of the card in the described catalogue; empty without it
 		bool execution_changed{false}; // the execution chosen in the panel has no card for this A, another one was taken
-		std::string pole_swapped; // the pole chosen in the panel can't stand by a switch, this one was taken instead; empty when not
+		bool switch_error{false}; // a pole of a group that doesn't stand by switches (concrete), standing by one
 		catenary::suspension data;
 	};
 	struct catenary_change
@@ -143,7 +143,18 @@ struct catenary_editor
 	catenary_tool m_catenary;
 	void catenary_scan();
 	bool catenary_spot_at(TTrack &Track, int const Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor, int const Side, catenary_spot &Spot) const;
-	bool catenary_by_switch(catenary_spot const &Spot, glm::dvec3 const &Foot) const;
+	// a pole of this type can't stand there: its group doesn't stand by switches and a switch is by it
+	bool catenary_switch_error(std::string const &Pole, glm::dvec3 const &Foot, TTrack const *Track) const;
+	bool catenary_switch_error(std::size_t const Index) const; // of a placed pole, remembered until it moves or changes type
+	struct switch_check
+	{
+		glm::dvec3 foot{0.0};
+		std::string pole;
+		bool error{false};
+	};
+	mutable std::vector<std::pair<TTrack const *, int>> m_switch_paths; // the paths of switches, gathered again when the number of tracks changes
+	mutable std::size_t m_switch_tracks{static_cast<std::size_t>(-1)};
+	mutable std::map<std::size_t, switch_check> m_switch_checks;
 	void catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole = {}) const;
 	bool catenary_on_mast(catenary::gantry const &Gantry, double const Stagger, catenary_spot &Spot) const;
 	catenary_spot const *catenary_spot_of(std::size_t const Index);

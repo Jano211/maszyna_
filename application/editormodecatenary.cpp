@@ -763,25 +763,53 @@ bool catenary_editor::catenary_on_mast(catenary::gantry const &Gantry, double co
 	return true;
 }
 
-// whether a pole standing there is by a switch: the track it's put by is one, or a switch path passes within kSwitchRange of the pole
-bool catenary_editor::catenary_by_switch(catenary_spot const &Spot, glm::dvec3 const &Foot) const
+// whether a pole of this type can't stand there: its group is no_switch (concrete 1701, 1711) and the track it stands by is a switch,
+// or a switch path passes within kSwitchRange of its foot (also a switch on the neighbouring track)
+bool catenary_editor::catenary_switch_error(std::string const &Pole, glm::dvec3 const &Foot, TTrack const *Track) const
 {
-	if (Spot.track != nullptr && Spot.track->eType == tt_Switch)
+	auto const *group{catenary_scene_structures().polegroup_of(Pole)};
+	if (group == nullptr || false == group->no_switch)
+		return false;
+	if (Track != nullptr && Track->eType == tt_Switch)
 		return true;
-	for (auto *track : simulation::Paths.sequence())
+	auto const &tracks{simulation::Paths.sequence()};
+	if (tracks.size() != m_switch_tracks)
 	{
-		if (track == nullptr || track->m_editorremoved || track->eType != tt_Switch || track->m_paths.empty())
+		m_switch_tracks = tracks.size();
+		m_switch_paths.clear();
+		m_switch_checks.clear();
+		for (auto const *track : tracks)
+			if (track != nullptr && track->eType == tt_Switch)
+				for (int path = 0; path < static_cast<int>(track->m_paths.size()); ++path)
+					m_switch_paths.emplace_back(track, path);
+	}
+	for (auto const &[track, path] : m_switch_paths)
+	{
+		if (track->m_editorremoved)
 			continue;
-		for (int path = 0; path < static_cast<int>(track->m_paths.size()); ++path)
-		{
-			bezier const curve{track->m_paths[path]};
-			if (geometry::plan_distance(curve.point(0.5), Foot) > curve.plan_length() * 0.5 + kSwitchRange)
-				continue;
-			if (geometry::plan_distance(curve.point(nearest_parameter(*track, path, Foot)), Foot) < kSwitchRange)
-				return true;
-		}
+		bezier const curve{track->m_paths[path]};
+		if (geometry::plan_distance(curve.point(0.5), Foot) > curve.plan_length() * 0.5 + kSwitchRange)
+			continue;
+		if (geometry::plan_distance(curve.point(nearest_parameter(*track, path, Foot)), Foot) < kSwitchRange)
+			return true;
 	}
 	return false;
+}
+
+bool catenary_editor::catenary_switch_error(std::size_t const Index) const
+{
+	auto const *data{catenary_scene_get(Index)};
+	if (data == nullptr || false == data->has_pole)
+		return false;
+	auto const foot{pole_of(*data)};
+	auto &check{m_switch_checks[Index]};
+	if (check.pole != data->pole_type || check.foot != foot)
+	{
+		check.pole = data->pole_type;
+		check.foot = foot;
+		check.error = catenary_switch_error(data->pole_type, foot, nullptr);
+	}
+	return check.error;
 }
 
 void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole) const
@@ -796,25 +824,6 @@ void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearan
 	{
 		Spot.problem = STR("No pole: the catalogue (data/traction_cantilevers.txt, data/traction_supports.txt) isn't loaded or has no poles");
 		return;
-	}
-	// a new pole from the panel whose group doesn't stand by switches (concrete 1701, 1711): by a switch the one named in the group
-	Spot.pole_swapped.clear();
-	if (Pole.empty())
-	{
-		auto const &structures{catenary_scene_structures()};
-		if (auto const *group{structures.polegroup_of(pole->name)}; group != nullptr && false == group->at_switch.empty())
-		{
-			auto const right{right_of(Spot.forward) * static_cast<double>(Spot.side)};
-			auto const foot{plan_of(Spot.axis) + right * (Clearance + 0.5 * pole->depth(0.0))};
-			if (catenary_by_switch(Spot, glm::dvec3{foot.x, Spot.axis.y, foot.y}))
-			{
-				if (auto const *steel{catalog->pole(group->at_switch)}; steel != nullptr)
-				{
-					Spot.pole_swapped = pole->name;
-					pole = steel;
-				}
-			}
-		}
 	}
 	auto const height{static_cast<double>(tool.height)};
 	auto const railhead{Spot.axis.y + kRailTop};
@@ -864,6 +873,7 @@ void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearan
 	data.pole[0] = polepoint.x;
 	data.pole[1] = polepoint.y;
 	data.pole[2] = polepoint.z;
+	Spot.switch_error = catenary_switch_error(pole->name, polepoint, Spot.track);
 	if (tool.insulators25)
 		data.insulators = "25";
 	if (scheme == nullptr)
@@ -945,8 +955,8 @@ std::string catenary_editor::catenary_intent_label(catenary_spot const &Spot) co
 		label += "\n" + family->title;
 	if (Spot.execution_changed)
 		label += "\n" + format(STR_C("execution %d has no card for this A, execution %d taken"), m_catenary.execution, Spot.data.execution);
-	if (false == Spot.pole_swapped.empty())
-		label += "\n" + format(STR_C("by a switch: pole %s instead of %s"), Spot.data.pole_type.c_str(), Spot.pole_swapped.c_str());
+	if (Spot.switch_error)
+		label += "\n" + format(STR_C("ERROR: pole %s doesn't stand by a switch, take a steel one"), Spot.data.pole_type.c_str());
 	if (m_catenary.chaining && m_catenary.last >= 0 && catenary_scene_get(static_cast<std::size_t>(m_catenary.last)) != nullptr)
 		label += "\n" + format(STR_C("with the span from the last pole, %.1f m"), glm::length(plan_of(wire_of(Spot.data)) - plan_of(wire_of(*catenary_scene_get(static_cast<std::size_t>(m_catenary.last))))));
 	return label;
@@ -2622,13 +2632,16 @@ void catenary_editor::draw_catenary_overlay() const
 		auto const selected{static_cast<int>(index) == tool.selected};
 		auto const hovered{is_intent(e.m_intent, intent_detail::select) && e.m_intent.index == static_cast<int>(index)};
 		auto const broken{catenary_scene_parts(index) == 0};
+		auto const byswitch{catenary_switch_error(index)};
 		auto const last{static_cast<int>(index) == tool.last && tool.chaining};
-		auto const colour{selected ? overlay_color::selected : hovered ? overlay_color::highlight : broken ? overlay_color::invalid : last ? overlay_color::grip : IM_COL32(255, 210, 60, 150)};
-		draw_pole(*data, colour, selected || hovered || last ? 3.0f : 1.5f);
+		auto const colour{selected ? overlay_color::selected : hovered ? overlay_color::highlight : broken || byswitch ? overlay_color::invalid : last ? overlay_color::grip : IM_COL32(255, 210, 60, 150)};
+		draw_pole(*data, byswitch && false == selected ? overlay_color::invalid : colour, selected || hovered || last || byswitch ? 3.0f : 1.5f);
 		ImVec2 head;
-		if ((selected || hovered || broken) && projection.project(pole_of(*data) + glm::dvec3{0.0, pole_top(*data) + 0.3, 0.0}, head))
+		if ((selected || hovered || broken || byswitch) && projection.project(pole_of(*data) + glm::dvec3{0.0, pole_top(*data) + 0.3, 0.0}, head))
 		{
-			auto const label{format("%d-%d", data->card, data->execution) + (broken ? std::string{"  "} + STR("doesn't assemble") : std::string{})};
+			auto label{format("%d-%d", data->card, data->execution) + (broken ? std::string{"  "} + STR("doesn't assemble") : std::string{})};
+			if (byswitch)
+				label += "  " + format(STR_C("%s by a switch"), data->pole_type.c_str());
 			drawlist->AddText(ImVec2(head.x + 6.0f, head.y - 6.0f), colour, label.c_str());
 		}
 	}
@@ -2656,7 +2669,7 @@ void catenary_editor::draw_catenary_overlay() const
 		catenary_spot spot;
 		if (catenary_spot_at(*e.m_hover.track, e.m_hover.path, e.m_hover.point, e.cursor_level(e.m_hover.point.y), 0, spot))
 		{
-			auto const colour{spot.card != 0 ? overlay_color::marked : overlay_color::invalid};
+			auto const colour{spot.card != 0 && false == spot.switch_error ? overlay_color::marked : overlay_color::invalid};
 			draw_pole(spot.data, colour, 3.0f);
 			projection.line(drawlist, spot.axis + glm::dvec3{0.0, kRailTop, 0.0}, pole_of(spot.data), colour, 1.5f);
 			if (tool.chaining && tool.last >= 0)
