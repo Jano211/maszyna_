@@ -95,6 +95,8 @@ struct catenary_editor
 		bool append{true}; // the next pole goes after the last one of the chain, otherwise before the first
 		int chain_selected{-1}; // the chain shown in the panel
 		int connect_from{-1}; // hanging the wires on from this suspension: the next poles clicked get the spans
+		int anchor_pick{-1}; // anchoring this chain to an existing pole: the next pole clicked carries the tensioning device
+		bool anchor_pick_start{false}; // ... at the start of the chain, otherwise at its end
 		char power[64]{"none"};
 		float voltage{3000.0f};
 		int material{0}; // 0 cu, 1 al
@@ -195,6 +197,8 @@ struct catenary_editor
 	void render_catenary_anchor_ui(std::size_t Chain);
 	// the anchor of the chain at its start (Start) or end; catenary_anchor_size() when none
 	std::size_t catenary_anchor_of(catenary::chain const &Chain, std::string const &File, bool Start) const;
+	// anchors the start or the end of the chain: on a new pole past the last one, or (On >= 0) on that existing pole
+	bool catenary_anchor_create(std::size_t Chain, bool Start, int On);
 	void render_catenary_cantilever_ui();
 	void render_catenary_wires_ui();
 	void catenary_choose_page(int const Page);

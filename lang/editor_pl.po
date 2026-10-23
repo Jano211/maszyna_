@@ -5894,3 +5894,30 @@ msgstr "żółte, pędzlowane"
 
 msgid "grey, shabby"
 msgstr "szare, brzydkie"
+
+msgid "Stop picking the pole"
+msgstr "Przerwij wybieranie słupa"
+
+msgid "to an existing pole"
+msgstr "do istniejącego słupa"
+
+msgid "LMB on the pole the tensioning device goes on"
+msgstr "LPM na słup, na którym ma stanąć urządzenie naprężające"
+
+msgid "The tensioning device goes on a pole already standing (with its cantilever); the pole stays as it is"
+msgstr "Urządzenie naprężające na słupie, który już stoi (z wysięgnikiem); słup zostaje jak jest"
+
+msgid "On the pole of %s"
+msgstr "Na słupie %s"
+
+msgid "This pole can't carry the anchor: it has to be a pole (not a drop or a point) from the file of the chain"
+msgstr "Na tym słupie nie da się zakotwić: musi to być słup (nie zwis ani punkt) z pliku łańcucha"
+
+msgid "The anchor goes on another pole than the last one of the chain"
+msgstr "Kotwienie musi być na innym słupie niż ostatni słup łańcucha"
+
+msgid "Click: the tensioning device on this pole"
+msgstr "Klik: urządzenie naprężające na tym słupie"
+
+msgid "Wires: LMB on the pole the tensioning device goes on"
+msgstr "Druty: LPM na słup, na którym ma stanąć urządzenie naprężające"

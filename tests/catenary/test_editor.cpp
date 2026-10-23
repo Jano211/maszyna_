@@ -330,6 +330,26 @@ int main( int, char *argv[] ) {
         catenary_scene_temperature();
         result = catenary_anchor_result( 0 );
         check( result->b > warm + 0.3 && mock_span_bodies.size() == 1, "mroz: rolka dalej od slupa, przeslo do kotwienia od nowa" );
+        // kotwienie na istniejącym słupie (podwieszenie s0003 za s0002): bez własnego słupa, za słupem idzie po przesunięciu
+        {
+            auto pole3 { entry };
+            pole3.name = "s0003"; pole3.at[ 2 ] = pole3.rope[ 2 ] = pole3.pole[ 2 ] = 184.0;
+            auto const carrier { catenary_scene_add( "td_kotwa_test.scm", pole3 ) };
+            catenary::anchor on { anchor };
+            on.name = "k2"; on.on = "s0003";
+            auto const partsown { catenary_anchor_parts( 0 ) };
+            Global.AirTemperature = 10.f;
+            catenary_scene_temperature();
+            auto const index { catenary_anchor_add( "td_kotwa_test.scm", on ) };
+            auto const partson { catenary_anchor_parts( index ) };
+            auto moved { *catenary_scene_get( carrier ) };
+            moved.pole[ 2 ] = moved.at[ 2 ] = moved.rope[ 2 ] = 186.0;
+            auto const before { mock_deleted_parts };
+            catenary_scene_update( carrier, moved );
+            auto const written { catenary::write_anchor( *catenary_anchor_get( index ) ) };
+            check( partson > 0 && partson + 2 == partsown && mock_deleted_parts >= before + static_cast<int>( partson ) && written.find( " on s0003 " ) != std::string::npos,
+                ( "kotwienie na istniejacym slupie: bez slupa i fundamentu (" + std::to_string( partson ) + " czesci), idzie za slupem, zapis z \"on\"" ).c_str() );
+        }
         Global.AirTemperature = 15.f;
         std::remove( "tests/catenary/td_kotwa_test.scm" );
     }
