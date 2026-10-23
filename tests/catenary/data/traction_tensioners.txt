@@ -47,21 +47,21 @@ weight 6322-1 height 0.092 mass 27 turn 90 model 6322 offset 4      // polimerob
 weight 6322-1n height 0.056 mass 27 turn 90 model 6322 offset 0     // polimerobetonowy Ø400, niski
 
 // rolka linowa 4460 (tom 5 s. 27): diameter po dnie rowka
-pulley 4460-1 diameter 0.220 width 0.080 grooves 2
-pulley 4460-2 diameter 0.220 width 0.044 grooves 1
-pulley 4460-3 diameter 0.320 width 0.044 grooves 1
+pulley 4460-01 diameter 0.220 width 0.080 grooves 2
+pulley 4460-02 diameter 0.220 width 0.044 grooves 1
+pulley 4460-03 diameter 0.320 width 0.044 grooves 1
 
 // dzwignia 6406 (tom 5 s. 167): hole <nazwa> <wzdluz osi od otworu I> <odsuniecie w bok>
-lever 6406-1 hole I 0.000 0 hole II 0.280 0 hole III 0.365 0.050 hole IV 0.572 0 hole V 0.665 0 hole VI 0.732 0
+lever 6406-01 hole I 0.000 0 hole II 0.280 0 hole III 0.365 0.050 hole IV 0.572 0 hole V 0.665 0 hole VI 0.732 0
 
 // prety ciezarow: L od spodu talerza do osi oczka (tom 5 s. 164-165). Inny pret niz c tablicy (2,00) obniza spod ciezarow o roznice.
-part 6401-1 length 2.00     // zeliwnych
-part 6401-2 length 1.25
-part 6401-3 length 1.70
-part 6402-1 length 2.30     // betonowych
-part 6402-2 length 2.50
-part 6402-3 length 2.80
-part 6402-4 length 3.00
+part 6401-01 length 2.00     // zeliwnych
+part 6401-02 length 1.25
+part 6401-03 length 1.70
+part 6402-01 length 2.30     // betonowych
+part 6402-02 length 2.50
+part 6402-03 length 2.80
+part 6402-04 length 3.00
 
 // device <karta> table pulley lever rod rope rope_diameter
 //   mount / holder / hanger / messenger / contact  <czesc dlugosc>...   lancuchy czesci liniowych
@@ -72,17 +72,17 @@ part 6402-4 length 3.00
 
 // 23-0461 kotwienie ciezarowe sieci z izolacja, rolki rownolegle, ciezary polimerobetonowe i zeliwne Ø306 (Uzup. 2 s. 16;
 // zastepuje 63-0401). Zeliwne na dole stosu.
-device 0461 table 0011-1 pulley 4460-1 lever 6406-1 rod 6402-1 rope 9832-02 rope_diameter 0.010
-  mount 4450-1 0.15 4440-2 0.27
-  holder 4440-1 0.27
-  hanger 6411-1 0.10 4720-1 0.17
-  messenger 4720-1 0.17 7150-1 0.60 4720-1 0.17 4420-1 0.40
-  contact 4720-1 0.17 7150-1 0.60 4720-1 0.17 4420-1 0.40
-  messenger_clamp 5120-6 0.25
-  contact_clamp 5120-6 0.25
-  equalizer 4410-1 0.30 spread 0.08
-  type 3 stack 6321-1 8 6323-1 18 lever IV I II clamp 5120-7
+device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 9832-02 rope_diameter 0.010
+  mount 4450-01 0.15 4440-02 0.27
+  holder 4440-01 0.27
+  hanger 6411-01 0.10 4720-01 0.17
+  messenger 4720-01 0.17 7150-01 0.60 4720-01 0.17 4420-01 0.40
+  contact 4720-01 0.17 7150-01 0.60 4720-01 0.17 4420-01 0.40
+  messenger_clamp 5120-06 0.25
+  contact_clamp 5120-06 0.25
+  equalizer 4410-01 0.30 spread 0.08
+  type 3 stack 6321-1 8 6323-1 18 lever IV I II clamp 5120-07
   type 4 stack 6321-1 4 6323-1 20 lever VI I III
   type 10 stack 6323-1 20 lever V I III
-  type 26 stack 6321-1 14 6323-1 19 lever I V III rod 6402-3 clamp 5120-7
+  type 26 stack 6321-1 14 6323-1 19 lever I V III rod 6402-03 clamp 5120-07
 enddevice
