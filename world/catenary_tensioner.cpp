@@ -392,6 +392,7 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 else if( key == "rod" ) { device->rod = value; }
                 else if( key == "rope" ) { device->rope = value; }
                 else if( key == "rope_diameter" ) { number_of( value, device->rope_diameter ); }
+                else if( key == "rope_eye" && k + 2 < words.size() ) { device->rope_eye = value; number_of( words[ k + 2 ], device->rope_eye_length ); ++k; }
                 else { report( "device " + device->name + ": unknown keyword \"" + key + "\"" ); }
             }
             continue;
@@ -630,20 +631,45 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     return true;
 }
 
-void tensioner_rope_parts( tensioner_result &Result, std::string const &Cord, double const Length, double const Girth ) {
-    for( std::size_t k = 1; k < Result.rope.size(); ++k ) {
-        vec const from { Result.rope[ k - 1 ][ 0 ], Result.rope[ k - 1 ][ 1 ], Result.rope[ k - 1 ][ 2 ] };
-        vec const to { Result.rope[ k ][ 0 ], Result.rope[ k ][ 1 ], Result.rope[ k ][ 2 ] };
-        auto const span { length( to - from ) };
-        if( span < 1e-6 ) { continue; }
-        auto const z { unit( to - from ) };
+void tensioner_rope_parts( tensioner_result &Result, std::string const &Cord, double const Length, double const Girth, std::string const &Eye, double const EyeLength ) {
+    std::vector<vec> points;
+    for( auto const &point : Result.rope ) {
+        vec const p { point[ 0 ], point[ 1 ], point[ 2 ] };
+        if( points.empty() || length( p - points.back() ) > 1e-6 ) { points.push_back( p ); }
+    }
+    if( points.size() < 2 ) { return; }
+    auto const segment = [ & ]( std::string const &Role, std::string const &Part, vec const &From, vec const &To, bool const Stretch ) {
+        auto const span { length( To - From ) };
+        if( span < 1e-6 ) { return; }
+        auto const z { unit( To - From ) };
         auto const y { side_of( z ) };
-        auto placement { placed( "rope." + std::to_string( k ), Cord, from ) };
+        auto placement { placed( Role, Part, From ) };
         set_rotation( placement, cross( y, z ), y, z );
-        placement.scale[ 0 ] = Girth;
-        placement.scale[ 1 ] = Girth;
-        placement.scale[ 2 ] = Length > 1e-9 ? span / Length : 1.0;
+        if( Stretch ) {
+            placement.scale[ 0 ] = Girth;
+            placement.scale[ 1 ] = Girth;
+            placement.scale[ 2 ] = Length > 1e-9 ? span / Length : 1.0;
+        }
         Result.parts.push_back( placement );
+    };
+    // ucha: zaczep ("eye") w skrajnym punkcie liny, zero ucha w stronę liny; pierwszy i ostatni odcinek skrócone
+    auto const eyes { false == Eye.empty() && EyeLength > 1e-6 };
+    if( eyes ) {
+        auto const n { points.size() };
+        auto const startdir { unit( points[ 1 ] - points[ 0 ] ) };
+        auto const enddir { unit( points[ n - 1 ] - points[ n - 2 ] ) };
+        auto const startcut { std::min( EyeLength, length( points[ 1 ] - points[ 0 ] ) ) };
+        auto const endcut { std::min( EyeLength, length( points[ n - 1 ] - points[ n - 2 ] ) ) };
+        auto const start { points[ 0 ] + startdir * startcut };
+        auto const end { points[ n - 1 ] - enddir * endcut };
+        // ucho: zero w styku z liną, +Z modelu do zaczepu
+        segment( "rope_eye.1", Eye, start, start - startdir * EyeLength, false );
+        segment( "rope_eye.2", Eye, end, end + enddir * EyeLength, false );
+        points.front() = start;
+        points.back() = end;
+    }
+    for( std::size_t k = 1; k < points.size(); ++k ) {
+        segment( "rope." + std::to_string( k ), Cord, points[ k - 1 ], points[ k ], true );
     }
 }
 
