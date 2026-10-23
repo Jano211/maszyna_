@@ -2280,6 +2280,8 @@ std::vector<editor_track::switch_template> editor_track::standard_switch_templat
 		double b;
 	};
 	definition const definitions[] = {
+		{"Rz 1:6,6 R190", 190.0, 6.6, 0.0, 0.0}, // a = R tg(alfa/2), b szacowane - do podania prawdziwe (Jan 2026-10-23)
+		{"Rz 1:7,5 R190", 190.0, 7.5, 0.0, 0.0}, // jw.
 		{"Rz 1:9 R190", 190.0, 9.0, 10.523, 16.615},
 		{"Rz 1:9 R300", 300.0, 9.0, 16.615, 16.615},
 		{"Rz 1:12 R500", 500.0, 12.0, 20.797, 0.0},
