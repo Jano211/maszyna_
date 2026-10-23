@@ -57,7 +57,31 @@ struct chain {
     std::string type;                       // symbol typu sieci, np. YwsC120-2C
     double      hangers[ 4 ] { 0.4, 4.0, 3.0, 0.04 }; // jak w node traction: najniższy wieszak, odstęp, liczba drutów, odstęp drutów
     std::string parallel;                   // przęsło bieżni wspólnej (jak "parallel" w node traction); puste = brak
+    std::string anchor_start, anchor_end;   // kotwienia (wpisy "anchor") przed pierwszym i za ostatnim podwieszeniem; puste = brak
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
+};
+
+// kotwienie ciężarowe (urządzenie naprężające z pliku traction_tensioners.txt) na słupie kotwowym, wpis
+// "node <max> <min> <nazwa> anchor device <karta> network <symbol typu> pole <słup> x y z toward x y z distance <m>
+//  [color <kolor>] [top_color <kolor>] [elongation <m>] [missing <n>] [ground <m>] [skin <tekstura>] endanchor".
+// pole: oś słupa na wysokości główki szyny; toward: punkt, z którego przychodzą druty (urządzenie leży w tym kierunku od
+// słupa); distance: odległość od kotwienia środkowego albo stałego. Łańcuch przypina się do niego "anchor_start/anchor_end",
+// a ostatnie przęsło (bez wieszaków) kończy się na uchwytach krańcowych urządzenia
+struct anchor {
+    std::string name;
+    double      range_max { 1000.0 };
+    double      range_min { 0.0 };
+    std::string device { "0461" };
+    std::string network;                    // symbol typu sieci (traction_<symbol>.txt): numer typu i liczba przewodów jezdnych
+    std::string pole_type;
+    double      pole[ 3 ] { 0.0, 0.0, 0.0 };
+    double      toward[ 3 ] { 0.0, 0.0, 0.0 };
+    double      distance { 700.0 };
+    std::string color, top_color;
+    double      elongation { 0.0 };
+    int         missing { 0 };
+    double      ground { -0.50 };
+    std::string skin;
 };
 
 // bramka: dwa słupy i dźwigar między nimi, wpis
@@ -85,6 +109,7 @@ struct suspension_file {
     std::vector<suspension> entries;
     std::vector<chain> chains;
     std::vector<gantry> gantries;
+    std::vector<anchor> anchors;
 };
 
 // rozbiera plik podwieszeń podany jako kolejne słowa (już bez komentarzy). Source: nazwa pliku do komunikatów.
@@ -98,6 +123,8 @@ std::string write_suspension( suspension const &Entry );
 std::string write_chain( chain const &Entry );
 // wpis bramki w postaci tekstu do pliku (jedna linia)
 std::string write_gantry( gantry const &Entry );
+// wpis kotwienia w postaci tekstu do pliku (jedna linia)
+std::string write_anchor( anchor const &Entry );
 
 // dane konstrukcji wsporczej z rejestru
 struct support_data {
