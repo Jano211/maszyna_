@@ -29,8 +29,8 @@ http://mozilla.org/MPL/2.0/.
 //                       zero w sworzniu od strony konstrukcji/dźwigni, biegną w -X do drugiego sworznia (pusty węzeł,
 //                       np. hole_1 uchwytu 4440; długość z danych); "~część" w łańcuchu - postawiona odwrotnie (4440: zero
 //                       w wąskim końcu, widełki z osią rolki na -X; przy rolce ruchomej widełki są od strony słupa)
-//   dźwignia 6406       zero w otworze I, otwory w +Z (I na dole), otwór III odsunięty w +X; przy otworze liny poniżej
-//                       otworu przewodów dźwignia odwrócona (obrót o 180 stopni wokół Y)
+//   dźwignia 6406       zero w otworze osi II (mount_2 = III), otwory w +Z (I na dole), otwory na druty odsunięte w -X
+//                       modelu (w stronę drutów); przy otworze liny poniżej otworu przewodów dźwignia odwrócona (180 wokół Y)
 //   pręt 6401/6402      zero na dole (pod stosem), w +Z do zaczepu na górze (długość z danych)
 //   ciężar 63xx         zero w środku spodu, w +Z; kolejne obracane o "turn" wokół Z; kolor numerem wykonania modelu
 //   lina                linka rozciągana (część typu cord, zero w zaczepie, w +Z, skalowana wzdłuż Z)
