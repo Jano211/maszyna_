@@ -79,3 +79,19 @@ Później: obrót wysięgników od temperatury i odległości od kotwienia środ
 w scenariuszu; parametry „stanu”: brakujące krążki (stos krótszy, naciąg mniejszy o 4·27 daN na krążek), wydłużenie
 sieci od ostatniej regulacji (ciężary niżej o 4×; oparte o grunt = utrata naciągu), zerwanie kotwienia (przęsła liczone
 z zadanej długości drutu → naciąg).
+
+## Kolprojekt_2010-1.PDF (88 s., katalog sieci YC150-2CS150 kod 36 i YC120-2CS150 kod 37, CuAg, 200 km/h)
+Strony PDF: s. 11–13 0017-1/2/3 lina kotwienia środkowego (Fe 70, Cu 120, Cu 150); s. 14–16 **0019-1/2/3 usytuowanie
+ciężarów, kotwienie ROZDZIELONE** (żeliwne / Ø306 / Ø400); s. 19–20 0060-36/37 przęsła naprężenia sześciosłupowe;
+s. 21–29 kotwienia stałe i środkowe (0403–0423, środkowe 0406/0408/0416/0418); s. 30–36 izolatory sekcyjne, punkty
+izolujące; s. **37–48 kotwienia ciężarowe ROLKI SZEREGOWE, osobno lina nośna i przewody jezdne**: 0448/0449 (żeliwne,
+z izolacją), 0459/0460 (żeliwne, bez izolacji), 0482–0485 (Ø306), 0486–0489 (Ø400).
+- Kotwienie rozdzielone: dwa urządzenia jedno nad drugim na tej samej konstrukcji: **lina nośna – rolki na 7,00 m,
+  przewody jezdne – na 6,30 m** nad główką (0019-1). Przy +10 °C spód ciężarów liny 2,25 m, przewodów 2,20 m; przy −25 °C
+  4,05 / 4,00 m, przy +40 °C 0,73 / 0,68 m (as = 750 m); pręty 2,00 (lina) i 1,70 m (przewody); ciężar 55 mm.
+- Rolki szeregowe: na urządzenie 2 × 4460-2 (D 220, jeden rowek) + 2 × 4460-3 (D 320), uchwyty 4440-4/-5/-6
+  (L 320 / 703 / 703), cięgło 4490-2 (10,00 m), zabezpieczenie 4600-2. Przekładnia 1:4 (liczby ciężarów dają naciągi z 0002).
+- Ciężary (lina / przewody), żeliwne i Ø400 te same liczby: typ 20: 15 / 25, 30: 15 / 18, 32: 30 / 20, 35: 27 / 18,
+  36: 18 / 28, 37: 15 / 28. Sprawdzenie: 25 × 27 × 4 × 0,981 = 2649 daN = przewody YC120-2C150 (2648).
+- Sieć 32 i 35 (dwie liny nośne): dźwignia równoramienna 6403-1 (32) albo wyrównywacz 4410 (35) rozdziela na dwie liny.
+- Do zrobienia: tablice montażowe rolek szeregowych 0011-5/-6/-7/-8 (tom 1 s. 13–16) i przebieg liny przez 4 rolki.
