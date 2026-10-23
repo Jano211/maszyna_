@@ -48,10 +48,10 @@ weight 6322-1 height 0.058 mass 27 turn 90 model 6322 offset 0      // polimerob
 weight 6322-1w height 0.092 mass 27 turn 90 model 6322 offset 4     // polimerobetonowy Ø400, wysoki (karta 0019-3: 91 mm), wykonania 5-8
 
 // rolka linowa 4460 (tom 5 s. 27): diameter po dnie rowka, z pustych wezlow groove_a/groove_b modeli Jana (2026-10-23):
-// rowki 107,4 mm od osi (karta D 220 -> 110), rozstaw rowkow 41,2 mm; 4460-03 136,6 mm (karta D 320 -> 160 - do sprawdzenia)
+// rowki 107,4 mm od osi (karta D 220 -> 110), rozstaw rowkow 41,2 mm; 4460-03 160 mm (karta D 320)
 pulley 4460-01 diameter 0.2148 width 0.0824 grooves 2
 pulley 4460-02 diameter 0.2148 width 0.044 grooves 1
-pulley 4460-03 diameter 0.2732 width 0.044 grooves 1
+pulley 4460-03 diameter 0.3200 width 0.044 grooves 1
 
 // dzwignia 6406 (tom 5 s. 167): hole <nazwa> <wzdluz osi od otworu I> <odsuniecie w bok>
 lever 6406-01 hole I 0.000 0 hole II 0.280 0 hole III 0.365 0.050 hole IV 0.572 0 hole V 0.665 0 hole VI 0.732 0
