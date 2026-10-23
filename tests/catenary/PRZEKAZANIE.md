@@ -493,3 +493,5 @@ tests/catenary/tc tests/catenary/data                                           
 - Scenerie testowe `td*.scn` (124 przęsła z typami i nazwami) i paczka `siec_exe_paczka3.zip`: Jan ma je z poprzedniego czatu.
 - Źródła faktów: katalog sieci (karta 0002 naciągi, karty 0570–0579 wieszaki), artykuł Koroblowskiego z TTS 10/2004 (2C120-2C-3, przęsło 70 m).
 - Katalogi PDF: `E:\SYF\INNE\PDF\Katalog ESN` (`z- KATALOG 1..6 -z.pdf`; karty 1100–1199 w tomie 3 od strony 55, części 4000–7999 w tomie 5; skany bez warstwy tekstu, czytać jako obrazy).
+
+- 2026-10-23: słupy betonowe przy rozjazdach. `polegroup ... at_switch <słup>` w traction_catalog.txt: nowy słup z panelu z takiej grupy, postawiony przy rozjeździe (tor słupa jest rozjazdem albo ścieżka rozjazdu < 8 m od stopy słupa, kSwitchRange), dostaje słup <słup>; w podpowiedzi „przy rozjeździe: słup X zamiast Y”. Edycja istniejących słupów nie zmienia typu. CZEKA na Jana: który słup stalowy wstawiać zamiast 1701/1711 i wpis 1711 w traction_supports.txt (jeszcze go nie ma).

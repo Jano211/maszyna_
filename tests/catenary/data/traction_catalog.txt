@@ -221,6 +221,8 @@ family 079x s_tube_vol2 cards 0790-0795 : 079x - poziome, hk 1,00 (?)
 // ===================================================================================================================
 // Slupy.
 // Wysokosc slupa 8,2 / 7,8 / 7,4 m = szlak / rownia stacyjna / peron (uzytkownik 2026-10-22: prawdopodobnie). Betonowe tej zaleznosci nie maja.
+// at_switch <slup> = przy rozjezdzie edytor stawia ten slup zamiast slupow z grupy (1701/1711 nie wystepuja przy rozjazdach - Jan 2026-10-23).
+// Przy rozjezdzie = tor slupa jest rozjazdem albo tor rozjazdu biegnie blizej niz 8 m od stopy slupa.
 polegroup p_concrete poles 1701 : Betonowe (1701)
 text Słupy betonowe: wysokość nie zależy od miejsca.
 polegroup p_ibeam_line foundation piles site line poles 1665 : Dwuteowe 200x200 na palach, 8,2 m (szlak?)
