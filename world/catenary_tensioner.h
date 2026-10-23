@@ -113,6 +113,10 @@ struct tensioner_device {
     tensioner_link messenger_clamp, contact_clamp;
     tensioner_link equalizer;           // wyrównywacz przewodów jezdnych (tylko przy dwóch przewodach)
     double equalizer_spread { 0.08 };   // rozstaw przewodów za wyrównywaczem
+    // zabezpieczenie 4600 wyk. 1: dwa ramiona z osi rolek (stałej i ruchomej) zbiegające się na dolnej śrubie, para po obu stronach rolek
+    std::string safety_fixed, safety_moving;
+    double safety_arm { 1.0 };          // rozstaw otworów ramienia
+    double safety_offset { 0.06 };      // odsunięcie każdej pary od środka rolki w bok
     std::vector<tensioner_type> types;
     tensioner_type const *type( int Code ) const;
 };

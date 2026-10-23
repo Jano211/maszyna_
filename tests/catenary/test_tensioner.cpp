@@ -165,6 +165,17 @@ int main( int argc, char **argv ) {
             && std::abs( weights[ 9 ]->rotation[ 3 ] - 1.0 ) < 1e-9, "kazdy kolejny ciezar obrocony o 90 stopni (zeliwne i betonowe)" );
     }
 
+    // zabezpieczenie 4600: cztery ramiona, dolna śruba pod rolkami
+    {
+        catenary::tensioner_input input;
+        input.temperature = -25.0;
+        catenary::tensioner_result result;
+        catenary::solve_tensioner( catalog, *device, input, result );
+        int arms { 0 };
+        for( auto const &part : result.parts ) { if( part.role.rfind( "safety", 0 ) == 0 ) { ++arms; } }
+        check( arms == 4 && result.warnings.empty(), "zabezpieczenie 4600: dwie pary ramion, tez przy -25 °C (rolki najdalej)" );
+    }
+
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDOW: %d\n", failures );
     return failures == 0 ? 0 : 1;
 }
