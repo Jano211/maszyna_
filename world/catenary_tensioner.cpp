@@ -567,13 +567,13 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     }
     auto z { s };
     int index { 0 };
-    std::map<std::string, int> turns; // ile ciężarów danego rodzaju już leży (obrót kolejnego)
+    int turns { 0 }; // ciężary już leżące na pręcie (każdy kolejny obrócony o "turn" swojego rodzaju)
     for( auto const *weight : stack ) {
         ++index;
         auto const top { index == static_cast<int>( stack.size() ) };
         auto const &color { top && false == Input.top_color.empty() ? Input.top_color : Input.color };
         auto placement { placed( "weight." + std::to_string( index ), color.empty() ? weight->name : weight->name + "_" + color, vec { columnx, yb, z } ) };
-        auto const angle { weight->turn * ( turns[ weight->name ]++ ) * kPi / 180.0 };
+        auto const angle { weight->turn * ( turns++ ) * kPi / 180.0 };
         set_rotation( placement, vec { std::cos( angle ), std::sin( angle ), 0.0 }, vec { -std::sin( angle ), std::cos( angle ), 0.0 }, vec { 0.0, 0.0, 1.0 } );
         Result.parts.push_back( placement );
         z += weight->height;
