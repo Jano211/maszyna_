@@ -103,6 +103,7 @@ set(SOURCES
 "world/catenary_solver.cpp"
 "world/catenary_network.cpp"
 "world/catenary_span.cpp"
+"world/catenary_tensioner.cpp"
 "world/catenary_suspension.cpp"
 "world/catenary_scene.cpp"
 "world/catenary_cantilever.cpp"
