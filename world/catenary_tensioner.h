@@ -105,6 +105,8 @@ struct tensioner_device {
     std::string name;                   // karta, np. 0461
     std::string table, pulley, lever, rod, rope;
     double rope_diameter { 0.010 };
+    std::string rope_eye;               // ucho (kausza) na obu końcach liny, nieskalowane; pusty = lina bez uch
+    double rope_eye_length { 0.0 };     // od zera ucha (styk z liną) do punktu "eye" (zaczep), wzdłuż +Z modelu
     std::vector<tensioner_link> mount;  // od czoła konstrukcji do osi rolki stałej
     std::vector<tensioner_link> holder; // od osi rolki ruchomej do osi dźwigni
     std::vector<tensioner_link> hanger; // od rolki stałej w dół do pręta (bez liny)
@@ -183,6 +185,7 @@ struct tensioner_result {
 bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &Device, tensioner_input const &Input, tensioner_result &Result );
 
 // lina jako odcinki linki rozciąganej (część Cord o długości spoczynkowej Length, skala w poprzek Girth)
-void tensioner_rope_parts( tensioner_result &Result, std::string const &Cord, double Length, double Girth );
+// Eye (gdy niepusty): ucho o długości EyeLength na obu końcach, punkt "eye" w zaczepie, lina skrócona o ucho
+void tensioner_rope_parts( tensioner_result &Result, std::string const &Cord, double Length, double Girth, std::string const &Eye = {}, double EyeLength = 0.0 );
 
 } // namespace catenary

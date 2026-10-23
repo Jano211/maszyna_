@@ -676,7 +676,12 @@ assemble_anchor( scene_anchor &Anchor ) {
         if( Notes.insert( warning ).second ) { WriteLog( ( "Catenary: " + warning + " (first seen in anchor \"" + data.name + "\")" ).c_str() ); }
     }
     if( auto const *cord { catalog->part( device->rope ) }; cord != nullptr ) {
-        catenary::tensioner_rope_parts( result, device->rope, cord->length, cord->girth );
+        auto eye { device->rope_eye };
+        if( false == eye.empty() && catalog->part( eye ) == nullptr ) {
+            ErrorLog( label + "rope eye part \"" + eye + "\" isn't in the cantilever catalogue, the rope is drawn without eyes" );
+            eye.clear();
+        }
+        catenary::tensioner_rope_parts( result, device->rope, cord->length, cord->girth, eye, device->rope_eye_length );
     }
     else { ErrorLog( label + "rope part \"" + device->rope + "\" isn't in the cantilever catalogue, the rope isn't drawn" ); }
     Anchor.temperature = Global.AirTemperature;

@@ -176,6 +176,26 @@ int main( int argc, char **argv ) {
         check( old == 2, "stare zlozenie: uchwyty krancowe 5110 na obu przewodach" );
     }
 
+    // lina z uchami: ucho na obu końcach z zaczepem w skrajnym punkcie liny, odcinki liny bez uch, ta sama długość razem
+    {
+        catenary::tensioner_input input;
+        catenary::tensioner_result result;
+        catenary::solve_tensioner( catalog, *device, input, result );
+        auto const first { result.rope.front() }, last { result.rope.back() };
+        catenary::tensioner_rope_parts( result, "4490-01", 1.0, 1.0, "4490-02", 0.15 );
+        std::vector<catenary::tensioner_placement const *> eyes;
+        double stretched { 0.0 };
+        for( auto const &part : result.parts ) {
+            if( part.role.rfind( "rope_eye.", 0 ) == 0 ) { eyes.push_back( &part ); }
+            else if( part.role.rfind( "rope.", 0 ) == 0 ) { stretched += part.scale[ 2 ]; }
+        }
+        auto const tip = []( catenary::tensioner_placement const *Eye, int const A ) { return Eye->position[ A ] + 0.15 * Eye->rotation[ 3 * A + 2 ]; };
+        auto const at = [ & ]( catenary::tensioner_placement const *Eye, std::vector<double> const &P ) {
+            return std::abs( tip( Eye, 0 ) - P[ 0 ] ) < 1e-6 && std::abs( tip( Eye, 1 ) - P[ 1 ] ) < 1e-6 && std::abs( tip( Eye, 2 ) - P[ 2 ] ) < 1e-6; };
+        check( eyes.size() == 2 && at( eyes[ 0 ], first ) && at( eyes[ 1 ], last ), "lina: uszy 4490-02 zaczepione w obu koncach liny" );
+        check( std::abs( stretched + 0.30 - rope_length( result ) ) < 1e-6, "lina: odcinki 4490-01 krotsze o dwa uszy" );
+    }
+
     // zabezpieczenie 4600: cztery ramiona, dolna śruba pod rolkami
     {
         catenary::tensioner_input input;
