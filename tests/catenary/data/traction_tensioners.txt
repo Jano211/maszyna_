@@ -70,7 +70,7 @@ part 6402-04 length 3.00
 //   messenger_clamp / contact_clamp <czesc dlugosc>, equalizer <czesc dlugosc> spread <rozstaw przewodow>
 //   type <traction_code> stack <ciezar liczba>... (od dolu) lever <otwor liny> <otwor przewodow> <otwor osi> [rod <pret>] [clamp <uchwyt liny>]
 // Dlugosci czesci liniowych: ZALOZENIE do czasu modeli (Jan 2026-10-23 szykuje); 4440: hole_1 z modeli (01-03 0,270, 04 0,320,
-// 05/06 0,336 i hole_2 0,703, 07 0,410) - czesci biegna w -X modelu.
+// 05/06 0,336 i hole_2 0,703, 07 0,410), 7150-01 0,8324, 4420-01 0,930, 4410-01 wire_1/2 0,1541 i ±0,040 - czesci biegna w -X modelu.
 // Lina 4490-1 (8,70 m z kauszami) - srednica ZALOZONA 10 mm; rysowana modelem odciagu linowego 9832-02.
 
 // 23-0461 kotwienie ciezarowe sieci z izolacja, rolki rownolegle, ciezary polimerobetonowe i zeliwne Ø306 (Uzup. 2 s. 16;
@@ -79,11 +79,11 @@ device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 9832-02 r
   mount 4450-01 0.15 4440-02 0.27
   holder ~4440-01 0.27
   hanger 6411-01 0.10 4720-01 0.17
-  messenger 4720-01 0.17 7150-01 0.60 4720-01 0.17 4420-01 0.40
-  contact 4720-01 0.17 7150-01 0.60 4720-01 0.17 4420-01 0.40
+  messenger 4720-01 0.17 7150-01 0.8324 4720-01 0.17 4420-01 0.93
+  contact 4720-01 0.17 7150-01 0.8324 4720-01 0.17 4420-01 0.93
   messenger_clamp 5120-06 0.25
   contact_clamp 5120-06 0.25
-  equalizer 4410-01 0.30 spread 0.08
+  equalizer 4410-01 0.1541 spread 0.08
   type 3 stack 6321-1 8 6323-1 18 lever IV I II clamp 5120-07
   type 4 stack 6321-1 4 6323-1 20 lever VI I III
   type 10 stack 6323-1 20 lever V I III
