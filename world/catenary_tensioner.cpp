@@ -247,6 +247,14 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 if( keyword == "equalizer" && words.size() >= 5 && words[ 3 ] == "spread" ) { number_of( words[ 4 ], device->equalizer_spread ); }
                 continue;
             }
+            if( keyword == "safety" && words.size() >= 5 ) {
+                // safety <ramię przy rolce stałej> <ramię przy ruchomej> <rozstaw otworów> <odsunięcie w bok>
+                device->safety_fixed = words[ 1 ];
+                device->safety_moving = words[ 2 ];
+                number_of( words[ 3 ], device->safety_arm );
+                number_of( words[ 4 ], device->safety_offset );
+                continue;
+            }
             if( keyword == "type" && words.size() >= 2 ) {
                 tensioner_type type;
                 double code;
@@ -488,6 +496,22 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         Result.parts.push_back( placed( "pulley_moving", pulley->name, movingaxle ) );
     }
     auto const axispoint { place_chain( Device.holder, "holder", movingaxle, out, Result ) };
+
+    // zabezpieczenie: ramiona z osi obu rolek do wspólnej dolnej śruby, para po obu stronach rolek
+    if( false == Device.safety_fixed.empty() ) {
+        auto const half { 0.5 * ( movingaxle.x - fixedaxle.x ) };
+        if( half < Device.safety_arm ) {
+            auto const drop { std::sqrt( Device.safety_arm * Device.safety_arm - half * half ) };
+            for( auto const side : { -1.0, 1.0 } ) {
+                vec const offset { 0.0, side * Device.safety_offset, 0.0 };
+                vec const bolt { fixedaxle.x + half, offset.y, height - drop };
+                auto const role { std::string( side < 0.0 ? "safety_a" : "safety_b" ) };
+                Result.parts.push_back( placed_along( role + ".fixed", Device.safety_fixed, fixedaxle + offset, bolt - ( fixedaxle + offset ) ) );
+                Result.parts.push_back( placed_along( role + ".moving", Device.safety_moving, movingaxle + offset, bolt - ( movingaxle + offset ) ) );
+            }
+        }
+        else { Result.warnings.push_back( "the pulleys are further apart than the safety arms reach" ); }
+    }
 
     // dźwignia: otwór osi na axispoint; przy otworze liny niżej niż otwór przewodów odwrócona
     auto const flipped { messengerhole->first < contacthole->first };
