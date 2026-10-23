@@ -66,6 +66,8 @@ struct catenary_editor
 		bool removed{false}; // the suspension was removed
 		bool gantry{false}; // a change of a gantry
 		std::optional<catenary::gantry> gantry_before; // none: the gantry was added
+		bool anchor{false}; // a change of an anchor
+		std::optional<catenary::anchor> anchor_before; // none: the anchor was added
 	};
 	struct catenary_tool
 	{
@@ -189,6 +191,10 @@ struct catenary_editor
 	void render_catenary_ui();
 	bool render_catenary_catalog_ui();
 	void render_catenary_chain_ui();
+	// the anchors at both ends of the selected chain: add, settings, remove
+	void render_catenary_anchor_ui(std::size_t Chain);
+	// the anchor of the chain at its start (Start) or end; catenary_anchor_size() when none
+	std::size_t catenary_anchor_of(catenary::chain const &Chain, std::string const &File, bool Start) const;
 	void render_catenary_cantilever_ui();
 	void render_catenary_wires_ui();
 	void catenary_choose_page(int const Page);

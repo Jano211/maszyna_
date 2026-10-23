@@ -284,6 +284,55 @@ int main( int, char *argv[] ) {
             check( singlegood, "pojedynczy element 3021 na slupie przelotowym: zapis z tip, sam dzwigar (slup stawia przeslo), 7,1 m od sciany slupa" );
         }
     }
+    // 6. kotwienie ciężarowe na końcu łańcucha: słup i urządzenie, ostatnie przęsło bez wieszaków do uchwytów krańcowych,
+    // temperatura przestawia ciężary i przęsło
+    {
+        auto a { entry }, c { entry };
+        a.name = "s0001"; c.name = "s0002";
+        c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 160.0;
+        catenary::anchor anchor;
+        anchor.name = "k1"; anchor.network = "C120-2C"; anchor.pole_type = "1611-11";
+        anchor.pole[ 0 ] = -2.4; anchor.pole[ 1 ] = 0.2; anchor.pole[ 2 ] = 184.0;
+        anchor.toward[ 0 ] = c.at[ 0 ]; anchor.toward[ 1 ] = c.at[ 1 ]; anchor.toward[ 2 ] = c.at[ 2 ];
+        anchor.distance = 700.0; anchor.color = "szary"; anchor.top_color = "zolty";
+        catenary::chain line;
+        line.name = "l1"; line.power = "pwr01"; line.type = "C120-2C"; line.anchor_end = "k1";
+        line.suspensions = { "s0001", "s0002" };
+        std::string text { catenary::write_suspension( a ) + "\n" + catenary::write_suspension( c ) + "\n" + catenary::write_anchor( anchor ) + "\n" + catenary::write_chain( line ) + "\n" };
+        { std::ofstream out { "tests/catenary/td_kotwa_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear(); mock_deleted_spans = 0;
+        Global.AirTemperature = 10.f;
+        auto const before { simulation::State.created.size() };
+        cParser directive( "td_kotwa_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        auto const *result { catenary_anchor_result( 0 ) };
+        check( catenary_anchor_size() == 1 && result != nullptr && result->warnings.empty() && catenary_anchor_parts( 0 ) > 30 && simulation::State.created.size() > before + 30,
+            ( "kotwienie: slup i urzadzenie w scenerii (" + std::to_string( catenary_anchor_parts( 0 ) ) + " czesci)" ).c_str() );
+        // przęsła: s0001-s0002 z wieszakami, s0002-k1 bez (odstęp 0)
+        auto good { mock_span_bodies.size() == 2 };
+        double end[ 3 ] { 0.0, 0.0, 0.0 };
+        if( good ) {
+            std::istringstream body { mock_span_bodies.back() };
+            std::string skip;
+            std::getline( body, skip );
+            std::getline( body, skip );
+            body >> end[ 0 ] >> end[ 1 ] >> end[ 2 ];
+            good = mock_span_bodies.back().find( "0.400 0.000 3 0.040 vis" ) != std::string::npos && mock_span_bodies.front().find( "0.400 4.000 3 0.040 vis" ) != std::string::npos;
+            std::printf( "  koniec przewodow przy kotwieniu: %.3f %.3f %.3f\n", end[ 0 ], end[ 1 ], end[ 2 ] );
+        }
+        // urządzenie od czoła słupa w stronę s0002: rolka 1,75 m, dźwignia, łańcuchy ~1,4 m, więc koniec ok. 3,5-4,5 m od słupa
+        good = good && end[ 2 ] < 184.0 - 3.0 && end[ 2 ] > 184.0 - 5.5 && end[ 1 ] > 0.2 + 6.0 && end[ 1 ] < 0.2 + 6.8;
+        check( good, "kotwienie: ostatnie przeslo bez wieszakow konczy sie na uchwytach krancowych urzadzenia" );
+        auto const warm { result->b };
+        mock_span_bodies.clear();
+        Global.AirTemperature = -20.f;
+        catenary_scene_temperature();
+        result = catenary_anchor_result( 0 );
+        check( result->b > warm + 0.3 && mock_span_bodies.size() == 1, "mroz: rolka dalej od slupa, przeslo do kotwienia od nowa" );
+        Global.AirTemperature = 15.f;
+        std::remove( "tests/catenary/td_kotwa_test.scm" );
+    }
     for( auto const &line : errors ) { std::printf( "  %s\n", line.c_str() ); }
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDY: %d\n", failures );
     return failures;

@@ -34,6 +34,7 @@ void catenary_scene_data( std::string const &Directory );
 #include "world/catenary_cantilever.h"
 #include "world/catenary_layout.h"
 #include "world/catenary_catalog.h"
+#include "world/catenary_tensioner.h"
 
 // katalog wysięgników (części, karty, słupy, mocowania); nullptr gdy nie dało się go wczytać
 catenary::cantilever_catalog const *catenary_scene_catalog();
@@ -88,6 +89,22 @@ bool catenary_chain_update( std::size_t Index, catenary::chain const &Data );
 void catenary_chain_remove( std::size_t Index );
 // łańcuch, do którego należy podwieszenie, i jego miejsce w łańcuchu; -1 gdy żaden
 int catenary_chain_of( std::size_t Suspension, std::size_t &Position );
+
+// ---- kotwienia (wpisy "anchor" w pliku sieci): słup kotwowy z urządzeniem naprężającym ---------------------------------
+std::size_t catenary_anchor_size();
+catenary::anchor const *catenary_anchor_get( std::size_t Index );
+std::string catenary_anchor_file( std::size_t Index );
+std::size_t catenary_anchor_parts( std::size_t Index );
+// wynik solvera ostatniego złożenia (b, s, ciężary, naciągi, uwagi); nullptr gdy usunięte
+catenary::tensioner_result const *catenary_anchor_result( std::size_t Index );
+// dodaje kotwienie, składa je i przebudowuje łańcuchy, które go używają. zwraca numer
+std::size_t catenary_anchor_add( std::string const &File, catenary::anchor const &Data );
+// zmienia kotwienie (także przywraca usunięte) i przebudowuje łańcuchy, które go używają
+bool catenary_anchor_update( std::size_t Index, catenary::anchor const &Data );
+void catenary_anchor_remove( std::size_t Index );
+std::string catenary_scene_new_anchor_name( std::string const &File );
+// po zmianie temperatury powietrza: kotwienia złożone przy innej (różnica od 0,5 °C) składa od nowa, z przęsłami do nich
+void catenary_scene_temperature();
 
 // ---- bramki (wpisy "gantry" w pliku sieci): słupy i dźwigar; zwisy z wysięgnikami to zwykłe podwieszenia -----------------
 std::size_t catenary_gantry_size();

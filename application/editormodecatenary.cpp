@@ -1614,6 +1614,14 @@ bool catenary_editor::catenary_undo()
 	{
 		auto const change{tool.undo.back()};
 		tool.undo.pop_back();
+		if (change.anchor)
+		{
+			if (change.anchor_before.has_value())
+				catenary_anchor_update(change.index, *change.anchor_before);
+			else
+				catenary_anchor_remove(change.index);
+			continue;
+		}
 		if (change.gantry)
 		{
 			if (change.gantry_before.has_value())
@@ -1726,6 +1734,236 @@ void catenary_editor::render_catenary_chain_ui()
 			if (bool toward{tool.toward}; catenary_propose_toward(toward))
 				tool.toward = toward;
 		}
+		render_catenary_anchor_ui(static_cast<std::size_t>(tool.chain_selected));
+	}
+}
+
+std::size_t catenary_editor::catenary_anchor_of(catenary::chain const &Chain, std::string const &File, bool const Start) const
+{
+	auto const &name{Start ? Chain.anchor_start : Chain.anchor_end};
+	if (name.empty())
+		return catenary_anchor_size();
+	for (std::size_t index = 0; index < catenary_anchor_size(); ++index)
+		if (auto const *anchor{catenary_anchor_get(index)}; anchor != nullptr && anchor->name == name && catenary_anchor_file(index) == File)
+			return index;
+	return catenary_anchor_size();
+}
+
+namespace
+{
+
+// the colours of the weights as the models have them (executions 1-4)
+char const *const kWeightColors[] = {"zolty", "szary", "zolty_pedzel", "szary_brzydki"};
+char const *const kWeightColorNames[] = {"yellow", "grey", "yellow, brushed", "grey, shabby"};
+
+int weight_color_index(std::string const &Name)
+{
+	for (int i = 0; i < 4; ++i)
+		if (Name == kWeightColors[i])
+			return i;
+	return 1;
+}
+
+} // namespace
+
+void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
+{
+	auto &tool{m_catenary};
+	auto const *chain{catenary_chain_get(Chain)};
+	if (chain == nullptr)
+		return;
+	auto const file{catenary_chain_file(Chain)};
+	auto const members{catenary_chain_members(Chain)};
+	if (members.size() < 2)
+		return;
+	ImGui::Separator();
+	ImGui::TextUnformatted(STR_C("Anchors (weight tensioning, card 23-0461)"));
+	for (int end = 0; end < 2; ++end)
+	{
+		auto const start{end == 0};
+		ImGui::PushID(end);
+		// the last two poles at this end: the wires come along them to the anchor
+		auto const *last{catenary_scene_get(start ? members.front() : members.back())};
+		auto const *previous{catenary_scene_get(start ? members[1] : members[members.size() - 2])};
+		auto const index{catenary_anchor_of(*chain, file, start)};
+		auto const *anchor{index < catenary_anchor_size() ? catenary_anchor_get(index) : nullptr};
+		if (last == nullptr || previous == nullptr || false == last->has_at || false == previous->has_at)
+		{
+			ImGui::PopID();
+			continue;
+		}
+		// along the wires, away from the chain
+		glm::dvec2 along{last->at[0] - previous->at[0], last->at[2] - previous->at[2]};
+		if (glm::length(along) < 0.1)
+		{
+			ImGui::PopID();
+			continue;
+		}
+		along = glm::normalize(along);
+		auto const base{last->has_pole ? glm::dvec2{last->pole[0], last->pole[2]} : glm::dvec2{last->at[0], last->at[2]}};
+		auto const baseheight{last->has_pole ? last->pole[1] : last->at[1] - static_cast<double>(tool.height)};
+		if (anchor == nullptr)
+		{
+			if (ImGui::Button(start ? STR_C("Anchor the start of the chain") : STR_C("Anchor the end of the chain")))
+			{
+				// the anchor pole 24 m past the last pole, in line with it (catalogue 22 m; Glowacki 24 m for big tensions)
+				catenary::anchor data;
+				data.name = catenary_scene_new_anchor_name(file);
+				data.network = chain->type;
+				data.pole_type = tool.poles.empty() ? std::string{} : tool.poles[std::clamp(tool.pole, 0, static_cast<int>(tool.poles.size()) - 1)];
+				auto const at{base + along * 24.0};
+				data.pole[0] = at.x;
+				data.pole[1] = baseheight;
+				data.pole[2] = at.y;
+				std::copy(std::begin(last->at), std::end(last->at), data.toward);
+				// from the middle anchor: half of the chain, by default
+				double length{0.0};
+				for (std::size_t k = 1; k < members.size(); ++k)
+				{
+					auto const *a{catenary_scene_get(members[k - 1])};
+					auto const *b{catenary_scene_get(members[k])};
+					if (a != nullptr && b != nullptr)
+						length += std::hypot(b->at[0] - a->at[0], b->at[2] - a->at[2]);
+				}
+				data.distance = std::clamp(std::round(0.5 * length / 10.0) * 10.0, 100.0, 750.0);
+				data.color = "szary";
+				data.top_color = "zolty";
+				auto changed{*chain};
+				(start ? changed.anchor_start : changed.anchor_end) = data.name;
+				++tool.group;
+				catenary_change added;
+				added.group = tool.group;
+				added.anchor = true;
+				added.index = catenary_anchor_add(file, data);
+				tool.undo.push_back(added);
+				catenary_change linked;
+				linked.group = tool.group;
+				linked.chain = true;
+				linked.index = Chain;
+				linked.chain_before = *chain;
+				tool.undo.push_back(linked);
+				catenary_chain_update(Chain, changed);
+				tool.status = STR("Anchored: the last span goes without droppers to the tensioning device");
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("An anchor pole 24 m past the last pole, in line with it, with the weight tensioning device; the last span hangs without droppers"));
+			ImGui::PopID();
+			continue;
+		}
+		ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(start ? STR_C("Start: anchor %s") : STR_C("End: anchor %s"), anchor->name.c_str()).c_str());
+		auto data{*anchor};
+		auto edited{false};
+		ImGui::PushItemWidth(180.0f);
+		{
+			// the anchor pole along the line of the last two poles
+			glm::dvec2 const pole{data.pole[0], data.pole[2]};
+			auto distance{static_cast<float>(glm::dot(pole - base, along))};
+			if (ImGui::SliderFloat(STR_C("Anchor pole from the last pole (m)"), &distance, 10.0f, 40.0f, "%.1f"))
+			{
+				auto const at{base + along * static_cast<double>(distance)};
+				data.pole[0] = at.x;
+				data.pole[2] = at.y;
+				edited = true;
+			}
+		}
+		if (ImGui::BeginCombo(STR_C("Anchor pole"), data.pole_type.c_str()))
+		{
+			auto chosen{static_cast<int>(std::find(tool.poles.begin(), tool.poles.end(), data.pole_type) - tool.poles.begin())};
+			if (grouped_items(tool.poles, chosen) && chosen >= 0 && chosen < static_cast<int>(tool.poles.size()))
+			{
+				data.pole_type = tool.poles[chosen];
+				edited = true;
+			}
+			ImGui::EndCombo();
+		}
+		{
+			auto distance{static_cast<float>(data.distance)};
+			if (ImGui::SliderFloat(STR_C("From the middle anchor (m)"), &distance, 50.0f, 900.0f, "%.0f"))
+			{
+				data.distance = distance;
+				edited = true;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Half-section length (from the middle or fixed anchor): the weights and the pulley move with the air temperature this much more"));
+		}
+		std::string const colornames[] = {STR(kWeightColorNames[0]), STR(kWeightColorNames[1]), STR(kWeightColorNames[2]), STR(kWeightColorNames[3])};
+		char const *const colors[] = {colornames[0].c_str(), colornames[1].c_str(), colornames[2].c_str(), colornames[3].c_str()};
+		{
+			auto color{weight_color_index(data.color)};
+			if (ImGui::Combo(STR_C("Weights"), &color, colors, 4))
+			{
+				data.color = kWeightColors[color];
+				edited = true;
+			}
+			auto top{data.top_color.empty() ? color : weight_color_index(data.top_color)};
+			if (ImGui::Combo(STR_C("Top weight"), &top, colors, 4))
+			{
+				data.top_color = kWeightColors[top];
+				edited = true;
+			}
+		}
+		{
+			auto missing{data.missing};
+			if (ImGui::SliderInt(STR_C("Weights missing"), &missing, 0, 10))
+			{
+				data.missing = missing;
+				edited = true;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Stolen from the top of the stack: about 100 daN less tension each"));
+			auto elongation{static_cast<float>(data.elongation * 100.0)};
+			if (ImGui::SliderFloat(STR_C("Wires stretched since regulated (cm)"), &elongation, 0.0f, 60.0f, "%.0f"))
+			{
+				data.elongation = elongation / 100.0;
+				edited = true;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Creep and wear of an old network: the weights hang 4 times this much lower; on the ground the network loses its tension"));
+		}
+		ImGui::PopItemWidth();
+		if (edited)
+		{
+			// one undo step for one drag of a slider
+			auto const &lastchange{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
+			if (tool.undo.empty() || false == lastchange.anchor || lastchange.index != index || false == ImGui::IsMouseDragging(0))
+			{
+				catenary_change change;
+				change.group = ++tool.group;
+				change.anchor = true;
+				change.index = index;
+				change.anchor_before = *anchor;
+				tool.undo.push_back(change);
+			}
+			catenary_anchor_update(index, data);
+		}
+		if (auto const *result{catenary_anchor_result(index)}; result != nullptr)
+		{
+			ImGui::TextDisabled("%s", format(STR_C("%.1f deg C: pulley %.2f m from the pole, weights %.2f m over the rails; %d weights, messenger %.0f daN, contact wires %.0f daN"),
+			                                   Global.AirTemperature, result->b, result->s, result->weights, result->messenger_tension, result->contact_tension).c_str());
+			for (auto const &warning : result->warnings)
+				ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s", warning.c_str());
+		}
+		if (ImGui::Button(STR_C("Remove the anchor")))
+		{
+			auto changed{*chain};
+			(start ? changed.anchor_start : changed.anchor_end).clear();
+			++tool.group;
+			catenary_change removed;
+			removed.group = tool.group;
+			removed.anchor = true;
+			removed.index = index;
+			removed.anchor_before = *anchor;
+			tool.undo.push_back(removed);
+			catenary_change unlinked;
+			unlinked.group = tool.group;
+			unlinked.chain = true;
+			unlinked.index = Chain;
+			unlinked.chain_before = *chain;
+			tool.undo.push_back(unlinked);
+			catenary_anchor_remove(index);
+			catenary_chain_update(Chain, changed);
+		}
+		ImGui::PopID();
 	}
 }
 

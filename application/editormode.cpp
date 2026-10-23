@@ -3582,6 +3582,7 @@ void editor_mode::render_environment_window()
         {
             Global.AirTemperature = std::clamp(temperature, -35.0f, 40.0f);
             simulation::Environment.compute_weather();
+            catenary_scene_temperature(); // ciężary kotwień idą za temperaturą
         }
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         ImGui::TextWrapped("%s", STR_C("Seen in the editor only; the scenery keeps its own time and weather"));

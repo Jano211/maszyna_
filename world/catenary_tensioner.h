@@ -30,7 +30,7 @@ http://mozilla.org/MPL/2.0/.
 //   dźwignia 6406       zero w otworze I, otwory w +Z (I na dole), otwór III odsunięty w +X; przy otworze liny poniżej
 //                       otworu przewodów dźwignia odwrócona (obrót o 180 stopni wokół Y)
 //   pręt 6401/6402      zero na dole (pod stosem), w +Z do zaczepu na górze (długość z danych)
-//   ciężar 63xx         zero w środku spodu, w +Z; kolejne obracane o "turn" wokół Z; kolor przyrostkiem nazwy
+//   ciężar 63xx         zero w środku spodu, w +Z; kolejne obracane o "turn" wokół Z; kolor numerem wykonania modelu
 //   lina                linka rozciągana (część typu cord, zero w zaczepie, w +Z, skalowana wzdłuż Z)
 #pragma once
 #include <map>
@@ -64,7 +64,13 @@ struct tensioner_weight {
     double height { 0.055 };
     double mass { 27.0 };                   // kg
     double turn { 0.0 };                    // stopnie: ciężar na n-tym miejscu stosu (od 0) obrócony o n·turn wokół pionu (wszystkie 90)
+    std::string model;                      // rdzeń nazwy modelu, np. 6321: model "<rdzeń>-<NN>", NN = offset + numer koloru
+    int offset { 0 };                       // 6322: 0 niskie (56 mm), 4 wysokie (92 mm) - dwie wysokości produkowane (Jan)
 };
+
+// numer koloru ciężaru w modelach (wykonania 1-4, Jan 2026-10-23): 1 żółty, 2 szary ładny, 3 żółty pędzlowany, 4 szary brzydki;
+// przyjmuje nazwę (zolty, szary, zolty_pedzel, szary_brzydki) albo cyfrę; 0 gdy nieznany
+int tensioner_color( std::string const &Name );
 
 struct tensioner_pulley {
     std::string name;
@@ -137,8 +143,8 @@ struct tensioner_input {
     double distance { 700.0 };          // m, od kotwienia stałego albo środkowego
     double elongation { 0.0 };          // m, trwałe wydłużenie sieci od ostatniej regulacji (rolka bliżej konstrukcji)
     int missing { 0 };                  // brakujące ciężary (z góry stosu)
-    std::string color;                  // wykonanie (kolor) ciężarów: przyrostek modelu "<ciężar>_<kolor>"; puste - bez przyrostka
-    std::string top_color;              // wykonanie najwyższego ciężaru (żółty); puste - jak reszta
+    std::string color;                  // kolor ciężarów (tensioner_color); pusty = szary
+    std::string top_color;              // kolor najwyższego ciężaru; pusty = jak reszta
     double ground { -0.50 };            // najniższe położenie spodu ciężarów względem główki szyny (grunt, fundament); ZAŁOŻENIE
     double gravity { 0.981 };           // daN/kg
 };
