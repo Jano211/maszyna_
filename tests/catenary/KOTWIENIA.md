@@ -88,11 +88,15 @@ z zadanej długości drutu → naciąg).
   w -02/-03 rozciągnie się razem z liną – albo oko osobno (nieskalowane, empty w miejscu, gdzie zaczyna się lina), albo
   -02/-03 ze stałym kawałkiem liny i reszta z -01. Modele od razu w średnicy z katalogu – bez skalowania w poprzek
   (girth 1); `rope_diameter` urządzenia (teraz ZAŁOŻONE 10 mm, liczy promień owinięcia na rolce) wyrównać do modelu.
-- **Prowadnica ciężarów wg katalogu (Jan 2026-10-24).** Rura 4470 (modele 4470-01/03/04, `end` na 4,0/4,5/5,5 m)
-  przykręcona do słupa uchwytami 5090 (góra i dół; L 460/435/535 mm – wyk. 1 żeliwne, 2 żeliwne i betonowe Ø306,
-  3 betonowe Ø400), oś 0,21 m od osi stosu (0,235 przy Ø400 – ramię pierścienia 5080). Pierścień 5080 (Ø310 / Ø405)
-  na stosie, jeździ po rurze z ciężarami. Długość rury z drogi ciężarów (różnica s w −25…+40 °C). Modele 5080 i 5090 –
-  Jan zrobi. Do ustalenia: wysokość rury nad główką, przy którym ciężarze pierścień.
+- **Prowadnica ciężarów i mocowania do słupa wg Uzup. 2** (sprawdzone 2026-10-24 02:00, POPRAWKA wcześniejszej notatki):
+  kotwienie WSPÓLNE (karta 33-0455, ciężary żeliwne i Ø306 – nasze 0461): prowadnica **5070-2** (rurowa z płytkami,
+  L 4500; 5070-1 L 4000) + pierścień **5080-1** (Ø310, ramię 210). 4470-4 + uchwyty 5090-2/3 + 5040-2/3 + 5080-2 – to
+  kotwienia ROZDZIELONE (0457 Ø306, 0458 Ø400); 0470 wspólne Ø400: 5070-2 + 5080-2. Mocowania 0455 wg wykonania
+  (rodzaju konstrukcji): poz. 1 (górne, pod rolkę/4450) 4510-1 (wyk. 1), 4510-2 (2), 4520-3 (3), 4520-4 (4), 4520-5 (5),
+  4570-1 (6), 4520-6 (7), 4520-7 (8), 5100-1 (11), 5100-2 (12); poz. 2 (dolne, pod prowadnicę) 4520-1 (1), 4520-2 (2),
+  4530-3 (3), 4560-1 (4, 5), 5100-3 (11), 5100-4 (12); wyk. 6–8 bez poz. 2. Szkice przekrojów: 1–3 dwa ceowniki
+  zamknięte, 4–5 kratowy z dwóch ceowników, 6 kratowy z kątowników, 7–8 dwuteownik, 11–12 słup betonowy (?).
+  Przypisanie wykonań do modeli słupów – do ustalenia z Janem. Długość prowadnicy z drogi ciężarów (Jan).
 - Pręty 6401-01..03 i 6402-01..04 z modeli: `eye` na długościach z danych – zgodne. 4430-01: `hole_1` −0,0747 – gdzie
   stoi, nie ustalone. Czekają: 4490-02 (plik pusty), 6411-01.
 - **Izolatory w starych złożeniach.** Przy drutach zaśniedziałych (jak 5110) zamiast żywicznego 7150 stary izolator
