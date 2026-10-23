@@ -76,11 +76,12 @@ part 6402-04 length 3.00
 // Dlugosci czesci liniowych: ZALOZENIE do czasu modeli (Jan 2026-10-23 szykuje); 4440: hole_1 z modeli (01-03 0,270, 04 0,320,
 // 05/06 0,336 i hole_2 0,703, 07 0,410), 4450-01 0,0747, 4720-01 0,100, 7150-01 0,8324, 4420-01 0,930, 4410-01 wire_1/2 0,1541 i ±0,040 - czesci biegna w -X modelu.
 // Lina 4490-1 (8,70 m z kauszami): model 4490-01 (sama lina, 1 m do "end", srednica 12 mm z modelu Jana 2026-10-24), skalowany
-// tylko wzdluz; ucho 4490-02 ("rope_eye <czesc> <zero-eye>", nieskalowane) na obu koncach - czeka na model.
+// tylko wzdluz; ucho 4490-02 ("rope_eye <czesc> <zero-eye>", nieskalowane) na obu koncach: zero w styku z lina, eye 0,205 w +Z
+// (i -0,004 w Y - pomijane).
 
 // 23-0461 kotwienie ciezarowe sieci z izolacja, rolki rownolegle, ciezary polimerobetonowe i zeliwne Ø306 (Uzup. 2 s. 16;
 // zastepuje 63-0401). Zeliwne na dole stosu.
-device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012
+device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   mount 4450-01 0.0747 4440-02 0.27
   holder ~4440-01 0.27
   hanger 6411-01 0.10 4720-01 0.10
