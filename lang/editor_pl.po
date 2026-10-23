@@ -5825,3 +5825,72 @@ msgstr "BŁĄD: słup %s nie może stać przy rozjeździe, daj stalowy"
 
 msgid "%s by a switch"
 msgstr "%s przy rozjeździe!"
+
+msgid "Anchors (weight tensioning, card 23-0461)"
+msgstr "Kotwienia (ciężarowe, karta 23-0461)"
+
+msgid "Anchor the start of the chain"
+msgstr "Zakotwij początek łańcucha"
+
+msgid "Anchor the end of the chain"
+msgstr "Zakotwij koniec łańcucha"
+
+msgid "Anchored: the last span goes without droppers to the tensioning device"
+msgstr "Zakotwiono: ostatnie przęsło bez wieszaków do urządzenia naprężającego"
+
+msgid "An anchor pole 24 m past the last pole, in line with it, with the weight tensioning device; the last span hangs without droppers"
+msgstr "Słup kotwowy 24 m za ostatnim słupem, w jego linii, z urządzeniem naprężającym; ostatnie przęsło wisi bez wieszaków"
+
+msgid "Start: anchor %s"
+msgstr "Początek: kotwienie %s"
+
+msgid "End: anchor %s"
+msgstr "Koniec: kotwienie %s"
+
+msgid "Anchor pole from the last pole (m)"
+msgstr "Słup kotwowy od ostatniego słupa (m)"
+
+msgid "Anchor pole"
+msgstr "Słup kotwowy"
+
+msgid "From the middle anchor (m)"
+msgstr "Od kotwienia środkowego (m)"
+
+msgid "Half-section length (from the middle or fixed anchor): the weights and the pulley move with the air temperature this much more"
+msgstr "Długość półodcinka (od kotwienia środkowego albo stałego): o tyle więcej ciężary i rolka chodzą z temperaturą powietrza"
+
+msgid "Weights"
+msgstr "Ciężary"
+
+msgid "Top weight"
+msgstr "Najwyższy ciężar"
+
+msgid "Weights missing"
+msgstr "Brakujące ciężary"
+
+msgid "Stolen from the top of the stack: about 100 daN less tension each"
+msgstr "Zdjęte z góry stosu: każdy to ok. 100 daN naciągu mniej"
+
+msgid "Wires stretched since regulated (cm)"
+msgstr "Wydłużenie sieci od regulacji (cm)"
+
+msgid "Creep and wear of an old network: the weights hang 4 times this much lower; on the ground the network loses its tension"
+msgstr "Pełzanie i zużycie starej sieci: ciężary wiszą 4 razy tyle niżej; oparte o grunt - sieć traci naciąg"
+
+msgid "%.1f deg C: pulley %.2f m from the pole, weights %.2f m over the rails; %d weights, messenger %.0f daN, contact wires %.0f daN"
+msgstr "%.1f °C: rolka %.2f m od słupa, ciężary %.2f m nad szynami; ciężarów %d, lina %.0f daN, przewody %.0f daN"
+
+msgid "Remove the anchor"
+msgstr "Usuń kotwienie"
+
+msgid "yellow"
+msgstr "żółte"
+
+msgid "grey"
+msgstr "szare"
+
+msgid "yellow, brushed"
+msgstr "żółte, pędzlowane"
+
+msgid "grey, shabby"
+msgstr "szare, brzydkie"
