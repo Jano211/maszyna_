@@ -85,12 +85,12 @@ device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 9832-02 r
   hanger 6411-01 0.10 4720-01 0.10
   messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
   contact 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
-  messenger_clamp 5120-06 0.25
-  contact_clamp 5120-06 0.25
+  messenger_clamp 5120-01 0.058     // uchwyt krancowy 5120 (wyk. 5-8 roznia sie tylko wkladka pod lub/przewod) - jeden model Jana, wire 0,058
+  contact_clamp 5120-01 0.058
   equalizer 4410-01 0.1541 spread 0.08
   safety 4600-01 4600-02 1.00 0.06     // zabezpieczenie 4600 wyk. 1 (karta 23-4600): ramiona 1,00 m z modeli, para po obu stronach rolek (0,06 - ZALOZENIE)
-  type 3 stack 6321-1 8 6323-1 18 lever IV I II clamp 5120-07
+  type 3 stack 6321-1 8 6323-1 18 lever IV I II
   type 4 stack 6321-1 4 6323-1 20 lever VI I III
   type 10 stack 6323-1 20 lever V I III
-  type 26 stack 6321-1 14 6323-1 19 lever I V III rod 6402-03 clamp 5120-07
+  type 26 stack 6321-1 14 6323-1 19 lever I V III rod 6402-03
 enddevice
