@@ -177,6 +177,7 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else if( key == "network" ) { line.network = one(); }
                 else if( key == "pole" ) { line.pole_type = one(); point( line.pole ); haspole = true; }
                 else if( key == "toward" ) { point( line.toward ); hastoward = true; }
+                else if( key == "on" ) { line.on = one(); }
                 else if( key == "distance" ) { number( line.distance ); }
                 else if( key == "color" ) { line.color = one(); }
                 else if( key == "top_color" ) { line.top_color = one(); }
@@ -378,7 +379,9 @@ std::string write_anchor( anchor const &Entry ) {
     std::string text { "node " + number( Entry.range_max, 0 ) + " " + number( Entry.range_min, 0 ) + " " + ( Entry.name.empty() ? std::string( "none" ) : Entry.name ) + " anchor" };
     text += " device " + Entry.device;
     if( false == Entry.network.empty() ) { text += " network " + Entry.network; }
-    text += " pole " + Entry.pole_type + " " + point( Entry.pole ) + " toward " + point( Entry.toward ) + " distance " + number( Entry.distance, 1 );
+    text += " pole " + Entry.pole_type + " " + point( Entry.pole );
+    if( false == Entry.on.empty() ) { text += " on " + Entry.on; }
+    text += " toward " + point( Entry.toward ) + " distance " + number( Entry.distance, 1 );
     if( false == Entry.color.empty() ) { text += " color " + Entry.color; }
     if( false == Entry.top_color.empty() ) { text += " top_color " + Entry.top_color; }
     if( Entry.elongation != 0.0 ) { text += " elongation " + number( Entry.elongation, 3 ); }

@@ -62,7 +62,7 @@ struct chain {
 };
 
 // kotwienie ciężarowe (urządzenie naprężające z pliku traction_tensioners.txt) na słupie kotwowym, wpis
-// "node <max> <min> <nazwa> anchor device <karta> network <symbol typu> pole <słup> x y z toward x y z distance <m>
+// "node <max> <min> <nazwa> anchor device <karta> network <symbol typu> pole <słup> x y z [on <podwieszenie>] toward x y z distance <m>
 //  [color <kolor>] [top_color <kolor>] [elongation <m>] [missing <n>] [ground <m>] [skin <tekstura>] endanchor".
 // pole: oś słupa na wysokości główki szyny; toward: punkt, z którego przychodzą druty (urządzenie leży w tym kierunku od
 // słupa); distance: odległość od kotwienia środkowego albo stałego. Łańcuch przypina się do niego "anchor_start/anchor_end",
@@ -75,6 +75,8 @@ struct anchor {
     std::string network;                    // symbol typu sieci (traction_<symbol>.txt): numer typu i liczba przewodów jezdnych
     std::string pole_type;
     double      pole[ 3 ] { 0.0, 0.0, 0.0 };
+    std::string on;                         // kotwienie na istniejącym słupie: nazwa podwieszenia (z tego pliku), którego słup to
+                                            // jest; słupa nie stawia, typ i punkt bierze z tamtego wpisu (pole tylko zapasowo)
     double      toward[ 3 ] { 0.0, 0.0, 0.0 };
     double      distance { 700.0 };
     std::string color, top_color;

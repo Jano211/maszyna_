@@ -596,6 +596,9 @@ assemble_gantry( scene_gantry &Gantry ) {
     return count;
 }
 
+std::size_t suspension_named( std::string const &File, std::string const &Name );
+void follow_anchor( scene_anchor const &Anchor );
+
 // urządzenia naprężające (traction_tensioners.txt); czytane przy pierwszym użyciu
 catenary::tensioner_catalog const *
 tensioners() {
@@ -630,8 +633,20 @@ assemble_anchor( scene_anchor &Anchor ) {
     if( catalog == nullptr || devices == nullptr ) { return 0; }
     auto const *device { devices->device( data.device ) };
     if( device == nullptr ) { ErrorLog( label + "uses device \"" + data.device + "\" which isn't in traction_tensioners.txt" ); return 0; }
-    auto const *pole { catalog->pole( data.pole_type ) };
-    if( pole == nullptr ) { ErrorLog( label + "uses pole \"" + data.pole_type + "\" which isn't in the supports catalogue" ); return 0; }
+    // na istniejącym słupie: typ i punkt z podwieszenia, które go stawia
+    auto poletype { data.pole_type };
+    double polepoint[ 3 ] { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
+    if( false == data.on.empty() ) {
+        auto const index { suspension_named( Anchor.file, data.on ) };
+        if( index >= Suspensions.size() || false == Suspensions[ index ].data.has_pole ) {
+            ErrorLog( label + "is on the pole of suspension \"" + data.on + "\", which isn't in the file or has no pole" );
+            return 0;
+        }
+        poletype = Suspensions[ index ].data.pole_type;
+        std::copy( std::begin( Suspensions[ index ].data.pole ), std::end( Suspensions[ index ].data.pole ), polepoint );
+    }
+    auto const *pole { catalog->pole( poletype ) };
+    if( pole == nullptr ) { ErrorLog( label + "uses pole \"" + poletype + "\" which isn't in the supports catalogue" ); return 0; }
     catenary::tensioner_input input;
     if( false == data.network.empty() ) {
         if( auto const *type { catenary::types().find( data.network ) }; type != nullptr ) {
@@ -662,7 +677,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     Anchor.temperature = Global.AirTemperature;
 
     // kierunek drutów w planie; zero urządzenia na czole słupa
-    glm::dvec3 const axis { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
+    glm::dvec3 const axis { polepoint[ 0 ], polepoint[ 1 ], polepoint[ 2 ] };
     auto dx { data.toward[ 0 ] - axis.x }, dz { data.toward[ 2 ] - axis.z };
     auto const along { std::sqrt( dx * dx + dz * dz ) };
     if( along < 1.0 ) { ErrorLog( label + "has its \"toward\" point less than 1 m from the pole" ); return 0; }
@@ -714,8 +729,9 @@ assemble_anchor( scene_anchor &Anchor ) {
             ++count;
         }
     };
-    // słup: Y wysięgnika od toru do słupa (słup po tej stronie drutów, po której stoi względem punktu "toward")
-    {
+    // słup: Y wysięgnika od toru do słupa (słup po tej stronie drutów, po której stoi względem punktu "toward");
+    // istniejący słup stawia jego podwieszenie
+    if( data.on.empty() ) {
         double sidex { dz }, sidez { -dx };
         if( ( axis.x - data.toward[ 0 ] ) * sidex + ( axis.z - data.toward[ 2 ] ) * sidez < 0.0 ) { sidex = -sidex; sidez = -sidez; }
         auto const poleheading { std::atan2( sidex, sidez ) };
@@ -1116,11 +1132,16 @@ reassemble( std::size_t const Index ) {
     assemble_alone( Index, *catalog );
 }
 
-// przęsła łańcuchów przy podwieszeniu idą za nim
+// przęsła łańcuchów przy podwieszeniu idą za nim, kotwienia na jego słupie też
 void
 follow_chains( std::size_t const Index ) {
     auto const &suspension { Suspensions[ Index ] };
     if( suspension.data.name.empty() ) { return; }
+    for( auto &anchor : Anchors ) {
+        if( anchor.removed || anchor.file != suspension.file || anchor.data.on != suspension.data.name ) { continue; }
+        assemble_anchor( anchor );
+        follow_anchor( anchor );
+    }
     for( auto &chain : Chains ) {
         if( chain.removed || chain.file != suspension.file ) { continue; }
         auto const &names { chain.data.suspensions };
