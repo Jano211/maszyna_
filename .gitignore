@@ -34,4 +34,5 @@ tests/catenary/tc
 tests/catenary/te
 tests/catenary/tk
 tests/catenary/conv_pick
+tests/catenary/tt
 tests/catenary/Siec_Test.scm
