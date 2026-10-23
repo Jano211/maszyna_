@@ -86,7 +86,8 @@ z zadanej długości drutu → naciąg).
   **4490-02 / 4490-03 z okiem na jednym albo drugim końcu** (pierwszy odcinek – zaczep przy rolce stałej, ostatni – pręt
   ciężarów). Do ustalenia przy eksporcie: który koniec ma oko w -02, a który w -03; odcinki są skalowane wzdłuż, więc oko
   w -02/-03 rozciągnie się razem z liną – albo oko osobno (nieskalowane, empty w miejscu, gdzie zaczyna się lina), albo
-  -02/-03 ze stałym kawałkiem liny i reszta z -01.
+  -02/-03 ze stałym kawałkiem liny i reszta z -01. Modele od razu w średnicy z katalogu – bez skalowania w poprzek
+  (girth 1); `rope_diameter` urządzenia (teraz ZAŁOŻONE 10 mm, liczy promień owinięcia na rolce) wyrównać do modelu.
 - **Izolatory w starych złożeniach.** Przy drutach zaśniedziałych (jak 5110) zamiast żywicznego 7150 stary izolator
   rolkowy: ramka z dwiema porcelanowymi rolkami (zdjęcie od Jana). Czeka na: numer/model, pivoty (zero + `hole_1`), czy pręt
   przed ramką to osobna część i czy zastępuje 4720/4420, czy też na linie nośnej, czy przy stanie „przejściowe” też
