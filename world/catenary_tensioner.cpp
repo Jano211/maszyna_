@@ -89,11 +89,11 @@ tensioner_placement placed( std::string const &Role, std::string const &Part, ve
     return placement;
 }
 
-// część liniowa: +X części w kierunku Direction
+// część liniowa: biegnie w -X części (modele Jana: 4440 z hole_1 na -X), więc -X części w kierunku Direction
 tensioner_placement placed_along( std::string const &Role, std::string const &Part, vec const &At, vec const &Direction ) {
     auto placement { placed( Role, Part, At ) };
-    auto const x { unit( Direction ) };
-    auto const y { side_of( x ) };
+    auto const x { unit( Direction ) * -1.0 };
+    auto const y { side_of( x ) * -1.0 };
     set_rotation( placement, x, y, cross( x, y ) );
     return placement;
 }
