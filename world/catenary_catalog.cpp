@@ -157,7 +157,7 @@ void structure_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 auto const &key { words[ k++ ] };
                 if( key == "foundation" && k < words.size() ) { polegroup.foundation = words[ k++ ]; }
                 else if( key == "site" && k < words.size() ) { polegroup.site = words[ k++ ]; }
-                else if( key == "at_switch" && k < words.size() ) { polegroup.at_switch = words[ k++ ]; }
+                else if( key == "no_switch" ) { polegroup.no_switch = true; }
                 else if( key == "poles" ) { while( k < words.size() ) { polegroup.poles.push_back( words[ k++ ] ); } }
                 else { report( "polegroup \"" + id + "\": unknown keyword \"" + key + "\"" ); break; }
             }

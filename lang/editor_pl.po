@@ -5820,5 +5820,8 @@ msgstr "Od osi toru do lica pierwszego słupa. Przy wstawianiu: tam staje pierws
 msgid "Drag sideways: turns the gantry around its first mast"
 msgstr "Przeciągnij w bok: obraca bramkę wokół pierwszego słupa"
 
-msgid "by a switch: pole %s instead of %s"
-msgstr "przy rozjeździe: słup %s zamiast %s"
+msgid "ERROR: pole %s doesn't stand by a switch, take a steel one"
+msgstr "BŁĄD: słup %s nie może stać przy rozjeździe, daj stalowy"
+
+msgid "%s by a switch"
+msgstr "%s przy rozjeździe!"
