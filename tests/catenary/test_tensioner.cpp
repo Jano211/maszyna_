@@ -150,6 +150,21 @@ int main( int argc, char **argv ) {
         check( grounded.grounded && grounded.tension == 0.0 && std::abs( grounded.s - input.ground ) < 1e-9, "+40 °C, 750 m, wydluzenie 30 cm: ciezary na gruncie, siec bez naciagu" );
     }
 
+    // kolory i obrot betonowych
+    {
+        catenary::tensioner_input input;
+        input.color = "szary";
+        input.top_color = "zolty";
+        catenary::tensioner_result result;
+        catenary::solve_tensioner( catalog, *device, input, result );
+        std::vector<catenary::tensioner_placement const *> weights;
+        for( auto const &part : result.parts ) { if( part.role.rfind( "weight.", 0 ) == 0 ) { weights.push_back( &part ); } }
+        check( weights.size() == 26 && weights.front()->part == "6321-1_szary" && weights.back()->part == "6323-1_zolty", "kolory: stos szary, najwyzszy zolty" );
+        // pierwszy betonowy (9.) bez obrotu, drugi o 90 stopni: os X czesci wzdluz +Y urzadzenia
+        check( std::abs( weights[ 8 ]->rotation[ 0 ] - 1.0 ) < 1e-9 && std::abs( weights[ 9 ]->rotation[ 3 ] - 1.0 ) < 1e-9 && std::abs( weights[ 10 ]->rotation[ 0 ] + 1.0 ) < 1e-9, "betonowe obracane co 90 stopni, zeliwne nie" );
+        check( std::abs( weights[ 1 ]->rotation[ 0 ] - 1.0 ) < 1e-9, "zeliwne bez obrotu" );
+    }
+
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDOW: %d\n", failures );
     return failures == 0 ? 0 : 1;
 }

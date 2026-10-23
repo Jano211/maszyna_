@@ -40,8 +40,10 @@ table 0011-8 base 0011-1 shift_b 0.75 shift_s -0.40 height 6.30 rod 2.00
 // ciezary: wysokosc (karty 0018/0019, Uzup. 2 s. 8-11), masa 27 kg (BN-67/9317-53; dla 6322/6323 ZALOZENIE - te same liczby
 // sztuk co zeliwnych na kartach, wiec ta sama masa; do sprawdzenia na kartach 6322/6323)
 weight 6321-1 height 0.055 mass 27      // zeliwny
-weight 6323-1 height 0.080 mass 27      // polimerobetonowy Ø306
-weight 6322-1 height 0.091 mass 27      // polimerobetonowy Ø400 (kotwienia rozdzielone)
+weight 6323-1 height 0.080 mass 27 turn 90   // polimerobetonowy Ø306; kazdy nastepny obrocony o 90 stopni (Jan)
+weight 6322-1 height 0.091 mass 27 turn 90   // polimerobetonowy Ø400 (kotwienia rozdzielone)
+// wykonania (kolory, Jan 2026-10-23): szary, ciemnoszary, zolty, zolty pedzlowany; zolty zwykle tylko najwyzszy ciezar.
+// Model ciezaru w kolorze: "<ciezar>_<kolor>" (tensioner_input.color / top_color) - NAZWY DO USTALENIA z Janem.
 
 // rolka linowa 4460 (tom 5 s. 27): diameter po dnie rowka
 pulley 4460-1 diameter 0.220 width 0.080 grooves 2

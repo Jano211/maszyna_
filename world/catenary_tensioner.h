@@ -30,7 +30,7 @@ http://mozilla.org/MPL/2.0/.
 //   dźwignia 6406       zero w otworze I, otwory w +Z (I na dole), otwór III odsunięty w +X; przy otworze liny poniżej
 //                       otworu przewodów dźwignia odwrócona (obrót o 180 stopni wokół Y)
 //   pręt 6401/6402      zero na dole (pod stosem), w +Z do zaczepu na górze (długość z danych)
-//   ciężar 63xx         zero w środku spodu, w +Z
+//   ciężar 63xx         zero w środku spodu, w +Z; betonowe kolejno obracane o "turn" wokół Z; kolor przyrostkiem nazwy
 //   lina                linka rozciągana (część typu cord, zero w zaczepie, w +Z, skalowana wzdłuż Z)
 #pragma once
 #include <map>
@@ -63,6 +63,7 @@ struct tensioner_weight {
     std::string name;
     double height { 0.055 };
     double mass { 27.0 };                   // kg
+    double turn { 0.0 };                    // stopnie: każdy następny ciężar tego rodzaju obrócony o tyle wokół pionu (betonowe 90)
 };
 
 struct tensioner_pulley {
@@ -136,6 +137,8 @@ struct tensioner_input {
     double distance { 700.0 };          // m, od kotwienia stałego albo środkowego
     double elongation { 0.0 };          // m, trwałe wydłużenie sieci od ostatniej regulacji (rolka bliżej konstrukcji)
     int missing { 0 };                  // brakujące ciężary (z góry stosu)
+    std::string color;                  // wykonanie (kolor) ciężarów: przyrostek modelu "<ciężar>_<kolor>"; puste - bez przyrostka
+    std::string top_color;              // wykonanie najwyższego ciężaru (żółty); puste - jak reszta
     double ground { -0.50 };            // najniższe położenie spodu ciężarów względem główki szyny (grunt, fundament); ZAŁOŻENIE
     double gravity { 0.981 };           // daN/kg
 };

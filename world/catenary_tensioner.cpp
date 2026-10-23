@@ -316,6 +316,7 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
             for( std::size_t k = 2; k + 1 < words.size(); k += 2 ) {
                 if( words[ k ] == "height" ) { number_of( words[ k + 1 ], weight.height ); }
                 else if( words[ k ] == "mass" ) { number_of( words[ k + 1 ], weight.mass ); }
+                else if( words[ k ] == "turn" ) { number_of( words[ k + 1 ], weight.turn ); }
                 else { report( "weight " + weight.name + ": unknown keyword \"" + words[ k ] + "\"" ); }
             }
             m_weights.push_back( weight );
@@ -566,8 +567,15 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     }
     auto z { s };
     int index { 0 };
+    std::map<std::string, int> turns; // ile ciężarów danego rodzaju już leży (obrót kolejnego)
     for( auto const *weight : stack ) {
-        Result.parts.push_back( placed( "weight." + std::to_string( ++index ), weight->name, vec { columnx, yb, z } ) );
+        ++index;
+        auto const top { index == static_cast<int>( stack.size() ) };
+        auto const &color { top && false == Input.top_color.empty() ? Input.top_color : Input.color };
+        auto placement { placed( "weight." + std::to_string( index ), color.empty() ? weight->name : weight->name + "_" + color, vec { columnx, yb, z } ) };
+        auto const angle { weight->turn * ( turns[ weight->name ]++ ) * kPi / 180.0 };
+        set_rotation( placement, vec { std::cos( angle ), std::sin( angle ), 0.0 }, vec { -std::sin( angle ), std::cos( angle ), 0.0 }, vec { 0.0, 0.0, 1.0 } );
+        Result.parts.push_back( placement );
         z += weight->height;
     }
     if( z > s + rodlength ) { Result.warnings.push_back( "the stack is higher than the rod" ); }
