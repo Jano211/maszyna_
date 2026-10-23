@@ -48,6 +48,12 @@ struct tensioner_table {
     std::vector<double> temperatures;       // °C, rosnąco
     std::vector<double> distances;          // m, rosnąco
     std::vector<std::vector<double>> b, s;  // [odległość][temperatura]
+    // wzór z karty 13-0011 (stary katalog): b = bn - as·α·(t - tn), s = sn - 4·as·α·(t - tn); gdy podany, liczy się z niego
+    // (wiersze tablicy zostają do porównania), bez przycinania do zakresu
+    bool formula { false };
+    double bn { 1.75 }, sn { 2.25 }, tn { 10.0 }, alpha { 17e-6 };
+    // ze wzoru, niezależnie od tego, czy tablica go używa
+    void formula_values( double Temperature, double Distance, double &B, double &S ) const;
     // wartości dla temperatury i odległości (interpolacja dwuliniowa, poza zakresem przycięte do brzegu);
     // zwraca false, gdy którakolwiek wartość była poza zakresem tablicy
     bool lookup( double Temperature, double Distance, double &B, double &S ) const;

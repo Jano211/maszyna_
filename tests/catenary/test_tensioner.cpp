@@ -63,29 +63,30 @@ int main( int argc, char **argv ) {
     check( device != nullptr, "urzadzenie 0461" );
     if( device == nullptr ) { return 1; }
 
-    // tablica: wartosci nominalne i z rogow
+    // tablica: wzor ze starej karty 13-0011 wobec wierszy nowej karty 0011-1
     {
         auto const *table { catalog.table( "0011-1" ) };
         double b, s;
         table->lookup( 10.0, 400.0, b, s );
-        check( std::abs( b - 1.75 ) < 1e-9 && std::abs( s - 2.25 ) < 1e-9, "tablica: +10 °C -> b 1,75, s 2,25" );
-        table->lookup( -25.0, 750.0, b, s );
-        check( std::abs( b - 2.20 ) < 1e-9 && std::abs( s - 4.05 ) < 1e-9, "tablica: -25 °C, 750 m -> b 2,20, s 4,05" );
-        table->lookup( 12.5, 725.0, b, s );
-        check( std::abs( b - ( 1.75 + 1.69 + 1.75 + 1.69 ) / 4.0 ) < 1e-9, "tablica: interpolacja dwuliniowa" );
-        check( false == table->lookup( 45.0, 800.0, b, s ) && std::abs( s - 0.73 ) < 1e-9, "tablica: poza zakresem przyciete do brzegu" );
-        // spojnosc b i s z przekladnia 1:4 (s - 2,25 = 4 (b - 1,75), zaokraglenia do 1 cm)
+        check( table->formula && std::abs( b - 1.75 ) < 1e-9 && std::abs( s - 2.25 ) < 1e-9, "wzor: +10 °C -> b 1,75, s 2,25" );
         int odd { 0 };
+        double worst { 0.0 };
         for( std::size_t r = 0; r < table->distances.size(); ++r ) {
             for( std::size_t c = 0; c < table->temperatures.size(); ++c ) {
-                auto const miss { ( table->s[ r ][ c ] - 2.25 ) - 4.0 * ( table->b[ r ][ c ] - 1.75 ) };
-                if( std::abs( miss ) > 0.045 ) {
+                table->formula_values( table->temperatures[ c ], table->distances[ r ], b, s );
+                auto const miss { std::max( std::abs( b - table->b[ r ][ c ] ), std::abs( s - table->s[ r ][ c ] ) ) };
+                if( miss > 0.025 ) {
                     ++odd;
-                    std::printf( "      niespojne: %g m, %+g °C: b %.2f s %.2f (roznica %.3f)\n", table->distances[ r ], table->temperatures[ c ], table->b[ r ][ c ], table->s[ r ][ c ], miss );
+                    std::printf( "      inaczej niz karta: %g m, %+g °C: wzor b %.3f s %.3f, karta b %.2f s %.2f\n", table->distances[ r ], table->temperatures[ c ], b, s, table->b[ r ][ c ], table->s[ r ][ c ] );
                 }
+                else { worst = std::max( worst, miss ); }
             }
         }
-        check( odd <= 3, "tablica: b i s zgodne z przekladnia 1:4 (trzy literowki karty)" );
+        std::printf( "      najwieksza roznica wzor - karta (bez literowek): %.3f m\n", worst );
+        check( odd <= 3, "wzor zgodny z tablica 0011-1 do 2,5 cm (poza literowkami karty)" );
+        double b7, s7;
+        catalog.table( "0011-7" )->lookup( -25.0, 200.0, b7, s7 );
+        check( std::abs( b7 - 3.02 ) < 0.01 && std::abs( s7 - 2.38 ) < 0.01, "tablica 0011-7 z przesuniecia 0011-1: 200 m, -25 °C -> b 3,02, s 2,38 (karta)" );
     }
 
     // naciagi z dzwigni i ciezarow = naciagi z kart 0002 w plikach typow sieci

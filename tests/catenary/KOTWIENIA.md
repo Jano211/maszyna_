@@ -95,3 +95,19 @@ z izolacją), 0459/0460 (żeliwne, bez izolacji), 0482–0485 (Ø306), 0486–04
   36: 18 / 28, 37: 15 / 28. Sprawdzenie: 25 × 27 × 4 × 0,981 = 2649 daN = przewody YC120-2C150 (2648).
 - Sieć 32 i 35 (dwie liny nośne): dźwignia równoramienna 6403-1 (32) albo wyrównywacz 4410 (35) rozdziela na dwie liny.
 - Do zrobienia: tablice montażowe rolek szeregowych 0011-5/-6/-7/-8 (tom 1 s. 13–16) i przebieg liny przez 4 rolki.
+
+## kolprojekt1.pdf (298 s., stary katalog Kolprojektu, rysunki odręczne)
+- s. 18 **13-0011 tablica montażowa urządzenia naprężającego z WZOREM**: b = bn − as·α·(t − tn), s = sn − 4·as·α·(t − tn),
+  α = 17·10⁻⁶ 1/°C, tn = +10 °C (stara wersja: bn 1,50, sn 1,80, oś rolek 6,10 m, b' = b + w, w = 0,83 m – długość łączników
+  przy śrubach rzymskich). Nowa tablica 0011-1 zgadza się ze wzorem do 2,4 cm poza dwiema literówkami (750/−15, 750/+35 w s)
+  → solver liczy ze wzoru (dowolne as i temperatura, bez przycinania).
+- s. 146 33-0401 kotwienia ciężarowe (stare „rodzaje sieci” 1–5: ciężarów 32 / 30 / 26 / 24 / 20, otwory dźwigni Ln V/VI/IV/VI/V,
+  Djp I, oś II/II/II/III/III, izolatory 7210-1); s. 147–158 kotwienia stałe i środkowe; s. 167–171 izolacja termiczna liny
+  nośnej (0444–0446), izolacja przewodów w przęśle naprężenia (0447); s. 172–174 zamocowania kotwień (0451, 0453, 0466).
+- s. 32–48 schematy przęseł naprężenia (0060–0077), s. 83–107 podwieszenia w przęsłach naprężenia na łukach.
+
+## transportszynowy.pl/Kolej/siectrakckolrodzaje (Jan 2026-10-23)
+- 1:4 „starszy wariant po dwa krążki na oś” (= rolki równoległe, 0461), „nowszy: zespoły krążka większego i mniejszego”
+  (= rolki szeregowe, 4460-2 + 4460-3); 1:2 – krążek stały i ruchomy (półskompensowane: tylko przewód jezdny, zwykle 1:2);
+  1:3 bębnowe – tramwaje. Ciężarki 27 kg. Kompensacja jednostronna – odcinki do 600 m. Skrócone przęsło czterosłupowe
+  wg strony 75 km/h (Głowacki: 70 km/h).
