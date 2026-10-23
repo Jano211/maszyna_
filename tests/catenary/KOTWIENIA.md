@@ -80,6 +80,18 @@ w scenariuszu; parametry „stanu”: brakujące krążki (stos krótszy, nacią
 sieci od ostatniej regulacji (ciężary niżej o 4×; oparte o grunt = utrata naciągu), zerwanie kotwienia (przęsła liczone
 z zadanej długości drutu → naciąg).
 
+## Do zrobienia (Jan 2026-10-24)
+- **Lina 4490 – porządek.** Teraz lina jest rysowana modelem odciągu 9832-02, który ma oko (kauszę) na końcu, więc na
+  łuku na rolce oko wychodzi w każdym odcinku. Jan zrobi: **4490-01 sama lina** (do odcinków środkowych i łuków),
+  **4490-02 / 4490-03 z okiem na jednym albo drugim końcu** (pierwszy odcinek – zaczep przy rolce stałej, ostatni – pręt
+  ciężarów). Do ustalenia przy eksporcie: który koniec ma oko w -02, a który w -03; odcinki są skalowane wzdłuż, więc oko
+  w -02/-03 rozciągnie się razem z liną – albo oko osobno (nieskalowane, empty w miejscu, gdzie zaczyna się lina), albo
+  -02/-03 ze stałym kawałkiem liny i reszta z -01.
+- **Izolatory w starych złożeniach.** Przy drutach zaśniedziałych (jak 5110) zamiast żywicznego 7150 stary izolator
+  rolkowy: ramka z dwiema porcelanowymi rolkami (zdjęcie od Jana). Czeka na: numer/model, pivoty (zero + `hole_1`), czy pręt
+  przed ramką to osobna część i czy zastępuje 4720/4420, czy też na linie nośnej, czy przy stanie „przejściowe” też
+  (5110 jest teraz tylko przy zaśniedziałych).
+
 ## Kolprojekt_2010-1.PDF (88 s., katalog sieci YC150-2CS150 kod 36 i YC120-2CS150 kod 37, CuAg, 200 km/h)
 Strony PDF: s. 11–13 0017-1/2/3 lina kotwienia środkowego (Fe 70, Cu 120, Cu 150); s. 14–16 **0019-1/2/3 usytuowanie
 ciężarów, kotwienie ROZDZIELONE** (żeliwne / Ø306 / Ø400); s. 19–20 0060-36/37 przęsła naprężenia sześciosłupowe;
