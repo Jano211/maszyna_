@@ -103,8 +103,12 @@ vec place_chain( std::vector<tensioner_link> const &Links, std::string const &Ro
     auto const step { unit( Direction ) };
     int index { 0 };
     for( auto const &link : Links ) {
-        Result.parts.push_back( placed_along( Role + "." + std::to_string( ++index ), link.name, From, step ) );
-        From = From + step * link.length;
+        // "~część": część odwrócona - jej zero (pin_a) na końcu tego odcinka, biegnie z powrotem (uchwyt 4440 przy rolce ruchomej)
+        auto const reversed { false == link.name.empty() && link.name[ 0 ] == '~' };
+        auto const name { reversed ? link.name.substr( 1 ) : link.name };
+        auto const end { From + step * link.length };
+        Result.parts.push_back( placed_along( Role + "." + std::to_string( ++index ), name, reversed ? end : From, reversed ? step * -1.0 : step ) );
+        From = end;
     }
     return From;
 }
