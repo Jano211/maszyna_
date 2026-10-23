@@ -165,6 +165,17 @@ int main( int argc, char **argv ) {
             && std::abs( weights[ 9 ]->rotation[ 3 ] - 1.0 ) < 1e-9, "kazdy kolejny ciezar obrocony o 90 stopni (zeliwne i betonowe)" );
     }
 
+    // stare złożenie: uchwyty 5110 na przewodach
+    {
+        catenary::tensioner_input input;
+        input.old_fittings = true;
+        catenary::tensioner_result result;
+        catenary::solve_tensioner( catalog, *device, input, result );
+        int old { 0 };
+        for( auto const &part : result.parts ) { if( part.role.rfind( "contact_clamp", 0 ) == 0 && part.part == "5110-01" ) { ++old; } }
+        check( old == 2, "stare zlozenie: uchwyty krancowe 5110 na obu przewodach" );
+    }
+
     // zabezpieczenie 4600: cztery ramiona, dolna śruba pod rolkami
     {
         catenary::tensioner_input input;

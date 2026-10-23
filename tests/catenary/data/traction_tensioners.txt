@@ -87,6 +87,7 @@ device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 9832-02 r
   contact 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
   messenger_clamp 5120-01 0.058     // uchwyt krancowy 5120 (wyk. 5-8 roznia sie tylko wkladka pod lub/przewod) - jeden model Jana, wire 0,058
   contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632    // stare zlozenia (druty zasniedziale, Jan 2026-10-24): uchwyt klinowy 5110 jak w starej karcie 33-0401
   equalizer 4410-01 0.1541 spread 0.08
   safety 4600-01 4600-02 1.00 0.06     // zabezpieczenie 4600 wyk. 1 (karta 23-4600): ramiona 1,00 m z modeli, para po obu stronach rolek (0,06 - ZALOZENIE)
   type 3 stack 6321-1 8 6323-1 18 lever IV I II

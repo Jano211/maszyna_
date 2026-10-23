@@ -662,6 +662,11 @@ assemble_anchor( scene_anchor &Anchor ) {
     input.ground = data.ground;
     input.color = data.color;
     input.top_color = data.top_color;
+    // stare złożenie: łańcuch z tym kotwieniem ma druty zaśniedziałe (stan 1)
+    for( auto const &chain : Chains ) {
+        if( chain.removed || chain.file != Anchor.file || data.name.empty() ) { continue; }
+        if( chain.data.anchor_start == data.name || chain.data.anchor_end == data.name ) { input.old_fittings = ( chain.data.state == 1 ); }
+    }
     auto &result { Anchor.result };
     if( false == catenary::solve_tensioner( *devices, *device, input, result ) ) {
         for( auto const &warning : result.warnings ) { ErrorLog( label + "can't be assembled: " + warning ); }
@@ -1390,6 +1395,10 @@ catenary_chain_update( std::size_t const Index, catenary::chain const &Data ) {
     auto &chain { Chains[ Index ] };
     chain.data = Data;
     chain.removed = Data.suspensions.size() < 2;
+    // kotwienia łańcucha od nowa (stan drutów decyduje o osprzęcie), przed przęsłami, które do nich dochodzą
+    for( auto const *name : { &Data.anchor_start, &Data.anchor_end } ) {
+        if( auto *anchor { anchor_named( chain.file, *name ) }; anchor != nullptr ) { assemble_anchor( *anchor ); }
+    }
     rebuild_chain( chain );
     mark_changed( chain.file );
     return true;

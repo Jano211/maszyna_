@@ -240,8 +240,8 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
             if( keyword == "hanger" ) { links_of( words, 1, device->hanger ); continue; }
             if( keyword == "messenger" ) { links_of( words, 1, device->messenger ); continue; }
             if( keyword == "contact" ) { links_of( words, 1, device->contact ); continue; }
-            if( ( keyword == "messenger_clamp" || keyword == "contact_clamp" || keyword == "equalizer" ) && words.size() >= 3 ) {
-                auto &link { keyword == "messenger_clamp" ? device->messenger_clamp : keyword == "contact_clamp" ? device->contact_clamp : device->equalizer };
+            if( ( keyword == "messenger_clamp" || keyword == "contact_clamp" || keyword == "contact_clamp_old" || keyword == "equalizer" ) && words.size() >= 3 ) {
+                auto &link { keyword == "messenger_clamp" ? device->messenger_clamp : keyword == "contact_clamp" ? device->contact_clamp : keyword == "contact_clamp_old" ? device->contact_clamp_old : device->equalizer };
                 link.name = words[ 1 ];
                 if( false == number_of( words[ 2 ], link.length ) ) { report( "bad length \"" + words[ 2 ] + "\"" ); }
                 if( keyword == "equalizer" && words.size() >= 5 && words[ 3 ] == "spread" ) { number_of( words[ 4 ], device->equalizer_spread ); }
@@ -562,9 +562,10 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         }
         for( std::size_t k = 0; k < ends.size(); ++k ) {
             auto at { ends[ k ] };
-            if( false == Device.contact_clamp.name.empty() ) {
-                Result.parts.push_back( placed_along( "contact_clamp." + std::to_string( k + 1 ), Device.contact_clamp.name, at, out ) );
-                at = at + out * Device.contact_clamp.length;
+            auto const &clamp { Input.old_fittings && false == Device.contact_clamp_old.name.empty() ? Device.contact_clamp_old : Device.contact_clamp };
+            if( false == clamp.name.empty() ) {
+                Result.parts.push_back( placed_along( "contact_clamp." + std::to_string( k + 1 ), clamp.name, at, out ) );
+                at = at + out * clamp.length;
             }
             Result.contact_ends.push_back( { at.x, at.y, at.z } );
         }

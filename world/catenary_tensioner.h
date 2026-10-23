@@ -111,6 +111,7 @@ struct tensioner_device {
     std::vector<tensioner_link> messenger; // od otworu dźwigni do uchwytu krańcowego liny nośnej (bez uchwytu)
     std::vector<tensioner_link> contact;   // od otworu dźwigni do wyrównywacza albo uchwytu krańcowego przewodu
     tensioner_link messenger_clamp, contact_clamp;
+    tensioner_link contact_clamp_old;   // uchwyt krańcowy przewodów w starych złożeniach (5110, stara karta 33-0401); pusty = jak nowe
     tensioner_link equalizer;           // wyrównywacz przewodów jezdnych (tylko przy dwóch przewodach)
     double equalizer_spread { 0.08 };   // rozstaw przewodów za wyrównywaczem
     // zabezpieczenie 4600 wyk. 1: dwa ramiona z osi rolek (stałej i ruchomej) zbiegające się na dolnej śrubie, para po obu stronach rolek
@@ -151,6 +152,7 @@ struct tensioner_input {
     int missing { 0 };                  // brakujące ciężary (z góry stosu)
     std::string color;                  // kolor ciężarów (tensioner_color); pusty = szary
     std::string top_color;              // kolor najwyższego ciężaru; pusty = jak reszta
+    bool old_fittings { false };        // stare złożenie (druty zaśniedziałe): uchwyty krańcowe przewodów 5110 zamiast 5120
     double ground { -0.50 };            // najniższe położenie spodu ciężarów względem główki szyny (grunt, fundament); ZAŁOŻENIE
     double gravity { 0.981 };           // daN/kg
 };
