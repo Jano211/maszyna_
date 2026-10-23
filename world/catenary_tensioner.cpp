@@ -492,12 +492,14 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     // dźwignia: otwór osi na axispoint; przy otworze liny niżej niż otwór przewodów odwrócona
     auto const flipped { messengerhole->first < contacthole->first };
     auto const sign { flipped ? -1.0 : 1.0 };
+    // model dźwigni (Jan): zero w otworze osi II, otwory na drutach odsunięte w -X modelu, czyli w stronę drutów;
+    // -X modelu idzie więc w +X urządzenia (obrót o 180 stopni wokół pionu), odwrócona dodatkowo o 180 wokół Y
     auto const holepoint = [ & ]( std::pair<double, double> const &Hole ) {
-        return axispoint + vec { sign * ( Hole.second - axishole->second ), 0.0, sign * ( Hole.first - axishole->first ) };
+        return axispoint + vec { -sign * ( Hole.second - axishole->second ), 0.0, sign * ( Hole.first - axishole->first ) };
     };
     {
         auto placement { placed( "lever", lever->name, holepoint( { 0.0, 0.0 } ) ) };
-        set_rotation( placement, vec { sign, 0.0, 0.0 }, vec { 0.0, 1.0, 0.0 }, vec { 0.0, 0.0, sign } );
+        set_rotation( placement, vec { -sign, 0.0, 0.0 }, vec { 0.0, -1.0, 0.0 }, vec { 0.0, 0.0, sign } );
         Result.parts.push_back( placement );
     }
     // podział naciągu dźwignią: momenty względem osi
