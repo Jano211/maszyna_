@@ -42,7 +42,7 @@ table 0011-8 base 0011-1 shift_b 0.75 shift_s -0.40 height 6.30 rod 2.00
 // Kazdy nastepny ciezar w stosie obrocony o 90 stopni (Jan). Model "<model>-<NN>": NN = offset + kolor (1 zolty, 2 szary,
 // 3 zolty pedzlowany, 4 szary brzydki); 6322 wysokie to wykonania 5-8.
 weight 6321-1 height 0.056 mass 27 turn 90 model 6321 offset 0      // zeliwny
-weight 6323-1 height 0.101 mass 27 turn 90 model 6323 offset 0      // polimerobetonowy Ø306
+weight 6323-1 height 0.100 mass 27 turn 90 model 6323 offset 0      // polimerobetonowy Ø306
 weight 6322-1 height 0.092 mass 27 turn 90 model 6322 offset 4      // polimerobetonowy Ø400, wysoki (jak karta 91 mm)
 weight 6322-1n height 0.056 mass 27 turn 90 model 6322 offset 0     // polimerobetonowy Ø400, niski
 
