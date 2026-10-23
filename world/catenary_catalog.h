@@ -56,6 +56,7 @@ struct catalog_polegroup {
     std::string text;
     std::string foundation;             // piles, cast; puste = nieokreślone
     std::string site;                   // line (szlak), station (równia stacyjna), platform (peron); puste = nieokreślone
+    std::string at_switch;              // słup stawiany zamiast słupów tej grupy przy rozjeździe; puste = mogą stać przy rozjazdach
     std::vector<std::string> poles;
 };
 

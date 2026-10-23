@@ -53,6 +53,7 @@ struct catenary_editor
 		std::string problem; // why there's no card, empty when there is one
 		std::string family; // the family of the card in the described catalogue; empty without it
 		bool execution_changed{false}; // the execution chosen in the panel has no card for this A, another one was taken
+		std::string pole_swapped; // the pole chosen in the panel can't stand by a switch, this one was taken instead; empty when not
 		catenary::suspension data;
 	};
 	struct catenary_change
@@ -142,6 +143,7 @@ struct catenary_editor
 	catenary_tool m_catenary;
 	void catenary_scan();
 	bool catenary_spot_at(TTrack &Track, int const Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor, int const Side, catenary_spot &Spot) const;
+	bool catenary_by_switch(catenary_spot const &Spot, glm::dvec3 const &Foot) const;
 	void catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole = {}) const;
 	bool catenary_on_mast(catenary::gantry const &Gantry, double const Stagger, catenary_spot &Spot) const;
 	catenary_spot const *catenary_spot_of(std::size_t const Index);

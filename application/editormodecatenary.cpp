@@ -45,6 +45,7 @@ double const kSpanSearch{150.0}; // m, the farthest a neighbouring pole of the s
 double const kSameLine{1.5}; // m across the span, farther the two poles belong to different tracks
 double const kCurveRadius{4000.0}; // m, a track bent less is a straight for the cards (table 0007)
 float const kPolePick{12.0f};
+double const kSwitchRange{8.0}; // m from a pole to a switch path: the pole stands by the switch (also on the neighbouring track)
 
 double nearest_parameter(TTrack const &Track, int const Path, glm::dvec3 const &Point)
 {
@@ -762,6 +763,27 @@ bool catenary_editor::catenary_on_mast(catenary::gantry const &Gantry, double co
 	return true;
 }
 
+// whether a pole standing there is by a switch: the track it's put by is one, or a switch path passes within kSwitchRange of the pole
+bool catenary_editor::catenary_by_switch(catenary_spot const &Spot, glm::dvec3 const &Foot) const
+{
+	if (Spot.track != nullptr && Spot.track->eType == tt_Switch)
+		return true;
+	for (auto *track : simulation::Paths.sequence())
+	{
+		if (track == nullptr || track->m_editorremoved || track->eType != tt_Switch || track->m_paths.empty())
+			continue;
+		for (int path = 0; path < static_cast<int>(track->m_paths.size()); ++path)
+		{
+			bezier const curve{track->m_paths[path]};
+			if (geometry::plan_distance(curve.point(0.5), Foot) > curve.plan_length() * 0.5 + kSwitchRange)
+				continue;
+			if (geometry::plan_distance(curve.point(nearest_parameter(*track, path, Foot)), Foot) < kSwitchRange)
+				return true;
+		}
+	}
+	return false;
+}
+
 void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole) const
 {
 	auto const &tool{m_catenary};
@@ -774,6 +796,25 @@ void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearan
 	{
 		Spot.problem = STR("No pole: the catalogue (data/traction_cantilevers.txt, data/traction_supports.txt) isn't loaded or has no poles");
 		return;
+	}
+	// a new pole from the panel whose group doesn't stand by switches (concrete 1701, 1711): by a switch the one named in the group
+	Spot.pole_swapped.clear();
+	if (Pole.empty())
+	{
+		auto const &structures{catenary_scene_structures()};
+		if (auto const *group{structures.polegroup_of(pole->name)}; group != nullptr && false == group->at_switch.empty())
+		{
+			auto const right{right_of(Spot.forward) * static_cast<double>(Spot.side)};
+			auto const foot{plan_of(Spot.axis) + right * (Clearance + 0.5 * pole->depth(0.0))};
+			if (catenary_by_switch(Spot, glm::dvec3{foot.x, Spot.axis.y, foot.y}))
+			{
+				if (auto const *steel{catalog->pole(group->at_switch)}; steel != nullptr)
+				{
+					Spot.pole_swapped = pole->name;
+					pole = steel;
+				}
+			}
+		}
 	}
 	auto const height{static_cast<double>(tool.height)};
 	auto const railhead{Spot.axis.y + kRailTop};
@@ -904,6 +945,8 @@ std::string catenary_editor::catenary_intent_label(catenary_spot const &Spot) co
 		label += "\n" + family->title;
 	if (Spot.execution_changed)
 		label += "\n" + format(STR_C("execution %d has no card for this A, execution %d taken"), m_catenary.execution, Spot.data.execution);
+	if (false == Spot.pole_swapped.empty())
+		label += "\n" + format(STR_C("by a switch: pole %s instead of %s"), Spot.data.pole_type.c_str(), Spot.pole_swapped.c_str());
 	if (m_catenary.chaining && m_catenary.last >= 0 && catenary_scene_get(static_cast<std::size_t>(m_catenary.last)) != nullptr)
 		label += "\n" + format(STR_C("with the span from the last pole, %.1f m"), glm::length(plan_of(wire_of(Spot.data)) - plan_of(wire_of(*catenary_scene_get(static_cast<std::size_t>(m_catenary.last))))));
 	return label;
