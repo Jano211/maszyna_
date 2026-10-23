@@ -41,9 +41,10 @@ table 0011-8 base 0011-1 shift_b 0.75 shift_s -0.40 height 6.30 rod 2.00
 // Ø400 produkowany w dwoch wysokosciach), masa 27 kg (BN-67/9317-53; dla 6322/6323 ZALOZENIE - te same liczby sztuk co zeliwnych).
 // Kazdy nastepny ciezar w stosie obrocony o 90 stopni (Jan). Model "<model>-<NN>": NN = offset + kolor (1 zolty, 2 szary,
 // 3 zolty pedzlowany, 4 szary brzydki); 6322 wysokie to wykonania 5-8.
+// Skok stosu = wysokosc ciezaru z karty + 1 mm szpary (Jan 2026-10-23): 55+1, Ø306 100+1, Ø400 57+1 i 91+1.
 weight 6321-1 height 0.056 mass 27 turn 90 model 6321 offset 0      // zeliwny
-weight 6323-1 height 0.100 mass 27 turn 90 model 6323 offset 0      // polimerobetonowy Ø306
-weight 6322-1 height 0.057 mass 27 turn 90 model 6322 offset 0      // polimerobetonowy Ø400 (Uzup. 2: 57 mm), wykonania 1-4
+weight 6323-1 height 0.101 mass 27 turn 90 model 6323 offset 0      // polimerobetonowy Ø306
+weight 6322-1 height 0.058 mass 27 turn 90 model 6322 offset 0      // polimerobetonowy Ø400 (Uzup. 2: 57 mm), wykonania 1-4; model ma top 56 mm - do poprawy na 58
 weight 6322-1w height 0.092 mass 27 turn 90 model 6322 offset 4     // polimerobetonowy Ø400, wysoki (karta 0019-3: 91 mm), wykonania 5-8
 
 // rolka linowa 4460 (tom 5 s. 27): diameter po dnie rowka
