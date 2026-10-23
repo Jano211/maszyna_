@@ -1,0 +1,75 @@
+// Urzadzenia naprezajace (kotwienia ciezarowe) - Katalog ESN tom 1 dzial 0400, Uzupelnienie nr 2; opis w tests/catenary/KOTWIENIA.md.
+// Czyta world/catenary_tensioner.cpp. Odleglosci w metrach. Uklad i ulozenie modeli - komentarz w catenary_tensioner.h.
+//
+// table <nazwa> height <os rolek nad glowka szyny> rod <dlugosc preta, dla ktorej liczono tablice>
+//   temperatures <t...>                         °C rosnaco
+//   row <odleglosc od kotwienia> b <...> s <...> b: os rolki ruchomej od czola konstrukcji, s: spod ciezarow nad glowka
+// endtable
+
+// 33-0011-1 tablica montazowa urzadzenia naprezajacego cala siec, rolki rownolegle (tom 1 s. 12). bn 1,75 / sn 2,25 przy +10 °C,
+// pret c = 2,00 m. Wartosci przepisane z karty; trzy komorki nie trzymaja przekladni 1:4 (550/+35 b 1,54 - z s wynikaloby 1,51;
+// 750/-15 i 750/+35 o 5 cm w s) - literowki karty, zostawione.
+table 0011-1 height 6.70 rod 2.00
+  temperatures -25 -20 -15 -10 -5 0 5 10 15 20 25 30 35 40
+  row 100 b 1.81 1.80 1.79 1.78 1.78 1.77 1.76 1.75 1.74 1.73 1.72 1.72 1.71 1.70 s 2.49 2.45 2.42 2.39 2.35 2.32 2.29 2.25 2.21 2.18 2.15 2.11 2.08 2.05
+  row 150 b 1.84 1.83 1.81 1.80 1.79 1.78 1.76 1.75 1.74 1.72 1.71 1.70 1.69 1.67 s 2.61 2.56 2.51 2.45 2.40 2.35 2.30 2.25 2.20 2.15 2.10 2.05 1.99 1.94
+  row 200 b 1.87 1.85 1.84 1.82 1.80 1.78 1.77 1.75 1.73 1.72 1.70 1.68 1.66 1.65 s 2.73 2.66 2.59 2.52 2.45 2.39 2.32 2.25 2.18 2.11 2.05 1.98 1.91 1.84
+  row 250 b 1.90 1.88 1.86 1.84 1.81 1.79 1.77 1.75 1.73 1.71 1.69 1.66 1.64 1.62 s 2.85 2.76 2.67 2.59 2.51 2.42 2.34 2.25 2.16 2.08 1.99 1.91 1.83 1.74
+  row 300 b 1.93 1.90 1.88 1.85 1.83 1.80 1.78 1.75 1.72 1.70 1.67 1.65 1.62 1.60 s 2.96 2.86 2.76 2.66 2.56 2.45 2.35 2.25 2.15 2.05 1.94 1.84 1.74 1.64
+  row 350 b 1.96 1.93 1.90 1.87 1.84 1.81 1.78 1.75 1.72 1.69 1.66 1.63 1.60 1.57 s 3.08 2.96 2.85 2.73 2.61 2.49 2.37 2.25 2.13 2.01 1.89 1.77 1.65 1.54
+  row 400 b 1.99 1.95 1.92 1.89 1.85 1.82 1.78 1.75 1.72 1.68 1.65 1.61 1.58 1.55 s 3.20 3.07 2.93 2.79 2.66 2.52 2.39 2.25 2.11 1.98 1.84 1.71 1.57 1.43
+  row 450 b 2.02 1.98 1.94 1.90 1.86 1.83 1.79 1.75 1.71 1.67 1.64 1.60 1.56 1.52 s 3.32 3.17 3.02 2.86 2.71 2.56 2.40 2.25 2.10 1.94 1.79 1.64 1.48 1.33
+  row 500 b 2.05 2.01 1.96 1.92 1.88 1.84 1.79 1.75 1.71 1.66 1.62 1.58 1.54 1.49 s 3.44 3.27 3.10 2.93 2.76 2.59 2.42 2.25 2.08 1.91 1.74 1.57 1.40 1.23
+  row 550 b 2.08 2.03 1.98 1.94 1.89 1.84 1.80 1.75 1.70 1.66 1.61 1.56 1.54 1.47 s 3.56 3.37 3.19 3.00 2.81 2.62 2.44 2.25 2.06 1.88 1.69 1.50 1.31 1.13
+  row 600 b 2.11 2.06 2.01 1.95 1.90 1.85 1.80 1.75 1.70 1.65 1.60 1.55 1.49 1.44 s 3.68 3.47 3.27 3.07 2.86 2.66 2.45 2.25 2.05 1.84 1.64 1.43 1.23 1.03
+  row 650 b 2.14 2.08 2.03 1.97 1.92 1.86 1.81 1.75 1.69 1.64 1.58 1.53 1.47 1.42 s 3.80 3.58 3.36 3.13 2.91 2.69 2.47 2.25 2.03 1.81 1.59 1.37 1.14 0.92
+  row 700 b 2.17 2.11 2.05 1.99 1.93 1.87 1.81 1.75 1.69 1.63 1.57 1.51 1.45 1.39 s 3.92 3.68 3.44 3.20 2.96 2.73 2.49 2.25 2.01 1.77 1.54 1.30 1.06 0.82
+  row 750 b 2.20 2.13 2.07 2.01 1.94 1.88 1.81 1.75 1.69 1.62 1.56 1.49 1.43 1.37 s 4.05 3.77 3.48 3.27 3.02 2.76 2.51 2.25 1.99 1.74 1.48 1.23 1.02 0.73
+endtable
+
+// ciezary: wysokosc (karty 0018/0019, Uzup. 2 s. 8-11), masa 27 kg (BN-67/9317-53; dla 6322/6323 ZALOZENIE - te same liczby
+// sztuk co zeliwnych na kartach, wiec ta sama masa; do sprawdzenia na kartach 6322/6323)
+weight 6321-1 height 0.055 mass 27      // zeliwny
+weight 6323-1 height 0.080 mass 27      // polimerobetonowy Ø306
+weight 6322-1 height 0.091 mass 27      // polimerobetonowy Ø400 (kotwienia rozdzielone)
+
+// rolka linowa 4460 (tom 5 s. 27): diameter po dnie rowka
+pulley 4460-1 diameter 0.220 width 0.080 grooves 2
+pulley 4460-2 diameter 0.220 width 0.044 grooves 1
+pulley 4460-3 diameter 0.320 width 0.044 grooves 1
+
+// dzwignia 6406 (tom 5 s. 167): hole <nazwa> <wzdluz osi od otworu I> <odsuniecie w bok>
+lever 6406-1 hole I 0.000 0 hole II 0.280 0 hole III 0.365 0.050 hole IV 0.572 0 hole V 0.665 0 hole VI 0.732 0
+
+// prety ciezarow: L od spodu talerza do osi oczka (tom 5 s. 164-165). Inny pret niz c tablicy (2,00) obniza spod ciezarow o roznice.
+part 6401-1 length 2.00     // zeliwnych
+part 6401-2 length 1.25
+part 6401-3 length 1.70
+part 6402-1 length 2.30     // betonowych
+part 6402-2 length 2.50
+part 6402-3 length 2.80
+part 6402-4 length 3.00
+
+// device <karta> table pulley lever rod rope rope_diameter
+//   mount / holder / hanger / messenger / contact  <czesc dlugosc>...   lancuchy czesci liniowych
+//   messenger_clamp / contact_clamp <czesc dlugosc>, equalizer <czesc dlugosc> spread <rozstaw przewodow>
+//   type <traction_code> stack <ciezar liczba>... (od dolu) lever <otwor liny> <otwor przewodow> <otwor osi> [rod <pret>] [clamp <uchwyt liny>]
+// Dlugosci czesci liniowych: ZALOZENIE do czasu modeli (Jan 2026-10-23 szykuje); 4440-1..3 L 270 mm z karty (Uzup. 2 s. 48).
+// Lina 4490-1 (8,70 m z kauszami) - srednica ZALOZONA 10 mm; rysowana modelem odciagu linowego 9832-02.
+
+// 23-0461 kotwienie ciezarowe sieci z izolacja, rolki rownolegle, ciezary polimerobetonowe i zeliwne Ø306 (Uzup. 2 s. 16;
+// zastepuje 63-0401). Zeliwne na dole stosu.
+device 0461 table 0011-1 pulley 4460-1 lever 6406-1 rod 6402-1 rope 9832-02 rope_diameter 0.010
+  mount 4450-1 0.15 4440-2 0.27
+  holder 4440-1 0.27
+  hanger 6411-1 0.10 4720-1 0.17
+  messenger 4720-1 0.17 7150-1 0.60 4720-1 0.17 4420-1 0.40
+  contact 4720-1 0.17 7150-1 0.60 4720-1 0.17 4420-1 0.40
+  messenger_clamp 5120-6 0.25
+  contact_clamp 5120-6 0.25
+  equalizer 4410-1 0.30 spread 0.08
+  type 3 stack 6321-1 8 6323-1 18 lever IV I II clamp 5120-7
+  type 4 stack 6321-1 4 6323-1 20 lever VI I III
+  type 10 stack 6323-1 20 lever V I III
+  type 26 stack 6321-1 14 6323-1 19 lever I V III rod 6402-3 clamp 5120-7
+enddevice
