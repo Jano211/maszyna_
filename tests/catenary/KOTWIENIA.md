@@ -65,3 +65,17 @@ Odczytane 2026-10-23 (skany bez tekstu; numery stron PDF). Typy sieci w tabelach
   typ 3: 8 + 18, typ 4: 4 + 20, typ 10: 0 + 20, typ 26: 14 + 19. Pręt 6402-1 (typ 26: 6402-3). Reszta jak 0401.
   s. 17 bez izolacji; s. 8–11 usytuowanie ciężarów (wspólne/rozdzielone, Ø306/Ø400); s. 13–15, 18, 21–22 zamocowania;
   s. 19–32 kotwienia szeregowe i osobne liny/przewody (Ø306, Ø400).
+
+## Plan (ustalenia z Janem 2026-10-23)
+1. Dane `traction_tensioners.txt`: tabela 0011-1 (b, s od temperatury i as), stosy wg 23-0461 (żeliwne na dole + Ø306),
+   Ø400 dla kotwień rozdzielonych, otwory dźwigni 6406 i przypisanie Ln/Djp/oś per typ (traction_code = typ z kart),
+   rolki 4460-1 (podwójne D 220).
+2. Solver urządzenia naprężającego (części jak cantilever_result + lina z odcinków stycznych i łuków na rolkach z
+   rozciąganych kawałków linki). Wielokrążek 1:4 – ZAŁOŻENIE (do sprawdzenia na zdjęciach): koniec liny przy rolce stałej
+   (słup), 4 żyły między rolkami podwójnymi, wolny koniec z rolki stałej pionowo w dół do pręta ciężarów.
+3. Temperatura: `Global.AirTemperature` przy wczytaniu i przy zmianie; poza −25…+40 °C przycięcie do tabeli.
+4. Wpis kotwienia w scenerii, przycisk „Zakotwij” (strona Druty), ostatnie przęsło bez wieszaków do dźwigni.
+Później: obrót wysięgników od temperatury i odległości od kotwienia środkowego (max 12°); dobowy przebieg temperatury
+w scenariuszu; parametry „stanu”: brakujące krążki (stos krótszy, naciąg mniejszy o 4·27 daN na krążek), wydłużenie
+sieci od ostatniej regulacji (ciężary niżej o 4×; oparte o grunt = utrata naciągu), zerwanie kotwienia (przęsła liczone
+z zadanej długości drutu → naciąg).
