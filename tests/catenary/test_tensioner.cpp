@@ -160,9 +160,9 @@ int main( int argc, char **argv ) {
         std::vector<catenary::tensioner_placement const *> weights;
         for( auto const &part : result.parts ) { if( part.role.rfind( "weight.", 0 ) == 0 ) { weights.push_back( &part ); } }
         check( weights.size() == 26 && weights.front()->part == "6321-1_szary" && weights.back()->part == "6323-1_zolty", "kolory: stos szary, najwyzszy zolty" );
-        // pierwszy betonowy (9.) bez obrotu, drugi o 90 stopni: os X czesci wzdluz +Y urzadzenia
-        check( std::abs( weights[ 8 ]->rotation[ 0 ] - 1.0 ) < 1e-9 && std::abs( weights[ 9 ]->rotation[ 3 ] - 1.0 ) < 1e-9 && std::abs( weights[ 10 ]->rotation[ 0 ] + 1.0 ) < 1e-9, "betonowe obracane co 90 stopni, zeliwne nie" );
-        check( std::abs( weights[ 1 ]->rotation[ 0 ] - 1.0 ) < 1e-9, "zeliwne bez obrotu" );
+        // n-ty ciezar w stosie (od 0) obrocony o n * 90 stopni: 0 -> X wzdluz +X, 1 -> X wzdluz +Y, 2 -> X wzdluz -X
+        check( std::abs( weights[ 0 ]->rotation[ 0 ] - 1.0 ) < 1e-9 && std::abs( weights[ 1 ]->rotation[ 3 ] - 1.0 ) < 1e-9 && std::abs( weights[ 2 ]->rotation[ 0 ] + 1.0 ) < 1e-9
+            && std::abs( weights[ 9 ]->rotation[ 3 ] - 1.0 ) < 1e-9, "kazdy kolejny ciezar obrocony o 90 stopni (zeliwne i betonowe)" );
     }
 
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDOW: %d\n", failures );
