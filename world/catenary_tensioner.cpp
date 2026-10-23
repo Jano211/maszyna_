@@ -117,6 +117,14 @@ void tensioner_table::formula_values( double const Temperature, double const Dis
     S = sn - 4.0 * shift;
 }
 
+int tensioner_color( std::string const &Name ) {
+    if( Name == "zolty" || Name == "1" ) { return 1; }
+    if( Name == "szary" || Name == "2" ) { return 2; }
+    if( Name == "zolty_pedzel" || Name == "3" ) { return 3; }
+    if( Name == "szary_brzydki" || Name == "4" ) { return 4; }
+    return 0;
+}
+
 bool tensioner_table::lookup( double const Temperature, double const Distance, double &B, double &S ) const {
     if( formula ) {
         formula_values( Temperature, Distance, B, S );
@@ -317,6 +325,8 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 if( words[ k ] == "height" ) { number_of( words[ k + 1 ], weight.height ); }
                 else if( words[ k ] == "mass" ) { number_of( words[ k + 1 ], weight.mass ); }
                 else if( words[ k ] == "turn" ) { number_of( words[ k + 1 ], weight.turn ); }
+                else if( words[ k ] == "model" ) { weight.model = words[ k + 1 ]; }
+                else if( words[ k ] == "offset" ) { double value { 0.0 }; number_of( words[ k + 1 ], value ); weight.offset = static_cast<int>( value ); }
                 else { report( "weight " + weight.name + ": unknown keyword \"" + words[ k ] + "\"" ); }
             }
             m_weights.push_back( weight );
@@ -572,7 +582,14 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         ++index;
         auto const top { index == static_cast<int>( stack.size() ) };
         auto const &color { top && false == Input.top_color.empty() ? Input.top_color : Input.color };
-        auto placement { placed( "weight." + std::to_string( index ), color.empty() ? weight->name : weight->name + "_" + color, vec { columnx, yb, z } ) };
+        auto model { weight->name };
+        if( false == weight->model.empty() ) {
+            auto number { tensioner_color( color ) };
+            if( number == 0 ) { number = 2; }
+            number += weight->offset;
+            model = weight->model + "-" + ( number < 10 ? "0" : "" ) + std::to_string( number );
+        }
+        auto placement { placed( "weight." + std::to_string( index ), model, vec { columnx, yb, z } ) };
         auto const angle { weight->turn * ( turns++ ) * kPi / 180.0 };
         set_rotation( placement, vec { std::cos( angle ), std::sin( angle ), 0.0 }, vec { -std::sin( angle ), std::cos( angle ), 0.0 }, vec { 0.0, 0.0, 1.0 } );
         Result.parts.push_back( placement );
