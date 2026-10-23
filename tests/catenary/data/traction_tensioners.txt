@@ -7,9 +7,11 @@
 // endtable
 
 // 33-0011-1 tablica montazowa urzadzenia naprezajacego cala siec, rolki rownolegle (tom 1 s. 12). bn 1,75 / sn 2,25 przy +10 °C,
-// pret c = 2,00 m. Wartosci przepisane z karty; trzy komorki nie trzymaja przekladni 1:4 (550/+35 b 1,54 - z s wynikaloby 1,51;
-// 750/-15 i 750/+35 o 5 cm w s) - literowki karty, zostawione.
-table 0011-1 height 6.70 rod 2.00
+// pret c = 2,00 m. Wiersze przepisane z karty; trzy komorki nie trzymaja przekladni 1:4 (550/+35 b 1,54 - z s wynikaloby 1,51;
+// 750/-15 i 750/+35 o 5 cm w s) - literowki karty.
+// Liczone ze wzoru ze starej karty 13-0011 (kolprojekt1.pdf s. 18): b = bn - as·α·(t - tn), s = sn - 4·as·α·(t - tn),
+// α = 17·10^-6 1/°C, tn = +10 °C (wiersze tablicy 0011-1 zgadzaja sie z nim do 2 cm poza literowkami; zostaja do testu).
+table 0011-1 height 6.70 rod 2.00 formula 1.75 2.25 10 17e-6
   temperatures -25 -20 -15 -10 -5 0 5 10 15 20 25 30 35 40
   row 100 b 1.81 1.80 1.79 1.78 1.78 1.77 1.76 1.75 1.74 1.73 1.72 1.72 1.71 1.70 s 2.49 2.45 2.42 2.39 2.35 2.32 2.29 2.25 2.21 2.18 2.15 2.11 2.08 2.05
   row 150 b 1.84 1.83 1.81 1.80 1.79 1.78 1.76 1.75 1.74 1.72 1.71 1.70 1.69 1.67 s 2.61 2.56 2.51 2.45 2.40 2.35 2.30 2.25 2.20 2.15 2.10 2.05 1.99 1.94
@@ -26,6 +28,14 @@ table 0011-1 height 6.70 rod 2.00
   row 700 b 2.17 2.11 2.05 1.99 1.93 1.87 1.81 1.75 1.69 1.63 1.57 1.51 1.45 1.39 s 3.92 3.68 3.44 3.20 2.96 2.73 2.49 2.25 2.01 1.77 1.54 1.30 1.06 0.82
   row 750 b 2.20 2.13 2.07 2.01 1.94 1.88 1.81 1.75 1.69 1.62 1.56 1.49 1.43 1.37 s 4.05 3.77 3.48 3.27 3.02 2.76 2.51 2.25 1.99 1.74 1.48 1.23 1.02 0.73
 endtable
+
+// rolki szeregowe (tom 1 s. 14-16): te same przyrosty b i s co 0011-1, inne polozenie nominalne (sprawdzone na pierwszych wierszach)
+// 13-0011-6 lina(y) nosna(e): os rolek 7,00 m, bn 2,40, sn 2,25
+table 0011-6 base 0011-1 shift_b 0.65 shift_s 0.00 height 7.00 rod 2.00
+// 13-0011-7 przewod(y) jezdny(e): os rolek 6,30 m, bn 2,90, sn 1,90
+table 0011-7 base 0011-1 shift_b 1.15 shift_s -0.35 height 6.30 rod 2.00
+// 13-0011-8 przewod(y) jezdny(e), kotwienie osobne: bn 2,50, sn 1,85
+table 0011-8 base 0011-1 shift_b 0.75 shift_s -0.40 height 6.30 rod 2.00
 
 // ciezary: wysokosc (karty 0018/0019, Uzup. 2 s. 8-11), masa 27 kg (BN-67/9317-53; dla 6322/6323 ZALOZENIE - te same liczby
 // sztuk co zeliwnych na kartach, wiec ta sama masa; do sprawdzenia na kartach 6322/6323)

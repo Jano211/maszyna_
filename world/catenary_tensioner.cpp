@@ -111,7 +111,17 @@ vec place_chain( std::vector<tensioner_link> const &Links, std::string const &Ro
 
 } // namespace
 
+void tensioner_table::formula_values( double const Temperature, double const Distance, double &B, double &S ) const {
+    auto const shift { Distance * alpha * ( Temperature - tn ) };
+    B = bn - shift;
+    S = sn - 4.0 * shift;
+}
+
 bool tensioner_table::lookup( double const Temperature, double const Distance, double &B, double &S ) const {
+    if( formula ) {
+        formula_values( Temperature, Distance, B, S );
+        return true;
+    }
     B = 0.0;
     S = 0.0;
     if( temperatures.empty() || distances.empty() ) { return false; }
@@ -256,14 +266,48 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
             continue;
         }
         if( keyword == "table" && words.size() >= 2 ) {
-            m_tables.emplace_back();
-            table = &m_tables.back();
-            table->name = words[ 1 ];
+            // "table <nazwa> base <inna> shift_b <m> shift_s <m> ..." - jednowierszowa, wartości innej tablicy przesunięte
+            // o stałą (tablice 0011-6/-7/-8 różnią się od 0011-1 tylko położeniem nominalnym)
+            tensioner_table entry;
+            entry.name = words[ 1 ];
+            double shiftb { 0.0 }, shifts { 0.0 };
+            auto derived { false };
             for( std::size_t k = 2; k + 1 < words.size(); k += 2 ) {
-                if( words[ k ] == "height" ) { number_of( words[ k + 1 ], table->height ); }
-                else if( words[ k ] == "rod" ) { number_of( words[ k + 1 ], table->rod ); }
-                else { report( "table " + table->name + ": unknown keyword \"" + words[ k ] + "\"" ); }
+                if( words[ k ] == "height" ) { number_of( words[ k + 1 ], entry.height ); }
+                else if( words[ k ] == "rod" ) { number_of( words[ k + 1 ], entry.rod ); }
+                else if( words[ k ] == "shift_b" ) { number_of( words[ k + 1 ], shiftb ); }
+                else if( words[ k ] == "shift_s" ) { number_of( words[ k + 1 ], shifts ); }
+                else if( words[ k ] == "formula" ) {
+                    // "formula <bn> <sn> <tn> <alfa>": cztery liczby
+                    if( k + 4 < words.size() && number_of( words[ k + 1 ], entry.bn ) && number_of( words[ k + 2 ], entry.sn )
+                     && number_of( words[ k + 3 ], entry.tn ) && number_of( words[ k + 4 ], entry.alpha ) ) { entry.formula = true; }
+                    else { report( "table " + entry.name + ": formula needs bn sn tn alpha" ); }
+                    k += 3; // pętla doda jeszcze 2
+                }
+                else if( words[ k ] == "base" ) {
+                    derived = true;
+                    auto const *base { this->table( words[ k + 1 ] ) };
+                    if( base == nullptr ) { report( "table " + entry.name + ": no base table " + words[ k + 1 ] + " before it" ); continue; }
+                    entry.temperatures = base->temperatures;
+                    entry.distances = base->distances;
+                    entry.b = base->b;
+                    entry.s = base->s;
+                    entry.formula = base->formula;
+                    entry.bn = base->bn;
+                    entry.sn = base->sn;
+                    entry.tn = base->tn;
+                    entry.alpha = base->alpha;
+                }
+                else { report( "table " + entry.name + ": unknown keyword \"" + words[ k ] + "\"" ); }
             }
+            if( derived ) {
+                for( auto &row : entry.b ) { for( auto &value : row ) { value += shiftb; } }
+                for( auto &row : entry.s ) { for( auto &value : row ) { value += shifts; } }
+                entry.bn += shiftb;
+                entry.sn += shifts;
+            }
+            m_tables.push_back( entry );
+            if( false == derived ) { table = &m_tables.back(); }
             continue;
         }
         if( keyword == "weight" && words.size() >= 2 ) {
