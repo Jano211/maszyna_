@@ -552,26 +552,31 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     // uchwyty do konstrukcji: 4450 zaczyna się w otworach uchwytów, hole_out przed czołem
     auto const *brackets { Input.pole.empty() ? nullptr : Device.brackets_for( Input.pole ) };
     auto const pivotx { brackets != nullptr ? brackets->hole_out : 0.0 };
+    // przód: -X modelu przed czoło (obrót o 180 stopni wokół pionu); Upside: do góry nogami (otwór nad zerem)
+    auto const front = [ & ]( std::string const &Role, std::string const &Part, vec const &At, bool const Upside ) {
+        if( Part.empty() ) { return; }
+        auto placement { placed( Role, Part, At ) };
+        if( Upside ) { set_rotation( placement, vec { -1.0, 0.0, 0.0 }, vec { 0.0, 1.0, 0.0 }, vec { 0.0, 0.0, -1.0 } ); }
+        else { set_rotation( placement, vec { -1.0, 0.0, 0.0 }, vec { 0.0, -1.0, 0.0 }, vec { 0.0, 0.0, 1.0 } ); }
+        Result.parts.push_back( placement );
+    };
+    // tył: na tylnej ścianie konstrukcji, -X modelu na zewnątrz (w -X urządzenia)
+    auto const back = [ & ]( std::string const &Role, std::string const &Part, vec const &At, bool const Upside ) {
+        if( Part.empty() || brackets == nullptr ) { return; }
+        auto const depth { Input.depth ? Input.depth( At.z ) : 0.0 };
+        if( depth <= 0.0 ) { return; }
+        auto placement { placed( Role, Part, vec { -depth, At.y, At.z } ) };
+        if( Upside ) { set_rotation( placement, vec { 1.0, 0.0, 0.0 }, vec { 0.0, -1.0, 0.0 }, vec { 0.0, 0.0, -1.0 } ); }
+        Result.parts.push_back( placement );
+        if( depth > brackets->bolt + 1e-6 ) {
+            std::string const text { "the bracket bolts are shorter than the structure is deep" };
+            if( std::find( Result.warnings.begin(), Result.warnings.end(), text ) == Result.warnings.end() ) { Result.warnings.push_back( text ); }
+        }
+    };
     if( brackets != nullptr ) {
-        // przód: -X modelu przed czoło (obrót o 180 stopni wokół pionu); dolny dodatkowo do góry nogami (otwór nad zerem)
-        auto const front = [ & ]( std::string const &Role, std::string const &Part, double const Z, bool const Upside ) {
-            auto placement { placed( Role, Part, vec { 0.0, 0.0, Z } ) };
-            if( Upside ) { set_rotation( placement, vec { -1.0, 0.0, 0.0 }, vec { 0.0, 1.0, 0.0 }, vec { 0.0, 0.0, -1.0 } ); }
-            else { set_rotation( placement, vec { -1.0, 0.0, 0.0 }, vec { 0.0, -1.0, 0.0 }, vec { 0.0, 0.0, 1.0 } ); }
-            Result.parts.push_back( placement );
-        };
-        // tył: na tylnej ścianie konstrukcji, -X modelu na zewnątrz (w -X urządzenia)
-        auto const back = [ & ]( std::string const &Role, std::string const &Part, double const Z, bool const Upside ) {
-            if( Part.empty() ) { return; }
-            auto const depth { Input.depth ? Input.depth( Z ) : 0.0 };
-            if( depth <= 0.0 ) { return; }
-            auto placement { placed( Role, Part, vec { -depth, 0.0, Z } ) };
-            if( Upside ) { set_rotation( placement, vec { 1.0, 0.0, 0.0 }, vec { 0.0, -1.0, 0.0 }, vec { 0.0, 0.0, -1.0 } ); }
-            Result.parts.push_back( placement );
-            if( depth > brackets->bolt + 1e-6 ) { Result.warnings.push_back( "the bracket bolts are shorter than the structure is deep" ); }
-        };
-        auto const top { height + Device.pivot_top + brackets->hole_drop };
-        auto const bottom { height - Device.pivot_bottom - brackets->hole_drop };
+        // dwa uchwyty wokół 4450: górny za mount_top, dolny odwrócony za mount_bottom
+        vec const top { 0.0, 0.0, height + Device.pivot_top + brackets->hole_drop };
+        vec const bottom { 0.0, 0.0, height - Device.pivot_bottom - brackets->hole_drop };
         front( "bracket_top", brackets->top_front, top, false );
         back( "bracket_top.back", brackets->top_back, top, false );
         front( "bracket_bottom", brackets->top_front, bottom, true );
@@ -770,13 +775,20 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     // pręt z ciężarami pod liną, łączniki między liną a prętem
     double hangerlength { 0.0 };
     for( auto const &link : Device.hanger ) { hangerlength += link.length; }
-    auto const columnx { fixedaxle.x - radius };
-    vec const ropeend { columnx, yb, s + rodlength + hangerlength };
+    // oś stosu: pod rolką stałą; z prowadnicą na uchwytach ustawia ją pierścień jeżdżący po osi prowadnicy (mount 5070 w hole_1
+    // uchwytu, Jan 2026-10-24) - lina schodzi z rolki lekko ukośnie
+    auto const turn { Device.ring_turn * kPi / 180.0 };
+    vec const toward { -std::cos( turn ), std::sin( turn ), 0.0 };   // od osi stosu do prowadnicy
+    auto const onbrackets { brackets != nullptr && false == Device.guide.empty() && false == Device.ring.empty() };
+    vec const guideaxis { onbrackets ? vec { brackets->hole_out, 0.0, 0.0 } - toward * Device.guide_mount : vec {} };
+    auto const columnx { onbrackets ? guideaxis.x - toward.x * Device.ring_arm : fixedaxle.x - radius };
+    auto const columny { onbrackets ? guideaxis.y - toward.y * Device.ring_arm : yb };
+    vec const ropeend { columnx, columny, s + rodlength + hangerlength };
     if( ropeend.z > height - 0.05 ) { Result.warnings.push_back( "the weights would hang above the pulley: rod or hangers too long for the table" ); }
     point( ropeend );
     place_chain( Device.hanger, "hanger", ropeend, down, Result );
     {
-        auto placement { placed( "rod", rodname, vec { columnx, yb, s } ) };
+        auto placement { placed( "rod", rodname, vec { columnx, columny, s } ) };
         Result.parts.push_back( placement );
     }
     auto z { s };
@@ -793,28 +805,27 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
             number += weight->offset;
             model = weight->model + "-" + ( number < 10 ? "0" : "" ) + std::to_string( number );
         }
-        auto placement { placed( "weight." + std::to_string( index ), model, vec { columnx, yb, z } ) };
+        auto placement { placed( "weight." + std::to_string( index ), model, vec { columnx, columny, z } ) };
         auto const angle { weight->turn * ( turns++ ) * kPi / 180.0 };
         set_rotation( placement, vec { std::cos( angle ), std::sin( angle ), 0.0 }, vec { -std::sin( angle ), std::cos( angle ), 0.0 }, vec { 0.0, 0.0, 1.0 } );
         Result.parts.push_back( placement );
         z += weight->height;
     }
     if( z > s + rodlength ) { Result.warnings.push_back( "the stack is higher than the rod" ); }
-    // pierścień prowadzący na wierzchu stosu, prowadnica w osi jego przesuwu, w stronę konstrukcji
+    // pierścień prowadzący na stosie, prowadnica w osi jego przesuwu, w stronę konstrukcji
     // obrót wokół osi stosu: -X modelu (w stronę prowadnicy) idzie w kierunku toward
-    auto const turn { Device.ring_turn * kPi / 180.0 };
-    vec const toward { -std::cos( turn ), std::sin( turn ), 0.0 };
     auto const turned = [ & ]( std::string const &Role, std::string const &Part, vec const &At ) {
         auto placement { placed( Role, Part, At ) };
         set_rotation( placement, toward * -1.0, vec { -toward.y, toward.x, 0.0 } * -1.0, vec { 0.0, 0.0, 1.0 } );
         return placement;
     };
     auto const ringz { Device.ring_at < 0.0 ? z : s + std::min( Device.ring_at, z - s ) };
-    if( false == Device.ring.empty() ) {
-        Result.parts.push_back( turned( "ring", Device.ring, vec { columnx, yb, ringz } ) );
+    // prowadnica tylko na uchwytach konstrukcji (bez nich nie ma jej gdzie przykręcić) - wtedy też bez pierścienia
+    if( onbrackets ) {
+        Result.parts.push_back( turned( "ring", Device.ring, vec { columnx, columny, ringz } ) );
     }
-    if( false == Device.guide.empty() ) {
-        auto const guide { vec { columnx, yb, Device.guide_bottom } + toward * ( Device.ring.empty() ? 0.0 : Device.ring_arm ) };
+    if( onbrackets ) {
+        auto const guide { vec { columnx, columny, Device.guide_bottom } + toward * ( Device.ring.empty() ? 0.0 : Device.ring_arm ) };
         Result.parts.push_back( turned( "guide", Device.guide, guide ) );
         Result.has_guide = true;
         auto const at { guide + toward * Device.guide_mount };
@@ -823,6 +834,15 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         std::copy( mount, mount + 3, Result.guide_end );
         Result.guide_end[ 2 ] += Device.guide_length;
         if( mount[ 0 ] < 0.0 ) { Result.warnings.push_back( "the guide mounts are behind the face of the structure" ); }
+        // uchwyty prowadnicy (karta 33-0455): dolny poz. 2 przy spodzie, górny poz. 1 przy końcu; otwory w mount / end
+        if( onbrackets ) {
+            vec const low { 0.0, at.y, Result.guide_mount[ 2 ] + brackets->hole_drop };
+            vec const high { 0.0, at.y, Result.guide_end[ 2 ] + brackets->hole_drop };
+            front( "bracket_guide_low", brackets->bottom_front, low, false );
+            back( "bracket_guide_low.back", brackets->bottom_back, low, false );
+            front( "bracket_guide_high", brackets->top_front, high, false );
+            back( "bracket_guide_high.back", brackets->top_back, high, false );
+        }
         if( false == Device.ring.empty() && ( ringz < Device.guide_bottom || ringz > Device.guide_bottom + Device.guide_length ) ) {
             Result.warnings.push_back( "the guide ring is off the guide" );
         }
