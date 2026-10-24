@@ -120,7 +120,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 
 **Kotwienie 0461 – dokończenie**
 
-- [ ] Prowadnica 5070 i pierścień 5080 – modele są; wysokości z karty 23-0018-2 (prowadnica 0,80–5,30, pierścień 1,00 nad spodem stosu – mieści się od −25 do +40 °C). W kodzie `guide`/`ring … at … turn`, w danych zakomentowane do modeli 5100 (położenie `eye` względem czoła słupa 1611). Do czego 5060-01 i 4480-01?
+- [ ] Prowadnica 5070 i pierścień 5080 – modele są; wysokości z karty 23-0018-2 (prowadnica 0,80–5,30, pierścień 1,00 nad spodem stosu – mieści się od −25 do +40 °C; szekla pierścienia po prowadnicy, 0,200 od osi stosu). W kodzie `guide`/`ring … at … turn`, w danych zakomentowane do modeli 5100 (położenie `eye` względem czoła słupa 1611). Do czego 5060-01 i 4480-01?
 - [ ] Mocowania do słupa wg 33-0455: góra pod rolkę (4510-1/-2, 4520-3…-7, 4570-1, 5100-1/-2), dół pod prowadnicę (4520-1/-2, 4530-3, 4560-1, 5100-3/-4) – 5100 (słup 1611, wyk. 11/12) modele Jan robi 24.10; przypisanie reszty wykonań do słupów
 - [ ] 6411-01 (łącznik liny z prętem; teraz 0,10 m bez modelu) – model
 - [ ] 4430-01 (`hole_1` −0,0747): ustalić, gdzie stoi

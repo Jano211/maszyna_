@@ -135,7 +135,7 @@ struct tensioner_device {
     double guide_length { 4.50 };
     double guide_mount { 0.07 };
     double guide_bottom { 0.80 };       // spód prowadnicy nad główką szyny (karta 23-0018-2: 0,80, prowadnica 4,50 do 5,30)
-    double ring_arm { 0.194 };
+    double ring_arm { 0.200 };          // od osi stosu do osi szekli, która chodzi po prowadnicy (karta 23-5080 wyk. 1: 200)
     double ring_turn { 0.0 };           // stopnie wokół osi stosu: 0 = prowadnica w stronę konstrukcji, 90 = w bok (+Y)
     double ring_at { 1.00 };            // wysokość pierścienia nad spodem stosu (karta 23-0018-2: 1,00 m); ujemna = na wierzchu stosu
     std::vector<tensioner_type> types;

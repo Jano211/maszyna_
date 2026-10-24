@@ -238,7 +238,7 @@ int main( int argc, char **argv ) {
     {
         auto withguide { *device };
         withguide.guide = "5070-02"; withguide.guide_length = 4.50; withguide.guide_mount = 0.07; withguide.guide_bottom = 0.80;
-        withguide.ring = "5080-01"; withguide.ring_arm = 0.19405;
+        withguide.ring = "5080-01"; withguide.ring_arm = 0.200;
         catenary::tensioner_input input;
         catenary::tensioner_result toward, aside;
         catenary::solve_tensioner( catalog, withguide, input, toward );
@@ -255,7 +255,7 @@ int main( int argc, char **argv ) {
         if( good ) {
             // pierścień na wierzchu stosu, w osi stosu; prowadnica 0,194 w +Y; mocowania 0,07 dalej, dolne na 0,70, górne 4,50 wyżej
             good = std::abs( ring->position[ 0 ] - top->position[ 0 ] ) < 1e-9 && std::abs( ring->position[ 2 ] - ( aside.s + 1.00 ) ) < 1e-9
-                && std::abs( guide->position[ 1 ] - ring->position[ 1 ] - 0.19405 ) < 1e-9 && std::abs( guide->position[ 0 ] - ring->position[ 0 ] ) < 1e-9
+                && std::abs( guide->position[ 1 ] - ring->position[ 1 ] - 0.200 ) < 1e-9 && std::abs( guide->position[ 0 ] - ring->position[ 0 ] ) < 1e-9
                 && std::abs( aside.guide_mount[ 1 ] - guide->position[ 1 ] - 0.07 ) < 1e-9 && std::abs( aside.guide_mount[ 2 ] - 0.80 ) < 1e-9
                 && std::abs( aside.guide_end[ 2 ] - 5.30 ) < 1e-9
                 && std::abs( ring->rotation[ 0 ] * -1.0 - 0.0 ) < 1e-9 && std::abs( -ring->rotation[ 3 ] - 1.0 ) < 1e-9; // -X modelu w +Y

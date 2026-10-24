@@ -121,8 +121,8 @@ z zadanej długości drutu → naciąg).
 - **13-5100** (t5 s. 76): uchwyty do kotwień, **słup 1611**; dwa kątowniki 40×40 ściągnięte śrubami M16; wyk. 1/2: a 220–250
   (górą, węższy słup), wyk. 3/4: a 290–320 (dołem); śruby M16×220 (wyk. 1, 3) albo ×260 (wyk. 2, 4) – wg słupa (wyk. 11 / 12 w 0455).
   Modele Jana: 5100-01…-04 przody, -05 tył do 1 i 2, -06 tył do 3 i 4, każdy z `eye`.
-- **23-5080** (t5 s. 74): pierścień wyk. 1 Ø310, zacisk na prowadnicy 210 mm od osi (model Jana 0,194), z drugiej strony szekla
-  200 mm; wyk. 2 Ø405 / 235. **13-5090** (s. 75): uchwyty prowadnic (rozdzielone).
+- **23-5080** (t5 s. 74): pierścień wyk. 1 Ø310; po prowadnicy chodzi **szekla, 200 mm od osi** (Jan 15:51; model `mount` w jej osi,
+  Jan poprawia z 0,194 na 0,200); po drugiej stronie śruba M12×55 ściągająca końce pierścienia, 210 mm; wyk. 2 Ø405 / 235. **13-5090** (s. 75): uchwyty prowadnic (rozdzielone).
 
 ## Izolator rolkowy ESN-2025 (Jan 2026-10-24 14:49–14:58, model `esn_2025.t3d`)
 - Stary izolator rolkowy (ramka z dwiema rolkami; zdjęcie i stary rysunek od Jana). Zero w pierwszym mocowaniu, `hole_1` w drugim,
