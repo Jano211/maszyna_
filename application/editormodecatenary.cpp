@@ -2155,7 +2155,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			int chosen{-1};
 			for (std::size_t k = 0; k < devices.size(); ++k)
 			{
-				labels.push_back(format(devices[k].fixed ? STR_C("fixed (card %s)") : devices[k].series ? STR_C("weights, pulleys in series (card %s)") : STR_C("weight tensioning (card %s)"), devices[k].card.c_str()));
+				labels.push_back(format(devices[k].fixed ? STR_C("fixed (card %s)") : devices[k].split ? STR_C("weights, messenger and contact wires separately (card %s)") : devices[k].series ? STR_C("weights, pulleys in series (card %s)") : STR_C("weight tensioning (card %s)"), devices[k].card.c_str()));
 				if (devices[k].card == card)
 				{
 					chosen = static_cast<int>(k);

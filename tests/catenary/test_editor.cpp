@@ -368,6 +368,11 @@ int main( int, char *argv[] ) {
             auto const *series { catenary_anchor_result( 0 ) };
             check( series != nullptr && false == series->fixed && series->weights > 0 && series->warnings.empty() && std::abs( series->b - 2.50 ) < 0.6,
                 "rolki szeregowe 0471 w scenerii: bez uwag" );
+            // rozdzielone 0482 nie ma sieci tego typu: bierze inne ciezarowe (0461), bez bledu
+            data.device = "0482";
+            catenary_anchor_update( 0, data );
+            auto const *fallback { catenary_anchor_result( 0 ) };
+            check( fallback != nullptr && fallback->weights > 0 && fallback->rope2.empty() && fallback->warnings.empty(), "rozdzielone 0482 dla sieci z jedna lina: zastepcze urzadzenie ciezarowe" );
             data.device = "0461";
             catenary_anchor_update( 0, data );
             result = catenary_anchor_result( 0 );

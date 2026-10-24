@@ -251,8 +251,27 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
             if( keyword == "messenger_each" ) { links_of( words, 1, device->messenger_each ); continue; }
             if( keyword == "contact_each" ) { links_of( words, 1, device->contact_each ); continue; }
             if( keyword == "messenger_equalizer" && words.size() >= 3 ) {
+                // messenger_equalizer <część> <długość> [spread <rozstaw lin>] [z]
                 device->messenger_equalizer.name = words[ 1 ];
                 if( false == number_of( words[ 2 ], device->messenger_equalizer.length ) ) { report( "bad length \"" + words[ 2 ] + "\"" ); }
+                for( std::size_t k = 3; k < words.size(); ++k ) {
+                    if( words[ k ] == "spread" && k + 1 < words.size() ) { number_of( words[ ++k ], device->messenger_spread ); }
+                    else if( words[ k ] == "z" ) { device->messenger_equalizer_z = true; }
+                }
+                continue;
+            }
+            if( keyword == "only" && words.size() >= 2 ) {
+                if( words[ 1 ] == "messenger" || words[ 1 ] == "contact" ) { device->only = words[ 1 ]; }
+                else { report( "only: messenger or contact" ); }
+                continue;
+            }
+            if( keyword == "split" && words.size() >= 3 ) { device->split_messenger = words[ 1 ]; device->split_contact = words[ 2 ]; continue; }
+            if( keyword == "frame" && words.size() >= 5 ) {
+                device->frame = words[ 1 ];
+                double side { -1.0 };
+                if( false == number_of( words[ 2 ], device->frame_length ) || false == number_of( words[ 3 ], device->frame_y ) || false == number_of( words[ 4 ], side ) ) { report( "frame: bad numbers" ); }
+                device->frame_side = side < 0.0 ? -1 : 1;
+                device->frame_owner = words.size() >= 6 && words[ 5 ] == "owner";
                 continue;
             }
             if( keyword == "messenger2" ) { links_of( words, 1, device->messenger2 ); continue; }
@@ -462,6 +481,7 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 else if( key == "rod" ) { device->rod = value; }
                 else if( key == "kind" ) {
                     if( value == "fixed" ) { device->fixed = true; }
+                    else if( value == "split" ) { device->split = true; }
                     else if( value != "weights" ) { report( "device " + device->name + ": unknown kind \"" + value + "\"" ); }
                 }
                 else if( key == "rope" ) { device->rope = value; }
@@ -628,13 +648,53 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     auto const *type { Device.type( Input.type ) };
     if( type == nullptr ) { return fail( "device " + Device.name + " has no data for network type " + std::to_string( Input.type ) ); }
     if( Device.fixed ) { return solve_fixed( Device, *type, Input, Result ); }
+    if( Device.split ) {
+        // kotwienie rozdzielone: urządzenie liny i urządzenie przewodów (albo ich odmiana dla typu sieci: <nazwa>-<cokolwiek>)
+        auto const pick = [ & ]( std::string const &Name ) -> tensioner_device const * {
+            if( auto const *exact { Catalog.device( Name ) }; exact != nullptr && exact->type( Input.type ) != nullptr ) { return exact; }
+            for( auto const &other : Catalog.devices() ) {
+                if( other.name.rfind( Name + "-", 0 ) == 0 && other.type( Input.type ) != nullptr ) { return &other; }
+            }
+            return nullptr;
+        };
+        auto const *messengerdevice { pick( Device.split_messenger ) }, *contactdevice { pick( Device.split_contact ) };
+        if( messengerdevice == nullptr || contactdevice == nullptr ) { return fail( "device " + Device.name + " has no messenger / contact device for network type " + std::to_string( Input.type ) ); }
+        tensioner_result rope, wires;
+        auto contactinput { Input };
+        contactinput.missing = 0;    // brakujące ciężary - ze stosu liny
+        if( Input.height > 0.0 ) {
+            // wysokość podana dla rolek liny; przewody o tyle niżej, co w tablicach
+            auto const *upper { Catalog.table( messengerdevice->table ) }, *lower { Catalog.table( contactdevice->table ) };
+            if( upper != nullptr && lower != nullptr ) { contactinput.height = Input.height - ( upper->height - lower->height ); }
+        }
+        if( false == solve_tensioner( Catalog, *messengerdevice, Input, rope ) ) { Result = rope; return false; }
+        if( false == solve_tensioner( Catalog, *contactdevice, contactinput, wires ) ) { Result = wires; return false; }
+        Result = rope;
+        for( auto part : wires.parts ) { part.role = "contact_device." + part.role; Result.parts.push_back( part ); }
+        Result.rope2 = wires.rope;
+        Result.contact_ends = wires.contact_ends;
+        Result.contact_tension = wires.contact_tension;
+        Result.tension = rope.tension + wires.tension;
+        Result.nominal_tension = rope.nominal_tension + wires.nominal_tension;
+        Result.weights = rope.weights + wires.weights;
+        Result.grounded = rope.grounded || wires.grounded;
+        for( auto const &warning : wires.warnings ) {
+            if( std::find( Result.warnings.begin(), Result.warnings.end(), warning ) == Result.warnings.end() ) { Result.warnings.push_back( warning ); }
+        }
+        return true;
+    }
     auto const *table { Catalog.table( Device.table ) };
     if( table == nullptr ) { return fail( "no table " + Device.table ); }
     auto const *pulley { Catalog.pulley( Device.pulley ) };
     if( pulley == nullptr ) { return fail( "no pulley " + Device.pulley ); }
-    auto const *lever { Catalog.lever( Device.lever ) };
-    if( lever == nullptr ) { return fail( "no lever " + Device.lever ); }
+    // urządzenie tylko liny albo tylko przewodów (kotwienie rozdzielone): bez dźwigni, wszystkie "otwory" w osi na końcu uchwytu
+    auto const only { false == Device.only.empty() };
+    auto const onlymessenger { Device.only == "messenger" };
+    static std::pair<double, double> const nowhere { 0.0, 0.0 };
+    auto const *lever { only ? nullptr : Catalog.lever( Device.lever ) };
+    if( false == only && lever == nullptr ) { return fail( "no lever " + Device.lever ); }
     auto const hole = [ & ]( std::string const &Name ) -> std::pair<double, double> const * {
+        if( only ) { return &nowhere; }
         auto const found { lever->holes.find( Name ) };
         return found == lever->holes.end() ? nullptr : &found->second;
     };
@@ -645,7 +705,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         return fail( "lever " + lever->name + " has no hole " + type->messenger_hole + "/" + type->contact_hole + "/" + type->axis_hole );
     }
     // druga dźwignia (dźwignie szeregowo): lever2 urządzenia albo ta sama część co pierwsza
-    auto const cascade { false == type->second_axis_hole.empty() };
+    auto const cascade { false == only && false == type->second_axis_hole.empty() };
     auto const *secondlever { cascade ? Catalog.lever( Device.lever2.empty() ? Device.lever : Device.lever2 ) : nullptr };
     if( cascade && secondlever == nullptr ) { return fail( "no lever " + Device.lever2 ); }
     auto const secondholeof = [ & ]( std::string const &Name ) -> std::pair<double, double> const * {
@@ -699,7 +759,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         auto const arm_m { std::abs( Messenger.first - Axis.first ) }, arm_c { std::abs( Contact.first - Axis.first ) };
         return arm_m + arm_c > 1e-9 ? arm_c / ( arm_m + arm_c ) : 0.5;
     };
-    auto const messengershare { share( *messengerhole, *contacthole, *axishole ) };
+    auto const messengershare { only ? ( onlymessenger ? 1.0 : 0.0 ) : share( *messengerhole, *contacthole, *axishole ) };
     auto const secondshare { cascade ? share( *secondmessenger, *secondcontact, *secondaxis ) : 0.0 };
     // części naciągu całej sieci: pierwsza lina, druga lina (szeregowo), przewody. Przesunięcia końców drutów przenoszą się na oś
     // pierwszej dźwigni z tymi samymi wagami (dźwignia sztywna: oś = część·przesunięcie liny + reszta·przesunięcie drugiej strony)
@@ -959,7 +1019,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     // model dźwigni (Jan): zero w otworze osi II, otwory na drutach odsunięte w -X modelu, czyli w stronę drutów;
     // -X modelu idzie więc w stronę drutów (obrót o 180 stopni wokół pionu), odwrócona dodatkowo o 180 wokół Y;
     // przechylona razem z układem across/upward
-    {
+    if( false == only ) {
         auto placement { placed( "lever", lever->name, holepoint( { 0.0, 0.0 } ) ) };
         set_rotation( placement, across * -sign, vec { 0.0, -1.0, 0.0 }, upward * sign );
         Result.parts.push_back( placement );
@@ -996,9 +1056,37 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         End[ 2 ] = end.z;
     };
     // izolatory rolkowe tylko w zwykłym złożeniu (szeregowo izolator jest w łańcuchu do drugiej dźwigni)
-    rope_chain( holepoint( *messengerhole ), Input.old_messenger && false == cascade && false == Device.messenger_old.empty() ? Device.messenger_old : Device.messenger, "messenger", Result.messenger_end );
+    if( only && onlymessenger && Input.messengers >= 2 && false == Device.messenger_equalizer.name.empty() ) {
+        // dwie liny z jednego urządzenia (sieć 32: dźwignia równoramienna 6403, 35: wyrównywacz 4410): jedna nad drugą
+        auto const start { holepoint( *messengerhole ) };
+        auto const way { aimed( start, Input.messenger_target ) };
+        auto end { place_chain( Device.messenger, "messenger", start, way, Result ) };
+        vec const up { -way.x * way.z, -way.y * way.z, way.x * way.x + way.y * way.y };
+        auto const across { unit( up ) };
+        auto placement { placed_along( "messenger_equalizer", Device.messenger_equalizer.name, end, way ) };
+        if( false == Device.messenger_equalizer_z ) { set_rotation( placement, way * -1.0, across, cross( way * -1.0, across ) ); }
+        Result.parts.push_back( placement );
+        end = end + way * Device.messenger_equalizer.length;
+        auto const clamp { type->messenger_clamp.empty() ? Device.messenger_clamp.name : type->messenger_clamp };
+        for( int k = 0; k < 2; ++k ) {
+            auto const tag { "messenger_each." + std::to_string( k + 1 ) };
+            // każda lina celuje w ostatnie podwieszenie osobno (rozstaw dźwigni 6403 zbiega się w przęśle)
+            auto const from { end + across * ( ( k - 0.5 ) * Device.messenger_spread ) };
+            auto const own { aimed( from, Input.messenger_target ) };
+            auto at { place_chain( Device.messenger_each, tag, from, own, Result ) };
+            if( false == clamp.empty() ) {
+                Result.parts.push_back( placed_along( "messenger_clamp." + std::to_string( k + 1 ), clamp, at, own ) );
+                at = at + own * Device.messenger_clamp.length;
+            }
+            auto *out { k == 1 ? Result.messenger_end : Result.messenger2_end };
+            out[ 0 ] = at.x; out[ 1 ] = at.y; out[ 2 ] = at.z;
+        }
+    }
+    else if( false == only || onlymessenger ) {
+        rope_chain( holepoint( *messengerhole ), Input.old_messenger && false == cascade && false == Device.messenger_old.empty() ? Device.messenger_old : Device.messenger, "messenger", Result.messenger_end );
+    }
     if( cascade ) { rope_chain( secondhole( *secondmessenger ), Device.messenger2, "messenger2", Result.messenger2_end ); }
-    {
+    if( false == only || false == onlymessenger ) {
         auto const start { cascade ? secondhole( *secondcontact ) : holepoint( *contacthole ) };
         auto const way { aimed( start, Input.contact_target ) };
         auto const &links { Input.old_contact && false == cascade && false == Device.contact_old.empty() ? Device.contact_old : Device.contact };
@@ -1079,9 +1167,18 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     // oś stosu: pod rolką stałą; z prowadnicą na uchwytach ustawia ją pierścień jeżdżący po osi prowadnicy (mount 5070 w hole_1
     // uchwytu, Jan 2026-10-24) - lina schodzi z rolki lekko ukośnie
     auto const turn { Device.ring_turn * kPi / 180.0 };
-    vec const toward { -std::cos( turn ), std::sin( turn ), 0.0 };   // od osi stosu do prowadnicy
+    vec toward { -std::cos( turn ), std::sin( turn ), 0.0 };   // od osi stosu do prowadnicy
     auto const onbrackets { brackets != nullptr && false == Device.guide.empty() && false == Device.ring.empty() };
-    vec const guideaxis { onbrackets ? vec { brackets->hole_out, 0.0, 0.0 } - toward * Device.guide_mount : vec {} };
+    auto const onframe { onbrackets && false == Device.frame.empty() };
+    // na ramie 5090: prowadnica w otworze ramy, stos pod liną (Y 0) o ramię pierścienia od prowadnicy, przy konstrukcji albo dalej;
+    // pierścień obrócony w stronę prowadnicy (Jan 2026-10-24)
+    if( onframe ) {
+        auto const offset { std::max( 0.0, Device.ring_arm * Device.ring_arm - Device.frame_y * Device.frame_y ) };
+        vec const guide { brackets->hole_out + Device.frame_length, Device.frame_y, 0.0 };
+        vec const stack { guide.x + Device.frame_side * std::sqrt( offset ), 0.0, 0.0 };
+        toward = unit( vec { guide.x - stack.x, guide.y - stack.y, 0.0 } );
+    }
+    vec const guideaxis { onframe ? vec { brackets->hole_out + Device.frame_length, Device.frame_y, 0.0 } : onbrackets ? vec { brackets->hole_out, 0.0, 0.0 } - toward * Device.guide_mount : vec {} };
     // z prowadnicą stos liczony w układzie konstrukcji (fix na końcu), bez niej - pod rolką, w układzie urządzenia
     auto const columnx { onbrackets ? guideaxis.x - toward.x * Device.ring_arm : fixedaxle.x - radius };
     auto const columny { onbrackets ? guideaxis.y - toward.y * Device.ring_arm : yb };
@@ -1138,10 +1235,17 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         Result.guide_end[ 2 ] += Device.guide_length;
         if( mount[ 0 ] < 0.0 ) { Result.warnings.push_back( "the guide mounts are behind the face of the structure" ); }
         // uchwyty prowadnicy (karta 33-0455): dolny poz. 2 przy spodzie, górny poz. 1 przy końcu; otwory w mount / end
-        if( onbrackets ) {
+        // na ramach 5090: ramy w otworach uchwytów (środek słupa), stawia je i ich uchwyty jedno z dwóch urządzeń (owner)
+        if( onframe && Device.frame_owner ) {
+            for( auto const z : { Result.guide_mount[ 2 ], Result.guide_end[ 2 ] } ) {
+                Result.parts.push_back( placed_along( z == Result.guide_mount[ 2 ] ? "frame_low" : "frame_high", Device.frame, vec { brackets->hole_out, 0.0, z }, out ) );
+            }
+        }
+        if( onbrackets && ( false == onframe || Device.frame_owner ) ) {
             // dolny odwrócony o 180 stopni (karta 33-0455): otwór nad zerem
-            vec const low { 0.0, at.y, Result.guide_mount[ 2 ] - brackets->hole_drop };
-            vec const high { 0.0, at.y, Result.guide_end[ 2 ] + brackets->hole_drop };
+            auto const y { onframe ? 0.0 : at.y };
+            vec const low { 0.0, y, Result.guide_mount[ 2 ] - brackets->hole_drop };
+            vec const high { 0.0, y, Result.guide_end[ 2 ] + brackets->hole_drop };
             front( "bracket_guide_low", brackets->bottom_front, low, true );
             back( "bracket_guide_low.back", brackets->bottom_back, low, true );
             front( "bracket_guide_high", brackets->top_front, high, false );

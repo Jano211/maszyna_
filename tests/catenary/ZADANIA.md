@@ -103,7 +103,8 @@ dźwigni zgadzają się z kartą 0002 dla typów 3, 4, 10 i 26. Szczegóły: KOT
 - [x] Pręty 6401/6402 z modeli, poprawka s na długość pręta, zabezpieczenie 4600 wyk. 1
 - [x] Stan sieci: brakujące ciężary, wydłużenie od regulacji, ciężary na gruncie (sieć bez naciągu)
 - [x] Kotwienia stałe 0403 (+ odmiany 10, 20, 32) i rolki szeregowe 0471 / 0480; wybór rodzaju w edytorze – KOTWIENIA.md
-- [ ] Kotwienie rozdzielone (dwa stosy), środkowe, stałe bez izolacji 0413, zabezpieczenie 4600-2 przy szeregowych
+- [x] Kotwienie rozdzielone 0482 / 0486 (dwa stosy, ramy 5090, 5040-2)
+- [ ] Kotwienie środkowe, stałe bez izolacji 0413, zabezpieczenie 4600-2 przy szeregowych
 - [x] Brakujące ciężary skracają sieć (sprężystość + zwis) i zmniejszają naciąg przęseł łańcucha (dopisek `tension`) – KOTWIENIA.md
 - [x] Druty zaśniedziałe = stare złożenie: uchwyty krańcowe 5110 na przewodach
 

@@ -605,6 +605,48 @@ int main( int argc, char **argv ) {
         check( good, std::string( "rolki szeregowe " ) + name + ": 4 rolki, lina stalej dlugosci (karta 4490-2: 10,00 m), ciezary 4 razy b, tablica 0011-5 bn 2,50" );
     }
 
+    // kotwienie rozdzielone 0482 (Ø306) i 0486 (Ø400): dwa urzadzenia (7,00 i 6,30), dwa stosy, naciagi jak w typach sieci
+    for( auto const *name : { "0482", "0486" } ) {
+        auto const *split { catalog.device( name ) };
+        if( split == nullptr ) { check( false, std::string( "urzadzenie " ) + name ); continue; }
+        auto good { true };
+        for( auto const code : { 32, 35 } ) {
+            int networkcode;
+            network net;
+            if( false == read_network( data + ( code == 32 ? "traction_2C120-2C-3.txt" : "traction_2C120-2C-4.txt" ), networkcode, net ) ) { good = false; continue; }
+            for( auto const temperature : { -25.0, 10.0, 40.0 } ) {
+                catenary::tensioner_input input;
+                input.type = code;
+                input.messengers = 2;
+                input.temperature = temperature;
+                input.distance = 750.0;
+                input.pole = "1611-11";
+                input.depth = []( double ) { return 0.12; };
+                catenary::tensioner_result result;
+                good = good && catenary::solve_tensioner( catalog, *split, input, result ) && result.warnings.empty();
+                good = good && std::abs( result.messenger_tension - net.messenger ) < 0.01 * net.messenger && std::abs( result.contact_tension - net.contact ) < 0.01 * net.contact;
+                good = good && result.contact_ends.size() == 2 && false == result.rope.empty() && false == result.rope2.empty() && result.messenger_end[ 2 ] > result.messenger2_end[ 2 ];
+                // dwa pierscienie: szekla kazdego na swojej prowadnicy (os prowadnicy w otworze ramy), stos liny blizej slupa
+                std::vector<catenary::tensioner_placement const *> rings, guides;
+                for( auto const &part : result.parts ) {
+                    if( part.role == "ring" || part.role == "contact_device.ring" ) { rings.push_back( &part ); }
+                    if( part.role == "guide" || part.role == "contact_device.guide" ) { guides.push_back( &part ); }
+                }
+                good = good && rings.size() == 2 && guides.size() == 2 && rings[ 0 ]->position[ 0 ] < rings[ 1 ]->position[ 0 ] && guides[ 0 ]->position[ 1 ] * guides[ 1 ]->position[ 1 ] < 0.0;
+                for( std::size_t k = 0; good && k < 2; ++k ) {
+                    auto const dx { guides[ k ]->position[ 0 ] - rings[ k ]->position[ 0 ] }, dy { guides[ k ]->position[ 1 ] - rings[ k ]->position[ 1 ] };
+                    good = good && std::abs( std::hypot( dx, dy ) - ( std::string( name ) == "0482" ? 0.200 : 0.21416 ) ) < 1e-6 && std::abs( std::abs( guides[ k ]->position[ 1 ] ) - 0.0575 ) < 1e-9;
+                }
+                if( temperature == 10.0 ) {
+                    std::printf( "    %s typ %d: lina %.0f daN (%d+...), przewody %.0f daN; stosy x %.2f i %.2f, prowadnice y %+.4f %+.4f\n", name, code, result.messenger_tension, result.weights,
+                        result.contact_tension, rings.size() == 2 ? rings[ 0 ]->position[ 0 ] : 0.0, rings.size() == 2 ? rings[ 1 ]->position[ 0 ] : 0.0,
+                        guides.size() == 2 ? guides[ 0 ]->position[ 1 ] : 0.0, guides.size() == 2 ? guides[ 1 ]->position[ 1 ] : 0.0 );
+                }
+            }
+        }
+        check( good, std::string( "kotwienie rozdzielone " ) + name + ": naciagi typow 32/35, dwie liny, dwa stosy, pierscienie na prowadnicach ramy 5090, -25..+40 °C bez uwag" );
+    }
+
     // kotwienia stale 63-0403: liczby czesci jak w tabeli karty (bez uchwytow do slupa)
     {
         struct expect { char const *device; int type, contacts, messengers; std::map<std::string, int> parts; };
