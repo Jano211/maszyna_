@@ -2,7 +2,20 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – stan na 2026-10-22 (edytor sieci, bramki, łańcuchy)
+## START TUTAJ – stan na 2026-10-24 (kotwienia; wcześniej edytor sieci, bramki, łańcuchy)
+
+- **NOWY CZAT: najpierw `ZADANIA.md`** (pełna lista zadań: zrobione / do zrobienia / do potwierdzenia / odłożone,
+  stan 2026-10-24; kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”), potem `KOTWIENIA.md` (kotwienia:
+  mapa kart, części, plan, rzeczy czekające na modele), potem ten plik.
+- 2026-10-23/24 KOTWIENIA CIĘŻAROWE (szczegóły w KOTWIENIA.md i ZADANIA.md): `world/catenary_tensioner.*` (solver urządzenia
+  23-0461, tablica 0011-1 ze wzoru 13-0011, dźwignia 6406, lina 1:4 4490-01 + ucha 4490-02, stos ciężarów z kolorami i
+  obrotem, stan sieci, stare uchwyty 5110 przy drutach zaśniedziałych), `data/traction_tensioners.txt`, test `tt`; wpis
+  `anchor … endanchor` + `anchor_start/anchor_end` w `chain` (`catenary_suspension`, `catenary_scene`: temperatura z
+  `Global.AirTemperature`, kotwienie na istniejącym słupie `on`, wysokość rolek `height`, łańcuchy do drutów celują w ostatnie
+  podwieszenie); edytor: panel kotwienia w panelu łańcucha (strona Druty). Edytor: odsuw na łuku z przechyłką od pochylonej
+  osi toru (karta 23-0007), szablony rozjazdów R190 1:6,6 / 1:7,5, R500 1:14, słupy `no_switch` na czerwono przy rozjeździe.
+  Gałąź `siec-radio` = sam kod exe sieci i radia (bez bujania/styków, bez md). Jan 24.10 13:24: do złożeń wysięgników uwag
+  nie ma. UWAGA przy zapisie na G: most raz zgłosił zapis, a zostawił starą wersję – po każdym zapisie porównać rozmiar.
 
 - 2026-10-23 02:40: `traction_SKB70-C.txt` (kod 5, Djp100 953, lina LB70 1165, hk 1,30, tablica 5) + `wire LB70 0.630 0` w traction_tables.txt (70 CuSi; 625–635 kg/km – użytkownik z internetu; zgodne z ~8,9 g/m na mm² lin Cu). Na G: wgrane. YC120-2C / YC95-2C dopisane 02:50 (decyzja użytkownika: krótka Y 10 m od 50 m; tablica 11, Y 245 daN, kod 0 – w 13-0002 „—”). Wszystkie 15 symboli z traction_layout.txt mają teraz definicje. Głowacki „Sieci trakcyjne” (E:\SYF\INNE\PDF\PDF Kolej, skan bez tekstu, 446 s., strona książki = strona PDF + 9): s. 368–369 – Y krótka 10 m na 2 wieszaki, długa 14 m na 4 wieszaki, linka 25 mm² Cu twarda 200–350 daN; s. 378 – parametry sieci do dużych prędkości (Y 10–16 m, zwis wstępny 1/1000 rozpiętości). Propozycja do potwierdzenia: YC = krótka Y 10 m od 50 m (13-0016-4).
 - 2026-10-23 02:30 (użytkownik 01:49) BRAMKA TRZYMANA OD TORU: przy włączonym „Pierwszy słup od toru” przeciąganie bramki prowadzi jej pierwszy słup wzdłuż toru w odległości osi z początku przeciągania (`catenary_along_track`: z torów w pobliżu ten, od którego punkt jest najbliżej tej odległości – działa też przez złącza torów; za końcem toru albo >10 m w bok – ruch swobodny). Pole „Lico od osi toru” przy zaznaczonej bramce pokazuje odległość jej 1. słupa i zmienia ją (przesunięcie prostopadle do toru, cofanie jednym krokiem); pola „Słup k: lico…” usunięte. Obrót i „prostopadle” – wokół 1. słupa (przy bramce wieloprzęsłowej: 1. słup przęsła o najniższym numerze), wszystkie przęsła jednym kątem. W sieci: bez kropek na końcach torów, bez dalekich torów (Global.editor_tracks tylko w Torach), tor pod kursorem tylko do 1,5 km od kamery.
