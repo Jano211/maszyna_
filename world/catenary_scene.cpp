@@ -1337,12 +1337,28 @@ assemble_middle( scene_chain &Chain ) {
             }
         }
         add_tube( solid, rope, ropeheight );
-        // V (złączka 6410-5 na przewodzie w połowie przęsła, ramiona do liny nośnej 1,50 m w obie strony wzdłuż przęsła): luźne
-        // linki zwisające między zaciskiem na linie nośnej a przewodem
+        // V (złączka 6410-5 na przewodzie w połowie przęsła, ramiona do liny nośnej 1,50 m w obie strony wzdłuż przęsła).
+        // Linka jest sztywna: z zacisku wychodzi chwilę wzdłuż liny nośnej, potem skośnie w dół i dochodzi do złączki wzdłuż
+        // przewodu (Jan 2026-10-25, zdjęcie) - krzywa trzeciego stopnia ze styczną do liny i do przewodu, wektory kontrolne
+        // po 0,6 odległości w poziomie (ZAŁOŻENIE dobrane na oko do zdjęcia)
         auto const reach { spanlength > 4.0 ? 1.5 / spanlength : 0.0 };
         auto const a { messengerat( 0.5 - reach ) }, b { messengerat( 0.5 + reach ) };
-        add_tube( solid, hanging( a, wiremiddle, 0.12, 12 ), ropeheight );
-        add_tube( solid, hanging( wiremiddle, b, 0.12, 12 ), ropeheight );
+        auto const unit = []( glm::dvec3 const &V ) { return glm::length( V ) > 1e-9 ? glm::normalize( V ) : glm::dvec3 { 1.0, 0.0, 0.0 }; };
+        auto const wiredirection { unit( vec( wires[ neighbour ] ) - vec( wires[ 1 ] ) ) };
+        auto const step { spanlength > 4.0 ? 0.1 / spanlength : 0.0 };
+        auto const stiff = [ & ]( glm::dvec3 const &From, glm::dvec3 const &Fromdirection, glm::dvec3 const &To, glm::dvec3 const &Todirection ) {
+            auto const handle { 0.6 * flat( From, To ) };
+            auto const p1 { From + Fromdirection * handle }, p2 { To - Todirection * handle };
+            std::vector<glm::dvec3> points;
+            int const steps { 16 };
+            for( int k = 0; k <= steps; ++k ) {
+                auto const t { static_cast<double>( k ) / steps }, u { 1.0 - t };
+                points.push_back( From * ( u * u * u ) + p1 * ( 3.0 * u * u * t ) + p2 * ( 3.0 * u * t * t ) + To * ( t * t * t ) );
+            }
+            return points;
+        };
+        add_tube( solid, stiff( a, unit( messengerat( 0.5 - reach + step ) - a ), wiremiddle, wiredirection ), ropeheight );
+        add_tube( solid, stiff( wiremiddle, wiredirection, b, unit( b - messengerat( 0.5 + reach - step ) ) ), ropeheight );
         // bryły zastępcze: zaciski 5560/5570 (na linie nośnej przy słupie środkowym i na końcach V), złączka 6410 na przewodzie
         add_box( solid, clamp, towards, 0.10, 0.045 );
         add_box( solid, a, alongspan, 0.08, 0.04 );
