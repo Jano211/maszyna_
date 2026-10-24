@@ -58,7 +58,8 @@ pulley 4460-03 diameter 0.3200 width 0.044 grooves 1
 // (os, mocowanie do uchwytu rolki), mount_2 = III (0,085 - na karcie odsuniety o 50 mm, w modelu na osi), hole_1 = I (-0,280),
 // hole_2 = IV (0,292), hole_3 = V (0,385), hole_4 = VI (0,4513); otwory na druty 0,040 w strone drutow
 lever 6406-01 hole I -0.280 0.040 hole II 0.000 0 hole III 0.085 0 hole IV 0.292 0.040 hole V 0.385 0.040 hole VI 0.4513 0.040
-// dzwignia rownoramienna 6403 (siec 32, dwie liny nosne): hole_1 0,250, hole_2 -0,2575, odsuniete 0,040 - na pozniej
+// dzwignia rownoramienna 6403 (model Jana): zero = os, hole_1 0,250 i hole_2 -0,25753 wzdluz Z, odsuniete 0,040 w -X
+lever 6403-01 hole axis 0.000 0 hole hole_1 0.250 0.040 hole hole_2 -0.25753 0.040
 
 // prety ciezarow: L od spodu talerza do osi oczka (tom 5 s. 164-165). Inny pret niz c tablicy (2,00) obniza spod ciezarow o roznice.
 part 6401-01 length 2.00     // zeliwnych
@@ -122,7 +123,7 @@ enddevice
 
 // 2 liny + 2 przewody na jednym stosie (siec 32, 35): urzadzenie jak 0461 (dwie podwojne rolki 1:4), dwie dzwignie 6406 szeregowo.
 // Ze zdjecia transportszynowy.pl IMG_0144 i opisu Jana (prawdopodobnie Kolprojekt z lat 80, karty nie mamy) - wymiary i otwory ZALOZONE.
-device 0461-2x2 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0461-2x2 table 0011-1 pulley 4460-01 lever 6403-01 lever2 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   mount 4450-01 0.0747 4440-02 0.27
   pivot 0.03436 0.02561       // 4450-01: mount_top / mount_bottom nad / pod zerem - tu wchodza uchwyty 5100 (gorny i dolny odwrocony)
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
@@ -138,13 +139,12 @@ device 0461-2x2 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-
   guide 5070-02 4.50 mount 0.07 bottom 0.80
   ring 5080-01 0.200 at 1.00
   safety 4600-01 4600-02 1.00 0.06     // zabezpieczenie 4600 wyk. 1 (karta 23-4600): ramiona 1,00 m z modeli, para po obu stronach rolek (0,06 - ZALOZENIE)
-  // pierwsza dzwignia: gorny otwor lina nosna 1 (jak 0461), dolny przez izolator zywiczny 7150 do osi drugiej 6406;
-  // druga: lina nosna 2 i przewody przez sruby rzymskie 4420 (Jan 2026-10-24)
+  // pierwsza od slupa rownoramienna 6403 (Jan 20:59): hole_1 lina nosna 1 (jak 0461, izolator 7150), hole_2 przez izolator zywiczny
+  // 7150 do drugiej - 6406 na dolnym mocowaniu (II, zero modelu); z niej przez sruby rzymskie 4420 lina nosna 2 i wyrownywacz 4410
   cascade 4720-01 0.10 7150-01 0.8324 4720-01 0.10
   messenger2 4720-01 0.10 4420-01 0.93
-  // otwory "na oko" (najblizej naciagow typu z otworow I, IV, V, VI): pierwsza I-IV os III daje linie 1 36%, druga I-V os III
-  // linie 2 45% reszty; liny nierowno (ok. 1950 / 1550 daN), przewody ok. 1890 daN przy typie 32. Ciezary Ø400 wysokie: 32 sztuki
-  // ze zdjecia przy DW755 (Jan), na precie 3,00 m (stos 2,94 m) - ZALOZENIE, karty nie ma
-  type 32 stack 6322-1w 32 lever I IV III second I V III rod 6402-04
-  type 35 stack 6322-1w 28 lever I IV III second I V III rod 6402-04
+  // 6403 dzieli po polowie: lina 1 dostaje pol calego naciagu. Otwory 6406 "na oko": VI lina 2, I przewody (najwiecej na przewody).
+  // Ciezary Ø400 wysokie: 32 sztuki ze zdjecia przy DW755 (Jan), na precie 3,00 m (stos 2,94 m) - ZALOZENIE, karty nie ma
+  type 32 stack 6322-1w 32 lever hole_1 hole_2 axis second VI I II rod 6402-04
+  type 35 stack 6322-1w 28 lever hole_1 hole_2 axis second VI I II rod 6402-04
 enddevice

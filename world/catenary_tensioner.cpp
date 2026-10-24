@@ -444,6 +444,7 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 if( key == "table" ) { device->table = value; }
                 else if( key == "pulley" ) { device->pulley = value; }
                 else if( key == "lever" ) { device->lever = value; }
+                else if( key == "lever2" ) { device->lever2 = value; }
                 else if( key == "rod" ) { device->rod = value; }
                 else if( key == "rope" ) { device->rope = value; }
                 else if( key == "rope_diameter" ) { number_of( value, device->rope_diameter ); }
@@ -511,13 +512,19 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     if( messengerhole == nullptr || contacthole == nullptr || axishole == nullptr ) {
         return fail( "lever " + lever->name + " has no hole " + type->messenger_hole + "/" + type->contact_hole + "/" + type->axis_hole );
     }
-    // druga dźwignia (dźwignie szeregowo): ta sama część co pierwsza
+    // druga dźwignia (dźwignie szeregowo): lever2 urządzenia albo ta sama część co pierwsza
     auto const cascade { false == type->second_axis_hole.empty() };
-    auto const *secondmessenger { cascade ? hole( type->second_messenger_hole ) : nullptr };
-    auto const *secondcontact { cascade ? hole( type->second_contact_hole ) : nullptr };
-    auto const *secondaxis { cascade ? hole( type->second_axis_hole ) : nullptr };
+    auto const *secondlever { cascade ? Catalog.lever( Device.lever2.empty() ? Device.lever : Device.lever2 ) : nullptr };
+    if( cascade && secondlever == nullptr ) { return fail( "no lever " + Device.lever2 ); }
+    auto const secondholeof = [ & ]( std::string const &Name ) -> std::pair<double, double> const * {
+        auto const found { secondlever->holes.find( Name ) };
+        return found == secondlever->holes.end() ? nullptr : &found->second;
+    };
+    auto const *secondmessenger { cascade ? secondholeof( type->second_messenger_hole ) : nullptr };
+    auto const *secondcontact { cascade ? secondholeof( type->second_contact_hole ) : nullptr };
+    auto const *secondaxis { cascade ? secondholeof( type->second_axis_hole ) : nullptr };
     if( cascade && ( secondmessenger == nullptr || secondcontact == nullptr || secondaxis == nullptr ) ) {
-        return fail( "lever " + lever->name + " has no hole " + type->second_messenger_hole + "/" + type->second_contact_hole + "/" + type->second_axis_hole );
+        return fail( "lever " + secondlever->name + " has no hole " + type->second_messenger_hole + "/" + type->second_contact_hole + "/" + type->second_axis_hole );
     }
     if( cascade && ( Device.cascade.empty() || Device.messenger2.empty() ) ) { return fail( "device " + Device.name + " has no cascade/messenger2 chain for the second lever" ); }
     Result.cascade = cascade;
@@ -797,7 +804,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     }
     if( cascade ) {
         place_chain( Device.cascade, "cascade", holepoint( *contacthole ), secondpull, Result );
-        auto placement { placed( "lever2", lever->name, secondhole( { 0.0, 0.0 } ) ) };
+        auto placement { placed( "lever2", secondlever->name, secondhole( { 0.0, 0.0 } ) ) };
         set_rotation( placement, secondpull * -secondsign, vec { 0.0, -1.0, 0.0 }, vec { -secondpull.z, 0.0, secondpull.x } * secondsign );
         Result.parts.push_back( placement );
     }

@@ -193,6 +193,9 @@ katalog kolprojekt1?).
   szeregowo), stos wysokich Ø400 – **32 sztuki**. Przy 27 kg byłoby 3390 daN, więc wysoki 6322 (91 mm) musi być cięższy: przyjęte
   43 kg (27 × 91/57), 32 szt. = 5399 daN ≈ typ 32 (5294). Teraz 0461-2x2: typ 32 – 32 × 6322-1w (liny 1954 / 1554, przewody 1891,
   stos 2,94 m), typ 35 – 28 szt.
+- Jan 20:59: pierwsza od słupa to **6403** (równoramienna, model: oś w zerze, hole_1 0,250, hole_2 −0,25753), druga 6406 na dolnym
+  mocowaniu (II). Urządzenie: `lever 6403-01 lever2 6406-01`, typ `lever hole_1 hole_2 axis second VI I II`. Skutek: lina 1 ma połowę
+  całego naciągu – typ 32: liny 2740 / 1018, przewody 1641 daN (typ sieci 1588 / 1588 / 2118). Do wyjaśnienia z Janem.
 
 ### 5. Kotwienia stałe (tom 1: 63-0403 sieci z izolacją, 0404 przewodów, 0405 lin nośnych, 0413 bez izolacji)
 - Na konstrukcji: **4430-1** przegubowy uchwyt kotwienia **[jest]** (lina i przewody osobno, 2 szt.)
