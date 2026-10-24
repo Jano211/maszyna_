@@ -253,7 +253,11 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
             if( keyword == "ring" && words.size() >= 3 ) {
                 device->ring = words[ 1 ];
                 if( false == number_of( words[ 2 ], device->ring_arm ) ) { report( "bad ring arm \"" + words[ 2 ] + "\"" ); }
-                if( words.size() >= 5 && words[ 3 ] == "turn" ) { number_of( words[ 4 ], device->ring_turn ); }
+                for( std::size_t k = 3; k + 1 < words.size(); k += 2 ) {
+                    if( words[ k ] == "turn" ) { number_of( words[ k + 1 ], device->ring_turn ); }
+                    else if( words[ k ] == "at" ) { number_of( words[ k + 1 ], device->ring_at ); }
+                    else { report( "unknown ring keyword \"" + words[ k ] + "\"" ); }
+                }
                 continue;
             }
             if( keyword == "messenger_old" ) { links_of( words, 1, device->messenger_old ); continue; }
@@ -741,8 +745,9 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         set_rotation( placement, toward * -1.0, vec { -toward.y, toward.x, 0.0 } * -1.0, vec { 0.0, 0.0, 1.0 } );
         return placement;
     };
+    auto const ringz { Device.ring_at < 0.0 ? z : s + std::min( Device.ring_at, z - s ) };
     if( false == Device.ring.empty() ) {
-        Result.parts.push_back( turned( "ring", Device.ring, vec { columnx, yb, z } ) );
+        Result.parts.push_back( turned( "ring", Device.ring, vec { columnx, yb, ringz } ) );
     }
     if( false == Device.guide.empty() ) {
         auto const guide { vec { columnx, yb, Device.guide_bottom } + toward * ( Device.ring.empty() ? 0.0 : Device.ring_arm ) };
@@ -754,7 +759,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         std::copy( mount, mount + 3, Result.guide_end );
         Result.guide_end[ 2 ] += Device.guide_length;
         if( mount[ 0 ] < 0.0 ) { Result.warnings.push_back( "the guide mounts are behind the face of the structure" ); }
-        if( false == Device.ring.empty() && ( z < Device.guide_bottom || z > Device.guide_bottom + Device.guide_length ) ) {
+        if( false == Device.ring.empty() && ( ringz < Device.guide_bottom || ringz > Device.guide_bottom + Device.guide_length ) ) {
             Result.warnings.push_back( "the guide ring is off the guide" );
         }
     }

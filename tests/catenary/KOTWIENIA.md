@@ -112,6 +112,18 @@ z zadanej długości drutu → naciąg).
   przed ramką to osobna część i czy zastępuje 4720/4420, czy też na linie nośnej, czy przy stanie „przejściowe” też
   (5110 jest teraz tylko przy zaśniedziałych).
 
+## Prowadnica, pierścień, uchwyty 5100 (karty przeczytane 2026-10-24 15:50)
+- **23-0018-2** (Uzup. 2 s. 8, usytuowanie ciężarów Ø306, kotwienie wspólne): prowadnica od **0,80 m** do 0,80 + 4,50 = 5,30 m nad
+  główką; pierścień prowadzący ok. **1,00 m nad spodem stosu** (na wysokości górnej części żeliwnych), przy +40 °C/750 m spód stosu
+  −0,07, pierścień ~0,93 – tuż nad spodem prowadnicy. Ciężar polimerobetonowy h = 100 mm. Rolki 6,70 m, 0,05 m nad rolką lina.
+- **33-0455** (Uzup. 2 s. 13): wyk. 7÷12 – dwa uchwyty poz. 1 na górze (pod urządzenie), jeden poz. 1 w połowie (górny koniec
+  prowadnicy), na dole poz. 2 (wyk. 11: 3 × 5100-1 + 1 × 5100-3; wyk. 12: 3 × 5100-2 + 1 × 5100-4). Prowadnica przed czołem słupa.
+- **13-5100** (t5 s. 76): uchwyty do kotwień, **słup 1611**; dwa kątowniki 40×40 ściągnięte śrubami M16; wyk. 1/2: a 220–250
+  (górą, węższy słup), wyk. 3/4: a 290–320 (dołem); śruby M16×220 (wyk. 1, 3) albo ×260 (wyk. 2, 4) – wg słupa (wyk. 11 / 12 w 0455).
+  Modele Jana: 5100-01…-04 przody, -05 tył do 1 i 2, -06 tył do 3 i 4, każdy z `eye`.
+- **23-5080** (t5 s. 74): pierścień wyk. 1 Ø310, zacisk na prowadnicy 210 mm od osi (model Jana 0,194), z drugiej strony szekla
+  200 mm; wyk. 2 Ø405 / 235. **13-5090** (s. 75): uchwyty prowadnic (rozdzielone).
+
 ## Izolator rolkowy ESN-2025 (Jan 2026-10-24 14:49–14:58, model `esn_2025.t3d`)
 - Stary izolator rolkowy (ramka z dwiema rolkami; zdjęcie i stary rysunek od Jana). Zero w pierwszym mocowaniu, `hole_1` w drugim,
   0,6004 m w −X (jak 7150 0,8324). 5 faz LOD.

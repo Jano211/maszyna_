@@ -34,7 +34,7 @@ http://mozilla.org/MPL/2.0/.
 //   pręt 6401/6402      zero na dole (pod stosem), w +Z do zaczepu na górze (długość z danych)
 //   ciężar 63xx         zero w środku spodu, w +Z; kolejne obracane o "turn" wokół Z; kolor numerem wykonania modelu
 //   prowadnica 5070     zero w osi przesuwu pierścienia na dole, w +Z; mocowania do wsporników w -X (w stronę konstrukcji)
-//   pierścień 5080      zero w osi stosu, poziomo, punkt przesuwu po prowadnicy w -X (w stronę konstrukcji)
+//   pierścień 5080      zero w osi stosu, poziomo, punkt przesuwu po prowadnicy w -X (w stronę konstrukcji); ring_at nad spodem stosu
 //   lina                linka rozciągana (część typu cord, zero w zaczepie, w +Z, skalowana wzdłuż Z)
 #pragma once
 #include <map>
@@ -134,9 +134,10 @@ struct tensioner_device {
     std::string guide, ring;
     double guide_length { 4.50 };
     double guide_mount { 0.07 };
-    double guide_bottom { 0.70 };       // spód prowadnicy nad główką szyny (tablica 0011-1)
+    double guide_bottom { 0.80 };       // spód prowadnicy nad główką szyny (karta 23-0018-2: 0,80, prowadnica 4,50 do 5,30)
     double ring_arm { 0.194 };
     double ring_turn { 0.0 };           // stopnie wokół osi stosu: 0 = prowadnica w stronę konstrukcji, 90 = w bok (+Y)
+    double ring_at { 1.00 };            // wysokość pierścienia nad spodem stosu (karta 23-0018-2: 1,00 m); ujemna = na wierzchu stosu
     std::vector<tensioner_type> types;
     tensioner_type const *type( int Code ) const;
 };
