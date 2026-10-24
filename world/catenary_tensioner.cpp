@@ -535,27 +535,42 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         Result.contact_tension = Result.tension - Result.messenger_tension;
     }
 
-    // łańcuchy do drutów
+    // łańcuchy do drutów: w stronę ostatniego podwieszenia (gdy podane), inaczej poziomo
+    auto const aim = [ & ]( vec const &From, double const *Target ) {
+        if( false == Input.aimed ) { return out; }
+        vec const to { Target[ 0 ] - From.x, Target[ 1 ] - From.y, Target[ 2 ] - From.z };
+        if( to.x < 1.0 ) {
+            Result.warnings.push_back( "the last suspension is behind or too close to the anchor, the wires are pulled level" );
+            return out;
+        }
+        return unit( to );
+    };
     {
-        auto end { place_chain( Device.messenger, "messenger", holepoint( *messengerhole ), out, Result ) };
+        auto const start { holepoint( *messengerhole ) };
+        auto const way { aim( start, Input.messenger_target ) };
+        auto end { place_chain( Device.messenger, "messenger", start, way, Result ) };
         auto const clamp { type->messenger_clamp.empty() ? Device.messenger_clamp.name : type->messenger_clamp };
         if( false == clamp.empty() ) {
-            Result.parts.push_back( placed_along( "messenger_clamp", clamp, end, out ) );
-            end = end + out * Device.messenger_clamp.length;
+            Result.parts.push_back( placed_along( "messenger_clamp", clamp, end, way ) );
+            end = end + way * Device.messenger_clamp.length;
         }
         Result.messenger_end[ 0 ] = end.x;
         Result.messenger_end[ 1 ] = end.y;
         Result.messenger_end[ 2 ] = end.z;
     }
     {
-        auto end { place_chain( Device.contact, "contact", holepoint( *contacthole ), out, Result ) };
+        auto const start { holepoint( *contacthole ) };
+        auto const way { aim( start, Input.contact_target ) };
+        auto end { place_chain( Device.contact, "contact", start, way, Result ) };
         std::vector<vec> ends;
         if( Input.contacts >= 2 && false == Device.equalizer.name.empty() ) {
-            Result.parts.push_back( placed_along( "equalizer", Device.equalizer.name, end, out ) );
-            end = end + out * Device.equalizer.length;
+            Result.parts.push_back( placed_along( "equalizer", Device.equalizer.name, end, way ) );
+            end = end + way * Device.equalizer.length;
+            // rozstaw przewodów poziomo, w poprzek kierunku łańcucha
+            auto const across { unit( vec { -way.y, way.x, 0.0 } ) };
             for( int k = 0; k < Input.contacts; ++k ) {
                 auto const offset { ( k - 0.5 * ( Input.contacts - 1 ) ) * Device.equalizer_spread };
-                ends.push_back( end + vec { 0.0, offset, 0.0 } );
+                ends.push_back( end + across * offset );
             }
         }
         else {
@@ -565,8 +580,8 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
             auto at { ends[ k ] };
             auto const &clamp { Input.old_fittings && false == Device.contact_clamp_old.name.empty() ? Device.contact_clamp_old : Device.contact_clamp };
             if( false == clamp.name.empty() ) {
-                Result.parts.push_back( placed_along( "contact_clamp." + std::to_string( k + 1 ), clamp.name, at, out ) );
-                at = at + out * clamp.length;
+                Result.parts.push_back( placed_along( "contact_clamp." + std::to_string( k + 1 ), clamp.name, at, way ) );
+                at = at + way * clamp.length;
             }
             Result.contact_ends.push_back( { at.x, at.y, at.z } );
         }

@@ -154,7 +154,12 @@ struct tensioner_input {
     int missing { 0 };                  // brakujące ciężary (z góry stosu)
     std::string color;                  // kolor ciężarów (tensioner_color); pusty = szary
     std::string top_color;              // kolor najwyższego ciężaru; pusty = jak reszta
-    bool old_fittings { false };        // stare złożenie (druty zaśniedziałe): uchwyty krańcowe przewodów 5110 zamiast 5120
+    bool old_fittings { false };
+    // punkty, w które celują łańcuchy do liny nośnej i do przewodów jezdnych (ostatnie podwieszenie, układ urządzenia);
+    // bez nich łańcuchy poziomo wzdłuż +X
+    bool aimed { false };
+    double messenger_target[ 3 ] { 0.0, 0.0, 0.0 };
+    double contact_target[ 3 ] { 0.0, 0.0, 0.0 };        // stare złożenie (druty zaśniedziałe): uchwyty krańcowe przewodów 5110 zamiast 5120
     double ground { -0.50 };            // najniższe położenie spodu ciężarów względem główki szyny (grunt, fundament); ZAŁOŻENIE
     double gravity { 0.981 };           // daN/kg
 };

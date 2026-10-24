@@ -598,6 +598,7 @@ assemble_gantry( scene_gantry &Gantry ) {
 
 std::size_t suspension_named( std::string const &File, std::string const &Name );
 void follow_anchor( scene_anchor const &Anchor );
+void rope_of( catenary::suspension const &Data, double *Rope );
 
 // urządzenia naprężające (traction_tensioners.txt); czytane przy pierwszym użyciu
 catenary::tensioner_catalog const *
@@ -667,20 +668,6 @@ assemble_anchor( scene_anchor &Anchor ) {
         if( chain.removed || chain.file != Anchor.file || data.name.empty() ) { continue; }
         if( chain.data.anchor_start == data.name || chain.data.anchor_end == data.name ) { input.old_fittings = ( chain.data.state == 1 ); }
     }
-    auto &result { Anchor.result };
-    if( false == catenary::solve_tensioner( *devices, *device, input, result ) ) {
-        for( auto const &warning : result.warnings ) { ErrorLog( label + "can't be assembled: " + warning ); }
-        return 0;
-    }
-    for( auto const &warning : result.warnings ) {
-        if( Notes.insert( warning ).second ) { WriteLog( ( "Catenary: " + warning + " (first seen in anchor \"" + data.name + "\")" ).c_str() ); }
-    }
-    if( auto const *cord { catalog->part( device->rope ) }; cord != nullptr ) {
-        catenary::tensioner_rope_parts( result, device->rope, cord->length, cord->girth, device->rope_eye, device->rope_eye_length );
-    }
-    else { ErrorLog( label + "rope part \"" + device->rope + "\" isn't in the cantilever catalogue, the rope isn't drawn" ); }
-    Anchor.temperature = Global.AirTemperature;
-
     // kierunek drutów w planie; zero urządzenia na czole słupa
     glm::dvec3 const axis { polepoint[ 0 ], polepoint[ 1 ], polepoint[ 2 ] };
     auto dx { data.toward[ 0 ] - axis.x }, dz { data.toward[ 2 ] - axis.z };
@@ -698,6 +685,51 @@ assemble_anchor( scene_anchor &Anchor ) {
         auto const part { catenary::cantilever_to_scene( placement, heading ) };
         return glm::dvec3 { origin.x + part.offset[ 0 ], origin.y + part.offset[ 1 ], origin.z + part.offset[ 2 ] };
     };
+    // łańcuchy do drutów wycelowane w ostatnie podwieszenie przed kotwieniem (przewody podchodzą pod kątem)
+    {
+        // punkt sceny -> układ urządzenia: osie urządzenia w scenie z toscene, układ prostokątny
+        double const zero[ 3 ] { 0.0, 0.0, 0.0 };
+        auto const base { toscene( zero ) };
+        glm::dvec3 axes[ 3 ];
+        for( int a = 0; a < 3; ++a ) {
+            double unit[ 3 ] { 0.0, 0.0, 0.0 };
+            unit[ a ] = 1.0;
+            axes[ a ] = toscene( unit ) - base;
+        }
+        auto const todevice = [ & ]( double const *Point, double *Out ) {
+            glm::dvec3 const d { Point[ 0 ] - base.x, Point[ 1 ] - base.y, Point[ 2 ] - base.z };
+            for( int a = 0; a < 3; ++a ) { Out[ a ] = glm::dot( d, axes[ a ] ); }
+        };
+        for( auto const &chain : Chains ) {
+            if( chain.removed || chain.file != Anchor.file || data.name.empty() || chain.data.suspensions.empty() ) { continue; }
+            std::string neighbour;
+            if( chain.data.anchor_start == data.name ) { neighbour = chain.data.suspensions.front(); }
+            else if( chain.data.anchor_end == data.name ) { neighbour = chain.data.suspensions.back(); }
+            else { continue; }
+            auto const index { suspension_named( Anchor.file, neighbour ) };
+            if( index >= Suspensions.size() || false == Suspensions[ index ].data.has_at ) { break; }
+            double rope[ 3 ];
+            rope_of( Suspensions[ index ].data, rope );
+            todevice( Suspensions[ index ].data.at, input.contact_target );
+            todevice( rope, input.messenger_target );
+            input.aimed = true;
+            break;
+        }
+    }
+    auto &result { Anchor.result };
+    if( false == catenary::solve_tensioner( *devices, *device, input, result ) ) {
+        for( auto const &warning : result.warnings ) { ErrorLog( label + "can't be assembled: " + warning ); }
+        return 0;
+    }
+    for( auto const &warning : result.warnings ) {
+        if( Notes.insert( warning ).second ) { WriteLog( ( "Catenary: " + warning + " (first seen in anchor \"" + data.name + "\")" ).c_str() ); }
+    }
+    if( auto const *cord { catalog->part( device->rope ) }; cord != nullptr ) {
+        catenary::tensioner_rope_parts( result, device->rope, cord->length, cord->girth, device->rope_eye, device->rope_eye_length );
+    }
+    else { ErrorLog( label + "rope part \"" + device->rope + "\" isn't in the cantilever catalogue, the rope isn't drawn" ); }
+    Anchor.temperature = Global.AirTemperature;
+
     {
         auto const messenger { toscene( result.messenger_end ) };
         double contact[ 3 ] { 0.0, 0.0, 0.0 };
@@ -870,6 +902,10 @@ rebuild_span( scene_chain &Chain, std::size_t const Span ) {
 // wszystkie przęsła łańcucha od nowa (zmiana typu, materiału, listy podwieszeń)
 void
 rebuild_chain( scene_chain &Chain ) {
+    // kotwienia łańcucha od nowa (stan drutów, kierunek do pierwszego/ostatniego podwieszenia), przed przęsłami do nich
+    for( auto const *name : { &Chain.data.anchor_start, &Chain.data.anchor_end } ) {
+        if( auto *anchor { anchor_named( Chain.file, *name ) }; anchor != nullptr ) { assemble_anchor( *anchor ); }
+    }
     for( auto *span : Chain.spans ) { if( span != nullptr ) { catenary_span_delete( span ); } }
     Chain.spans.assign( Chain.removed || Chain.data.suspensions.size() < 2 ? 0 : chain_points( Chain ) - 1, nullptr );
     for( std::size_t span = 0; span < Chain.spans.size(); ++span ) { rebuild_span( Chain, span ); }
@@ -1152,6 +1188,11 @@ follow_chains( std::size_t const Index ) {
         auto const &names { chain.data.suspensions };
         for( std::size_t position = 0; position < names.size(); ++position ) {
             if( names[ position ] != suspension.data.name ) { continue; }
+            // skrajne podwieszenie: kotwienie celuje w nie łańcuchami do drutów
+            std::string const *end { position == 0 ? &chain.data.anchor_start : position + 1 == names.size() ? &chain.data.anchor_end : nullptr };
+            if( end != nullptr && false == end->empty() ) {
+                if( auto *anchor { anchor_named( chain.file, *end ) }; anchor != nullptr ) { assemble_anchor( *anchor ); }
+            }
             auto const point { position + ( chain.data.anchor_start.empty() ? 0 : 1 ) };
             if( point > 0 ) { rebuild_span( chain, point - 1 ); }
             rebuild_span( chain, point );
@@ -1395,10 +1436,6 @@ catenary_chain_update( std::size_t const Index, catenary::chain const &Data ) {
     auto &chain { Chains[ Index ] };
     chain.data = Data;
     chain.removed = Data.suspensions.size() < 2;
-    // kotwienia łańcucha od nowa (stan drutów decyduje o osprzęcie), przed przęsłami, które do nich dochodzą
-    for( auto const *name : { &Data.anchor_start, &Data.anchor_end } ) {
-        if( auto *anchor { anchor_named( chain.file, *name ) }; anchor != nullptr ) { assemble_anchor( *anchor ); }
-    }
     rebuild_chain( chain );
     mark_changed( chain.file );
     return true;

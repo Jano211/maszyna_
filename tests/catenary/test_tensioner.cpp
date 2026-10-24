@@ -176,6 +176,32 @@ int main( int argc, char **argv ) {
         check( old == 2, "stare zlozenie: uchwyty krancowe 5110 na obu przewodach" );
     }
 
+    // łańcuchy wycelowane w ostatnie podwieszenie: konce drutow na prostej od otworu dzwigni do podwieszenia
+    {
+        catenary::tensioner_input input;
+        catenary::tensioner_result level, aimed;
+        catenary::solve_tensioner( catalog, *device, input, level );
+        input.aimed = true;
+        double const messenger[ 3 ] { 60.0, 1.5, 8.2 }, contact[ 3 ] { 60.0, -0.3, 5.0 };
+        std::copy( messenger, messenger + 3, input.messenger_target );
+        std::copy( contact, contact + 3, input.contact_target );
+        catenary::solve_tensioner( catalog, *device, input, aimed );
+        auto const along = [ & ]( std::string const &Role, double const *Target ) {
+            catenary::tensioner_placement const *first { nullptr };
+            for( auto const &part : aimed.parts ) { if( part.role == Role ) { first = &part; } }
+            if( first == nullptr ) { return false; }
+            // model biegnie w -X: kolumna X rotacji = -kierunek łańcucha
+            double d[ 3 ], l { 0.0 };
+            for( int a = 0; a < 3; ++a ) { d[ a ] = Target[ a ] - first->position[ a ]; l += d[ a ] * d[ a ]; }
+            l = std::sqrt( l );
+            double dot { 0.0 };
+            for( int a = 0; a < 3; ++a ) { dot += -first->rotation[ 3 * a ] * d[ a ] / l; }
+            return dot > 0.99999;
+        };
+        check( along( "messenger.1", messenger ) && along( "contact.1", contact ), "lancuchy do drutow skierowane na ostatnie podwieszenie" );
+        check( aimed.messenger_end[ 2 ] > level.messenger_end[ 2 ] && aimed.messenger_end[ 1 ] > level.messenger_end[ 1 ] && aimed.warnings.empty(), "lina nosna podchodzi w gore i w bok, bez uwag" );
+    }
+
     // lina z uchami: ucho na obu końcach z zaczepem w skrajnym punkcie liny, odcinki liny bez uch, ta sama długość razem
     {
         catenary::tensioner_input input;
