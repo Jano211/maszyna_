@@ -195,7 +195,9 @@ katalog kolprojekt1?).
   stos 2,94 m), typ 35 – 28 szt.
 - Jan 20:59: pierwsza od słupa to **6403** (równoramienna, model: oś w zerze, hole_1 0,250, hole_2 −0,25753), druga 6406 na dolnym
   mocowaniu (II). Urządzenie: `lever 6403-01 lever2 6406-01`, typ `lever hole_1 hole_2 axis second VI I II`. Skutek: lina 1 ma połowę
-  całego naciągu – typ 32: liny 2740 / 1018, przewody 1641 daN (typ sieci 1588 / 1588 / 2118). Do wyjaśnienia z Janem.
+  całego naciągu – typ 32: liny 2740 / 1018, przewody 1641 daN (typ sieci 1588 / 1588 / 2118).
+- Jan 21:08: na zdjęciu potwierdzone – pierwsza (bliżej słupa) złapana idealnie w połowie, druga w 1/4 wysokości od dołu
+  (II, dół = strona otworu I → I przewody, góra lina 2). Tak jest w danych; nierówny podział naciągu to skutek tego złożenia.
 
 ### 5. Kotwienia stałe (tom 1: 63-0403 sieci z izolacją, 0404 przewodów, 0405 lin nośnych, 0413 bez izolacji)
 - Na konstrukcji: **4430-1** przegubowy uchwyt kotwienia **[jest]** (lina i przewody osobno, 2 szt.)
