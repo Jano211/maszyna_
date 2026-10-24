@@ -352,6 +352,20 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 number_of( words[ 4 ], device->safety_offset );
                 continue;
             }
+            if( keyword == "safety_series" && words.size() >= 7 ) {
+                device->series_arm_fixed = words[ 1 ];
+                device->series_arm_moving = words[ 2 ];
+                device->series_bar = words[ 3 ];
+                number_of( words[ 4 ], device->series_arm );
+                number_of( words[ 5 ], device->series_bar_length );
+                number_of( words[ 6 ], device->safety_offset );
+                continue;
+            }
+            if( keyword == "title" && words.size() >= 2 ) {
+                device->title.clear();
+                for( std::size_t k = 1; k < words.size(); ++k ) { device->title += ( k > 1 ? " " : "" ) + words[ k ]; }
+                continue;
+            }
             if( keyword == "type" && words.size() >= 2 ) {
                 tensioner_type type;
                 double code;
@@ -1020,7 +1034,24 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     place_chain( Device.holder, "holder", movingaxle, pull, Result );
 
     // zabezpieczenie: ramiona z osi obu rolek do wspólnej dolnej śruby, para po obu stronach rolek
-    if( false == Device.safety_fixed.empty() ) {
+    // zabezpieczenie rolek szeregowych: ramiona z osi małych rolek pochylone tak, żeby ich końce dzielił drążek
+    if( series && false == Device.series_arm_fixed.empty() ) {
+        auto const offset { 0.5 * ( ( movingaxle.x - fixedsmall.x ) - Device.series_bar_length ) };
+        if( std::abs( offset ) < Device.series_arm ) {
+            auto const drop { std::sqrt( Device.series_arm * Device.series_arm - offset * offset ) };
+            for( auto const side : { -1.0, 1.0 } ) {
+                vec const aside { 0.0, side * Device.safety_offset, 0.0 };
+                auto const a { fixedsmall + aside }, b { movingaxle + aside };
+                vec const lowa { a.x + offset, a.y, height - drop }, lowb { b.x - offset, b.y, height - drop };
+                auto const role { std::string( side < 0.0 ? "safety_a" : "safety_b" ) };
+                Result.parts.push_back( placed_along( role + ".fixed", Device.series_arm_fixed, a, lowa - a ) );
+                Result.parts.push_back( placed_along( role + ".moving", Device.series_arm_moving, b, lowb - b ) );
+                if( false == Device.series_bar.empty() ) { Result.parts.push_back( placed_along( role + ".bar", Device.series_bar, lowa, lowb - lowa ) ); }
+            }
+        }
+        else { Result.warnings.push_back( "the pulleys are further apart than the safety arms reach" ); }
+    }
+    if( false == series && false == Device.safety_fixed.empty() ) {
         auto const half { 0.5 * ( movingaxle.x - fixedaxle.x ) };
         if( half < Device.safety_arm ) {
             auto const drop { std::sqrt( Device.safety_arm * Device.safety_arm - half * half ) };
@@ -1296,7 +1327,8 @@ void tensioner_rope_solid( tensioner_result &Result, double const Radius, int co
             auto const z { unit( Toward ) };
             auto const y { side_of( z ) };
             auto placement { placed( Role, Eye, Joint ) };
-            set_rotation( placement, cross( y, z ), y, z );
+            // ucho obrócone o 90 stopni wokół liny względem pierwotnego (Jan 2026-10-25): płaszczyzna ucha pionowo
+            set_rotation( placement, y, cross( y, z ) * -1.0, z );
             Result.parts.push_back( placement );
         };
         auto const n { points.size() };

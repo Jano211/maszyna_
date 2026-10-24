@@ -2108,6 +2108,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 				if (ImGui::Selectable(labels[k].c_str(), static_cast<int>(k) == chosen))
 				{
 					changed.middle = k == 0 ? std::string{} : chain->suspensions[k];
+					changed.middle_heights[0] = changed.middle_heights[1] = 0.0;
 					edited = true;
 				}
 			ImGui::EndCombo();
@@ -2124,11 +2125,40 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 				changed.middle_device = insulated == 1 ? "0408" : "0406";
 				edited = true;
 			}
+			// heights of the anchor rope on the poles before and after (when the cantilever is in the way)
+			auto const where{std::find(chain->suspensions.begin(), chain->suspensions.end(), chain->middle) - chain->suspensions.begin()};
+			auto const members{catenary_chain_members(Chain)};
+			for (int side = 0; side < 2; ++side)
+			{
+				auto const k{static_cast<std::size_t>(where) + (side == 0 ? -1 : 1)};
+				auto const *neighbour{k < members.size() ? catenary_scene_get(members[k]) : nullptr};
+				if (neighbour == nullptr || false == neighbour->has_pole)
+					continue;
+				auto const automatic{(neighbour->has_rope ? neighbour->rope[1] : neighbour->at[1] + 1.70) - neighbour->pole[1]};
+				auto height{static_cast<float>(chain->middle_heights[side] > 0.0 ? chain->middle_heights[side] : automatic)};
+				ImGui::PushID(side);
+				if (ImGui::SliderFloat(side == 0 ? STR_C("Anchor rope on the pole before (m)") : STR_C("Anchor rope on the pole after (m)"), &height, 4.0f, 10.0f, "%.2f"))
+				{
+					changed.middle_heights[side] = height;
+					edited = true;
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("Height of the anchor of the middle anchor rope on that pole above the rail heads; by default at the messenger. Move it when it hits the cantilever"));
+				ImGui::PopID();
+			}
+			if ((chain->middle_heights[0] > 0.0 || chain->middle_heights[1] > 0.0) && ImGui::Button(STR_C("Anchor rope at the messenger")))
+			{
+				changed.middle_heights[0] = changed.middle_heights[1] = 0.0;
+				edited = true;
+			}
 		}
 		ImGui::PopItemWidth();
 		if (edited)
 		{
-			tool.undo.push_back({++tool.group, true, Chain, std::nullopt, *chain, false});
+			// one undo step for one drag of a slider
+			auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
+			if (tool.undo.empty() || false == last.chain || last.index != Chain || false == ImGui::IsMouseDragging(0))
+				tool.undo.push_back({++tool.group, true, Chain, std::nullopt, *chain, false});
 			catenary_chain_update(Chain, changed);
 			chain = catenary_chain_get(Chain);
 			if (chain == nullptr)
@@ -2196,11 +2226,17 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 		auto fixed{false};
 		{
 			auto const devices{catenary_anchor_devices()};
-			auto const card{data.device.substr(0, data.device.find('-'))};
+			auto card{data.device.substr(0, data.device.find('-'))};
+			for (auto const &item : devices)
+				if (item.card == data.device)
+					card = data.device; // a variant listed by itself (0461-2x2)
 			std::vector<std::string> labels;
 			int chosen{-1};
 			for (std::size_t k = 0; k < devices.size(); ++k)
 			{
+				if (false == devices[k].title.empty())
+					labels.push_back(devices[k].title + " (" + devices[k].card + ")");
+				else
 				labels.push_back(format(devices[k].fixed ? STR_C("fixed (card %s)") : devices[k].split ? STR_C("weights, messenger and contact wires separately (card %s)") : devices[k].series ? STR_C("weights, pulleys in series (card %s)") : STR_C("weight tensioning (card %s)"), devices[k].card.c_str()));
 				if (devices[k].card == card)
 				{
