@@ -271,6 +271,24 @@ int main( int argc, char **argv ) {
         check( result.rope.size() > 3 * 36, "lina: luki na rolkach co 5 stopni" );
     }
 
+    // krazki rolek: osobno rowek A (model rolki) i B (4460-11), obrot o przewinieta line: 1, 2, 3, 4 razy przesuw rolki
+    {
+        catenary::tensioner_input input;
+        catenary::tensioner_result warm, cold;
+        catenary::solve_tensioner( catalog, *device, input, warm );
+        input.temperature = -25.0;
+        catenary::solve_tensioner( catalog, *device, input, cold );
+        int sheaves { 0 };
+        for( auto const &part : cold.parts ) { if( part.part == "4460-11" ) { ++sheaves; } }
+        auto const radius { 0.5 * 0.2148 + 0.5 * 0.012 };
+        auto const travel { cold.b - warm.b };
+        char text[ 200 ];
+        std::snprintf( text, sizeof( text ), "krazki: przy +10 °C bez obrotu, przy -25 °C rolka ruchoma %.2f m, krazek staly B %.2f obrotu", travel, cold.turn_fixed_b / ( 2.0 * 3.14159265358979 ) );
+        check( sheaves == 2 && std::abs( warm.turn_fixed_b ) < 1e-9 && std::abs( cold.turn_moving_a - travel / radius ) < 1e-9
+            && std::abs( cold.turn_fixed_a - 2.0 * cold.turn_moving_a ) < 1e-9 && std::abs( cold.turn_moving_b - 3.0 * cold.turn_moving_a ) < 1e-9
+            && std::abs( cold.turn_fixed_b - 4.0 * cold.turn_moving_a ) < 1e-9, text );
+    }
+
     // zabezpieczenie 4600: cztery ramiona, dolna śruba pod rolkami
     {
         catenary::tensioner_input input;

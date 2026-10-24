@@ -353,6 +353,7 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 if( words[ k ] == "diameter" ) { pulley.diameter = value; }
                 else if( words[ k ] == "width" ) { pulley.width = value; }
                 else if( words[ k ] == "grooves" ) { pulley.grooves = static_cast<int>( value ); }
+                else if( words[ k ] == "sheave" ) { pulley.sheave = words[ k + 1 ]; }
                 else { report( "pulley " + pulley.name + ": unknown keyword \"" + words[ k ] + "\"" ); }
             }
             m_pulleys.push_back( pulley );
@@ -495,9 +496,31 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     auto const radius { 0.5 * pulley->diameter + 0.5 * Device.rope_diameter };
     if( movingaxle.x - fixedaxle.x < 2.0 * radius ) { Result.warnings.push_back( "the pulleys overlap: the network pulled the moving one to the structure" ); }
     {
-        auto fixed { placed( "pulley_fixed", pulley->name, fixedaxle ) };
-        Result.parts.push_back( fixed );
-        Result.parts.push_back( placed( "pulley_moving", pulley->name, movingaxle ) );
+        // krążki obracają się o linę przewiniętą od położenia przy +10 °C (bez wydłużenia). Przy przesunięciu rolki ruchomej
+        // o d lina przechodzi kolejno: ruchoma A d, stała A 2d, ruchoma B 3d, stała B 4d (tyle jadą ciężary); wszystkie
+        // krążki obracają się w tę samą stronę: przy rolce oddalającej się od konstrukcji lina cofa się w stronę zaczepu,
+        // co w płaszczyźnie X-Z jest obrotem wokół +Y (Z w stronę X)
+        double b0 { b }, s0 { 0.0 };
+        table->lookup( 10.0, Input.distance, b0, s0 );
+        auto const travel { b - b0 };
+        auto const turn = [ & ]( double const Times ) { return Times * travel / radius; };
+        auto const twin { pulley->grooves >= 2 && false == pulley->sheave.empty() };
+        Result.turn_moving_a = turn( 1.0 );
+        Result.turn_fixed_a = turn( 2.0 );
+        Result.turn_moving_b = turn( pulley->grooves >= 2 ? 3.0 : 1.0 );
+        Result.turn_fixed_b = turn( pulley->grooves >= 2 ? 4.0 : 2.0 );
+        auto const spun = [ & ]( std::string const &Role, std::string const &Part, vec const &Axle, double const Angle ) {
+            auto placement { placed( Role, Part, Axle ) };
+            auto const c { std::cos( Angle ) }, s { std::sin( Angle ) };
+            set_rotation( placement, vec { c, 0.0, -s }, vec { 0.0, 1.0, 0.0 }, vec { s, 0.0, c } );
+            Result.parts.push_back( placement );
+        };
+        spun( "pulley_fixed", pulley->name, fixedaxle, Result.turn_fixed_a );
+        spun( "pulley_moving", pulley->name, movingaxle, Result.turn_moving_a );
+        if( twin ) {
+            spun( "sheave_fixed", pulley->sheave, fixedaxle, Result.turn_fixed_b );
+            spun( "sheave_moving", pulley->sheave, movingaxle, Result.turn_moving_b );
+        }
     }
     auto const axispoint { place_chain( Device.holder, "holder", movingaxle, out, Result ) };
 
