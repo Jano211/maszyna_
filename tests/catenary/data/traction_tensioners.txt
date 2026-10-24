@@ -45,7 +45,8 @@ table 0011-8 base 0011-1 shift_b 0.75 shift_s -0.40 height 6.30 rod 2.00
 weight 6321-1 height 0.056 mass 27 turn 90 model 6321 offset 0      // zeliwny
 weight 6323-1 height 0.101 mass 27 turn 90 model 6323 offset 0      // polimerobetonowy Ø306
 weight 6322-1 height 0.058 mass 27 turn 90 model 6322 offset 0      // polimerobetonowy Ø400 (Uzup. 2: 57 mm), wykonania 1-4; model ma top 56 mm - do poprawy na 58
-weight 6322-1w height 0.092 mass 27 turn 90 model 6322 offset 4     // polimerobetonowy Ø400, wysoki (karta 0019-3: 91 mm), wykonania 5-8
+weight 6322-1w height 0.092 mass 43 turn 90 model 6322 offset 4     // polimerobetonowy Ø400, wysoki (karta 0019-3: 91 mm), wykonania 5-8
+// 6322 wysoki: masa ZALOZONA 43 kg (27 kg x 91/57 mm); zgadza sie ze zdjeciem 2+2 przy DW755 (Google 2024): 32 sztuki na sieci 32
 
 // rolka linowa 4460 (tom 5 s. 27): diameter po dnie rowka, z pustych wezlow groove_a/groove_b modeli Jana (2026-10-23):
 // rowki 107,4 mm od osi (karta D 220 -> 110), rozstaw rowkow 41,2 mm; 4460-03 160 mm (karta D 320)
@@ -142,8 +143,8 @@ device 0461-2x2 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-
   cascade 4720-01 0.10 7150-01 0.8324 4720-01 0.10
   messenger2 4720-01 0.10 4420-01 0.93
   // otwory "na oko" (najblizej naciagow typu z otworow I, IV, V, VI): pierwsza I-IV os III daje linie 1 36%, druga I-V os III
-  // linie 2 45% reszty; liny nierowno (ok. 1840 / 1460 daN), przewody ok. 1780 daN przy typie 32. Ciezary Ø400 na precie 3,00 m
-  // (stos ok. 2,8 m) - ZALOZENIE, karty nie ma
-  type 32 stack 6322-1 48 lever I IV III second I V III rod 6402-04
-  type 35 stack 6322-1 43 lever I IV III second I V III rod 6402-04
+  // linie 2 45% reszty; liny nierowno (ok. 1950 / 1550 daN), przewody ok. 1890 daN przy typie 32. Ciezary Ø400 wysokie: 32 sztuki
+  // ze zdjecia przy DW755 (Jan), na precie 3,00 m (stos 2,94 m) - ZALOZENIE, karty nie ma
+  type 32 stack 6322-1w 32 lever I IV III second I V III rod 6402-04
+  type 35 stack 6322-1w 28 lever I IV III second I V III rod 6402-04
 enddevice

@@ -189,6 +189,10 @@ katalog kolprojekt1?).
   (tylko I, IV, V, VI na druty) nie dają równych lin: najbliżej I-IV oś III + I-V oś III → typ 32: 48 × Ø400 = 5086 daN, liny
   1840 / 1464, przewody 1781 (typ: 1588 / 1588 / 2118); typ 35: 43 szt. Pręt 6402-04 3,00 m, stos 2,8 m, mieści się od −25 do
   +40 °C przy 750 m. Wszystko ZAŁOŻENIE do potwierdzenia w terenie.
+- Jan 20:55: zdjęcie Google Street View przy DW755 (2024): to samo urządzenie (dwie rolki z zabezpieczeniem 4600 w „V”, dwie dźwignie
+  szeregowo), stos wysokich Ø400 – **32 sztuki**. Przy 27 kg byłoby 3390 daN, więc wysoki 6322 (91 mm) musi być cięższy: przyjęte
+  43 kg (27 × 91/57), 32 szt. = 5399 daN ≈ typ 32 (5294). Teraz 0461-2x2: typ 32 – 32 × 6322-1w (liny 1954 / 1554, przewody 1891,
+  stos 2,94 m), typ 35 – 28 szt.
 
 ### 5. Kotwienia stałe (tom 1: 63-0403 sieci z izolacją, 0404 przewodów, 0405 lin nośnych, 0413 bez izolacji)
 - Na konstrukcji: **4430-1** przegubowy uchwyt kotwienia **[jest]** (lina i przewody osobno, 2 szt.)
