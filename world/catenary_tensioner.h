@@ -113,6 +113,7 @@ struct tensioner_type {
 struct tensioner_device {
     std::string name;                   // karta, np. 0461
     std::string table, pulley, lever, rod, rope;
+    std::string lever2;                 // druga dźwignia (szeregowo), gdy inna niż pierwsza
     double rope_diameter { 0.010 };
     std::string rope_eye;               // ucho (kausza) na obu końcach liny, nieskalowane; pusty = lina bez uch
     double rope_eye_length { 0.0 };     // od zera ucha (styk z liną) do punktu "eye" (zaczep), wzdłuż +Z modelu
