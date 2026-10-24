@@ -91,6 +91,8 @@ struct catenary_editor
 		int selected{-1};
 		// chains: the poles placed one after another are joined by spans
 		bool chaining{true};
+		int continue_pending{-1}; // the chain goes on from this pole, from the next frame of the panel (the button is in the middle of it)
+		bool insert_spans{true}; // a pole placed in a span of a chain goes into the chain between the two poles of the span
 		int chain{-1}; // the chain the next pole is added to
 		int last{-1}; // the pole the next span starts at
 		bool append{true}; // the next pole goes after the last one of the chain, otherwise before the first
@@ -177,6 +179,21 @@ struct catenary_editor
 	void catenary_copy(std::vector<std::size_t> const &Targets);
 	bool catenary_propose_toward(bool &Toward);
 	void catenary_place(catenary_spot const &Spot);
+	// the span of a chain the spot falls in (in the plan: the wire point near the line of the span, between its ends)
+	struct chain_insert
+	{
+		int chain{-1};
+		std::size_t after{0}; // the new pole goes after this position of the chain
+		std::size_t from{0}, to{0}; // the suspensions at both ends of the span
+	};
+	bool catenary_insert_at(catenary_spot const &Spot, chain_insert &Insert) const;
+	// the next pole placed starts a new chain
+	void catenary_chain_end();
+	// the next poles placed go on from this pole: at the end (or the start) of its chain, or a new chain from it;
+	// false when the pole is in the middle of a chain
+	bool catenary_chain_continue(std::size_t Pole);
+	// the chain block of the poles page: what the next click does, end, anchor, go on from the selected pole
+	void render_catenary_chain_state();
 	void catenary_chain_apply();
 	void catenary_connect(std::size_t const To);
 	int catenary_gantry_hit() const;

@@ -151,13 +151,14 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 **Przęsła i łańcuchy**
 
 - [ ] Przęsła naprężenia: dwa łańcuchy na jednym słupie (102x, 0120, zerówki); drugi przewód i druga lina z wyniku wysięgnika (`second_wire`, `wire_b`, `messenger_b`, `arms.N.wire`) do danych przęseł
-- [ ] Wstawianie słupa w środek łańcucha
+- [x] Wstawianie słupa w środek łańcucha (24.10, odcinek 2138): słup postawiony pod przęsłem (punkt drutu do 1,5 m od linii przęsła, nie bliżej niż 2 m od jego końców) wchodzi do łańcucha między te dwa słupy, w pliku łańcucha; podgląd dwóch nowych przęseł; checkbox „W przęsła”
+- [x] Łańcuch w panelu Słupy (24.10): ramka z tym, co zrobi następny klik, „Zakończ łańcuch (Esc)”, „Zakotwij tu i zakończ”; przy zaznaczonym słupie końcowym (albo poza łańcuchem) „Ciągnij łańcuch od tego słupa (C)” – też na stronie Druty; Esc przerywa też rozwieszanie i wybór słupa pod kotwienie
 - [ ] Rozstaw drutów 10 cm przy 6207/6208 przechodzący w 8 cm na pierwszych wieszakach
 - [ ] Zygzak przy słupach po różnych stronach toru (liczyć po stronie drutu, nie do/od słupa) – niski priorytet
 - [ ] Wyciąganie liny nośnej na zewnątrz łuku
 - [ ] Typ wieszaka (pojedynczy / podwójny, karty 0570–0579) w pliku typu sieci
 - [ ] Głowica 4170 obracana w kierunek liny w przęsłach naprężenia
-- [ ] „Rozwieś druty”: czy kończyć też Esc / PPM (pytanie do Jana)
+- [x] „Rozwieś druty”: kończy też Esc (24.10)
 
 **Słupy i podwieszenia**
 
@@ -194,6 +195,7 @@ Te rzeczy są w danych jako ZAŁOŻENIE albo czekają na obejrzenie w grze. Odha
 - [x] Teowniki: 09xx, 0177/0179/0197, 0180, dwie sieci 018x/019x, łuki 0137–0174, 0167/0169
 - [ ] Przęsła łańcuchów po poprawce (linie i bryły nie naraz, nie rozjeżdżają się po edycji sąsiada)
 - [ ] Bramka trzymana od toru przy przeciąganiu; mocowania wysięgnika na słupie bramki (depth = 2·offset)
+- [ ] Łańcuchy: wstawianie w przęsło, ramka „Łańcuch”, C / Esc (24.10, odcinek 2138)
 
 **Założenia w danych**
 
