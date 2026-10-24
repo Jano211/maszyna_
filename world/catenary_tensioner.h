@@ -222,6 +222,7 @@ struct tensioner_input {
     int type { 3 };                     // numer typu sieci (traction_code)
     int contacts { 2 };                 // liczba przewodów jezdnych
     int messengers { 1 };               // liczba lin nośnych (kotwienie stałe sieci 32, 35: dwie)
+    double messenger_stack { 0.04 };    // odstęp pionowy dwóch lin nośnych w przęśle (druga celuje o tyle niżej)
     double temperature { 10.0 };        // °C
     double distance { 700.0 };          // m, od kotwienia stałego albo środkowego
     double elongation { 0.0 };          // m, trwałe wydłużenie sieci od ostatniej regulacji (rolka bliżej konstrukcji)
