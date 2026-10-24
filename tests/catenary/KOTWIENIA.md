@@ -80,7 +80,13 @@ w scenariuszu; parametry „stanu”: brakujące krążki (stos krótszy, nacią
 sieci od ostatniej regulacji (ciężary niżej o 4×; oparte o grunt = utrata naciągu), zerwanie kotwienia (przęsła liczone
 z zadanej długości drutu → naciąg).
 
-## Do zrobienia (Jan 2026-10-24)
+## Stan 2026-10-24 14:30 (pełna lista: ZADANIA.md)
+- Lina: bryła proceduralna (`tensioner_rope_solid` → `Anchor.rope` w układzie scenerii → `catenary_span_attach` na przęśle do
+  kotwienia → `solid.rope` w rendererach), ucha 4490-02 jako modele. Segmenty 4490-01 i `tensioner_rope_parts` usunięte.
+- Rolki: `sheave 4460-11` w `pulley`; obroty w `tensioner_result::turn_*`.
+- Czekają na Jana: 5070-2 / 5080-1 / 5090, mocowania 0455 + przypisanie wykonań do słupów, 6411-01, izolator rolkowy, 4430-01.
+
+## Do zrobienia (Jan 2026-10-24, rano)
 - **Lina 4490 – porządek.** Teraz lina jest rysowana modelem odciągu 9832-02, który ma oko (kauszę) na końcu, więc na
   łuku na rolce oko wychodzi w każdym odcinku. Jan zrobi: **4490-01 sama lina** (do odcinków środkowych i łuków),
   **4490-02 / 4490-03 z okiem na jednym albo drugim końcu** (pierwszy odcinek – zaczep przy rolce stałej, ostatni – pręt

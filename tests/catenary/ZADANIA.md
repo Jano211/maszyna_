@@ -1,6 +1,6 @@
 # Sieć trakcyjna w exe – lista zadań
 
-Stan na 2026-10-24 13:30. Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
+Stan na 2026-10-24 14:30. Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
 (https://claude.ai/artifact/LboXDQjty15vbb7ieh8AUn) – Jan może odhaczać tam; przy zmianach przenosić tutaj.
 Zestawienie z notatek w `tests/catenary/*.md` (PRZEKAZANIE, KONCEPCJA, KONCEPCJA_EDYTOR, BRAMKI, KOTWIENIA, GLOWACKI,
 ROZSZERZANIE) i z pracy nad kotwieniami 23–24.10.
@@ -96,7 +96,9 @@ dźwigni zgadzają się z kartą 0002 dla typów 3, 4, 10 i 26. Szczegóły: KOT
 
 - [x] Tablica montażowa 0011-1 liczona ze wzoru 13-0011 (b, s od temperatury i odległości od kotwienia stałego); 0011-6/-7/-8 jako przesunięcia
 - [x] Dźwignia 6406: otwory z modelu, podział naciągu momentami; otwory na druty po właściwej stronie (poprawka 24.10)
-- [x] Lina 1:4 o stałej długości w −25…+40 °C; model 4490-01 (12 mm, `rope_diameter 0.012`) i ucha 4490-02 (`rope_eye 4490-02 0.205`) na obu końcach
+- [x] Lina 1:4 o stałej długości w −25…+40 °C; ucha 4490-02 (`rope_eye 4490-02 0.205`) na obu końcach
+- [x] Lina jako bryła proceduralna (24.10 po południu): rura 12 mm (`rope_diameter`), 8 ścianek, łuki na rolkach co 5°, bez łączeń; stal (`catenary_rope_metal`); rysuje ją z bliska przęsło dochodzące do kotwienia (`catenary_span_attach`, uchwyt `solid.rope` w obu rendererach). Model 4490-01 nieużywany. Z daleka (poza zasięgiem brył) liny nie ma; bez typu sieci w przęśle – też nie
+- [x] Krążki rolek kręcą się (24.10): `pulley … sheave 4460-11`; 4460-01 = oś + krążek rowka A, 4460-11 = krążek B; obrót o przewiniętą linę od położenia przy +10 °C (ruchoma A 1×, stała A 2×, ruchoma B 3×, stała B 4× przesuwu rolki), wokół +Y urządzenia. Nakrętki osi kręcą się z krążkiem A – Jan: zostaje tak (bez dodatkowych submodeli)
 - [x] Stos ciężarów: każdy kolejny obrócony o 90°, cztery wykonania kolorów, osobny kolor najwyższego, wysokie 6322
 - [x] Pręty 6401/6402 z modeli, poprawka s na długość pręta, zabezpieczenie 4600 wyk. 1
 - [x] Stan sieci: brakujące ciężary, wydłużenie od regulacji, ciężary na gruncie (sieć bez naciągu)
@@ -124,6 +126,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [ ] 4430-01 (`hole_1` −0,0747): ustalić, gdzie stoi
 - [ ] Stary izolator rolkowy (ramka z dwiema porcelanowymi rolkami) zamiast 7150 przy drutach zaśniedziałych – numer, pivoty, czy pręt przed ramką to osobna część, czy na linie nośnej też
 - [ ] Czy stan „przejściowe” też ma dawać stare złożenie (5110 i izolator rolkowy)
+- [ ] Obejrzeć w grze: lina proceduralna (czy siedzi w rowkach), obrót krążków przy suwaku temperatury
 - [ ] Obroty części po komplecie modeli (Jan powie, co stoi krzywo)
 - [ ] Dźwignia przechylona do kierunku drutów (dziś wisi pionowo, łańcuchy już celują w podwieszenie)
 
