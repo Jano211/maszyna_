@@ -2,7 +2,22 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – stan na 2026-10-24 (kotwienia; wcześniej edytor sieci, bramki, łańcuchy)
+## START TUTAJ – stan na 2026-10-25 01:05 (kotwienia; wcześniej edytor sieci, bramki, łańcuchy)
+
+- **Ustalenie z Janem 2026-10-25: do środy (limit tygodniowy) ŻADNYCH NOWYCH TEMATÓW – tylko domykanie rozgrzebanego** (poprawki
+  po jego oględzinach w exe, modele mocowań i malowanie słupów robi on). Jan przetestuje sieć „w jakiejś Częstochowie”.
+- Zrobione w odcinku 2138 (24/25.10, szczegóły KOTWIENIA.md): brakujące ciężary skracają sieć (tablica przewodów: przekrój,
+  moduł), kotwienia: stałe 0403/0413/0423 (odmiany 10, 20, 32), rolki szeregowe 0471/0480 z 4600-2, rozdzielone 0482/0486
+  (dwa stosy, 5040-2, ramy 5090), 2+2 na jednym stosie 0461-2x2 (dwie 6403), środkowe 0406/0408 (bryły zastępcze zacisków,
+  V z liny nośnej z solvera przęsła, suwaki wysokości), uchwyty 4520 dla 1665–1667 i 1701 (width 0,21), przekładka 6411 na
+  sworzniu ucha, `@90` – obrót części łańcucha, rodzaj kotwienia w edytorze, typ sieci kotwienia z łańcucha.
+- **Kolejka PO środzie (Jan, nie ruszać wcześniej):** kotwienie samej liny / samych przewodów (0405 / 0404, ciężarowe z
+  połówek rozdzielonego) + łańcuch „lina kończy się na kotwieniu X, przewód idzie dalej” i przęsła samego przewodu (koncepcja
+  zaakceptowana 01:05, praktyka do sprawdzenia; Jan ma papiery na podwieszenia mostowe/tunelowe), LPN-y, przewody wzmacniające,
+  parasole wstawiane z edytora (na zwisach bramek i wysięgniki rozstawione), kotwienia środkowe 0416 (do dźwigara) i 0418,
+  sieci Y 36/37 w kotwieniach (Kolprojekt 2010 s. 21–29: części 5505-17/18, 6410-17/18, 9811-7/8, 5120-7/8), obejma dodatkowa
+  przy teowych wysięgnikach w kotwieniu środkowym.
+- MSVC: nie nazywać zmiennych `small`, `near`, `far`, `interface`, `hyper` (makra Windows); /tmp/claude-0/syn.sh ma je dodane.
 
 - **Jan buduje exe z gałęzi `wszystko`** (sieć + bujanie + radio): po każdej zmianie kodu scalić `siec-trakcyjna` do `wszystko` i wypchnąć obie (24.10: zapomniane – Jan zbudował bez `width`, słupy 161x odrzucone).
 - **NOWY CZAT: najpierw `ZADANIA.md`** (pełna lista zadań: zrobione / do zrobienia / do potwierdzenia / odłożone,
