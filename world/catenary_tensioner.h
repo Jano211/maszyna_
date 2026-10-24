@@ -103,6 +103,9 @@ struct tensioner_type {
     int code { -1 };
     std::vector<std::pair<std::string, int>> stack;   // od dołu: ciężar, liczba
     std::string messenger_hole, contact_hole, axis_hole;
+    // dźwignie szeregowo (2 liny + 2 przewody na jednym stosie): otwór przewodów pierwszej dźwigni ciągnie łańcuchem "cascade"
+    // drugą dźwignię za jej otwór osi; druga dzieli dalej na drugą linę nośną i przewody. Puste = jedna dźwignia
+    std::string second_messenger_hole, second_contact_hole, second_axis_hole;
     std::string rod;                    // pręt, gdy inny niż urządzenia
     std::string messenger_clamp;        // uchwyt krańcowy liny nośnej, gdy inny niż urządzenia
 };
@@ -118,6 +121,9 @@ struct tensioner_device {
     std::vector<tensioner_link> hanger; // od rolki stałej w dół do pręta (bez liny)
     std::vector<tensioner_link> messenger; // od otworu dźwigni do uchwytu krańcowego liny nośnej (bez uchwytu)
     std::vector<tensioner_link> contact;   // od otworu dźwigni do wyrównywacza albo uchwytu krańcowego przewodu
+    // dźwignie szeregowo: od otworu przewodów pierwszej do osi drugiej (z izolatorem) i od otworu liny drugiej do uchwytu drugiej
+    // liny nośnej; przewody ("contact") wtedy z drugiej dźwigni
+    std::vector<tensioner_link> cascade, messenger2;
     // stare złożenia: izolator rolkowy ESN-2025 zamiast 7150 (Jan 2026-10-24: ESN-2025 - 4420 - [wyrównywacz] - uchwyt);
     // puste = jak nowe
     std::vector<tensioner_link> messenger_old, contact_old;
@@ -235,6 +241,10 @@ struct tensioner_result {
     double shortening { 0.0 };              // m, o ile rolka odjechała od tablicy przez mniejszy naciąg (sprężystość i zwis)
     double messenger_tension { 0.0 }, contact_tension { 0.0 };
     double messenger_end[ 3 ] { 0.0, 0.0, 0.0 };         // gdzie kończy się lina nośna (uchwyt krańcowy)
+    // dźwignie szeregowo: druga lina nośna (z drugiej dźwigni) i naciągi obu lin osobno (messenger_tension to ich suma)
+    bool cascade { false };
+    double messenger2_end[ 3 ] { 0.0, 0.0, 0.0 };
+    double messenger_tensions[ 2 ] { 0.0, 0.0 };
     std::vector<std::vector<double>> contact_ends;       // gdzie kończą się przewody jezdne
     bool grounded { false };                // ciężary oparte o grunt: sieć bez naciągu od urządzenia
     // mocowania prowadnicy do wsporników na konstrukcji (dolne i górne, układ urządzenia); has_guide = false bez prowadnicy

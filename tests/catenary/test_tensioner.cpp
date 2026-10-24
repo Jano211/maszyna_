@@ -513,6 +513,69 @@ int main( int argc, char **argv ) {
         check( arms == 4 && result.warnings.empty(), "zabezpieczenie 4600: dwie pary ramion, tez przy -25 °C (rolki najdalej)" );
     }
 
+    // 2 liny + 2 przewody na jednym stosie: dwie dzwignie 6406 szeregowo (Jan, zdjecie IMG_0144; otwory i stos ZALOZONE)
+    if( auto const *twin { catalog.device( "0461-2x2" ) }; twin != nullptr ) {
+        for( auto const code : { 32, 35 } ) {
+            catenary::tensioner_input input;
+            input.type = code;
+            input.pole = "1611-11";
+            input.depth = []( double ) { return 0.12; };
+            catenary::tensioner_result result;
+            auto const solved { catenary::solve_tensioner( catalog, *twin, input, result ) };
+            auto const label { "2x2 typ " + std::to_string( code ) };
+            std::printf( "    %s: %d ciezarow, %.0f daN: liny %.0f + %.0f, przewody %.0f; stos %.2f m, spod %.2f\n", label.c_str(), result.weights, result.tension,
+                result.messenger_tensions[ 0 ], result.messenger_tensions[ 1 ], result.contact_tension, result.stack_height, result.s );
+            for( auto const &warning : result.warnings ) { std::printf( "      uwaga: %s\n", warning.c_str() ); }
+            catenary::tensioner_placement const *first { nullptr }, *second { nullptr }, *cascade { nullptr };
+            int clamps { 0 };
+            for( auto const &part : result.parts ) {
+                if( part.role == "lever" ) { first = &part; }
+                if( part.role == "lever2" ) { second = &part; }
+                if( part.role == "cascade.2" ) { cascade = &part; }
+                if( part.role == "messenger_clamp" || part.role == "messenger2_clamp" || part.role.rfind( "contact_clamp.", 0 ) == 0 ) { ++clamps; }
+            }
+            auto good { solved && result.cascade && first != nullptr && second != nullptr && cascade != nullptr && cascade->part == "7150-01" && clamps == 4 };
+            good = good && std::abs( result.messenger_tensions[ 0 ] + result.messenger_tensions[ 1 ] + result.contact_tension - result.tension ) < 1e-6;
+            // druga dzwignia dalej od konstrukcji niz pierwsza, obie liny wychodza dalej niz pierwsza dzwignia
+            good = good && second->position[ 0 ] > first->position[ 0 ] + 0.5 && result.messenger2_end[ 0 ] > result.messenger_end[ 0 ] - 1.5;
+            good = good && result.contact_ends.size() == 2 && result.warnings.empty();
+            check( good, label + ": dwie dzwignie szeregowo (izolator 7150 miedzy nimi), dwie liny i dwa przewody, naciag sie zgadza, bez uwag" );
+        }
+        // stos 2,8 m na precie 3,00 m miesci sie od -25 do +40 °C przy 750 m; lancuchy wycelowane w ostatnie podwieszenie
+        {
+            catenary::tensioner_input input;
+            input.type = 32;
+            input.distance = 750.0;
+            auto good { true };
+            for( auto const temperature : { -25.0, 40.0 } ) {
+                input.temperature = temperature;
+                catenary::tensioner_result result;
+                good = good && catenary::solve_tensioner( catalog, *twin, input, result ) && result.warnings.empty() && false == result.grounded;
+            }
+            input.temperature = 10.0;
+            input.aimed = true;
+            double const rope[ 3 ] { 30.0, 0.5, 8.4 }, wire[ 3 ] { 30.0, 0.5, 6.6 };
+            std::copy( rope, rope + 3, input.messenger_target );
+            std::copy( wire, wire + 3, input.contact_target );
+            catenary::tensioner_result aimed;
+            good = good && catenary::solve_tensioner( catalog, *twin, input, aimed ) && aimed.warnings.empty() && std::abs( aimed.lever_tilt ) > 1e-3 && aimed.messenger2_end[ 2 ] > 6.7;
+            check( good, "2x2 typ 32: stos na precie od -25 do +40 °C (750 m), lancuchy do podwieszenia nad urzadzeniem bez uwag" );
+        }
+        // 4 brakujace: druga lina ma polowe sztywnosci - skrocenie z wagami czesci naciagu
+        catenary::tensioner_input input;
+        input.type = 32;
+        input.missing = 4;
+        input.messenger_stiffness = 2.0 * 118e9 * 120e-6 / 10.0;
+        input.contact_stiffness = 2.0 * 120e9 * 100e-6 / 10.0;
+        catenary::tensioner_result result;
+        catenary::solve_tensioner( catalog, *twin, input, result );
+        auto const t0 { result.nominal_tension }, dt { t0 - result.tension };
+        auto const f1 { result.messenger_tensions[ 0 ] / result.tension }, f2 { result.messenger_tensions[ 1 ] / result.tension }, fc { result.contact_tension / result.tension };
+        auto const expected { f1 * f1 * dt * 700.0 / ( 0.5 * input.messenger_stiffness ) + f2 * f2 * dt * 700.0 / ( 0.5 * input.messenger_stiffness ) + fc * fc * dt * 700.0 / input.contact_stiffness };
+        check( std::abs( result.shortening - expected ) < 1e-9 && expected > 0.0, "2x2, 4 brakujace: skrocenie sprezyste obu lin i przewodow (bez zwisu)" );
+    }
+    else { check( false, "urzadzenie 0461-2x2" ); }
+
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDOW: %d\n", failures );
     return failures == 0 ? 0 : 1;
 }

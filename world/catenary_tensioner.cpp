@@ -240,6 +240,8 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
             if( keyword == "hanger" ) { links_of( words, 1, device->hanger ); continue; }
             if( keyword == "messenger" ) { links_of( words, 1, device->messenger ); continue; }
             if( keyword == "contact" ) { links_of( words, 1, device->contact ); continue; }
+            if( keyword == "cascade" ) { links_of( words, 1, device->cascade ); continue; }
+            if( keyword == "messenger2" ) { links_of( words, 1, device->messenger2 ); continue; }
             if( keyword == "guide" && words.size() >= 3 ) {
                 device->guide = words[ 1 ];
                 if( false == number_of( words[ 2 ], device->guide_length ) ) { report( "bad guide length \"" + words[ 2 ] + "\"" ); }
@@ -321,6 +323,11 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                         type.messenger_hole = words[ k++ ];
                         type.contact_hole = words[ k++ ];
                         type.axis_hole = words[ k++ ];
+                    }
+                    else if( key == "second" && k + 2 < words.size() ) {
+                        type.second_messenger_hole = words[ k++ ];
+                        type.second_contact_hole = words[ k++ ];
+                        type.second_axis_hole = words[ k++ ];
                     }
                     else if( key == "rod" && k < words.size() ) { type.rod = words[ k++ ]; }
                     else if( key == "clamp" && k < words.size() ) { type.messenger_clamp = words[ k++ ]; }
@@ -504,6 +511,16 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     if( messengerhole == nullptr || contacthole == nullptr || axishole == nullptr ) {
         return fail( "lever " + lever->name + " has no hole " + type->messenger_hole + "/" + type->contact_hole + "/" + type->axis_hole );
     }
+    // druga dźwignia (dźwignie szeregowo): ta sama część co pierwsza
+    auto const cascade { false == type->second_axis_hole.empty() };
+    auto const *secondmessenger { cascade ? hole( type->second_messenger_hole ) : nullptr };
+    auto const *secondcontact { cascade ? hole( type->second_contact_hole ) : nullptr };
+    auto const *secondaxis { cascade ? hole( type->second_axis_hole ) : nullptr };
+    if( cascade && ( secondmessenger == nullptr || secondcontact == nullptr || secondaxis == nullptr ) ) {
+        return fail( "lever " + lever->name + " has no hole " + type->second_messenger_hole + "/" + type->second_contact_hole + "/" + type->second_axis_hole );
+    }
+    if( cascade && ( Device.cascade.empty() || Device.messenger2.empty() ) ) { return fail( "device " + Device.name + " has no cascade/messenger2 chain for the second lever" ); }
+    Result.cascade = cascade;
     auto const rodname { type->rod.empty() ? Device.rod : type->rod };
     auto const rodlength { [ & ] { auto const found { Catalog.part_lengths().find( rodname ) }; return found != Catalog.part_lengths().end() ? found->second : table->rod; }() };
 
@@ -537,33 +554,50 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     Result.tension = 4.0 * mass * Input.gravity;
     Result.nominal_tension = 4.0 * fullmass * Input.gravity;
 
-    // podział naciągu dźwignią: momenty względem osi
-    auto const armmessenger { std::abs( messengerhole->first - axishole->first ) };
-    auto const armcontact { std::abs( contacthole->first - axishole->first ) };
-    auto const shares { armmessenger + armcontact };
-    auto const messengershare { shares > 1e-9 ? armcontact / shares : 0.5 }; // część naciągu na linie nośnej
+    // podział naciągu dźwignią: momenty względem osi; część naciągu na otworze liny
+    auto const share = [ & ]( std::pair<double, double> const &Messenger, std::pair<double, double> const &Contact, std::pair<double, double> const &Axis ) {
+        auto const arm_m { std::abs( Messenger.first - Axis.first ) }, arm_c { std::abs( Contact.first - Axis.first ) };
+        return arm_m + arm_c > 1e-9 ? arm_c / ( arm_m + arm_c ) : 0.5;
+    };
+    auto const messengershare { share( *messengerhole, *contacthole, *axishole ) };
+    auto const secondshare { cascade ? share( *secondmessenger, *secondcontact, *secondaxis ) : 0.0 };
+    // części naciągu całej sieci: pierwsza lina, druga lina (szeregowo), przewody. Przesunięcia końców drutów przenoszą się na oś
+    // pierwszej dźwigni z tymi samymi wagami (dźwignia sztywna: oś = część·przesunięcie liny + reszta·przesunięcie drugiej strony)
+    auto const first { messengershare };
+    auto const second { cascade ? ( 1.0 - messengershare ) * secondshare : 0.0 };
+    auto const wires { 1.0 - first - second };
+    auto const ropeshare { first + second };
 
     // mniejszy naciąg niż w tablicy: sieć krótsza o wydłużenie sprężyste od różnicy naciągów i o nadmiar długości zwisu.
     // Wieszaki trzymają przewody pod liną, więc dodatkowy zwis jest wspólny i niesie go naciąg liny i przewodów razem:
     // lina zwisa f0·(Hm0 + Hc)/(Hm + Hc), przewody (prosto przy pełnym naciągu) f0·(Hm0 − Hm)/(Hm + Hc), gdzie
-    // f0 = w·a²/(8·Hm0); nadmiar długości zwisu w przęśle 8·f²/(3·a), przęseł distance/a. Lina i przewody ciągną każde
-    // swój otwór dźwigni, oś dźwigni (rolka ruchoma) przesuwa się o średnią ważoną ramionami
+    // f0 = w·a²/(8·Hm0); nadmiar długości zwisu w przęśle 8·f²/(3·a), przęseł distance/a. Dwie liny szeregowo: każda ma połowę
+    // sztywności i swoją część naciągu
     if( mass > 0.0 && Result.tension < Result.nominal_tension && ( Input.messenger_stiffness > 0.0 || Input.contact_stiffness > 0.0 ) ) {
         auto const length { std::max( 0.0, Input.distance ) };
-        auto const messenger0 { Result.nominal_tension * messengershare }, messenger { Result.tension * messengershare };
-        auto const contact0 { Result.nominal_tension - messenger0 }, contact { Result.tension - messenger };
-        double messengershift { 0.0 }, contactshift { 0.0 };
-        if( Input.messenger_stiffness > 0.0 ) { messengershift = ( messenger0 - messenger ) * length / Input.messenger_stiffness; }
-        if( Input.contact_stiffness > 0.0 ) { contactshift = ( contact0 - contact ) * length / Input.contact_stiffness; }
+        auto const drop { Result.nominal_tension - Result.tension };
+        auto const messenger0 { Result.nominal_tension * ropeshare }, messenger { Result.tension * ropeshare };
+        auto const contact0 { Result.nominal_tension * wires }, contact { Result.tension * wires };
+        double sagmessengershift { 0.0 }, sagcontactshift { 0.0 };
         if( Input.load > 0.0 && Input.span > 0.0 && messenger0 > 0.0 && messenger + contact > 0.0 ) {
             auto const sag0 { Input.load * Input.span * Input.span / ( 8.0 * messenger0 ) };
             auto const sagmessenger { sag0 * ( messenger0 + contact ) / ( messenger + contact ) };
             auto const sagcontact { sag0 * ( messenger0 - messenger ) / ( messenger + contact ) };
             auto const spans { length / Input.span };
-            messengershift += spans * 8.0 / ( 3.0 * Input.span ) * ( sagmessenger * sagmessenger - sag0 * sag0 );
-            contactshift += spans * 8.0 / ( 3.0 * Input.span ) * sagcontact * sagcontact;
+            sagmessengershift = spans * 8.0 / ( 3.0 * Input.span ) * ( sagmessenger * sagmessenger - sag0 * sag0 );
+            sagcontactshift = spans * 8.0 / ( 3.0 * Input.span ) * sagcontact * sagcontact;
         }
-        Result.shortening = messengershare * messengershift + ( 1.0 - messengershare ) * contactshift;
+        // przesunięcie końca jednej grupy drutów o części Part naciągu i sztywności Stiffness
+        auto const shift = [ & ]( double const Part, double const Stiffness, double const Sag ) {
+            return Part * ( ( Stiffness > 0.0 ? Part * drop * length / Stiffness : 0.0 ) + Sag );
+        };
+        if( cascade ) {
+            Result.shortening = shift( first, 0.5 * Input.messenger_stiffness, sagmessengershift ) + shift( second, 0.5 * Input.messenger_stiffness, sagmessengershift );
+        }
+        else {
+            Result.shortening = shift( first, Input.messenger_stiffness, sagmessengershift );
+        }
+        Result.shortening += shift( wires, Input.contact_stiffness, sagcontactshift );
         b += Result.shortening;
         s += 4.0 * Result.shortening;
     }
@@ -671,7 +705,9 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     // pochylenia, a pochylenie od kierunków z otworów, więc kilka przybliżeń (cel daleko - zbiega się od razu)
     auto const flipped { messengerhole->first < contacthole->first };
     auto const sign { flipped ? -1.0 : 1.0 };
-    Result.messenger_tension = Result.tension * messengershare;
+    Result.messenger_tensions[ 0 ] = Result.tension * first;
+    Result.messenger_tensions[ 1 ] = Result.tension * second;
+    Result.messenger_tension = Result.tension * ropeshare;
     Result.contact_tension = Result.tension - Result.messenger_tension;
     double holderlength { 0.0 };
     for( auto const &link : Device.holder ) { holderlength += link.length; }
@@ -694,20 +730,42 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         return axispoint + across * ( sign * ( Hole.second - axishole->second ) ) + upward * ( sign * ( Hole.first - axishole->first ) );
     };
     lever_frame();
+    // druga dźwignia (szeregowo): oś na końcu łańcucha "cascade" z otworu przewodów pierwszej, wzdłuż wypadkowej drugiej
+    auto const secondsign { cascade && secondmessenger->first < secondcontact->first ? -1.0 : 1.0 };
+    double cascadelength { 0.0 };
+    for( auto const &link : Device.cascade ) { cascadelength += link.length; }
+    vec secondpull { out }, secondaxispoint;
+    auto const secondhole = [ & ]( std::pair<double, double> const &Hole ) {
+        vec const up { -secondpull.z, 0.0, secondpull.x };
+        return secondaxispoint + secondpull * ( secondsign * ( Hole.second - secondaxis->second ) ) + up * ( secondsign * ( Hole.first - secondaxis->first ) );
+    };
+    auto const second_frame = [ & ]() { if( cascade ) { secondaxispoint = holepoint( *contacthole ) + secondpull * cascadelength; } };
+    second_frame();
+    // wypadkowa w płaszczyźnie X-Z; dźwignia nie przechyla się dalej niż do 45 stopni (dziwny cel - zostaje bliżej pionu)
+    auto const flat_pull = []( vec const &Resultant, vec &Pull ) {
+        vec const flat { Resultant.x, 0.0, Resultant.z };
+        if( length( flat ) < 1e-9 || flat.x < std::abs( flat.z ) ) { return false; }
+        Pull = unit( flat );
+        return true;
+    };
     if( Input.aimed ) {
         for( int pass = 0; pass < 6; ++pass ) {
             bool shortm, shortc;
+            auto const previous { pull };
             auto const wm { aim( holepoint( *messengerhole ), Input.messenger_target, shortm ) };
-            auto const wc { aim( holepoint( *contacthole ), Input.contact_target, shortc ) };
-            auto const resultant { wm * messengershare + wc * ( 1.0 - messengershare ) };
-            vec const flat { resultant.x, 0.0, resultant.z };
-            // dźwignia nie przechyla się dalej niż do 45 stopni (dziwny cel - zostaje bliżej pionu)
-            if( length( flat ) < 1e-9 || flat.x < std::abs( flat.z ) ) { break; }
-            auto const next { unit( flat ) };
-            auto const change { length( next - pull ) };
-            pull = next;
+            vec wc;
+            if( cascade ) {
+                // druga dźwignia ciągnie pierwszą wzdłuż swojej wypadkowej
+                auto const wm2 { aim( secondhole( *secondmessenger ), Input.messenger_target, shortm ) };
+                auto const wc2 { aim( secondhole( *secondcontact ), Input.contact_target, shortc ) };
+                flat_pull( wm2 * secondshare + wc2 * ( 1.0 - secondshare ), secondpull );
+                wc = secondpull;
+            }
+            else { wc = aim( holepoint( *contacthole ), Input.contact_target, shortc ); }
+            if( false == flat_pull( wm * messengershare + wc * ( 1.0 - messengershare ), pull ) ) { break; }
             lever_frame();
-            if( change < 1e-6 ) { break; }
+            second_frame();
+            if( length( pull - previous ) < 1e-6 && pass > 0 ) { break; }
         }
     }
     Result.lever_tilt = std::atan2( -pull.z, pull.x );
@@ -737,6 +795,12 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         set_rotation( placement, across * -sign, vec { 0.0, -1.0, 0.0 }, upward * sign );
         Result.parts.push_back( placement );
     }
+    if( cascade ) {
+        place_chain( Device.cascade, "cascade", holepoint( *contacthole ), secondpull, Result );
+        auto placement { placed( "lever2", lever->name, secondhole( { 0.0, 0.0 } ) ) };
+        set_rotation( placement, secondpull * -secondsign, vec { 0.0, -1.0, 0.0 }, vec { -secondpull.z, 0.0, secondpull.x } * secondsign );
+        Result.parts.push_back( placement );
+    }
 
     // łańcuchy do drutów: w stronę ostatniego podwieszenia (gdy podane), inaczej poziomo
     bool warned { false };
@@ -749,24 +813,26 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         }
         return way;
     };
-    {
-        auto const start { holepoint( *messengerhole ) };
-        auto const way { aimed( start, Input.messenger_target ) };
-        auto const &links { Input.old_messenger && false == Device.messenger_old.empty() ? Device.messenger_old : Device.messenger };
-        auto end { place_chain( links, "messenger", start, way, Result ) };
+    // lina nośna z otworu dźwigni do uchwytu krańcowego; Role: messenger albo messenger2
+    auto const rope_chain = [ & ]( vec const &Start, std::vector<tensioner_link> const &Links, std::string const &Role, double *End ) {
+        auto const way { aimed( Start, Input.messenger_target ) };
+        auto end { place_chain( Links, Role, Start, way, Result ) };
         auto const clamp { type->messenger_clamp.empty() ? Device.messenger_clamp.name : type->messenger_clamp };
         if( false == clamp.empty() ) {
-            Result.parts.push_back( placed_along( "messenger_clamp", clamp, end, way ) );
+            Result.parts.push_back( placed_along( Role + "_clamp", clamp, end, way ) );
             end = end + way * Device.messenger_clamp.length;
         }
-        Result.messenger_end[ 0 ] = end.x;
-        Result.messenger_end[ 1 ] = end.y;
-        Result.messenger_end[ 2 ] = end.z;
-    }
+        End[ 0 ] = end.x;
+        End[ 1 ] = end.y;
+        End[ 2 ] = end.z;
+    };
+    // izolatory rolkowe tylko w zwykłym złożeniu (szeregowo izolator jest w łańcuchu do drugiej dźwigni)
+    rope_chain( holepoint( *messengerhole ), Input.old_messenger && false == cascade && false == Device.messenger_old.empty() ? Device.messenger_old : Device.messenger, "messenger", Result.messenger_end );
+    if( cascade ) { rope_chain( secondhole( *secondmessenger ), Device.messenger2, "messenger2", Result.messenger2_end ); }
     {
-        auto const start { holepoint( *contacthole ) };
+        auto const start { cascade ? secondhole( *secondcontact ) : holepoint( *contacthole ) };
         auto const way { aimed( start, Input.contact_target ) };
-        auto const &links { Input.old_contact && false == Device.contact_old.empty() ? Device.contact_old : Device.contact };
+        auto const &links { Input.old_contact && false == cascade && false == Device.contact_old.empty() ? Device.contact_old : Device.contact };
         auto end { place_chain( links, "contact", start, way, Result ) };
         std::vector<vec> ends;
         if( Input.contacts >= 2 && false == Device.equalizer.name.empty() ) {
