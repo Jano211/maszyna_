@@ -29,7 +29,7 @@ struct catenary_editor
 	using track_intent = editor_mode::track_intent;
 	using key_hint = editor_mode::key_hint;
 	// what a catenary intent (track_intent::kind::catenary) is about, in its detail
-	enum class intent_detail { place, select, chain, gantry, mast };
+	enum class intent_detail { place, select, chain, gantry, mast, anchor };
 	static bool is_intent(track_intent const &Intent, intent_detail const Detail)
 	{
 		return Intent.what == track_intent::kind::catenary && Intent.detail == static_cast<int>(Detail);
@@ -98,6 +98,8 @@ struct catenary_editor
 		int connect_from{-1}; // hanging the wires on from this suspension: the next poles clicked get the spans
 		int anchor_pick{-1}; // anchoring this chain to an existing pole: the next pole clicked carries the tensioning device
 		bool anchor_pick_start{false}; // ... at the start of the chain, otherwise at its end
+		int anchor_selected{-1}; // the anchor picked in the view: its chain is shown, the panel marks it, Del removes it
+		bool anchor_scroll{false}; // the panel scrolls to the anchor picked in the view, once
 		char power[64]{"none"};
 		float voltage{3000.0f};
 		int material{0}; // 0 cu, 1 al
@@ -204,6 +206,12 @@ struct catenary_editor
 	std::size_t catenary_anchor_of(catenary::chain const &Chain, std::string const &File, bool Start) const;
 	// anchors the start or the end of the chain: on a new pole past the last one, or (On >= 0) on that existing pole
 	bool catenary_anchor_create(std::size_t Chain, bool Start, int On);
+	// removes the anchor at the start or the end of the chain (one undo step with the chain)
+	void catenary_anchor_delete(std::size_t Chain, bool Start);
+	// the anchor whose tensioning device is under the cursor; -1 if none
+	int catenary_anchor_hit() const;
+	// shows the chain in the panel as a click on its span does
+	void catenary_chain_show(int Chain);
 	void render_catenary_cantilever_ui();
 	void render_catenary_wires_ui();
 	void catenary_choose_page(int const Page);

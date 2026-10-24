@@ -1,6 +1,6 @@
 # Sieć trakcyjna w exe – lista zadań
 
-Stan na 2026-10-24 14:30. Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
+Stan na 2026-10-24 15:30. Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
 (https://claude.ai/artifact/LboXDQjty15vbb7ieh8AUn) – Jan może odhaczać tam; przy zmianach przenosić tutaj.
 Zestawienie z notatek w `tests/catenary/*.md` (PRZEKAZANIE, KONCEPCJA, KONCEPCJA_EDYTOR, BRAMKI, KOTWIENIA, GLOWACKI,
 ROZSZERZANIE) i z pracy nad kotwieniami 23–24.10.
@@ -128,7 +128,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [ ] Czy stan „przejściowe” też ma dawać stare złożenie (5110 i izolator rolkowy)
 - [ ] Obejrzeć w grze: lina proceduralna (czy siedzi w rowkach), obrót krążków przy suwaku temperatury
 - [ ] Obroty części po komplecie modeli (Jan powie, co stoi krzywo)
-- [ ] Dźwignia przechylona do kierunku drutów (dziś wisi pionowo, łańcuchy już celują w podwieszenie)
+- [x] Dźwignia przechylona do kierunku drutów (24.10, odcinek 2138): staje prostopadle do wypadkowej z obu łańcuchów, uchwyt 4440 wzdłuż wypadkowej (tylko w płaszczyźnie urządzenia); typowo 0,3–0,5° (`lever_tilt`, test `tt`)
 
 **Kolejne rodzaje**
 
@@ -141,7 +141,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 
 **Wizualizacja i czas**
 
-- [ ] Zaznaczanie i rysowanie kotwienia w oknie edytora (dziś tylko z panelu łańcucha)
+- [x] Zaznaczanie i rysowanie kotwienia w oknie edytora (24.10, odcinek 2138): LPM na urządzeniu (od czoła słupa do rolki ruchomej albo kolumna ciężarów) zaznacza kotwienie i jego łańcuch (strona Druty, panel przewija do kotwienia), Del usuwa; obrys niebieski, z uwagami czerwony, niezłożone – czerwony słup z napisem (`catenary_anchor_shape`, `catenary_anchor_chain`, test `te`)
 - [ ] Obrót wysięgników od temperatury i odległości od kotwienia środkowego (do 12°)
 - [ ] Dobowy przebieg temperatury w scenariuszu
 - [ ] Zerwanie kotwienia (przęsła liczone z zadanej długości drutu)
@@ -189,7 +189,7 @@ Te rzeczy są w danych jako ZAŁOŻENIE albo czekają na obejrzenie w grze. Odha
 
 **Do obejrzenia w symulatorze**
 
-- [ ] Kotwienia po przebudowie exe: ucha 4490-02, łączniki 4720 w otworach 6406, łańcuchy pochylone do ostatniego słupa, suwak wysokości rolek
+- [ ] Kotwienia po przebudowie exe: ucha 4490-02, łączniki 4720 w otworach 6406, łańcuchy pochylone do ostatniego słupa, suwak wysokości rolek, dźwignia przechylona, zaznaczanie kotwienia w oknie
 - [ ] Odsuw na łuku z przechyłką (kierunek do środka łuku, wartość w podpowiedzi)
 - [x] Teowniki: 09xx, 0177/0179/0197, 0180, dwie sieci 018x/019x, łuki 0137–0174, 0167/0169
 - [ ] Przęsła łańcuchów po poprawce (linie i bryły nie naraz, nie rozjeżdżają się po edycji sąsiada)

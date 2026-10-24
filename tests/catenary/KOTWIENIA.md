@@ -85,6 +85,8 @@ z zadanej długości drutu → naciąg).
   kotwienia → `solid.rope` w rendererach), ucha 4490-02 jako modele. Segmenty 4490-01 i `tensioner_rope_parts` usunięte.
 - Rolki: `sheave 4460-11` w `pulley`; obroty w `tensioner_result::turn_*`.
 - Czekają na Jana: 5070-2 / 5080-1 / 5090, mocowania 0455 + przypisanie wykonań do słupów, 6411-01, izolator rolkowy, 4430-01.
+- 2026-10-24 popołudnie (odcinek 2138): dźwignia przechylona do wypadkowej łańcuchów (kilka przybliżeń, `lever_tilt`, najwyżej 45°),
+  zaznaczanie kotwienia w oknie edytora (obrys z `catenary_anchor_shape`).
 
 ## Do zrobienia (Jan 2026-10-24, rano)
 - **Lina 4490 – porządek.** Teraz lina jest rysowana modelem odciągu 9832-02, który ma oko (kauszę) na końcu, więc na

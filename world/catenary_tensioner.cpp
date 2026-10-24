@@ -522,7 +522,61 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
             spun( "sheave_moving", pulley->sheave, movingaxle, Result.turn_moving_b );
         }
     }
-    auto const axispoint { place_chain( Device.holder, "holder", movingaxle, out, Result ) };
+    // dźwignia: otwór osi na końcu uchwytu od rolki ruchomej; przy otworze liny niżej niż otwór przewodów odwrócona.
+    // Dźwignia na sworzniu staje prostopadle do wypadkowej sił z obu łańcuchów, a uchwyt 4440 idzie wzdłuż tej
+    // wypadkowej (pochylenie tylko w płaszczyźnie X-Z urządzenia; łańcuchy celują dalej w 3D). Otwory zależą od
+    // pochylenia, a pochylenie od kierunków z otworów, więc kilka przybliżeń (cel daleko - zbiega się od razu)
+    auto const flipped { messengerhole->first < contacthole->first };
+    auto const sign { flipped ? -1.0 : 1.0 };
+    // podział naciągu dźwignią: momenty względem osi
+    auto const armmessenger { std::abs( messengerhole->first - axishole->first ) };
+    auto const armcontact { std::abs( contacthole->first - axishole->first ) };
+    auto const shares { armmessenger + armcontact };
+    double messengershare { 0.5 }; // część naciągu na linie nośnej
+    if( shares > 1e-9 ) {
+        messengershare = armcontact / shares;
+        Result.messenger_tension = Result.tension * messengershare;
+        Result.contact_tension = Result.tension - Result.messenger_tension;
+    }
+    double holderlength { 0.0 };
+    for( auto const &link : Device.holder ) { holderlength += link.length; }
+    // kierunek łańcucha do ostatniego podwieszenia albo poziomo; Short: cel za blisko albo za konstrukcją
+    auto const aim = [ & ]( vec const &From, double const *Target, bool &Short ) {
+        Short = false;
+        if( false == Input.aimed ) { return out; }
+        vec const to { Target[ 0 ] - From.x, Target[ 1 ] - From.y, Target[ 2 ] - From.z };
+        if( to.x < 1.0 ) { Short = true; return out; }
+        return unit( to );
+    };
+    vec pull { out };                       // kierunek uchwytu i wypadkowej, w płaszczyźnie X-Z
+    vec axispoint, across, upward;          // oś dźwigni i jej osie: across = wzdłuż pull, upward = wzdłuż dźwigni
+    auto const lever_frame = [ & ]() {
+        axispoint = movingaxle + pull * holderlength;
+        across = pull;
+        upward = vec { -pull.z, 0.0, pull.x };
+    };
+    auto const holepoint = [ & ]( std::pair<double, double> const &Hole ) {
+        return axispoint + across * ( sign * ( Hole.second - axishole->second ) ) + upward * ( sign * ( Hole.first - axishole->first ) );
+    };
+    lever_frame();
+    if( Input.aimed ) {
+        for( int pass = 0; pass < 6; ++pass ) {
+            bool shortm, shortc;
+            auto const wm { aim( holepoint( *messengerhole ), Input.messenger_target, shortm ) };
+            auto const wc { aim( holepoint( *contacthole ), Input.contact_target, shortc ) };
+            auto const resultant { wm * messengershare + wc * ( 1.0 - messengershare ) };
+            vec const flat { resultant.x, 0.0, resultant.z };
+            // dźwignia nie przechyla się dalej niż do 45 stopni (dziwny cel - zostaje bliżej pionu)
+            if( length( flat ) < 1e-9 || flat.x < std::abs( flat.z ) ) { break; }
+            auto const next { unit( flat ) };
+            auto const change { length( next - pull ) };
+            pull = next;
+            lever_frame();
+            if( change < 1e-6 ) { break; }
+        }
+    }
+    Result.lever_tilt = std::atan2( -pull.z, pull.x );
+    place_chain( Device.holder, "holder", movingaxle, pull, Result );
 
     // zabezpieczenie: ramiona z osi obu rolek do wspólnej dolnej śruby, para po obu stronach rolek
     if( false == Device.safety_fixed.empty() ) {
@@ -540,40 +594,29 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         else { Result.warnings.push_back( "the pulleys are further apart than the safety arms reach" ); }
     }
 
-    // dźwignia: otwór osi na axispoint; przy otworze liny niżej niż otwór przewodów odwrócona
-    auto const flipped { messengerhole->first < contacthole->first };
-    auto const sign { flipped ? -1.0 : 1.0 };
     // model dźwigni (Jan): zero w otworze osi II, otwory na drutach odsunięte w -X modelu, czyli w stronę drutów;
-    // -X modelu idzie więc w +X urządzenia (obrót o 180 stopni wokół pionu), odwrócona dodatkowo o 180 wokół Y
-    auto const holepoint = [ & ]( std::pair<double, double> const &Hole ) {
-        return axispoint + vec { sign * ( Hole.second - axishole->second ), 0.0, sign * ( Hole.first - axishole->first ) };
-    };
+    // -X modelu idzie więc w stronę drutów (obrót o 180 stopni wokół pionu), odwrócona dodatkowo o 180 wokół Y;
+    // przechylona razem z układem across/upward
     {
         auto placement { placed( "lever", lever->name, holepoint( { 0.0, 0.0 } ) ) };
-        set_rotation( placement, vec { -sign, 0.0, 0.0 }, vec { 0.0, -1.0, 0.0 }, vec { 0.0, 0.0, sign } );
+        set_rotation( placement, across * -sign, vec { 0.0, -1.0, 0.0 }, upward * sign );
         Result.parts.push_back( placement );
-    }
-    // podział naciągu dźwignią: momenty względem osi
-    auto const armmessenger { std::abs( messengerhole->first - axishole->first ) };
-    auto const armcontact { std::abs( contacthole->first - axishole->first ) };
-    if( armmessenger + armcontact > 1e-9 ) {
-        Result.messenger_tension = Result.tension * armcontact / ( armmessenger + armcontact );
-        Result.contact_tension = Result.tension - Result.messenger_tension;
     }
 
     // łańcuchy do drutów: w stronę ostatniego podwieszenia (gdy podane), inaczej poziomo
-    auto const aim = [ & ]( vec const &From, double const *Target ) {
-        if( false == Input.aimed ) { return out; }
-        vec const to { Target[ 0 ] - From.x, Target[ 1 ] - From.y, Target[ 2 ] - From.z };
-        if( to.x < 1.0 ) {
+    bool warned { false };
+    auto const aimed = [ & ]( vec const &From, double const *Target ) {
+        bool tooshort;
+        auto const way { aim( From, Target, tooshort ) };
+        if( tooshort && false == warned ) {
             Result.warnings.push_back( "the last suspension is behind or too close to the anchor, the wires are pulled level" );
-            return out;
+            warned = true;
         }
-        return unit( to );
+        return way;
     };
     {
         auto const start { holepoint( *messengerhole ) };
-        auto const way { aim( start, Input.messenger_target ) };
+        auto const way { aimed( start, Input.messenger_target ) };
         auto end { place_chain( Device.messenger, "messenger", start, way, Result ) };
         auto const clamp { type->messenger_clamp.empty() ? Device.messenger_clamp.name : type->messenger_clamp };
         if( false == clamp.empty() ) {
@@ -586,7 +629,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     }
     {
         auto const start { holepoint( *contacthole ) };
-        auto const way { aim( start, Input.contact_target ) };
+        auto const way { aimed( start, Input.contact_target ) };
         auto end { place_chain( Device.contact, "contact", start, way, Result ) };
         std::vector<vec> ends;
         if( Input.contacts >= 2 && false == Device.equalizer.name.empty() ) {

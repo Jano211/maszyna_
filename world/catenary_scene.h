@@ -97,6 +97,11 @@ std::string catenary_anchor_file( std::size_t Index );
 std::size_t catenary_anchor_parts( std::size_t Index );
 // wynik solvera ostatniego złożenia (b, s, ciężary, naciągi, uwagi); nullptr gdy usunięte
 catenary::tensioner_result const *catenary_anchor_result( std::size_t Index );
+// obrys złożonego urządzenia dla edytora (współrzędne scenerii): czoło słupa i oś rolki ruchomej na wysokości rolek, góra i spód
+// kolumny ciężarów; false gdy usunięte albo niezłożone
+bool catenary_anchor_shape( std::size_t Index, double ( &Shape )[ 4 ][ 3 ] );
+// łańcuch, który kończy się tym kotwieniem (Start: na początku), -1 gdy żaden
+int catenary_anchor_chain( std::size_t Index, bool &Start );
 // dodaje kotwienie, składa je i przebudowuje łańcuchy, które go używają. zwraca numer
 std::size_t catenary_anchor_add( std::string const &File, catenary::anchor const &Data );
 // zmienia kotwienie (także przywraca usunięte) i przebudowuje łańcuchy, które go używają

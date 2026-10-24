@@ -238,6 +238,55 @@ int main( int argc, char **argv ) {
         };
         check( along( "messenger.1", messenger ) && along( "contact.1", contact ), "lancuchy do drutow skierowane na ostatnie podwieszenie" );
         check( aimed.messenger_end[ 2 ] > level.messenger_end[ 2 ] && aimed.messenger_end[ 1 ] > level.messenger_end[ 1 ] && aimed.warnings.empty(), "lina nosna podchodzi w gore i w bok, bez uwag" );
+        // dźwignia w równowadze: moment sił łańcuchów względem osi (wokół Y urządzenia) zero, uchwyt wzdłuż wypadkowej
+        {
+            catenary::tensioner_placement const *lever { nullptr }, *holder { nullptr }, *m { nullptr }, *c { nullptr };
+            for( auto const &part : aimed.parts ) {
+                if( part.role == "lever" ) { lever = &part; }
+                if( part.role == "holder.1" ) { holder = &part; }
+                if( part.role == "messenger.1" ) { m = &part; }
+                if( part.role == "contact.1" ) { c = &part; }
+            }
+            // oś dźwigni = zero modelu przesunięte o otwór osi (model: X = -odsunięcie, Z = wzdłuż)
+            auto const *lv { catalog.lever( "6406-01" ) };
+            auto const *type { device->type( input.type ) };
+            auto const &ah { lv->holes.at( type->axis_hole ) };
+            double const local[ 3 ] { -ah.second, 0.0, ah.first };
+            double axis[ 3 ], fm[ 3 ], fc[ 3 ], fsum[ 3 ];
+            for( int a = 0; a < 3; ++a ) {
+                axis[ a ] = lever->position[ a ] + lever->rotation[ 3 * a ] * local[ 0 ] + lever->rotation[ 3 * a + 2 ] * local[ 2 ];
+                fm[ a ] = -m->rotation[ 3 * a ] * aimed.messenger_tension;
+                fc[ a ] = -c->rotation[ 3 * a ] * aimed.contact_tension;
+                fsum[ a ] = fm[ a ] + fc[ a ];
+            }
+            auto const moment_y = [ & ]( catenary::tensioner_placement const *At, double const *F ) {
+                double const r[ 3 ] { At->position[ 0 ] - axis[ 0 ], 0.0, At->position[ 2 ] - axis[ 2 ] };
+                return r[ 2 ] * F[ 0 ] - r[ 0 ] * F[ 2 ];
+            };
+            auto const moment { moment_y( m, fm ) + moment_y( c, fc ) };
+            auto const scale { aimed.tension * 0.4 };
+            // uchwyt biegnie w -X części: -kolumna X = kierunek od rolki do dźwigni
+            double const hx { -holder->rotation[ 0 ] }, hz { -holder->rotation[ 6 ] };
+            auto const fl { std::sqrt( fsum[ 0 ] * fsum[ 0 ] + fsum[ 2 ] * fsum[ 2 ] ) };
+            auto const inline_ { ( hx * fsum[ 0 ] + hz * fsum[ 2 ] ) / fl };
+            check( std::abs( moment ) < 1e-3 * scale && std::abs( inline_ ) > 0.99999, // uchwyt "~4440": odwrocony, znak bez znaczenia
+                "dzwignia przechylona do drutow: moment " + std::to_string( moment ) + " daNm, uchwyt wzdluz wypadkowej, odchylenie "
+                + std::to_string( aimed.lever_tilt * 180.0 / 3.14159265358979 ) + " st., wzdluz " + std::to_string( inline_ ) + ", skala " + std::to_string( scale ) );
+            check( std::abs( level.lever_tilt ) < 1e-12, "bez celu dzwignia pionowo" );
+        }
+        // typowo: podwieszenie 50 m dalej, lina 7,20, przewód 5,60 nad główką - druty ciągną w dół, dźwignia u góry do konstrukcji
+        for( auto const &type : device->types ) {
+            catenary::tensioner_input typical { input };
+            typical.type = type.code;
+            double const tm[ 3 ] { 50.0, 0.0, 7.20 }, tc[ 3 ] { 50.0, 0.0, 5.60 };
+            std::copy( tm, tm + 3, typical.messenger_target );
+            std::copy( tc, tc + 3, typical.contact_target );
+            catenary::tensioner_result result;
+            catenary::solve_tensioner( catalog, *device, typical, result );
+            std::printf( "      typ %d: dzwignia odchylona o %.2f st.\n", type.code, result.lever_tilt * 180.0 / 3.14159265358979 );
+            check( result.lever_tilt > 0.0 && result.lever_tilt < 0.2 && result.warnings.empty(),
+                "typ " + std::to_string( type.code ) + ": druty nizej niz dzwignia - dzwignia pochylona, mniej niz 11 st." );
+        }
     }
 
     // lina jako bryla proceduralna z uchami: ucha w koncach liny, rura od ucha do ucha bez lacznikow, scianki na zewnatrz

@@ -182,6 +182,7 @@ struct tensioner_result {
     double b { 0.0 }, s { 0.0 };            // położenie rolki ruchomej i spodu ciężarów
     double stack_height { 0.0 };
     double height { 0.0 };                  // oś rolek nad główką szyny
+    double lever_tilt { 0.0 };              // radiany: odchylenie uchwytu dźwigni od poziomu w dół (dźwignia od pionu w stronę konstrukcji u góry)
     // obrót krążków (radiany wokół +Y urządzenia) od położenia przy +10 °C: lina przewinięta przez rowek / promień
     double turn_fixed_a { 0.0 }, turn_fixed_b { 0.0 }, turn_moving_a { 0.0 }, turn_moving_b { 0.0 };
     int weights { 0 };                      // zawieszone ciężary

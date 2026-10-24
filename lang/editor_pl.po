@@ -5930,3 +5930,27 @@ msgstr "Wysokość osi rolek na słupie; ciężary przesuwają się razem z nimi
 
 msgid ", superelevation %.0f mm"
 msgstr ", przechyłka %.0f mm"
+
+msgid "Click: select the anchor"
+msgstr "Klik: zaznacz kotwienie"
+
+msgid "Anchor %s selected: its settings are below, Del removes it"
+msgstr "Zaznaczone kotwienie %s: ustawienia poniżej, Del je usuwa"
+
+msgid "Anchor %s isn't at the end of any chain"
+msgstr "Kotwienie %s nie kończy żadnego łańcucha"
+
+msgid "Anchor removed"
+msgstr "Kotwienie usunięte"
+
+msgid "(selected in the view)"
+msgstr "(zaznaczone w oknie)"
+
+msgid "LMB on a tensioning device"
+msgstr "LPM na urządzeniu naprężającym"
+
+msgid "selects the anchor and its chain"
+msgstr "zaznacza kotwienie i jego łańcuch"
+
+msgid "removes the selected anchor"
+msgstr "usuwa zaznaczone kotwienie"
