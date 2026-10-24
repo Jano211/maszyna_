@@ -33,6 +33,8 @@ http://mozilla.org/MPL/2.0/.
 //                       modelu (w stronę drutów); przy otworze liny poniżej otworu przewodów dźwignia odwrócona (180 wokół Y)
 //   pręt 6401/6402      zero na dole (pod stosem), w +Z do zaczepu na górze (długość z danych)
 //   ciężar 63xx         zero w środku spodu, w +Z; kolejne obracane o "turn" wokół Z; kolor numerem wykonania modelu
+//   prowadnica 5070     zero w osi przesuwu pierścienia na dole, w +Z; mocowania do wsporników w -X (w stronę konstrukcji)
+//   pierścień 5080      zero w osi stosu, poziomo, punkt przesuwu po prowadnicy w -X (w stronę konstrukcji)
 //   lina                linka rozciągana (część typu cord, zero w zaczepie, w +Z, skalowana wzdłuż Z)
 #pragma once
 #include <map>
@@ -126,6 +128,15 @@ struct tensioner_device {
     std::string safety_fixed, safety_moving;
     double safety_arm { 1.0 };          // rozstaw otworów ramienia
     double safety_offset { 0.06 };      // odsunięcie każdej pary od środka rolki w bok
+    // prowadnica ciężarów (5070, karta 33-0455) i pierścień prowadzący na wierzchu stosu (5080). Model prowadnicy: zero w osi
+    // przesuwu pierścienia na dole, w +Z (długość), punkty "mount"/"end" mocowań do wsporników o guide_mount w -X (w stronę
+    // konstrukcji). Pierścień: zero w osi stosu, poziomo, "mount" o ring_arm w -X (w osi przesuwu po prowadnicy); pusty = bez nich
+    std::string guide, ring;
+    double guide_length { 4.50 };
+    double guide_mount { 0.07 };
+    double guide_bottom { 0.70 };       // spód prowadnicy nad główką szyny (tablica 0011-1)
+    double ring_arm { 0.194 };
+    double ring_turn { 0.0 };           // stopnie wokół osi stosu: 0 = prowadnica w stronę konstrukcji, 90 = w bok (+Y)
     std::vector<tensioner_type> types;
     tensioner_type const *type( int Code ) const;
 };
@@ -195,6 +206,9 @@ struct tensioner_result {
     double messenger_end[ 3 ] { 0.0, 0.0, 0.0 };         // gdzie kończy się lina nośna (uchwyt krańcowy)
     std::vector<std::vector<double>> contact_ends;       // gdzie kończą się przewody jezdne
     bool grounded { false };                // ciężary oparte o grunt: sieć bez naciągu od urządzenia
+    // mocowania prowadnicy do wsporników na konstrukcji (dolne i górne, układ urządzenia); has_guide = false bez prowadnicy
+    bool has_guide { false };
+    double guide_mount[ 3 ] { 0.0, 0.0, 0.0 }, guide_end[ 3 ] { 0.0, 0.0, 0.0 };
     std::vector<std::string> warnings;
 };
 

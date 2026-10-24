@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <algorithm>
 #include <fstream>
 #include <map>
 #include <sstream>
@@ -230,6 +231,44 @@ int main( int argc, char **argv ) {
             check( body && messenger && contact && fits( messenger, type.messenger_hole ) && fits( contact, type.contact_hole ),
                 "typ " + std::to_string( type.code ) + ": lacznik 4720 liny i przewodow w otworach dzwigni " + type.messenger_hole + "/" + type.contact_hole );
         }
+    }
+
+    // prowadnica 5070-2 i pierscien 5080-1 (dane jeszcze zakomentowane): pierscien na wierzchu stosu, prowadnica w osi jego
+    // przesuwu; skierowane do slupa - mocowania w slupie (uwaga), obrocone o 90 stopni - przed czolem, bez uwag przy +10 °C
+    {
+        auto withguide { *device };
+        withguide.guide = "5070-02"; withguide.guide_length = 4.50; withguide.guide_mount = 0.07; withguide.guide_bottom = 0.70;
+        withguide.ring = "5080-01"; withguide.ring_arm = 0.19405;
+        catenary::tensioner_input input;
+        catenary::tensioner_result toward, aside;
+        catenary::solve_tensioner( catalog, withguide, input, toward );
+        withguide.ring_turn = 90.0;
+        catenary::solve_tensioner( catalog, withguide, input, aside );
+        catenary::tensioner_placement const *ring { nullptr }, *guide { nullptr }, *top { nullptr };
+        for( auto const &part : aside.parts ) {
+            if( part.role == "ring" ) { ring = &part; }
+            if( part.role == "guide" ) { guide = &part; }
+            if( part.role.rfind( "weight.", 0 ) == 0 ) { top = &part; }
+        }
+        auto good { ring != nullptr && guide != nullptr && top != nullptr && aside.has_guide && aside.warnings.empty() };
+        good = good && std::find( toward.warnings.begin(), toward.warnings.end(), std::string( "the guide mounts are behind the face of the structure" ) ) != toward.warnings.end();
+        if( good ) {
+            // pierścień na wierzchu stosu, w osi stosu; prowadnica 0,194 w +Y; mocowania 0,07 dalej, dolne na 0,70, górne 4,50 wyżej
+            good = std::abs( ring->position[ 0 ] - top->position[ 0 ] ) < 1e-9 && std::abs( ring->position[ 2 ] - ( aside.s + aside.stack_height ) ) < 1e-9
+                && std::abs( guide->position[ 1 ] - ring->position[ 1 ] - 0.19405 ) < 1e-9 && std::abs( guide->position[ 0 ] - ring->position[ 0 ] ) < 1e-9
+                && std::abs( aside.guide_mount[ 1 ] - guide->position[ 1 ] - 0.07 ) < 1e-9 && std::abs( aside.guide_mount[ 2 ] - 0.70 ) < 1e-9
+                && std::abs( aside.guide_end[ 2 ] - 5.20 ) < 1e-9
+                && std::abs( ring->rotation[ 0 ] * -1.0 - 0.0 ) < 1e-9 && std::abs( -ring->rotation[ 3 ] - 1.0 ) < 1e-9; // -X modelu w +Y
+        }
+        std::printf( "      prowadnica: os stosu %.3f m od czola, mocowania przy obrocie 0: %.3f m (w slupie), 90: %.3f / %.3f m w bok\n",
+            top != nullptr ? top->position[ 0 ] : 0.0, toward.guide_mount[ 0 ], aside.guide_mount[ 0 ], aside.guide_mount[ 1 ] );
+        check( good, "prowadnica 5070-2 i pierscien 5080-1: pierscien na stosie, prowadnica w osi przesuwu, obrot wokol osi stosu" );
+        // przy mrozie pierścień schodzi z prowadnicy 0,70..5,20 (do ustalenia z Janem)
+        input.temperature = -25.0;
+        catenary::tensioner_result cold;
+        catenary::solve_tensioner( catalog, withguide, input, cold );
+        std::printf( "      -25 °C: wierzch stosu %.2f m, prowadnica do %.2f m%s\n", cold.s + cold.stack_height, cold.guide_end[ 2 ],
+            std::find( cold.warnings.begin(), cold.warnings.end(), std::string( "the guide ring is off the guide" ) ) != cold.warnings.end() ? " - pierscien poza prowadnica" : "" );
     }
 
     // wyzej na slupie: rolki i ciezary o tyle samo wyzej, lina ta sama

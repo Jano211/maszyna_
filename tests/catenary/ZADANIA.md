@@ -120,7 +120,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 
 **Kotwienie 0461 – dokończenie**
 
-- [ ] Prowadnica 5070-2 (rura z płytkami, 4,5 m; 5070-1 4,0 m) i pierścień 5080-1 na stosie, oś 0,21 m od osi stosu; długość z drogi ciężarów – **modele 5080 i 5090 Jan robi** (5090 do rozdzielonych)
+- [ ] Prowadnica 5070 i pierścień 5080 – modele są (24.10: 5070-01/-02 zero w osi przesuwu pierścienia, `mount`/`end` 0,07 w −X, długość 4,0/4,5; 5080-01/-02 `mount` 0,194/0,214 od osi stosu). W kodzie `guide`/`ring … turn` (test `tt`), w danych ZAKOMENTOWANE – **czeka na Jana**: do słupa wchodzą 3,5 cm w słup (oś stosu 0,23 m od czoła), przy −25 °C wierzch stosu 5,9 m ponad prowadnicą 0,70–5,20. Strona prowadnicy, pierścień na wierzchu czy pod stosem, wysokość spodu. Do czego 5060-01 i 4480-01 (`mount` 0,203 / 0,200)?
 - [ ] Mocowania do słupa wg 33-0455: góra pod rolkę (4510-1/-2, 4520-3…-7, 4570-1, 5100-1/-2), dół pod prowadnicę (4520-1/-2, 4530-3, 4560-1, 5100-3/-4) – **modele + przypisanie wykonań 1–12 do modeli słupów (Jan)**
 - [ ] 6411-01 (łącznik liny z prętem; teraz 0,10 m bez modelu) – model
 - [ ] 4430-01 (`hole_1` −0,0747): ustalić, gdzie stoi

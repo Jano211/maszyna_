@@ -72,6 +72,7 @@ part 6402-04 length 3.00
 //   mount / holder / hanger / messenger / contact  <czesc dlugosc>...   lancuchy czesci liniowych ("~czesc" - odwrocona)
 //   messenger_old / contact_old <czesc dlugosc>...   to samo w starych zlozeniach (izolator rolkowy)
 //   messenger_clamp / contact_clamp <czesc dlugosc>, equalizer <czesc dlugosc> spread <rozstaw przewodow>
+//   guide <prowadnica> <dlugosc> mount <od osi pierscienia do mocowan> bottom <spod nad glowka>, ring <pierscien> <od osi stosu do prowadnicy>
 //   safety <ramie przy rolce stalej> <ramie przy ruchomej> <rozstaw otworow> <odsuniecie w bok>
 //   type <traction_code> stack <ciezar liczba>... (od dolu) lever <otwor liny> <otwor przewodow> <otwor osi> [rod <pret>] [clamp <uchwyt liny>]
 // Dlugosci czesci liniowych: ZALOZENIE do czasu modeli (Jan 2026-10-23 szykuje); 4440: hole_1 z modeli (01-03 0,270, 04 0,320,
@@ -97,6 +98,11 @@ device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 r
   contact_clamp 5120-01 0.058
   contact_clamp_old 5110-01 0.0632    // stare zlozenia (druty zasniedziale, Jan 2026-10-24): uchwyt klinowy 5110 jak w starej karcie 33-0401
   equalizer 4410-01 0.1541 spread 0.08
+  // prowadnica 5070-2 (karta 33-0455, L 4500; z modelu: mount/end 0,07 od osi pierscienia) i pierscien 5080-1 (mount 0,194 od osi
+  // stosu) - CZEKA NA JANA (2026-10-24): skierowane do slupa wchodza 3,5 cm w slup (os stosu 0,23 m od czola), a przy -25 °C wierzch
+  // stosu 5,9 m ponad prowadnica 0,70..5,20. Ktora strona (turn), pierscien na wierzchu czy pod stosem, wysokosc spodu prowadnicy?
+  // guide 5070-02 4.50 mount 0.07 bottom 0.70
+  // ring 5080-01 0.19405 turn 90
   safety 4600-01 4600-02 1.00 0.06     // zabezpieczenie 4600 wyk. 1 (karta 23-4600): ramiona 1,00 m z modeli, para po obu stronach rolek (0,06 - ZALOZENIE)
   type 3 stack 6321-1 8 6323-1 18 lever IV I II
   type 4 stack 6321-1 4 6323-1 20 lever VI I III

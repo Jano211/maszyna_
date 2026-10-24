@@ -240,6 +240,22 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
             if( keyword == "hanger" ) { links_of( words, 1, device->hanger ); continue; }
             if( keyword == "messenger" ) { links_of( words, 1, device->messenger ); continue; }
             if( keyword == "contact" ) { links_of( words, 1, device->contact ); continue; }
+            if( keyword == "guide" && words.size() >= 3 ) {
+                device->guide = words[ 1 ];
+                if( false == number_of( words[ 2 ], device->guide_length ) ) { report( "bad guide length \"" + words[ 2 ] + "\"" ); }
+                for( std::size_t k = 3; k + 1 < words.size(); k += 2 ) {
+                    if( words[ k ] == "mount" ) { number_of( words[ k + 1 ], device->guide_mount ); }
+                    else if( words[ k ] == "bottom" ) { number_of( words[ k + 1 ], device->guide_bottom ); }
+                    else { report( "unknown guide keyword \"" + words[ k ] + "\"" ); }
+                }
+                continue;
+            }
+            if( keyword == "ring" && words.size() >= 3 ) {
+                device->ring = words[ 1 ];
+                if( false == number_of( words[ 2 ], device->ring_arm ) ) { report( "bad ring arm \"" + words[ 2 ] + "\"" ); }
+                if( words.size() >= 5 && words[ 3 ] == "turn" ) { number_of( words[ 4 ], device->ring_turn ); }
+                continue;
+            }
             if( keyword == "messenger_old" ) { links_of( words, 1, device->messenger_old ); continue; }
             if( keyword == "contact_old" ) { links_of( words, 1, device->contact_old ); continue; }
             if( ( keyword == "messenger_clamp" || keyword == "contact_clamp" || keyword == "contact_clamp_old" || keyword == "equalizer" ) && words.size() >= 3 ) {
@@ -716,6 +732,32 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         z += weight->height;
     }
     if( z > s + rodlength ) { Result.warnings.push_back( "the stack is higher than the rod" ); }
+    // pierścień prowadzący na wierzchu stosu, prowadnica w osi jego przesuwu, w stronę konstrukcji
+    // obrót wokół osi stosu: -X modelu (w stronę prowadnicy) idzie w kierunku toward
+    auto const turn { Device.ring_turn * kPi / 180.0 };
+    vec const toward { -std::cos( turn ), std::sin( turn ), 0.0 };
+    auto const turned = [ & ]( std::string const &Role, std::string const &Part, vec const &At ) {
+        auto placement { placed( Role, Part, At ) };
+        set_rotation( placement, toward * -1.0, vec { -toward.y, toward.x, 0.0 } * -1.0, vec { 0.0, 0.0, 1.0 } );
+        return placement;
+    };
+    if( false == Device.ring.empty() ) {
+        Result.parts.push_back( turned( "ring", Device.ring, vec { columnx, yb, z } ) );
+    }
+    if( false == Device.guide.empty() ) {
+        auto const guide { vec { columnx, yb, Device.guide_bottom } + toward * ( Device.ring.empty() ? 0.0 : Device.ring_arm ) };
+        Result.parts.push_back( turned( "guide", Device.guide, guide ) );
+        Result.has_guide = true;
+        auto const at { guide + toward * Device.guide_mount };
+        double const mount[ 3 ] { at.x, at.y, at.z };
+        std::copy( mount, mount + 3, Result.guide_mount );
+        std::copy( mount, mount + 3, Result.guide_end );
+        Result.guide_end[ 2 ] += Device.guide_length;
+        if( mount[ 0 ] < 0.0 ) { Result.warnings.push_back( "the guide mounts are behind the face of the structure" ); }
+        if( false == Device.ring.empty() && ( z < Device.guide_bottom || z > Device.guide_bottom + Device.guide_length ) ) {
+            Result.warnings.push_back( "the guide ring is off the guide" );
+        }
+    }
     return true;
 }
 
