@@ -276,6 +276,34 @@ int main( int argc, char *argv[] ) {
         std::printf( "bryly: sciany i normalne na zewnatrz, lina 14 mm, linka wieszaka %.1f mm (oszacowana z masy)  %s\n", hanger * 1000, good ? "OK" : "BLAD" );
         failed = failed || !good;
     }
+    // przęsło do kotwienia z dwiema liniami: dolna lina kończy się na podanym uchwycie (dopisek rope2), górna bez zmian
+    {
+        auto good { false };
+        if( auto const *definition { registry.find( "2C120-2C-3" ) }; definition != nullptr ) {
+            catenary::span_points points {
+                { 0.0, 5.6, 0.0 }, { 0.0, 5.6, 20.0 }, { 0.0, 7.3, 0.0 }, { 0.0, 7.3, 20.0 } };
+            points.messenger2_end_set = true;
+            points.messenger2_end = catenary::vec3 { 0.0, 7.0, 19.6 };
+            catenary::span_solution solution;
+            std::string error;
+            if( catenary::solve_span_points( *definition, {}, points, false, false, solution, error ) ) {
+                catenary::span_geometry geometry;
+                catenary::build_geometry( *definition, solution, points, 0.04, geometry );
+                // ostatni punkt dolnej liny (najniższy z końców lin przy z = 20) ma być w podanym miejscu
+                auto hit { false }, upper { false };
+                for( auto const &element : geometry.elements ) {
+                    if( element.kind != catenary::element_kind::messenger ) { continue; }
+                    for( auto const &p : { element.from, element.to } ) {
+                        if( std::abs( p.x - 0.0 ) < 1e-6 && std::abs( p.y - 7.0 ) < 1e-6 && std::abs( p.z - 19.6 ) < 1e-6 ) { hit = true; }
+                        if( std::abs( p.y - 7.3 ) < 1e-6 && std::abs( p.z - 20.0 ) < 1e-6 ) { upper = true; }
+                    }
+                }
+                good = hit && upper;
+            }
+        }
+        std::printf( "dolna lina przesla do kotwienia na swoim uchwycie (rope2): %s\n", good ? "OK" : "BLAD" );
+        failed = failed || !good;
+    }
     // błędne dane: brak pliku typu i plik w starym formacie mają dać nullptr i komunikat, każdy tylko raz
     {
         auto const before { errors };

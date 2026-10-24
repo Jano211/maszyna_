@@ -100,6 +100,8 @@ struct scene_anchor {
     bool solved { false };
     double messenger[ 3 ] { 0.0, 0.0, 0.0 };   // koniec liny nośnej (uchwyt krańcowy), współrzędne scenerii
     double contact[ 3 ] { 0.0, 0.0, 0.0 };     // koniec przewodów jezdnych (środek między przewodami)
+    bool has_messenger2 { false };              // druga lina nośna kończy się na swoim uchwycie (przęsło dociąga do niego dolną linę)
+    double messenger2[ 3 ] { 0.0, 0.0, 0.0 };
     double temperature { 0.0 };                // temperatura, przy której złożono
     catenary::tensioner_result result;
     std::vector<catenary::solid_vertex> rope;  // lina jako bryła proceduralna (trójkąty, współrzędne scenerii); rysuje ją przęsło do kotwienia
@@ -892,17 +894,14 @@ assemble_anchor( scene_anchor &Anchor ) {
         Anchor.messenger[ 0 ] = messenger.x;
         Anchor.messenger[ 1 ] = messenger.y;
         Anchor.messenger[ 2 ] = messenger.z;
-        // druga lina nośna: przęsło rysuje ją o odstęp lin pod pierwszą od końca pierwszej - kawałek liny od jej uchwytu
-        // krańcowego do tego miejsca (2+2 na jednym stosie, dźwignia 6403 / wyrównywacz 4410 w kotwieniach)
+        // druga lina nośna: koniec na jej uchwycie krańcowym, przęsło do kotwienia dociąga tam dolną linę (dopisek "rope2")
         auto const second { result.messenger2_end[ 0 ] != 0.0 || result.messenger2_end[ 1 ] != 0.0 || result.messenger2_end[ 2 ] != 0.0 };
-        if( second && input.messengers >= 2 ) {
-            auto const from { toscene( result.messenger2_end ) };
-            glm::dvec3 const to { messenger.x, messenger.y - input.messenger_stack, messenger.z };
-            if( glm::length( to - from ) > 0.005 ) {
-                std::vector<glm::dvec3> piece { from, to };
-                auto const *definition { network.empty() ? nullptr : catenary::types().find( network ) };
-                add_tube( Anchor.rope, piece, definition != nullptr && definition->messenger_wire.diameter > 0.0 ? 0.5 * definition->messenger_wire.diameter : 0.007 );
-            }
+        Anchor.has_messenger2 = second && input.messengers >= 2;
+        if( Anchor.has_messenger2 ) {
+            auto const at { toscene( result.messenger2_end ) };
+            Anchor.messenger2[ 0 ] = at.x;
+            Anchor.messenger2[ 1 ] = at.y;
+            Anchor.messenger2[ 2 ] = at.z;
         }
         for( int k = 0; k < 3; ++k ) { Anchor.contact[ k ] = contact[ k ] / ends; }
     }
@@ -1094,6 +1093,13 @@ span_body( scene_chain const &Chain, std::size_t const Span ) {
         if( span_tension( Chain, Span, messenger, contact ) ) { body += " tension " + text_number( messenger, 0 ) + " " + text_number( contact, 0 ); }
     }
     if( false == data.parallel.empty() ) { body += " parallel " + data.parallel; }
+    // kotwienie z dwiema liniami: dolna lina przęsła kończy się na swoim uchwycie krańcowym
+    for( auto const end : { 0, 1 } ) {
+        if( ( end == 0 ? anchoreda : anchoredb ) == false ) { continue; }
+        auto const *anchor { anchor_named( Chain.file, end == 0 ? ( Span == 0 ? data.anchor_start : std::string() ) : data.anchor_end ) };
+        if( anchor == nullptr || false == anchor->has_messenger2 ) { continue; }
+        body += std::string( " rope2 " ) + ( end == 0 ? "start " : "end " ) + point_text( anchor->messenger2 );
+    }
     return body + " endtraction";
 }
 
