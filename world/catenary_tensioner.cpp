@@ -645,10 +645,16 @@ bool solve_fixed( tensioner_device const &Device, tensioner_type const &Type, te
         else { starts.push_back( end ); }
         for( std::size_t k = 0; k < starts.size(); ++k ) {
             auto const tag { Role + "_each." + std::to_string( k + 1 ) };
-            auto at { place_chain( Each, tag, starts[ k ], way, Result ) };
+            // dwie liny nośne: górna celuje w linę przęsła, dolna o odstęp lin niżej
+            auto own { way };
+            if( Vertical && starts.size() == 2 && Input.aimed ) {
+                double const lower[ 3 ] { Target[ 0 ], Target[ 1 ], Target[ 2 ] - ( k == 0 ? Input.messenger_stack : 0.0 ) };
+                own = aimed( starts[ k ], lower );
+            }
+            auto at { place_chain( Each, tag, starts[ k ], own, Result ) };
             if( false == Clamp.name.empty() ) {
-                Result.parts.push_back( placed_along( Role + "_clamp." + std::to_string( k + 1 ), Clamp.name, at, way ) );
-                at = at + way * Clamp.length;
+                Result.parts.push_back( placed_along( Role + "_clamp." + std::to_string( k + 1 ), Clamp.name, at, own ) );
+                at = at + own * Clamp.length;
             }
             Ends.push_back( at );
         }
@@ -1094,8 +1100,10 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         return way;
     };
     // lina nośna z otworu dźwigni do uchwytu krańcowego; Role: messenger albo messenger2
-    auto const rope_chain = [ & ]( vec const &Start, std::vector<tensioner_link> const &Links, std::string const &Role, double *End ) {
-        auto const way { aimed( Start, Input.messenger_target ) };
+    // druga (dolna) lina nośna celuje o odstęp lin niżej niż pierwsza
+    double const lowertarget[ 3 ] { Input.messenger_target[ 0 ], Input.messenger_target[ 1 ], Input.messenger_target[ 2 ] - Input.messenger_stack };
+    auto const rope_chain = [ & ]( vec const &Start, std::vector<tensioner_link> const &Links, std::string const &Role, double *End, double const *Target ) {
+        auto const way { aimed( Start, Target ) };
         auto end { place_chain( Links, Role, Start, way, Result ) };
         auto const clamp { type->messenger_clamp.empty() ? Device.messenger_clamp.name : type->messenger_clamp };
         if( false == clamp.empty() ) {
@@ -1123,7 +1131,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
             auto const tag { "messenger_each." + std::to_string( k + 1 ) };
             // każda lina celuje w ostatnie podwieszenie osobno (rozstaw dźwigni 6403 zbiega się w przęśle)
             auto const from { end + across * ( ( k - 0.5 ) * Device.messenger_spread ) };
-            auto const own { aimed( from, Input.messenger_target ) };
+            auto const own { aimed( from, k == 1 ? Input.messenger_target : lowertarget ) };
             auto at { place_chain( Device.messenger_each, tag, from, own, Result ) };
             if( false == clamp.empty() ) {
                 Result.parts.push_back( placed_along( "messenger_clamp." + std::to_string( k + 1 ), clamp, at, own ) );
@@ -1134,9 +1142,9 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         }
     }
     else if( false == only || onlymessenger ) {
-        rope_chain( holepoint( *messengerhole ), Input.old_messenger && false == cascade && false == Device.messenger_old.empty() ? Device.messenger_old : Device.messenger, "messenger", Result.messenger_end );
+        rope_chain( holepoint( *messengerhole ), Input.old_messenger && false == cascade && false == Device.messenger_old.empty() ? Device.messenger_old : Device.messenger, "messenger", Result.messenger_end, Input.messenger_target );
     }
-    if( cascade ) { rope_chain( secondhole( *secondmessenger ), Device.messenger2, "messenger2", Result.messenger2_end ); }
+    if( cascade ) { rope_chain( secondhole( *secondmessenger ), Device.messenger2, "messenger2", Result.messenger2_end, lowertarget ); }
     if( false == only || false == onlymessenger ) {
         auto const start { cascade ? secondhole( *secondcontact ) : holepoint( *contacthole ) };
         auto const way { aimed( start, Input.contact_target ) };

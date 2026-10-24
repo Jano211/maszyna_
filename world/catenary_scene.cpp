@@ -605,6 +605,7 @@ assemble_gantry( scene_gantry &Gantry ) {
 
 std::size_t suspension_named( std::string const &File, std::string const &Name );
 void follow_anchor( scene_anchor const &Anchor );
+void add_tube( std::vector<catenary::solid_vertex> &Triangles, std::vector<glm::dvec3> const &Points, double Radius );
 void rope_of( catenary::suspension const &Data, double *Rope );
 
 // urządzenia naprężające (traction_tensioners.txt); czytane przy pierwszym użyciu
@@ -673,6 +674,7 @@ assemble_anchor( scene_anchor &Anchor ) {
             input.type = type->type.code;
             input.contacts = type->type.contact_count;
             input.messengers = type->type.messenger_count;
+            input.messenger_stack = type->type.messenger_stack;
             // sztywności i ciężar sieci do skracania przy brakujących ciężarach (przekrój i moduł z traction_tables.txt)
             auto const &net { type->type };
             input.messenger_stiffness = net.messenger_count * type->messenger_wire.area * type->messenger_wire.modulus * 0.1;
@@ -890,6 +892,18 @@ assemble_anchor( scene_anchor &Anchor ) {
         Anchor.messenger[ 0 ] = messenger.x;
         Anchor.messenger[ 1 ] = messenger.y;
         Anchor.messenger[ 2 ] = messenger.z;
+        // druga lina nośna: przęsło rysuje ją o odstęp lin pod pierwszą od końca pierwszej - kawałek liny od jej uchwytu
+        // krańcowego do tego miejsca (2+2 na jednym stosie, dźwignia 6403 / wyrównywacz 4410 w kotwieniach)
+        auto const second { result.messenger2_end[ 0 ] != 0.0 || result.messenger2_end[ 1 ] != 0.0 || result.messenger2_end[ 2 ] != 0.0 };
+        if( second && input.messengers >= 2 ) {
+            auto const from { toscene( result.messenger2_end ) };
+            glm::dvec3 const to { messenger.x, messenger.y - input.messenger_stack, messenger.z };
+            if( glm::length( to - from ) > 0.005 ) {
+                std::vector<glm::dvec3> piece { from, to };
+                auto const *definition { network.empty() ? nullptr : catenary::types().find( network ) };
+                add_tube( Anchor.rope, piece, definition != nullptr && definition->messenger_wire.diameter > 0.0 ? 0.5 * definition->messenger_wire.diameter : 0.007 );
+            }
+        }
         for( int k = 0; k < 3; ++k ) { Anchor.contact[ k ] = contact[ k ] / ends; }
     }
     {
