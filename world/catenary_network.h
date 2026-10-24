@@ -16,6 +16,8 @@ namespace catenary {
 struct wire_data {
     double mass { 0.0 };        // kg/m
     double diameter { 0.0 };    // m
+    double area { 0.0 };        // m², przekrój czynny (do wydłużeń sprężystych); 0 = nieznany
+    double modulus { 0.0 };     // Pa, moduł sprężystości przewodu (liny skręcane: niższy niż drutu); 0 = nieznany
 };
 
 // pełny opis typu sieci: dane dla solvera i dane potrzebne tylko do rysowania

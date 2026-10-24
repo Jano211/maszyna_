@@ -1,17 +1,20 @@
 # Dane katalogowe sieci trakcyjnej czytane przez symulator.
 #
-# wire <nazwa> <masa kg/m> <srednica mm>
+# wire <nazwa> <masa kg/m> <srednica mm> [<przekroj mm2> <modul sprezystosci GPa>]
 #   masy i srednice wg kart 9811 (liny) i 9871 (przewody jezdne); srednica 0 = jeszcze nie odczytana z karty
-wire L10    0.091  0
-wire L25    0.226  6.39
-wire L35    0.316  0
-wire L95    0.859  0
+#   przekroj i modul do skracania sieci przy spadku naciagu (brakujace ciezary); bez nich urzadzenie tego nie liczy.
+#   Moduly z sieci, nie z kart: liny Cu twarde 119/118/117 GPa przy 7/19/37 drutach (karta OLX), przewod jezdny
+#   CW128C (Cu-ETP) 100-150 GPa -> 120; lina brazowa LB70 - nie znaleziono, ZALOZENIE 118 jak Cu 19 drutow
+wire L10    0.091  0      10   119
+wire L25    0.226  6.39   25   119
+wire L35    0.316  0      35   119
+wire L95    0.859  0      95   118
 # LB70: lina brazowa 70 CuSi (siec SKB70-C); masa 625-635 kg/km wg uzytkownika, zgodna z ~8,9 g/m na mm2 lin Cu
-wire LB70   0.630  0
-wire L120   1.060  14.0
-wire L150   1.345  15.8
-wire Djp100 0.890  12.0
-wire Djp150 1.335  14.5
+wire LB70   0.630  0      70   118
+wire L120   1.060  14.0   120  118
+wire L150   1.345  15.8   150  117
+wire Djp100 0.890  12.0   100  120
+wire Djp150 1.335  14.5   150  120
 #
 # spacing <tablica> <rozpietosc m> <odstepy m ...>
 #   rozstaw wieszakow wg kart 0010: os podwieszenia-1, 1-2, ..., ostatni-os podwieszenia

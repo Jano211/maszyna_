@@ -184,6 +184,13 @@ struct tensioner_input {
     double distance { 700.0 };          // m, od kotwienia stałego albo środkowego
     double elongation { 0.0 };          // m, trwałe wydłużenie sieci od ostatniej regulacji (rolka bliżej konstrukcji)
     int missing { 0 };                  // brakujące ciężary (z góry stosu)
+    // sieć do skrócenia przy naciągu mniejszym niż od pełnego stosu (brakujące ciężary): sztywności EA wszystkich lin
+    // nośnych i wszystkich przewodów jezdnych (daN), ciężar sieci na metr wiszący na linie (daN/m) i średnia rozpiętość
+    // przęseł (m). Lina i przewody skracają się sprężyście, a lina dodatkowo zwisa bardziej, więc urządzenie ściąga je ku
+    // przęsłom: rolka dalej od konstrukcji, ciężary wyżej. Sztywność 0 = bez tego (tablica jak przy pełnym stosie)
+    double messenger_stiffness { 0.0 }, contact_stiffness { 0.0 };
+    double load { 0.0 };
+    double span { 0.0 };
     std::string color;                  // kolor ciężarów (tensioner_color); pusty = szary
     std::string top_color;              // kolor najwyższego ciężaru; pusty = jak reszta
     bool old_fittings { false };            // uchwyty krańcowe przewodów 5110 (druty zaśniedziałe)
@@ -224,6 +231,8 @@ struct tensioner_result {
     double turn_fixed_a { 0.0 }, turn_fixed_b { 0.0 }, turn_moving_a { 0.0 }, turn_moving_b { 0.0 };
     int weights { 0 };                      // zawieszone ciężary
     double tension { 0.0 };                 // daN, całkowity naciąg sieci od ciężarów (zero, gdy ciężary stoją na gruncie)
+    double nominal_tension { 0.0 };         // daN, naciąg od pełnego stosu (jak w tablicy)
+    double shortening { 0.0 };              // m, o ile rolka odjechała od tablicy przez mniejszy naciąg (sprężystość i zwis)
     double messenger_tension { 0.0 }, contact_tension { 0.0 };
     double messenger_end[ 3 ] { 0.0, 0.0, 0.0 };         // gdzie kończy się lina nośna (uchwyt krańcowy)
     std::vector<std::vector<double>> contact_ends;       // gdzie kończą się przewody jezdne

@@ -527,12 +527,46 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         if( weight == nullptr ) { return fail( "no weight " + name ); }
         for( int k = 0; k < count; ++k ) { stack.push_back( weight ); }
     }
+    double fullmass { 0.0 };
+    for( auto const *weight : stack ) { fullmass += weight->mass; }
     for( int k = 0; k < Input.missing && false == stack.empty(); ++k ) { stack.pop_back(); }
     double mass { 0.0 }, stackheight { 0.0 };
     for( auto const *weight : stack ) { mass += weight->mass; stackheight += weight->height; }
     Result.weights = static_cast<int>( stack.size() );
     Result.stack_height = stackheight;
     Result.tension = 4.0 * mass * Input.gravity;
+    Result.nominal_tension = 4.0 * fullmass * Input.gravity;
+
+    // podział naciągu dźwignią: momenty względem osi
+    auto const armmessenger { std::abs( messengerhole->first - axishole->first ) };
+    auto const armcontact { std::abs( contacthole->first - axishole->first ) };
+    auto const shares { armmessenger + armcontact };
+    auto const messengershare { shares > 1e-9 ? armcontact / shares : 0.5 }; // część naciągu na linie nośnej
+
+    // mniejszy naciąg niż w tablicy: sieć krótsza o wydłużenie sprężyste od różnicy naciągów i o nadmiar długości zwisu.
+    // Wieszaki trzymają przewody pod liną, więc dodatkowy zwis jest wspólny i niesie go naciąg liny i przewodów razem:
+    // lina zwisa f0·(Hm0 + Hc)/(Hm + Hc), przewody (prosto przy pełnym naciągu) f0·(Hm0 − Hm)/(Hm + Hc), gdzie
+    // f0 = w·a²/(8·Hm0); nadmiar długości zwisu w przęśle 8·f²/(3·a), przęseł distance/a. Lina i przewody ciągną każde
+    // swój otwór dźwigni, oś dźwigni (rolka ruchoma) przesuwa się o średnią ważoną ramionami
+    if( mass > 0.0 && Result.tension < Result.nominal_tension && ( Input.messenger_stiffness > 0.0 || Input.contact_stiffness > 0.0 ) ) {
+        auto const length { std::max( 0.0, Input.distance ) };
+        auto const messenger0 { Result.nominal_tension * messengershare }, messenger { Result.tension * messengershare };
+        auto const contact0 { Result.nominal_tension - messenger0 }, contact { Result.tension - messenger };
+        double messengershift { 0.0 }, contactshift { 0.0 };
+        if( Input.messenger_stiffness > 0.0 ) { messengershift = ( messenger0 - messenger ) * length / Input.messenger_stiffness; }
+        if( Input.contact_stiffness > 0.0 ) { contactshift = ( contact0 - contact ) * length / Input.contact_stiffness; }
+        if( Input.load > 0.0 && Input.span > 0.0 && messenger0 > 0.0 && messenger + contact > 0.0 ) {
+            auto const sag0 { Input.load * Input.span * Input.span / ( 8.0 * messenger0 ) };
+            auto const sagmessenger { sag0 * ( messenger0 + contact ) / ( messenger + contact ) };
+            auto const sagcontact { sag0 * ( messenger0 - messenger ) / ( messenger + contact ) };
+            auto const spans { length / Input.span };
+            messengershift += spans * 8.0 / ( 3.0 * Input.span ) * ( sagmessenger * sagmessenger - sag0 * sag0 );
+            contactshift += spans * 8.0 / ( 3.0 * Input.span ) * sagcontact * sagcontact;
+        }
+        Result.shortening = messengershare * messengershift + ( 1.0 - messengershare ) * contactshift;
+        b += Result.shortening;
+        s += 4.0 * Result.shortening;
+    }
 
     // ciężary nie zejdą niżej niż grunt: lina nie puści rolki bliżej konstrukcji, sieć traci naciąg
     if( s < Input.ground ) {
@@ -637,16 +671,8 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     // pochylenia, a pochylenie od kierunków z otworów, więc kilka przybliżeń (cel daleko - zbiega się od razu)
     auto const flipped { messengerhole->first < contacthole->first };
     auto const sign { flipped ? -1.0 : 1.0 };
-    // podział naciągu dźwignią: momenty względem osi
-    auto const armmessenger { std::abs( messengerhole->first - axishole->first ) };
-    auto const armcontact { std::abs( contacthole->first - axishole->first ) };
-    auto const shares { armmessenger + armcontact };
-    double messengershare { 0.5 }; // część naciągu na linie nośnej
-    if( shares > 1e-9 ) {
-        messengershare = armcontact / shares;
-        Result.messenger_tension = Result.tension * messengershare;
-        Result.contact_tension = Result.tension - Result.messenger_tension;
-    }
+    Result.messenger_tension = Result.tension * messengershare;
+    Result.contact_tension = Result.tension - Result.messenger_tension;
     double holderlength { 0.0 };
     for( auto const &link : Device.holder ) { holderlength += link.length; }
     // kierunek łańcucha do ostatniego podwieszenia albo poziomo; Short: cel za blisko albo za konstrukcją

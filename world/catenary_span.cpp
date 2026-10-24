@@ -10,6 +10,8 @@ http://mozilla.org/MPL/2.0/.
 #include "stdafx.h"
 #include "world/catenary_span.h"
 
+#include <memory>
+
 #include "world/Traction.h"
 #include "world/catenary_network.h"
 #include "utilities/Globals.h"
@@ -32,6 +34,7 @@ struct catenary_span {
     catenary_solid solid;                                       // bryły do oglądania z bliska
     bool solidloaded { false };
     std::vector<catenary::solid_vertex> attached;               // bryła dołączona (lina kotwienia), układ scenerii
+    std::shared_ptr<catenary::network_definition> own;          // kopia typu z naciągiem z dopisku "tension"
 };
 
 namespace {
@@ -250,7 +253,7 @@ catenary_span_metal( TTraction const &Traction, bool const Fitting ) {
 
 // przypisuje przęsłu typ sieci z dopisku "type" i dobiera rozstaw wieszaków
 void
-catenary_span_assign( TTraction &Traction, std::string const &Symbol ) {
+catenary_span_assign( TTraction &Traction, std::string const &Symbol, double const Messenger, double const Contact ) {
 
     Traction.m_catenaryspan.reset();
     if( Symbol.empty() ) { return; }
@@ -266,6 +269,13 @@ catenary_span_assign( TTraction &Traction, std::string const &Symbol ) {
     }
     span->definition = registry.find( Symbol );
     if( span->definition == nullptr ) { return; } // brak typu został już zgłoszony, przęsło rysuje się po staremu
+    // naciąg z dopisku "tension" (daN): przęsło liczone z kopią typu
+    if( Messenger > 0.0 || Contact > 0.0 ) {
+        span->own = std::make_shared<catenary::network_definition>( *span->definition );
+        if( Messenger > 0.0 ) { span->own->type.messenger_tension = 10.0 * Messenger; }
+        if( Contact > 0.0 && span->own->type.contact_tension > 0.0 ) { span->own->type.contact_tension = 10.0 * Contact; }
+        span->definition = span->own.get();
+    }
     // odstęp wieszaków 0 w scenerii oznacza odcinek bez wieszaków (do kotwienia albo urządzenia naprężającego):
     // rysowane są same liny i przewody w liczbie wg typu, a rozstaw wieszaków zostaje pusty
     if( Traction.iNumSections == 0 ) { return; }

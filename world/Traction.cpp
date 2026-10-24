@@ -140,6 +140,7 @@ TTraction::Load( cParser *parser, glm::dvec3 const &pOrigin ) {
 
     std::string token { parser->getToken<std::string>() };
     std::string catenarytype;
+    double catenarytension[ 2 ] { 0.0, 0.0 };
     while( false == token.empty()
         && token != "endtraction" ) {
 
@@ -152,11 +153,16 @@ TTraction::Load( cParser *parser, glm::dvec3 const &pOrigin ) {
             // symbol typu sieci, np. YwsC120-2C; starsze wersje symulatora pomijają ten dopisek
             catenarytype = parser->getToken<std::string>( false );
         }
+        else if( token == "tension" ) {
+            // naciąg liny nośnej i przewodów jezdnych w daN inny niż w typie sieci (brakujące ciężary w kotwieniu)
+            parser->getTokens( 2 );
+            *parser >> catenarytension[ 0 ] >> catenarytension[ 1 ];
+        }
         token = parser->getToken<std::string>();
     }
 
     Init(); // przeliczenie parametrów
-    catenary_span_assign( *this, catenarytype );
+    catenary_span_assign( *this, catenarytype, catenarytension[ 0 ], catenarytension[ 1 ] );
 
     // calculate traction location
     location( glm::mix( pPoint2, pPoint1, 0.5 ) );

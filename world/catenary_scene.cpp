@@ -662,6 +662,11 @@ assemble_anchor( scene_anchor &Anchor ) {
         if( auto const *type { catenary::types().find( data.network ) }; type != nullptr ) {
             input.type = type->type.code;
             input.contacts = type->type.contact_count;
+            // sztywności i ciężar sieci do skracania przy brakujących ciężarach (przekrój i moduł z traction_tables.txt)
+            auto const &net { type->type };
+            input.messenger_stiffness = net.messenger_count * type->messenger_wire.area * type->messenger_wire.modulus * 0.1;
+            input.contact_stiffness = net.contact_count * type->contact_wire.area * type->contact_wire.modulus * 0.1;
+            input.load = ( net.messenger_count * net.messenger_mass + net.contact_count * net.contact_mass ) * input.gravity;
         }
         else { ErrorLog( label + "uses network type \"" + data.network + "\" which has no file" ); }
     }
@@ -681,10 +686,25 @@ assemble_anchor( scene_anchor &Anchor ) {
     }
     input.color = data.color;
     input.top_color = data.top_color;
-    // stare złożenie: łańcuch z tym kotwieniem ma druty zaśniedziałe (stan 1)
+    // stare złożenie: łańcuch z tym kotwieniem ma druty zaśniedziałe (stan 1); średnia rozpiętość jego przęseł między podwieszeniami
     for( auto const &chain : Chains ) {
         if( chain.removed || chain.file != Anchor.file || data.name.empty() ) { continue; }
-        if( chain.data.anchor_start == data.name || chain.data.anchor_end == data.name ) { input.old_fittings = ( chain.data.state == 1 ); }
+        if( chain.data.anchor_start == data.name || chain.data.anchor_end == data.name ) {
+            input.old_fittings = ( chain.data.state == 1 );
+            double total { 0.0 };
+            int spans { 0 };
+            double previous[ 3 ];
+            bool has { false };
+            for( auto const &name : chain.data.suspensions ) {
+                auto const index { suspension_named( Anchor.file, name ) };
+                if( index >= Suspensions.size() || false == Suspensions[ index ].data.has_at ) { has = false; continue; }
+                auto const *at { Suspensions[ index ].data.at };
+                if( has ) { total += std::hypot( at[ 0 ] - previous[ 0 ], at[ 2 ] - previous[ 2 ] ); ++spans; }
+                std::copy( at, at + 3, previous );
+                has = true;
+            }
+            if( spans > 0 ) { input.span = total / spans; }
+        }
     }
     // izolatory: rolkowe ESN-2025 z wyboru, a bez wyboru przy drutach zaśniedziałych (jak uchwyty 5110)
     if( data.insulators.empty() ) { input.old_messenger = input.old_contact = input.old_fittings; }
@@ -946,6 +966,42 @@ chain_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *
     return true;
 }
 
+// naciąg przęsła k łańcucha od kotwienia z niepełnym stosem ciężarów (daN): przęsła od tego kotwienia do kotwienia
+// środkowego albo stałego (distance wzdłuż łańcucha); false, gdy przęsło ma naciąg typu sieci. Bliższe kotwienie wygrywa,
+// ciężary na gruncie zostawiają naciąg typu (sieć bez naciągu urządzenia nie da się policzyć)
+bool
+span_tension( scene_chain const &Chain, std::size_t const Span, double &Messenger, double &Contact ) {
+    auto const *type { Chain.data.type.empty() ? nullptr : catenary::types().find( Chain.data.type ) };
+    if( type == nullptr ) { return false; }
+    auto const points { chain_points( Chain ) };
+    if( Span + 1 >= points ) { return false; }
+    // odległości wzdłuż łańcucha od początku do środka przęsła i od środka przęsła do końca
+    std::vector<double> along( points, 0.0 );
+    double previous[ 3 ], wire[ 3 ], rope[ 3 ];
+    bool anchored;
+    for( std::size_t point = 0; point < points; ++point ) {
+        if( false == chain_point( Chain, point, wire, rope, anchored ) ) { return false; }
+        if( point > 0 ) { along[ point ] = along[ point - 1 ] + std::hypot( wire[ 0 ] - previous[ 0 ], wire[ 2 ] - previous[ 2 ] ); }
+        std::copy( wire, wire + 3, previous );
+    }
+    auto const middle { 0.5 * ( along[ Span ] + along[ Span + 1 ] ) };
+    double best { 1e30 }, ratio { 1.0 };
+    for( auto const end : { 0, 1 } ) {
+        auto const &name { end == 0 ? Chain.data.anchor_start : Chain.data.anchor_end };
+        if( name.empty() ) { continue; }
+        auto const *anchor { anchor_named( Chain.file, name ) };
+        if( anchor == nullptr || false == anchor->solved || anchor->result.grounded || anchor->result.nominal_tension <= 0.0 ) { continue; }
+        auto const reach { end == 0 ? middle : along.back() - middle };
+        if( reach > anchor->data.distance || reach >= best ) { continue; }
+        best = reach;
+        ratio = anchor->result.tension / anchor->result.nominal_tension;
+    }
+    if( std::abs( ratio - 1.0 ) < 1e-3 || ratio <= 0.0 ) { return false; }
+    Messenger = 0.1 * type->type.messenger_tension * ratio;
+    Contact = 0.1 * type->type.contact_tension * ratio;
+    return true;
+}
+
 // treść wpisu node traction dla przęsła k łańcucha; pusta, gdy brakuje podwieszenia. Przęsło do kotwienia bez wieszaków
 std::string
 span_body( scene_chain const &Chain, std::size_t const Span ) {
@@ -959,7 +1015,12 @@ span_body( scene_chain const &Chain, std::size_t const Span ) {
     body += point_text( wirea ) + "\n" + point_text( wireb ) + "\n" + point_text( ropea ) + "\n" + point_text( ropeb ) + "\n";
     auto const spacing { anchoreda || anchoredb ? 0.0 : data.hangers[ 1 ] };
     body += text_number( data.hangers[ 0 ], 3 ) + " " + text_number( spacing, 3 ) + " " + std::to_string( static_cast<int>( data.hangers[ 2 ] ) ) + " " + text_number( data.hangers[ 3 ], 3 ) + " vis";
-    if( false == data.type.empty() ) { body += " type " + data.type; }
+    if( false == data.type.empty() ) {
+        body += " type " + data.type;
+        // brakujące ciężary w kotwieniu: mniejszy naciąg, większy zwis (starsze wersje symulatora pomijają ten dopisek)
+        double messenger, contact;
+        if( span_tension( Chain, Span, messenger, contact ) ) { body += " tension " + text_number( messenger, 0 ) + " " + text_number( contact, 0 ); }
+    }
     if( false == data.parallel.empty() ) { body += " parallel " + data.parallel; }
     return body + " endtraction";
 }
@@ -1664,13 +1725,14 @@ catenary_scene_new_gantry_name( std::string const &File ) {
 
 namespace {
 
-// przęsła do kotwienia (pierwsze albo ostatnie łańcucha) idą za nim
+// przęsła łańcucha z kotwieniem idą za nim: przęsło do kotwienia (położenie końców), a pozostałe przez naciąg
+// (brakujące ciężary zmieniają zwis wszystkich przęseł do kotwienia środkowego)
 void
 follow_anchor( scene_anchor const &Anchor ) {
     for( auto &chain : Chains ) {
         if( chain.removed || chain.file != Anchor.file || Anchor.data.name.empty() ) { continue; }
-        if( chain.data.anchor_start == Anchor.data.name && false == chain.spans.empty() ) { rebuild_span( chain, 0 ); }
-        if( chain.data.anchor_end == Anchor.data.name && false == chain.spans.empty() ) { rebuild_span( chain, chain.spans.size() - 1 ); }
+        if( chain.data.anchor_start != Anchor.data.name && chain.data.anchor_end != Anchor.data.name ) { continue; }
+        for( std::size_t span = 0; span < chain.spans.size(); ++span ) { rebuild_span( chain, span ); }
     }
 }
 
