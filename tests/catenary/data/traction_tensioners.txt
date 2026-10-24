@@ -70,6 +70,14 @@ part 6402-02 length 2.50
 part 6402-03 length 2.80
 part 6402-04 length 3.00
 
+// uchwyty do konstrukcji wg karty 33-0455 (modele Jana 2026-10-24, hole_1 -0,04 / -0,04 jak 5100; dlugosc srub z modeli):
+//   wyk. 1 (2 ceowniki zamkniete do C140): gora 4510-1 (0,177), dol 4520-1 (0,177); wyk. 2 (C160-180): 4510-2 (0,217) / 4520-2 (0,217)
+//   wyk. 3 (do C240): 4520-3 (0,257) / 4530-3 (brak); wyk. 4 (kratowy do C200): 4520-4 (0,107) / 4560-1 (brak); wyk. 5 (C220-240):
+//   4520-5 (0,127) / 4560-1; wyk. 7 (I180-200): 4520-6 (0,237); wyk. 8 (I220-240): 4520-7 (0,277). Tyly: 4510-3, 4520-8.
+//   Na razie bez slupow z tych wykonan w danych (poza dwuteownikami 166x - wyk. 7).
+// laczniki z modeli Jana 2026-10-24 (jeszcze bez urzadzen, ktore ich uzywaja): 4710-01 0,075, 4730-01 0,170, 4750-01 0,450,
+// 6511-01 0,075 (zamiast izolatora 7150 w kotwieniu srodkowym bez izolacji)
+
 // device <karta> table pulley lever rod rope rope_diameter
 //   mount / holder / hanger / messenger / contact  <czesc dlugosc>...   lancuchy czesci liniowych ("~czesc" - odwrocona)
 //   messenger_old / contact_old <czesc dlugosc>...   to samo w starych zlozeniach (izolator rolkowy)
@@ -97,6 +105,9 @@ device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 r
   // C180-200 - dopiski na kartach 43-0456 i 13-0457; C120 jak 11.
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
   brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  // dwuteowniki 1665-1667 (200x200): karta 33-0455 wyk. 7 (I180-200) - 4520-6 na gorze i na dole (bez poz. 2), tyl 4520-8;
+  // modele Jana 2026-10-24: hole_1 jak 5100 (0,04 / 0,04), sruby 0,237. Slup 1701 (betonowy) w 0455 nie wystepuje - bez uchwytow
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   holder ~4440-01 0.27
   hanger 6411-01 0.10 4720-01 0.10
   messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
@@ -128,6 +139,9 @@ device 0461-2x2 table 0011-1 pulley 4460-01 lever 6403-01 lever2 6406-01 rod 640
   pivot 0.03436 0.02561       // 4450-01: mount_top / mount_bottom nad / pod zerem - tu wchodza uchwyty 5100 (gorny i dolny odwrocony)
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
   brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  // dwuteowniki 1665-1667 (200x200): karta 33-0455 wyk. 7 (I180-200) - 4520-6 na gorze i na dole (bez poz. 2), tyl 4520-8;
+  // modele Jana 2026-10-24: hole_1 jak 5100 (0,04 / 0,04), sruby 0,237. Slup 1701 (betonowy) w 0455 nie wystepuje - bez uchwytow
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   holder ~4440-01 0.27
   hanger 6411-01 0.10 4720-01 0.10
   messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
