@@ -516,6 +516,7 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 else if( key == "rope" ) { device->rope = value; }
                 else if( key == "rope_diameter" ) { number_of( value, device->rope_diameter ); }
                 else if( key == "rope_eye" && k + 2 < words.size() ) { device->rope_eye = value; number_of( words[ k + 2 ], device->rope_eye_length ); ++k; }
+                else if( key == "rope_spacer" && k + 2 < words.size() ) { device->rope_spacer = value; number_of( words[ k + 2 ], device->rope_spacer_length ); ++k; }
                 else { report( "device " + device->name + ": unknown keyword \"" + key + "\"" ); }
             }
             continue;
@@ -1314,7 +1315,8 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     return true;
 }
 
-void tensioner_rope_solid( tensioner_result &Result, double const Radius, int const Sides, std::string const &Eye, double const EyeLength, std::vector<tensioner_vertex> &Triangles ) {
+void tensioner_rope_solid( tensioner_result &Result, double const Radius, int const Sides, std::string const &Eye, double const EyeLength, std::vector<tensioner_vertex> &Triangles,
+    std::string const &Spacer, double const SpacerLength ) {
     std::vector<vec> points;
     for( auto const &point : Result.rope ) {
         vec const p { point[ 0 ], point[ 1 ], point[ 2 ] };
@@ -1338,6 +1340,14 @@ void tensioner_rope_solid( tensioner_result &Result, double const Radius, int co
         auto const end { points[ n - 1 ] - enddir * std::min( EyeLength, length( points[ n - 1 ] - points[ n - 2 ] ) ) };
         eye( "rope_eye.1", start, startdir * -1.0 );
         eye( "rope_eye.2", end, enddir );
+        // przekładka ślizgowa na sworzniu ucha przy pręcie: sworzeń wzdłuż X ucha (ucho płaskie w Y-Z modelu), w zaczepie
+        if( false == Spacer.empty() ) {
+            auto const z { unit( enddir ) };
+            auto const pin { side_of( z ) };   // X ucha (obróconego o 90 stopni)
+            auto placement { placed( "rope_spacer", Spacer, points[ n - 1 ] - pin * ( 0.5 * SpacerLength ) ) };
+            set_rotation( placement, z, cross( pin, z ), pin );
+            Result.parts.push_back( placement );
+        }
         points.front() = start;
         points.back() = end;
     }
