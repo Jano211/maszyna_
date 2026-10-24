@@ -349,6 +349,29 @@ int main( int, char *argv[] ) {
             check( std::none_of( mock_span_bodies.begin(), mock_span_bodies.end(), []( std::string const &Body ) { return Body.find( " tension " ) != std::string::npos; } ),
                 "pelny stos: przesla z naciagiem typu sieci" );
         }
+        // kotwienie stale 0403 zamiast ciezarowego: bez ciezarow, przeslo do niego od nowa, z powrotem 0461
+        {
+            auto data { *catenary_anchor_get( 0 ) };
+            data.device = "0403";
+            mock_span_bodies.clear();
+            catenary_anchor_update( 0, data );
+            auto const *fixed { catenary_anchor_result( 0 ) };
+            auto const devices { catenary_anchor_devices() };
+            auto const listed { std::count_if( devices.begin(), devices.end(), []( catenary_anchor_card const &Item ) { return Item.card == "0403" && Item.fixed; } ) == 1
+                && std::count_if( devices.begin(), devices.end(), []( catenary_anchor_card const &Item ) { return Item.card == "0471" && Item.series && false == Item.fixed; } ) == 1
+                && std::none_of( devices.begin(), devices.end(), []( catenary_anchor_card const &Item ) { return Item.card.find( '-' ) != std::string::npos; } ) };
+            std::printf( "  kotwienie stale: czesci %d, uwagi %d, przesel od nowa %d\n", static_cast<int>( catenary_anchor_parts( 0 ) ), fixed != nullptr ? static_cast<int>( fixed->warnings.size() ) : -1, static_cast<int>( mock_span_bodies.size() ) );
+            check( listed && fixed != nullptr && fixed->fixed && fixed->weights == 0 && catenary_anchor_parts( 0 ) > 10 && mock_span_bodies.size() == 2,
+                "kotwienie stale 0403 w scenerii: lista kart, bez ciezarow, przesla od nowa" );
+            data.device = "0471";
+            catenary_anchor_update( 0, data );
+            auto const *series { catenary_anchor_result( 0 ) };
+            check( series != nullptr && false == series->fixed && series->weights > 0 && series->warnings.empty() && std::abs( series->b - 2.50 ) < 0.6,
+                "rolki szeregowe 0471 w scenerii: bez uwag" );
+            data.device = "0461";
+            catenary_anchor_update( 0, data );
+            result = catenary_anchor_result( 0 );
+        }
         // obrys urządzenia dla edytora: czoło słupa w stronę s0002 na wysokości rolek, rolka ruchoma dalej, kolumna ciężarów pionowo;
         // kotwienie kończy łańcuch l1 (koniec)
         {

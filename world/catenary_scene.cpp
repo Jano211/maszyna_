@@ -662,16 +662,24 @@ assemble_anchor( scene_anchor &Anchor ) {
         if( auto const *type { catenary::types().find( data.network ) }; type != nullptr ) {
             input.type = type->type.code;
             input.contacts = type->type.contact_count;
+            input.messengers = type->type.messenger_count;
             // sztywności i ciężar sieci do skracania przy brakujących ciężarach (przekrój i moduł z traction_tables.txt)
             auto const &net { type->type };
             input.messenger_stiffness = net.messenger_count * type->messenger_wire.area * type->messenger_wire.modulus * 0.1;
             input.contact_stiffness = net.contact_count * type->contact_wire.area * type->contact_wire.modulus * 0.1;
             input.load = ( net.messenger_count * net.messenger_mass + net.contact_count * net.contact_mass ) * input.gravity;
-            // urządzenie bez danych dla tego typu (np. 0461 dla dwóch lin nośnych): pierwsze, które je ma (0461-2x2)
+            // urządzenie bez danych dla tego typu (np. 0461 dla dwóch lin nośnych, 0403 dla sieci 32): najpierw z tej samej karty
+            // (nazwa do "-": 0461-2x2, 0403-32), potem dowolne tego samego rodzaju (ciężarowe / stałe)
             if( device->type( input.type ) == nullptr ) {
+                auto const card { data.device.substr( 0, data.device.find( '-' ) ) };
+                catenary::tensioner_device const *same { nullptr }, *kind { nullptr };
                 for( auto const &other : devices->devices() ) {
-                    if( other.type( input.type ) != nullptr ) { device = &other; break; }
+                    if( other.fixed != device->fixed || other.type( input.type ) == nullptr ) { continue; }
+                    if( same == nullptr && other.name.substr( 0, other.name.find( '-' ) ) == card ) { same = &other; }
+                    if( kind == nullptr ) { kind = &other; }
                 }
+                if( same != nullptr ) { device = same; }
+                else if( kind != nullptr ) { device = kind; }
             }
         }
         else { ErrorLog( label + "uses network type \"" + data.network + "\" which has no file" ); }
@@ -1769,6 +1777,17 @@ catenary::tensioner_result const *
 catenary_anchor_result( std::size_t const Index ) {
     if( Index >= Anchors.size() || Anchors[ Index ].removed ) { return nullptr; }
     return &Anchors[ Index ].result;
+}
+
+std::vector<catenary_anchor_card>
+catenary_anchor_devices() {
+    std::vector<catenary_anchor_card> result;
+    if( auto const *devices { tensioners() }; devices != nullptr ) {
+        for( auto const &device : devices->devices() ) {
+            if( device.name.find( '-' ) == std::string::npos ) { result.push_back( { device.name, device.fixed, false == device.small_pulley.empty() } ); }
+        }
+    }
+    return result;
 }
 
 bool

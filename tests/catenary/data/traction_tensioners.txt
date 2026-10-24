@@ -31,6 +31,9 @@ endtable
 
 // rolki szeregowe (tom 1 s. 14-16): te same przyrosty b i s co 0011-1, inne polozenie nominalne (sprawdzone na pierwszych wierszach)
 // 13-0011-6 lina(y) nosna(e): os rolek 7,00 m, bn 2,40, sn 2,25
+// 13-0011-5 cala siec, rolki szeregowe (tom 1 s. 13): b od czola do osi skrajnej rolki (duzej ruchomej), bn 2,50, sn 2,25, os rolek
+// 6,70, pret c 2,00; przyrosty jak 0011-1 (wiersze 500 i 550 karty z literowkami)
+table 0011-5 base 0011-1 shift_b 0.75 shift_s 0.00 height 6.70 rod 2.00
 table 0011-6 base 0011-1 shift_b 0.65 shift_s 0.00 height 7.00 rod 2.00
 // 13-0011-7 przewod(y) jezdny(e): os rolek 6,30 m, bn 2,90, sn 1,90
 table 0011-7 base 0011-1 shift_b 1.15 shift_s -0.35 height 6.30 rod 2.00
@@ -165,4 +168,142 @@ device 0461-2x2 table 0011-1 pulley 4460-01 lever 6403-01 lever2 6406-01 rod 640
   // Ciezary Ø400 wysokie: 32 sztuki ze zdjecia przy DW755 (Jan), na precie 3,00 m (stos 2,94 m) - ZALOZENIE, karty nie ma
   type 32 stack 6322-1w 32 lever hole_1 hole_2 axis second VI I II rod 6402-04
   type 35 stack 6322-1w 28 lever hole_1 hole_2 axis second VI I II rod 6402-04
+enddevice
+
+// ---- kotwienia stale (kind fixed) ---------------------------------------------------------------------------------------
+// 63-0403 kotwienia stale sieci z izolacja (tom 1 s. 89): na konstrukcji dwa przegubowe uchwyty kotwienia 4430-1 - lina nosna na
+// jej wysokosci, przewody na swojej; kazdy w parze uchwytow poz. 1 (karta 43-0453: 5100-1/-2 x4 w wyk. 11/12, inne 4510/4520/4570).
+// Lancuchy wg rysunkow karty, liczby czesci zgodne z tabela. Uchwyt krancowy 5120-6/-7 - jeden model 5120-01.
+// Wysokosc uchwytow: drutow ostatniego podwieszenia (lancuch prawie poziomo) - ZALOZENIE, karta 0453 jej nie podaje.
+// sieci 3, 4, 26, 30: lina 4430-7150-5120; przewody 4430-7150-4720-4730-4410-2x5120
+device 0403 kind fixed
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01 bez punktow mount_top / mount_bottom - ZALOZENIE jak 4450-01 (ta sama bryla)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  messenger 7150-01 0.8324
+  contact 7150-01 0.8324 4720-01 0.10 4730-01 0.17
+  type 3
+  type 4
+  type 26
+  type 30
+enddevice
+// siec 10 (jeden przewod): przewod 4430-7150-4720-5120 (bez 4730 i 4410)
+device 0403-10 kind fixed
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01 bez punktow mount_top / mount_bottom - ZALOZENIE jak 4450-01 (ta sama bryla)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  messenger 7150-01 0.8324
+  contact 7150-01 0.8324 4720-01 0.10
+  type 10
+enddevice
+// siec 20: lina 4430-7150-5120-7; przewody 4430-4730-4720-4410, za nim kazdy 7150-5120-7 (na rysunku 4720 za 4410, ale w tabeli
+// tylko jeden - przed wyrownywaczem)
+device 0403-20 kind fixed
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01 bez punktow mount_top / mount_bottom - ZALOZENIE jak 4450-01 (ta sama bryla)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  messenger 7150-01 0.8324
+  contact 4730-01 0.17 4720-01 0.10
+  contact_each 7150-01 0.8324
+  type 20
+enddevice
+// sieci 32, 35 (dwie liny nosne): liny 4430-4710-4410 (jedna nad druga), za nim kazda 4720-7150-5120-7; przewody 4430-4730-4410,
+// za nim kazdy 4720-7150-5120-6
+device 0403-32 kind fixed
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01 bez punktow mount_top / mount_bottom - ZALOZENIE jak 4450-01 (ta sama bryla)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  messenger 4710-01 0.075
+  messenger_equalizer 4410-01 0.1541
+  messenger_each 4720-01 0.10 7150-01 0.8324
+  contact 4730-01 0.17
+  contact_each 4720-01 0.10 7150-01 0.8324
+  type 32
+  type 35
+enddevice
+
+// ---- rolki szeregowe (cala siec na jednym stosie) ---------------------------------------------------------------------------
+// 13-0471 kotwienie ciezarowe sieci z izolacja, rolki szeregowe, ciezary Ø400 (rysunek ukladu jak 13-0421, tom 1 s. 98): przy slupie
+// 4450 + 4440-7, duza 4460-3, na 4440-6 mala 4460-2; wozek: mala 4460-2 i duza 4460-3 na 4440-5, dalej dzwignia 6406 jak 0461.
+// Ciezary 6322-1 (26/24/20/33), prety 6401-3 (typ 3, 4) / -2 (10) / -1 (26); zamocowania 13-0470: pierscien 5080-2 0,70 nad spodem
+// stosu (13-0018-3). Zabezpieczenie 4600-2 (trapez pod rolkami) - jeszcze nie stawiane.
+device 0471 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+  series 4460-02 0.336 0.703 holder 4440-06   // mala rolka 0,336 za duza (hole_1 4440-6 i 4440-5), zaczep liny w hole_2 4440-6 (0,703)
+  mount 4450-01 0.0747 4440-07 0.41
+  pivot 0.03436 0.02561
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  holder 4440-05 0.703                       // od malej ruchomej: duza w hole_1 (0,336), dzwignia w hole_2 (0,703)
+  hanger 6411-01 0.10 4720-01 0.10
+  messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
+  contact 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
+  messenger_old esn_2025 0.6004 4420-01 0.93
+  contact_old esn_2025 0.6004 4420-01 0.93
+  messenger_clamp 5120-01 0.058
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  guide 5070-02 4.50 mount 0.07 bottom 0.80
+  ring 5080-02 0.21416 at 0.70
+  type 3 stack 6322-1 26 lever IV I II rod 6401-03
+  type 4 stack 6322-1 24 lever VI I III rod 6401-03
+  type 10 stack 6322-1 20 lever V I III rod 6401-02
+  type 26 stack 6322-1 33 lever I V III rod 6401-01
+enddevice
+
+// 23-0480 to samo z ciezarami Ø306 i zeliwnymi (stos jak 0461), przy slupie 4440-4; pierscien 5080-1 jak 0461 - ZALOZENIE
+device 0480 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+  series 4460-02 0.336 0.703 holder 4440-06   // mala rolka 0,336 za duza (hole_1 4440-6 i 4440-5), zaczep liny w hole_2 4440-6 (0,703)
+  mount 4450-01 0.0747 4440-04 0.32
+  pivot 0.03436 0.02561
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  holder 4440-05 0.703                       // od malej ruchomej: duza w hole_1 (0,336), dzwignia w hole_2 (0,703)
+  hanger 6411-01 0.10 4720-01 0.10
+  messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
+  contact 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
+  messenger_old esn_2025 0.6004 4420-01 0.93
+  contact_old esn_2025 0.6004 4420-01 0.93
+  messenger_clamp 5120-01 0.058
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  guide 5070-02 4.50 mount 0.07 bottom 0.80
+  ring 5080-01 0.200 at 1.00
+  type 3 stack 6321-1 8 6323-1 18 lever IV I II
+  type 4 stack 6321-1 4 6323-1 20 lever VI I III
+  type 10 stack 6323-1 20 lever V I III
+  type 26 stack 6321-1 14 6323-1 19 lever I V III rod 6402-03
 enddevice

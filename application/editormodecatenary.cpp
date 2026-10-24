@@ -2089,7 +2089,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 	if (members.size() < 2)
 		return;
 	ImGui::Separator();
-	ImGui::TextUnformatted(STR_C("Anchors (weight tensioning, card 23-0461)"));
+	ImGui::TextUnformatted(STR_C("Anchors"));
 	for (int end = 0; end < 2; ++end)
 	{
 		auto const start{end == 0};
@@ -2146,6 +2146,37 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 		auto data{*anchor};
 		auto edited{false};
 		ImGui::PushItemWidth(180.0f);
+		// kind of the anchor: the card of the device (weight tensioning 0461, fixed 0403); variants for network types go by themselves
+		auto fixed{false};
+		{
+			auto const devices{catenary_anchor_devices()};
+			auto const card{data.device.substr(0, data.device.find('-'))};
+			std::vector<std::string> labels;
+			int chosen{-1};
+			for (std::size_t k = 0; k < devices.size(); ++k)
+			{
+				labels.push_back(format(devices[k].fixed ? STR_C("fixed (card %s)") : devices[k].series ? STR_C("weights, pulleys in series (card %s)") : STR_C("weight tensioning (card %s)"), devices[k].card.c_str()));
+				if (devices[k].card == card)
+				{
+					chosen = static_cast<int>(k);
+					fixed = devices[k].fixed;
+				}
+			}
+			if (ImGui::BeginCombo(STR_C("Kind"), chosen >= 0 ? labels[chosen].c_str() : data.device.c_str()))
+			{
+				for (std::size_t k = 0; k < devices.size(); ++k)
+					if (ImGui::Selectable(labels[k].c_str(), static_cast<int>(k) == chosen))
+					{
+						data.device = devices[k].card;
+						data.height = 0.0;
+						fixed = devices[k].fixed;
+						edited = true;
+					}
+				ImGui::EndCombo();
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Weight tensioning keeps the tension with the air temperature; a fixed anchor holds the wires straight on the pole (the other end of the half-section has the weights)"));
+		}
 		if (false == data.on.empty())
 			ImGui::TextDisabled("%s", format(STR_C("On the pole of %s"), data.on.c_str()).c_str());
 		else
@@ -2171,6 +2202,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			}
 			ImGui::EndCombo();
 		}
+		if (false == fixed)
 		{
 			auto distance{static_cast<float>(data.distance)};
 			if (ImGui::SliderFloat(STR_C("From the middle anchor (m)"), &distance, 50.0f, 900.0f, "%.0f"))
@@ -2183,6 +2215,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 		}
 		std::string const colornames[] = {STR(kWeightColorNames[0]), STR(kWeightColorNames[1]), STR(kWeightColorNames[2]), STR(kWeightColorNames[3])};
 		char const *const colors[] = {colornames[0].c_str(), colornames[1].c_str(), colornames[2].c_str(), colornames[3].c_str()};
+		if (false == fixed)
 		{
 			auto color{weight_color_index(data.color)};
 			if (ImGui::Combo(STR_C("Weights"), &color, colors, 4))
@@ -2197,6 +2230,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 				edited = true;
 			}
 		}
+		if (false == fixed)
 		{
 			// the insulators of the chains to the wires: resin 7150 or the old roller ESN-2025
 			static char const *const values[] = {"", "new", "old", "messenger", "contact"};
@@ -2215,31 +2249,35 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 				ImGui::SetTooltip("%s", STR_C("Old assemblies have the roller insulator ESN-2025 straight in the lever hole, then the turnbuckle and the clamp; by default the roller ones come with tarnished wires, as the 5110 clamps do"));
 		}
 		{
-			auto missing{data.missing};
-			if (ImGui::SliderInt(STR_C("Weights missing"), &missing, 0, 10))
+			if (false == fixed)
 			{
-				data.missing = missing;
-				edited = true;
+				auto missing{data.missing};
+				if (ImGui::SliderInt(STR_C("Weights missing"), &missing, 0, 10))
+				{
+					data.missing = missing;
+					edited = true;
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("Stolen from the top of the stack: about 100 daN less tension each"));
+				auto elongation{static_cast<float>(data.elongation * 100.0)};
+				if (ImGui::SliderFloat(STR_C("Wires stretched since regulated (cm)"), &elongation, 0.0f, 60.0f, "%.0f"))
+				{
+					data.elongation = elongation / 100.0;
+					edited = true;
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("Creep and wear of an old network: the weights hang 4 times this much lower; on the ground the network loses its tension"));
 			}
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("Stolen from the top of the stack: about 100 daN less tension each"));
-			auto elongation{static_cast<float>(data.elongation * 100.0)};
-			if (ImGui::SliderFloat(STR_C("Wires stretched since regulated (cm)"), &elongation, 0.0f, 60.0f, "%.0f"))
-			{
-				data.elongation = elongation / 100.0;
-				edited = true;
-			}
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("Creep and wear of an old network: the weights hang 4 times this much lower; on the ground the network loses its tension"));
 			auto const *solved{catenary_anchor_result(index)};
 			auto height{static_cast<float>(data.height > 0.0 ? data.height : (solved != nullptr && solved->height > 0.0 ? solved->height : 6.70))};
-			if (ImGui::SliderFloat(STR_C("Pulleys above the rail heads (m)"), &height, 5.0f, 9.0f, "%.2f"))
+			if (ImGui::SliderFloat(fixed ? STR_C("Contact wire anchor above the rail heads (m)") : STR_C("Pulleys above the rail heads (m)"), &height, 4.5f, 9.0f, "%.2f"))
 			{
 				data.height = height;
 				edited = true;
 			}
 			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("Height of the pulley axles on the mast; the weights move up or down with them. The mounting table gives 6.70 m. Drag or Ctrl+click to type"));
+				ImGui::SetTooltip("%s", fixed ? STR_C("Height of the anchor of the contact wires on the mast (the messenger one goes as much higher as at the last pole); by default at the height of the wires at the last pole. Drag or Ctrl+click to type")
+				                              : STR_C("Height of the pulley axles on the mast; the weights move up or down with them. The mounting table gives 6.70 m. Drag or Ctrl+click to type"));
 		}
 		ImGui::PopItemWidth();
 		if (edited)
@@ -2259,8 +2297,11 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 		}
 		if (auto const *result{catenary_anchor_result(index)}; result != nullptr)
 		{
-			ImGui::TextDisabled("%s", format(STR_C("%.1f deg C: pulley %.2f m from the pole, weights %.2f m over the rails; %d weights, messenger %.0f daN, contact wires %.0f daN"),
-			                                   Global.AirTemperature, result->b, result->s, result->weights, result->messenger_tension, result->contact_tension).c_str());
+			if (result->fixed)
+				ImGui::TextDisabled("%s", format(STR_C("Fixed anchor: contact wires %.2f m over the rails"), result->height).c_str());
+			else
+				ImGui::TextDisabled("%s", format(STR_C("%.1f deg C: pulley %.2f m from the pole, weights %.2f m over the rails; %d weights, messenger %.0f daN, contact wires %.0f daN"),
+				                                   Global.AirTemperature, result->b, result->s, result->weights, result->messenger_tension, result->contact_tension).c_str());
 			for (auto const &warning : result->warnings)
 				ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s", warning.c_str());
 		}

@@ -576,6 +576,80 @@ int main( int argc, char **argv ) {
     }
     else { check( false, "urzadzenie 0461-2x2" ); }
 
+    // rolki szeregowe 0471 (Ø400) i 0480 (Ø306): duza i mala przy slupie, mala i duza na wozku, lina 4490-2 ok. 10 m, 1:4
+    for( auto const *name : { "0471", "0480" } ) {
+        auto const *series { catalog.device( name ) };
+        if( series == nullptr ) { check( false, std::string( "urzadzenie " ) + name ); continue; }
+        auto good { true };
+        double lengths[ 3 ], bs[ 3 ], ss[ 3 ];
+        int index { 0 };
+        for( auto const temperature : { -25.0, 10.0, 40.0 } ) {
+            catenary::tensioner_input input;
+            input.type = 3;
+            input.temperature = temperature;
+            input.pole = "1611-11";
+            input.depth = []( double ) { return 0.12; };
+            catenary::tensioner_result result;
+            good = good && catenary::solve_tensioner( catalog, *series, input, result ) && result.warnings.empty();
+            int pulleys { 0 };
+            for( auto const &part : result.parts ) { pulleys += part.role.rfind( "pulley_", 0 ) == 0; }
+            good = good && pulleys == 4;
+            lengths[ index ] = rope_length( result );
+            bs[ index ] = result.b;
+            ss[ index ] = result.s;
+            ++index;
+        }
+        good = good && std::abs( lengths[ 0 ] - lengths[ 1 ] ) < 0.03 && std::abs( lengths[ 2 ] - lengths[ 1 ] ) < 0.03 && std::abs( lengths[ 1 ] - 10.0 ) < 0.6;
+        good = good && std::abs( ( ss[ 0 ] - ss[ 2 ] ) - 4.0 * ( bs[ 0 ] - bs[ 2 ] ) ) < 1e-6 && std::abs( bs[ 1 ] - 2.50 ) < 1e-6;
+        std::printf( "    %s: lina %.2f / %.2f / %.2f m, b %.2f..%.2f\n", name, lengths[ 0 ], lengths[ 1 ], lengths[ 2 ], bs[ 2 ], bs[ 0 ] );
+        check( good, std::string( "rolki szeregowe " ) + name + ": 4 rolki, lina stalej dlugosci (karta 4490-2: 10,00 m), ciezary 4 razy b, tablica 0011-5 bn 2,50" );
+    }
+
+    // kotwienia stale 63-0403: liczby czesci jak w tabeli karty (bez uchwytow do slupa)
+    {
+        struct expect { char const *device; int type, contacts, messengers; std::map<std::string, int> parts; };
+        std::vector<expect> const cases {
+            { "0403", 3, 2, 1, { { "4410-01", 1 }, { "4430-01", 2 }, { "4720-01", 1 }, { "4730-01", 1 }, { "5120-01", 3 }, { "7150-01", 2 } } },
+            { "0403-10", 10, 1, 1, { { "4430-01", 2 }, { "4720-01", 1 }, { "5120-01", 2 }, { "7150-01", 2 } } },
+            { "0403-20", 20, 2, 1, { { "4410-01", 1 }, { "4430-01", 2 }, { "4720-01", 1 }, { "4730-01", 1 }, { "5120-01", 3 }, { "7150-01", 3 } } },
+            { "0403-32", 32, 2, 2, { { "4410-01", 2 }, { "4430-01", 2 }, { "4710-01", 1 }, { "4720-01", 4 }, { "4730-01", 1 }, { "5120-01", 4 }, { "7150-01", 4 } } } };
+        for( auto const &item : cases ) {
+            auto const *fixed { catalog.device( item.device ) };
+            if( fixed == nullptr ) { check( false, std::string( "urzadzenie " ) + item.device ); continue; }
+            catenary::tensioner_input input;
+            input.type = item.type;
+            input.contacts = item.contacts;
+            input.messengers = item.messengers;
+            input.aimed = true;
+            double const rope[ 3 ] { 40.0, 0.3, 7.30 }, wire[ 3 ] { 40.0, 0.3, 5.60 };
+            std::copy( rope, rope + 3, input.messenger_target );
+            std::copy( wire, wire + 3, input.contact_target );
+            catenary::tensioner_result result;
+            auto const solved { catenary::solve_tensioner( catalog, *fixed, input, result ) };
+            std::map<std::string, int> counted;
+            for( auto const &part : result.parts ) { ++counted[ part.part ]; }
+            auto good { solved && result.fixed && result.warnings.empty() && result.weights == 0 && result.rope.empty() && counted == item.parts };
+            good = good && result.contact_ends.size() == static_cast<std::size_t>( item.contacts );
+            // przewody na wysokosci ostatniego podwieszenia, lina wyzej; konce drutow kilka metrow od slupa w strone podwieszenia
+            good = good && std::abs( result.height - 5.60 ) < 1e-9 && result.messenger_end[ 2 ] > 7.0 && result.contact_ends[ 0 ][ 2 ] > 5.5 && result.contact_ends[ 0 ][ 2 ] < 5.7;
+            good = good && result.messenger_end[ 0 ] > 0.8 && result.contact_ends[ 0 ][ 0 ] > 1.0;
+            if( item.messengers == 2 ) { good = good && result.messenger_end[ 2 ] > result.messenger2_end[ 2 ] + 0.05; }
+            std::string list;
+            for( auto const &[ name, count ] : counted ) { list += " " + name + "x" + std::to_string( count ); }
+            std::printf( "    %s typ %d:%s; lina %.2f m od czola, przewody %.2f m\n", item.device, item.type, list.c_str(), result.messenger_end[ 0 ], result.contact_ends.empty() ? 0.0 : result.contact_ends[ 0 ][ 0 ] );
+            check( good, std::string( "kotwienie stale " ) + item.device + " typ " + std::to_string( item.type ) + ": czesci jak w tabeli 0403, druty na wysokosci podwieszenia" );
+        }
+        // na slupie 1611-11: dwie pary uchwytow 5100-1 (gora lina, dol przewody), kazda wokol 4430
+        catenary::tensioner_input input;
+        input.pole = "1611-11";
+        input.depth = []( double ) { return 0.12; };
+        catenary::tensioner_result result;
+        catenary::solve_tensioner( catalog, *catalog.device( "0403" ), input, result );
+        int fronts { 0 }, backs { 0 };
+        for( auto const &part : result.parts ) { fronts += part.part == "5100-01"; backs += part.part == "5100-05"; }
+        check( fronts == 4 && backs == 4 && result.warnings.empty(), "kotwienie stale na 1611-11: 4 x 5100-1 + 4 x 5100-5 (karta 43-0453)" );
+    }
+
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDOW: %d\n", failures );
     return failures == 0 ? 0 : 1;
 }
