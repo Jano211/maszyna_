@@ -277,11 +277,18 @@ int main( int argc, char **argv ) {
 
     // uchwyty 5100 na słupie 1611: górny trzyma 4450 za mount_top, dolny (odwrócony) za mount_bottom; tyły po drugiej stronie słupa
     {
+        // uchwyty jeszcze zakomentowane w danych: ustawione tutaj
+        auto withbrackets { *device };
+        catenary::tensioner_device::bracket_set set;
+        set.pole = "1611"; set.hole_out = 0.04; set.hole_drop = 0.04; set.bolt = 0.217;
+        set.top_front = "5100-01"; set.top_back = "5100-05"; set.bottom_front = "5100-03"; set.bottom_back = "5100-06";
+        withbrackets.brackets = { set };
+        withbrackets.pivot_top = 0.03436; withbrackets.pivot_bottom = 0.02561;
         catenary::tensioner_input input;
         input.pole = "1611-11";
         input.depth = []( double ) { return 0.20; };
         catenary::tensioner_result result;
-        catenary::solve_tensioner( catalog, *device, input, result );
+        catenary::solve_tensioner( catalog, withbrackets, input, result );
         std::map<std::string, catenary::tensioner_placement const *> by;
         for( auto const &part : result.parts ) { by[ part.role ] = &part; }
         auto const hole = []( catenary::tensioner_placement const *P, int const A ) {
@@ -300,11 +307,11 @@ int main( int argc, char **argv ) {
         }
         check( good, "uchwyty 5100 na slupie 1611: otwory w mount_top / mount_bottom 4450 (0,04 przed czolem), tyly za slupem" );
         input.depth = []( double ) { return 0.25; };
-        catenary::solve_tensioner( catalog, *device, input, result );
+        catenary::solve_tensioner( catalog, withbrackets, input, result );
         check( std::find( result.warnings.begin(), result.warnings.end(), std::string( "the bracket bolts are shorter than the structure is deep" ) ) != result.warnings.end(),
             "uchwyty 5100: uwaga, gdy sruby krotsze niz slup gleboki" );
         input.pole = "1701";
-        catenary::solve_tensioner( catalog, *device, input, result );
+        catenary::solve_tensioner( catalog, withbrackets, input, result );
         auto none { true };
         for( auto const &part : result.parts ) { if( part.role.rfind( "bracket", 0 ) == 0 ) { none = false; } }
         check( none, "slup bez uchwytow w danych: bez uchwytow, 4450 na czole" );
