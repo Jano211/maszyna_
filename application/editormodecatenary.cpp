@@ -404,6 +404,11 @@ bool catenary_editor::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3
 	auto const after{curve.point(std::min(1.0, parameter + step))};
 	double a[2]{before.x, before.z}, b[2]{Spot.axis.x, Spot.axis.z}, c[2]{after.x, after.z};
 	Spot.radius = catenary::plan_radius(a, b, c);
+	{
+		// the centre of the bend is on the side of the chord's middle
+		auto const bend{glm::dot(0.5 * (plan_of(before) + plan_of(after)) - plan_of(Spot.axis), right)};
+		Spot.inward = std::abs(bend) < 1e-6 ? 0 : bend > 0.0 ? 1 : -1;
+	}
 	switch (m_catenary.bend)
 	{
 	case 1: Spot.curve = false; break;
@@ -812,6 +817,32 @@ bool catenary_editor::catenary_switch_error(std::size_t const Index) const
 	return check.error;
 }
 
+double catenary_editor::catenary_cant(catenary_spot const &Spot)
+{
+	if (Spot.track == nullptr || Spot.path < 0 || Spot.path >= static_cast<int>(Spot.track->m_paths.size()))
+		return 0.0;
+	auto const &rolls{Spot.track->m_paths[Spot.path].rolls};
+	return std::abs(glm::radians(glm::mix(static_cast<double>(rolls[0]), static_cast<double>(rolls[1]), std::clamp(Spot.parameter, 0.0, 1.0))));
+}
+
+glm::dvec3 catenary_editor::catenary_cant_shift(catenary_spot const &Spot, double const Height)
+{
+	auto const cant{catenary_cant(Spot)};
+	if (cant < 1e-4)
+		return glm::dvec3{0.0};
+	// towards the centre of the bend; on a cant without a bend (shouldn't be) by the sign of the roll: a positive one lifts the left rail
+	auto side{Spot.inward};
+	if (side == 0)
+	{
+		auto const &rolls{Spot.track->m_paths[Spot.path].rolls};
+		side = glm::mix(rolls[0], rolls[1], static_cast<float>(Spot.parameter)) > 0.0f ? 1 : -1;
+	}
+	auto const right{right_of(Spot.forward) * static_cast<double>(side)};
+	auto const shift{Height * std::sin(cant)};
+	// the rail heads: the lower rail stays at the points of the track, the middle goes up by half the cant (TSegment::Init)
+	return glm::dvec3{right.x * shift, 0.75 * std::sin(cant), right.y * shift};
+}
+
 void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole) const
 {
 	auto const &tool{m_catenary};
@@ -832,8 +863,9 @@ void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearan
 	auto const axisdistance{Clearance + 0.5 * pole->depth(0.0)};
 	auto const offset{Toward ? Stagger : -Stagger};
 	auto const polepoint{glm::dvec3{Spot.axis.x, railhead, Spot.axis.z} + out * axisdistance};
-	auto const wire{glm::dvec3{Spot.axis.x, railhead + height, Spot.axis.z} + out * offset};
-	Spot.reach = axisdistance - offset - 0.5 * pole->depth(height);
+	// on a superelevated track the stagger is measured from the leaning axis of the track (table 23-0007)
+	auto const wire{glm::dvec3{Spot.axis.x, railhead + height, Spot.axis.z} + catenary_cant_shift(Spot, height) + out * offset};
+	Spot.reach = glm::dot(plan_of(polepoint) - plan_of(wire), plan_of(out)) - 0.5 * pole->depth(height);
 	// the card: from the group of the described catalogue, or (without it) from the tubular families 11xx/12xx
 	catenary::cantilever_scheme const *scheme{nullptr};
 	auto const &structures{catenary_scene_structures()};
@@ -935,7 +967,8 @@ catenary_editor::catenary_spot const *catenary_editor::catenary_spot_of(std::siz
 	}
 	// what the suspension has, not what the panel would make
 	auto const right{right_of(spot.forward) * static_cast<double>(spot.side)};
-	spot.toward = glm::dot(plan_of(wire) - plan_of(spot.axis), right) >= 0.0;
+	auto const lean{catenary_cant_shift(spot, wire.y - (spot.axis.y + kRailTop))};
+	spot.toward = glm::dot(plan_of(wire) - plan_of(spot.axis + lean), right) >= 0.0;
 	spot.data = *data;
 	spot.card = data->card;
 	auto const decade{(data->card / 10) % 10};
@@ -946,7 +979,9 @@ catenary_editor::catenary_spot const *catenary_editor::catenary_spot_of(std::siz
 
 std::string catenary_editor::catenary_intent_label(catenary_spot const &Spot) const
 {
-	auto const where{Spot.curve ? format(STR_C("curve R %.0f m"), Spot.radius) : std::string{STR("straight")}};
+	auto where{Spot.curve ? format(STR_C("curve R %.0f m"), Spot.radius) : std::string{STR("straight")}};
+	if (auto const cant{catenary_cant(Spot)}; cant >= 1e-4)
+		where += format(STR_C(", superelevation %.0f mm"), 1500.0 * std::sin(cant));
 	auto const offset{Spot.toward ? STR("towards the pole") : STR("away from the pole")};
 	if (Spot.card == 0)
 		return format(STR_C("Pole here, %s, wires %s: %s"), where.c_str(), offset.c_str(), Spot.problem.c_str());

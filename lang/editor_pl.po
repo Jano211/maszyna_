@@ -5927,3 +5927,6 @@ msgstr "Rolki nad główką szyny (m)"
 
 msgid "Height of the pulley axles on the mast; the weights move up or down with them. The mounting table gives 6.70 m. Drag or Ctrl+click to type"
 msgstr "Wysokość osi rolek na słupie; ciężary przesuwają się razem z nimi. Tablica montażowa podaje 6,70 m. Przeciągnij albo Ctrl+klik, żeby wpisać"
+
+msgid ", superelevation %.0f mm"
+msgstr ", przechyłka %.0f mm"
