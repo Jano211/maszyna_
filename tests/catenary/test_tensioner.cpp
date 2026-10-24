@@ -140,6 +140,31 @@ int main( int argc, char **argv ) {
         input.missing = 4;
         catenary::solve_tensioner( catalog, *device, input, thin );
         check( thin.weights == full.weights - 4 && std::abs( thin.tension - full.tension * thin.weights / full.weights ) < 1e-6, "4 brakujace ciezary: naciag mniejszy proporcjonalnie" );
+        // brakujace ciezary skracaja siec: C120-2C (L120 118 GPa, 2 x Djp100 120 GPa), przesla 60 m, 700 m
+        {
+            auto shorter { input };
+            shorter.messenger_stiffness = 118e9 * 120e-6 / 10.0;
+            shorter.contact_stiffness = 2.0 * 120e9 * 100e-6 / 10.0;
+            shorter.load = ( 1.060 + 2.0 * 0.890 ) * 0.981;
+            shorter.span = 60.0;
+            catenary::tensioner_result result, same;
+            catenary::solve_tensioner( catalog, *device, shorter, result );
+            shorter.missing = 0;
+            catenary::solve_tensioner( catalog, *device, shorter, same );
+            auto const ms { full.messenger_tension / full.tension };
+            auto const hm0 { full.messenger_tension }, hm { result.messenger_tension }, hc0 { full.contact_tension }, hc { result.contact_tension };
+            // zwis wspolny liny i przewodow (wieszaki): f liny = f0 (Hm0 + Hc) / (Hm + Hc), f przewodow = f0 (Hm0 - Hm) / (Hm + Hc)
+            auto const f0 { shorter.load * 3600.0 / ( 8.0 * hm0 ) };
+            auto const fm { f0 * ( hm0 + hc ) / ( hm + hc ) }, fc { f0 * ( hm0 - hm ) / ( hm + hc ) };
+            auto const dm { ( hm0 - hm ) * 700.0 / shorter.messenger_stiffness + 700.0 / 60.0 * 8.0 / 180.0 * ( fm * fm - f0 * f0 ) };
+            auto const dc { ( hc0 - hc ) * 700.0 / shorter.contact_stiffness + 700.0 / 60.0 * 8.0 / 180.0 * fc * fc };
+            auto const expected { ms * dm + ( 1.0 - ms ) * dc };
+            std::printf( "    4 brakujace: naciag %.0f -> %.0f daN, rolka dalej o %.3f m, ciezary wyzej o %.3f m\n", full.tension, result.tension, result.shortening, result.s - thin.s );
+            check( std::abs( result.shortening - expected ) < 1e-9 && expected > 0.03 && expected < 0.20
+                && std::abs( result.b - ( thin.b + expected ) ) < 1e-9 && std::abs( result.s - ( thin.s + 4.0 * expected ) ) < 1e-9,
+                "4 brakujace ciezary: siec krotsza (sprezystosc i zwis), rolka dalej od konstrukcji, ciezary 4 razy wyzej" );
+            check( same.shortening == 0.0 && std::abs( same.b - full.b ) < 1e-12, "pelny stos: bez skrocenia, jak w tablicy" );
+        }
         input.missing = 0;
         input.elongation = 0.10;
         catenary::solve_tensioner( catalog, *device, input, stretched );

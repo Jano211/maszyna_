@@ -10,6 +10,7 @@
 #include "utilities/Globals.h"
 #include "utilities/Logs.h"
 #include "utilities/parser.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
@@ -329,7 +330,25 @@ int main( int, char *argv[] ) {
         Global.AirTemperature = -20.f;
         catenary_scene_temperature();
         result = catenary_anchor_result( 0 );
-        check( result->b > warm + 0.3 && mock_span_bodies.size() == 1, "mroz: rolka dalej od slupa, przeslo do kotwienia od nowa" );
+        check( result->b > warm + 0.3 && mock_span_bodies.size() == 2, "mroz: rolka dalej od slupa, przesla lancucha z kotwieniem od nowa" );
+        // brakujące ciężary: sieć krótsza, przęsła łańcucha z mniejszym naciągiem
+        {
+            auto data { *catenary_anchor_get( 0 ) };
+            auto const frost { *result };
+            data.missing = 4;
+            mock_span_bodies.clear();
+            catenary_anchor_update( 0, data );
+            auto const *thin { catenary_anchor_result( 0 ) };
+            auto const tension { std::count_if( mock_span_bodies.begin(), mock_span_bodies.end(), []( std::string const &Body ) { return Body.find( " tension " ) != std::string::npos; } ) };
+            std::printf( "  4 brakujace ciezary: naciag %.0f -> %.0f daN, siec krotsza o %.3f m, przesel z naciagiem %d\n", frost.tension, thin->tension, thin->shortening, static_cast<int>( tension ) );
+            check( thin->shortening > 0.02 && thin->b > frost.b && tension == 2, "brakujace ciezary: siec krotsza (przekroje z tablicy przewodow), przesla z mniejszym naciagiem" );
+            data.missing = 0;
+            mock_span_bodies.clear();
+            catenary_anchor_update( 0, data );
+            result = catenary_anchor_result( 0 );
+            check( std::none_of( mock_span_bodies.begin(), mock_span_bodies.end(), []( std::string const &Body ) { return Body.find( " tension " ) != std::string::npos; } ),
+                "pelny stos: przesla z naciagiem typu sieci" );
+        }
         // obrys urządzenia dla edytora: czoło słupa w stronę s0002 na wysokości rolek, rolka ruchoma dalej, kolumna ciężarów pionowo;
         // kotwienie kończy łańcuch l1 (koniec)
         {

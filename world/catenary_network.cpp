@@ -99,7 +99,10 @@ void type_registry::load_tables() {
             double mass { 0.0 }, diameter { 0.0 };
             stream >> mass >> diameter;
             if( stream.fail() || mass <= 0.0 ) { report( "Catenary: bad wire entry in \"" + filename + "\" (line " + std::to_string( linenumber ) + ")" ); continue; }
-            m_wires[ key ] = { mass, diameter * 0.001 };
+            // dalej opcjonalnie: przekrój mm² i moduł sprężystości GPa
+            double area { 0.0 }, modulus { 0.0 };
+            if( stream >> area ) { stream >> modulus; }
+            m_wires[ key ] = { mass, diameter * 0.001, std::max( 0.0, area ) * 1e-6, std::max( 0.0, modulus ) * 1e9 };
         }
         else if( kind == "spacing" ) {
             int span { 0 };

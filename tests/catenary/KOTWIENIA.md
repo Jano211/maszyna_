@@ -112,6 +112,23 @@ z zadanej długości drutu → naciąg).
   przed ramką to osobna część i czy zastępuje 4720/4420, czy też na linie nośnej, czy przy stanie „przejściowe” też
   (5110 jest teraz tylko przy zaśniedziałych).
 
+## Brakujące ciężary skracają sieć (2026-10-24 wieczór)
+
+Naciąg od niepełnego stosu H < H0 (H0 = pełny stos, jak w tablicy). Sieć do kotwienia środkowego (distance) skraca się,
+urządzenie ściąga ją ku przęsłom: rolka dalej od konstrukcji o `shortening`, ciężary wyżej 4 razy tyle.
+- sprężyście: ΔH·distance/EA, osobno lina (Hm = H·ms) i przewody (Hc = H − Hm); EA z `wire` w traction_tables.txt
+  (przekrój mm², moduł GPa – dopisane kolumny);
+- zwis: wieszaki trzymają przewody pod liną, dodatkowy zwis niosą naciągi razem: lina f0·(Hm0+Hc)/(Hm+Hc), przewody
+  f0·(Hm0−Hm)/(Hm+Hc), f0 = w·a²/(8·Hm0), w = ciężar liny i przewodów na metr (bez wieszaków), a = średnia rozpiętość
+  przęseł łańcucha; nadmiar długości 8f²/(3a) na przęsło;
+- oś dźwigni (rolka ruchoma) = ms·Δlina + (1−ms)·Δprzewody (dźwignia sztywna obraca się, tego obrotu nie rysujemy).
+- C120-2C, 700 m, przęsła 60 m, 4 z 26 brak: 2755 → 2331 daN, rolka 12,5 cm dalej, ciężary 50 cm wyżej.
+- Przęsła łańcucha (do `distance` od kotwienia, bliższe kotwienie wygrywa) dostają dopisek `tension <lina daN> <przewody daN>`
+  w node traction – liczone kopią typu z mniejszym naciągiem (większy zwis). Ciężary na gruncie: naciąg typu (nie liczymy).
+- Moduły z sieci (w kartach nic): liny Cu twarde 119/118/117 GPa przy 7/19/37 drutach, α 17e-6 (karta OLX, ideal.co.nz);
+  przewód jezdny CW128C 100–150 GPa → 120 (totalmateria); **LB70 brązowa – nie znaleziono, ZAŁOŻENIE 118**.
+- Wydłużenie trwałe (`elongation`) naciągu nie zmienia (ciężary go trzymają), dopóki stos nie siądzie na gruncie.
+
 ## Prowadnica, pierścień, uchwyty 5100 (karty przeczytane 2026-10-24 15:50)
 - **23-0018-2** (Uzup. 2 s. 8, usytuowanie ciężarów Ø306, kotwienie wspólne): prowadnica od **0,80 m** do 0,80 + 4,50 = 5,30 m nad
   główką; pierścień prowadzący ok. **1,00 m nad spodem stosu** (na wysokości górnej części żeliwnych), przy +40 °C/750 m spód stosu

@@ -29,7 +29,8 @@ extern catenary_settings CatenarySettings;
 
 // przypisuje przęsłu typ sieci z dopisku "type" i dobiera rozstaw wieszaków; wołane po wczytaniu punktów przęsła.
 // pusty symbol albo wyłączone rysowanie wg typu zostawia przęsło rysowane po staremu
-void catenary_span_assign( TTraction &Traction, std::string const &Symbol );
+// Messenger, Contact: naciąg liny nośnej i przewodów jezdnych w daN zamiast naciągu typu (dopisek "tension"); 0 = jak w typie
+void catenary_span_assign( TTraction &Traction, std::string const &Symbol, double Messenger = 0.0, double Contact = 0.0 );
 // symbol typu sieci przypisany przęsłu; pusty gdy brak
 std::string catenary_span_symbol( TTraction const &Traction );
 // odcinki przęsła policzone wg typu sieci, dopisywane do Vertices; false gdy przęsło ma być narysowane po staremu
