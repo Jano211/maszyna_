@@ -124,8 +124,9 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [ ] Mocowania do słupa wg 33-0455: góra pod rolkę (4510-1/-2, 4520-3…-7, 4570-1, 5100-1/-2), dół pod prowadnicę (4520-1/-2, 4530-3, 4560-1, 5100-3/-4) – **modele + przypisanie wykonań 1–12 do modeli słupów (Jan)**
 - [ ] 6411-01 (łącznik liny z prętem; teraz 0,10 m bez modelu) – model
 - [ ] 4430-01 (`hole_1` −0,0747): ustalić, gdzie stoi
-- [ ] Stary izolator rolkowy = **ESN-2025** (model Jana 24.10) zamiast 7150 przy drutach zaśniedziałych – zero i drugi zaczep modelu, czy w kotwieniu też (Jan podał użycie w izolacji przęsła od przęsła)
+- [x] Stary izolator rolkowy **ESN-2025** (model `esn_2025`, hole_1 0,6004) zamiast 7150 (24.10, odcinek 2138): łańcuchy `messenger_old` / `contact_old` = ESN-2025 – 4420 – [wyrównywacz] – uchwyt, wprost w otworze dźwigni; wpis kotwienia `insulators new|old|messenger|contact`, bez wpisu – rolkowe na obu przy drutach zaśniedziałych; w edytorze lista „Izolatory”; test `tt`, `ts`; na G: traction_tensioners.txt 9593 B
 - [ ] Czy stan „przejściowe” też ma dawać stare złożenie (5110 i izolator rolkowy)
+- [ ] Łańcuch z ESN-2025 bez 4720 przed izolatorem (tak podał Jan) i uchwyt liny nośnej 5120 też w starym złożeniu – do potwierdzenia w grze
 - [ ] Obejrzeć w grze: lina proceduralna (czy siedzi w rowkach), obrót krążków przy suwaku temperatury
 - [ ] Obroty części po komplecie modeli (Jan powie, co stoi krzywo)
 - [x] Dźwignia przechylona do kierunku drutów (24.10, odcinek 2138): staje prostopadle do wypadkowej z obu łańcuchów, uchwyt 4440 wzdłuż wypadkowej (tylko w płaszczyźnie urządzenia); typowo 0,3–0,5° (`lever_tilt`, test `tt`)
@@ -138,7 +139,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [ ] Kotwienie środkowe (0406: lina 9831-5, zaciski 1,00 m od słupa środkowego, połączenia V w połowie przęsła); kontrola 12° wysięgnika na skrajnych słupach
 - [ ] Kotwienie środkowe do dźwigara bramki (0463…)
 - [ ] Podniesienie drutu o 0,30 m na słupie, gdzie krzyżują się przęsła naprężenia
-- [ ] Izolacja sieci przęsło od przęsła (0447): łańcuch ESN-2025 – 4420 – wyrównywacz – 5110 (Jan 24.10)
+- [ ] Izolatory sekcyjne (przęsło od przęsła) – Jan 24.10: na razie nie. Dwa typy: rolkowe (ESN-2025) i nowe na izolatorach żywicznych; przejezdne i nieprzejezdne (dwa izolatory jak na linie nośnej)
 
 **Wizualizacja i czas**
 

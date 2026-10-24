@@ -112,13 +112,14 @@ z zadanej długości drutu → naciąg).
   przed ramką to osobna część i czy zastępuje 4720/4420, czy też na linie nośnej, czy przy stanie „przejściowe” też
   (5110 jest teraz tylko przy zaśniedziałych).
 
-## Izolator rolkowy ESN-2025 (Jan 2026-10-24 14:49–14:55, model gotowy)
-- ESN-2025 = stary izolator rolkowy (ramka z dwiema rolkami; na starym rysunku Jana: 2027 uchwyt klinowy na linie, 2026, 2025
-  izolator, 2037 przy urządzeniu z rolką i łańcuchem). Zastępstwo dla żywicznych 7150 w starych złożeniach.
-- Użycie, które Jan podał: izolacja sieci w przęśle – jedno przęsło od drugiego (nie do słupa). Łańcuch: **ESN-2025 – 4420 (śruba
-  rzymska) – wyrównywacz – 5110 (uchwyt klinowy)**. Łącznik między izolatorem a uchwytem niepotrzebny (Jan).
-- Do ustalenia: zero i drugi zaczep modelu (długość jak 7150 0,8324), czy też w kotwieniu przy drutach zaśniedziałych zamiast 7150.
-  Izolacja przęsła od przęsła (0447, t1 s. 106; stary katalog 0447 s. 167–171) jeszcze niezrobiona.
+## Izolator rolkowy ESN-2025 (Jan 2026-10-24 14:49–14:58, model `esn_2025.t3d`)
+- Stary izolator rolkowy (ramka z dwiema rolkami; zdjęcie i stary rysunek od Jana). Zero w pierwszym mocowaniu, `hole_1` w drugim,
+  0,6004 m w −X (jak 7150 0,8324). 5 faz LOD.
+- W kotwieniu do słupa zamiast 7150, wprost w otworze dźwigni: ESN-2025 – 4420 – [wyrównywacz] – uchwyt (5110 przy przewodach).
+  Bywa na samej linie nośnej, na samych przewodach albo na obu – wpis kotwienia `insulators new|old|messenger|contact`; bez wpisu
+  rolkowe na obu przy drutach zaśniedziałych (jak 5110).
+- Izolatory sekcyjne (przęsło od przęsła) – na razie nie (Jan): rolkowe i nowe żywiczne, przejezdne i nieprzejezdne (dwa izolatory
+  jak na linie nośnej).
 
 ## Kolprojekt_2010-1.PDF (88 s., katalog sieci YC150-2CS150 kod 36 i YC120-2CS150 kod 37, CuAg, 200 km/h)
 Strony PDF: s. 11–13 0017-1/2/3 lina kotwienia środkowego (Fe 70, Cu 120, Cu 150); s. 14–16 **0019-1/2/3 usytuowanie

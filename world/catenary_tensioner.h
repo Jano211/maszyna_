@@ -115,6 +115,9 @@ struct tensioner_device {
     std::vector<tensioner_link> hanger; // od rolki stałej w dół do pręta (bez liny)
     std::vector<tensioner_link> messenger; // od otworu dźwigni do uchwytu krańcowego liny nośnej (bez uchwytu)
     std::vector<tensioner_link> contact;   // od otworu dźwigni do wyrównywacza albo uchwytu krańcowego przewodu
+    // stare złożenia: izolator rolkowy ESN-2025 zamiast 7150 (Jan 2026-10-24: ESN-2025 - 4420 - [wyrównywacz] - uchwyt);
+    // puste = jak nowe
+    std::vector<tensioner_link> messenger_old, contact_old;
     tensioner_link messenger_clamp, contact_clamp;
     tensioner_link contact_clamp_old;   // uchwyt krańcowy przewodów w starych złożeniach (5110, stara karta 33-0401); pusty = jak nowe
     tensioner_link equalizer;           // wyrównywacz przewodów jezdnych (tylko przy dwóch przewodach)
@@ -157,7 +160,8 @@ struct tensioner_input {
     int missing { 0 };                  // brakujące ciężary (z góry stosu)
     std::string color;                  // kolor ciężarów (tensioner_color); pusty = szary
     std::string top_color;              // kolor najwyższego ciężaru; pusty = jak reszta
-    bool old_fittings { false };
+    bool old_fittings { false };            // uchwyty krańcowe przewodów 5110 (druty zaśniedziałe)
+    bool old_messenger { false }, old_contact { false }; // izolatory rolkowe (łańcuchy messenger_old / contact_old) na linie / przewodach
     // punkty, w które celują łańcuchy do liny nośnej i do przewodów jezdnych (ostatnie podwieszenie, układ urządzenia);
     // bez nich łańcuchy poziomo wzdłuż +X
     bool aimed { false };

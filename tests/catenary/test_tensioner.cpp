@@ -175,6 +175,34 @@ int main( int argc, char **argv ) {
         for( auto const &part : result.parts ) { if( part.role.rfind( "contact_clamp", 0 ) == 0 && part.part == "5110-01" ) { ++old; } }
         check( old == 2, "stare zlozenie: uchwyty krancowe 5110 na obu przewodach" );
     }
+    // izolator rolkowy ESN-2025 zamiast 7150 (bez łączników 4720): osobno na linie i na przewodach; łańcuch krótszy o 0,432 m
+    {
+        auto const insulator = []( catenary::tensioner_result const &Result, std::string const &Role ) {
+            std::string found;
+            for( auto const &part : Result.parts ) {
+                if( part.role.rfind( Role + ".", 0 ) == 0 && ( part.part == "esn_2025" || part.part == "7150-01" ) ) { found = part.part; }
+            }
+            return found;
+        };
+        catenary::tensioner_input input;
+        catenary::tensioner_result fresh, both, line, wires;
+        catenary::solve_tensioner( catalog, *device, input, fresh );
+        input.old_messenger = input.old_contact = true;
+        catenary::solve_tensioner( catalog, *device, input, both );
+        input.old_contact = false;
+        catenary::solve_tensioner( catalog, *device, input, line );
+        input.old_messenger = false; input.old_contact = true;
+        catenary::solve_tensioner( catalog, *device, input, wires );
+        auto const shorter { fresh.messenger_end[ 0 ] - both.messenger_end[ 0 ] };
+        int links { 0 };
+        for( auto const &part : both.parts ) { if( part.role.rfind( "contact.", 0 ) == 0 ) { ++links; } }
+        check( insulator( fresh, "messenger" ) == "7150-01" && insulator( both, "messenger" ) == "esn_2025" && insulator( both, "contact" ) == "esn_2025"
+            && insulator( line, "messenger" ) == "esn_2025" && insulator( line, "contact" ) == "7150-01"
+            && insulator( wires, "messenger" ) == "7150-01" && insulator( wires, "contact" ) == "esn_2025"
+            && links == 2 && std::abs( shorter - 0.432 ) < 1e-6,
+            "izolator rolkowy ESN-2025: na linie, na przewodach albo na obu; ESN-2025 + 4420, lancuch krotszy o "
+            + std::to_string( shorter ) + " m" );
+    }
 
     // dzwignia: lancuchy zaczynaja sie w otworach modelu (otwor w modelu: X = -odsuniecie, Z = wzdluz osi od zera)
     {

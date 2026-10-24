@@ -6035,3 +6035,24 @@ msgstr "kończy łańcuch: następny słup zaczyna nowy"
 
 msgid "the chain goes on from the selected pole"
 msgstr "łańcuch idzie dalej od zaznaczonego słupa"
+
+msgid "by the wires (roller ones when tarnished)"
+msgstr "wg drutów (rolkowe przy zaśniedziałych)"
+
+msgid "resin 7150"
+msgstr "żywiczne 7150"
+
+msgid "roller ESN-2025 on both"
+msgstr "rolkowe ESN-2025 na obu"
+
+msgid "roller on the messenger only"
+msgstr "rolkowy tylko na linie nośnej"
+
+msgid "roller on the contact wires only"
+msgstr "rolkowe tylko na przewodach"
+
+msgid "Insulators"
+msgstr "Izolatory"
+
+msgid "Old assemblies have the roller insulator ESN-2025 straight in the lever hole, then the turnbuckle and the clamp; by default the roller ones come with tarnished wires, as the 5110 clamps do"
+msgstr "Stare złożenia mają izolator rolkowy ESN-2025 wprost w otworze dźwigni, za nim śrubę rzymską i uchwyt; domyślnie rolkowe są przy drutach zaśniedziałych, tak jak uchwyty 5110"

@@ -2198,6 +2198,23 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			}
 		}
 		{
+			// the insulators of the chains to the wires: resin 7150 or the old roller ESN-2025
+			static char const *const values[] = {"", "new", "old", "messenger", "contact"};
+			std::string const names[] = {STR("by the wires (roller ones when tarnished)"), STR("resin 7150"), STR("roller ESN-2025 on both"), STR("roller on the messenger only"), STR("roller on the contact wires only")};
+			char const *const items[] = {names[0].c_str(), names[1].c_str(), names[2].c_str(), names[3].c_str(), names[4].c_str()};
+			int chosen{0};
+			for (int i = 0; i < 5; ++i)
+				if (data.insulators == values[i])
+					chosen = i;
+			if (ImGui::Combo(STR_C("Insulators"), &chosen, items, 5))
+			{
+				data.insulators = values[chosen];
+				edited = true;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Old assemblies have the roller insulator ESN-2025 straight in the lever hole, then the turnbuckle and the clamp; by default the roller ones come with tarnished wires, as the 5110 clamps do"));
+		}
+		{
 			auto missing{data.missing};
 			if (ImGui::SliderInt(STR_C("Weights missing"), &missing, 0, 10))
 			{

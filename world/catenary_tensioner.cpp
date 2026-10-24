@@ -240,6 +240,8 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
             if( keyword == "hanger" ) { links_of( words, 1, device->hanger ); continue; }
             if( keyword == "messenger" ) { links_of( words, 1, device->messenger ); continue; }
             if( keyword == "contact" ) { links_of( words, 1, device->contact ); continue; }
+            if( keyword == "messenger_old" ) { links_of( words, 1, device->messenger_old ); continue; }
+            if( keyword == "contact_old" ) { links_of( words, 1, device->contact_old ); continue; }
             if( ( keyword == "messenger_clamp" || keyword == "contact_clamp" || keyword == "contact_clamp_old" || keyword == "equalizer" ) && words.size() >= 3 ) {
                 auto &link { keyword == "messenger_clamp" ? device->messenger_clamp : keyword == "contact_clamp" ? device->contact_clamp : keyword == "contact_clamp_old" ? device->contact_clamp_old : device->equalizer };
                 link.name = words[ 1 ];
@@ -617,7 +619,8 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     {
         auto const start { holepoint( *messengerhole ) };
         auto const way { aimed( start, Input.messenger_target ) };
-        auto end { place_chain( Device.messenger, "messenger", start, way, Result ) };
+        auto const &links { Input.old_messenger && false == Device.messenger_old.empty() ? Device.messenger_old : Device.messenger };
+        auto end { place_chain( links, "messenger", start, way, Result ) };
         auto const clamp { type->messenger_clamp.empty() ? Device.messenger_clamp.name : type->messenger_clamp };
         if( false == clamp.empty() ) {
             Result.parts.push_back( placed_along( "messenger_clamp", clamp, end, way ) );
@@ -630,7 +633,8 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     {
         auto const start { holepoint( *contacthole ) };
         auto const way { aimed( start, Input.contact_target ) };
-        auto end { place_chain( Device.contact, "contact", start, way, Result ) };
+        auto const &links { Input.old_contact && false == Device.contact_old.empty() ? Device.contact_old : Device.contact };
+        auto end { place_chain( links, "contact", start, way, Result ) };
         std::vector<vec> ends;
         if( Input.contacts >= 2 && false == Device.equalizer.name.empty() ) {
             Result.parts.push_back( placed_along( "equalizer", Device.equalizer.name, end, way ) );

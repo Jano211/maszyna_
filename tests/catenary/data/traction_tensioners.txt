@@ -70,6 +70,7 @@ part 6402-04 length 3.00
 
 // device <karta> table pulley lever rod rope rope_diameter
 //   mount / holder / hanger / messenger / contact  <czesc dlugosc>...   lancuchy czesci liniowych ("~czesc" - odwrocona)
+//   messenger_old / contact_old <czesc dlugosc>...   to samo w starych zlozeniach (izolator rolkowy)
 //   messenger_clamp / contact_clamp <czesc dlugosc>, equalizer <czesc dlugosc> spread <rozstaw przewodow>
 //   safety <ramie przy rolce stalej> <ramie przy ruchomej> <rozstaw otworow> <odsuniecie w bok>
 //   type <traction_code> stack <ciezar liczba>... (od dolu) lever <otwor liny> <otwor przewodow> <otwor osi> [rod <pret>] [clamp <uchwyt liny>]
@@ -88,6 +89,10 @@ device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 r
   hanger 6411-01 0.10 4720-01 0.10
   messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
   contact 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
+  // stare zlozenia (Jan 2026-10-24): izolator rolkowy ESN-2025 (model esn_2025, zero w pierwszym mocowaniu, hole_1 0,6004 w -X)
+  // zamiast 7150, wprost w otworze dzwigni: ESN-2025 - 4420 - [wyrownywacz] - uchwyt. Na linie, na przewodach albo na obu (wpis "insulators")
+  messenger_old esn_2025 0.6004 4420-01 0.93
+  contact_old esn_2025 0.6004 4420-01 0.93
   messenger_clamp 5120-01 0.058     // uchwyt krancowy 5120 (wyk. 5-8 roznia sie tylko wkladka pod lub/przewod) - jeden model Jana, wire 0,058
   contact_clamp 5120-01 0.058
   contact_clamp_old 5110-01 0.0632    // stare zlozenia (druty zasniedziale, Jan 2026-10-24): uchwyt klinowy 5110 jak w starej karcie 33-0401

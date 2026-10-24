@@ -672,6 +672,12 @@ assemble_anchor( scene_anchor &Anchor ) {
         if( chain.removed || chain.file != Anchor.file || data.name.empty() ) { continue; }
         if( chain.data.anchor_start == data.name || chain.data.anchor_end == data.name ) { input.old_fittings = ( chain.data.state == 1 ); }
     }
+    // izolatory: rolkowe ESN-2025 z wyboru, a bez wyboru przy drutach zaśniedziałych (jak uchwyty 5110)
+    if( data.insulators.empty() ) { input.old_messenger = input.old_contact = input.old_fittings; }
+    else {
+        input.old_messenger = ( data.insulators == "old" || data.insulators == "messenger" );
+        input.old_contact = ( data.insulators == "old" || data.insulators == "contact" );
+    }
     // kierunek drutów w planie; zero urządzenia na czole słupa
     glm::dvec3 const axis { polepoint[ 0 ], polepoint[ 1 ], polepoint[ 2 ] };
     auto dx { data.toward[ 0 ] - axis.x }, dz { data.toward[ 2 ] - axis.z };
