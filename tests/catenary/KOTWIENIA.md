@@ -112,6 +112,22 @@ z zadanej długości drutu → naciąg).
   przed ramką to osobna część i czy zastępuje 4720/4420, czy też na linie nośnej, czy przy stanie „przejściowe” też
   (5110 jest teraz tylko przy zaśniedziałych).
 
+## Kotwienia stałe i rolki szeregowe – zrobione (2026-10-24 noc)
+
+- **Stałe 63-0403** (`kind fixed`): urządzenia 0403 (sieci 3, 4, 26, 30), 0403-10, 0403-20, 0403-32 (32, 35) – łańcuchy z rysunków
+  karty, liczby części zgodne z tabelą (test). Na konstrukcji 4430-1 w parze uchwytów poz. 1 (43-0453) na wysokości liny i drugi
+  na wysokości przewodów. Wysokość = drutów ostatniego podwieszenia (ZAŁOŻENIE, 0453 jej nie podaje); suwak w edytorze przesuwa
+  obie. Dwie liny (32/35) przez 4410 obrócony o 90° (jedna nad drugą). 4430 pivot ZAŁOŻONY jak 4450 (model bez mount_top/bottom).
+  Bez izolacji (0413) i odsunięta izolacja (s. 100) – jeszcze nie.
+- **Rolki szeregowe** (`series`): 0471 (Ø400, 6322-1, pręty 6401-3/-2/-1, pierścień 5080-2 0,70 nad spodem stosu, 4440-7)
+  i 0480 (Ø306 + żeliwne jak 0461, 4440-4). Układ z rysunku 13-0421: przy słupie duża 4460-3 i na 4440-6 mała 4460-2 (0,336),
+  wózek: mała i duża na 4440-5 (dźwignia w hole_2 0,703); lina od zaczepu w hole_2 4440-6 przez małą ruchomą, małą stałą,
+  dużą ruchomą i dużą stałą w dół – 1:4, długość 9,6 / 10,0 m (karta 4490-2: 10,00) stała od −25 do +40 °C.
+  Tablica 0011-5: b do osi skrajnej (dużej ruchomej) bn 2,50. Zabezpieczenie 4600-2 (trapez pod rolkami) jeszcze nie stawiane.
+- Edytor: „Rodzaj” kotwienia = karta (ciężarowe 0461, szeregowe 0471/0480, stałe 0403); odmiany dla typów sieci (0461-2x2,
+  0403-32 …) dobiera sam (najpierw ta sama karta, potem ten sam rodzaj).
+- **Rozdzielone (dwa stosy)** – czeka na układ od Jana (gdzie 5040-2 wystaje i jak stoją dwie prowadnice względem toru).
+
 ## Brakujące ciężary skracają sieć (2026-10-24 wieczór)
 
 Naciąg od niepełnego stosu H < H0 (H0 = pełny stos, jak w tablicy). Sieć do kotwienia środkowego (distance) skraca się,

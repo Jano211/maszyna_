@@ -125,6 +125,18 @@ struct tensioner_device {
     // dźwignie szeregowo: od otworu przewodów pierwszej do osi drugiej (z izolatorem) i od otworu liny drugiej do uchwytu drugiej
     // liny nośnej; przewody ("contact") wtedy z drugiej dźwigni
     std::vector<tensioner_link> cascade, messenger2;
+    // kotwienie stałe (kind fixed): bez rolek i ciężarów; na konstrukcji dwa przegubowe uchwyty kotwienia (pierwsza część "mount",
+    // 4430) - liny na wysokości liny nośnej, przewodów na wysokości przewodów, każdy w parze uchwytów poz. 1 (karta 43-0453).
+    // Za wyrównywaczem łańcuch każdego drutu osobno (…_each), dwie liny nośne przez messenger_equalizer (sieć 32, 35)
+    bool fixed { false };
+    // rolki szeregowe (karty 0421, 0471, 0480): przy konstrukcji duża rolka (pulley) i za nią mała (small_pulley) o small_spacing
+    // dalej na uchwycie fixed_holder (4440-6), na wózku mała i duża (uchwyt 4440-5 = holder); lina od zaczepu na uchwycie stałym
+    // (dead_end od osi dużej) przez małą ruchomą, małą stałą, dużą ruchomą i dużą stałą w dół. b z tablicy = oś dużej ruchomej.
+    // Puste small_pulley = rolki równoległe (podwójne)
+    std::string small_pulley, fixed_holder;
+    double small_spacing { 0.336 }, dead_end { 0.703 };
+    std::vector<tensioner_link> messenger_each, contact_each;
+    tensioner_link messenger_equalizer;
     // stare złożenia: izolator rolkowy ESN-2025 zamiast 7150 (Jan 2026-10-24: ESN-2025 - 4420 - [wyrównywacz] - uchwyt);
     // puste = jak nowe
     std::vector<tensioner_link> messenger_old, contact_old;
@@ -187,6 +199,7 @@ private:
 struct tensioner_input {
     int type { 3 };                     // numer typu sieci (traction_code)
     int contacts { 2 };                 // liczba przewodów jezdnych
+    int messengers { 1 };               // liczba lin nośnych (kotwienie stałe sieci 32, 35: dwie)
     double temperature { 10.0 };        // °C
     double distance { 700.0 };          // m, od kotwienia stałego albo środkowego
     double elongation { 0.0 };          // m, trwałe wydłużenie sieci od ostatniej regulacji (rolka bliżej konstrukcji)
@@ -244,7 +257,8 @@ struct tensioner_result {
     double messenger_end[ 3 ] { 0.0, 0.0, 0.0 };         // gdzie kończy się lina nośna (uchwyt krańcowy)
     // dźwignie szeregowo: druga lina nośna (z drugiej dźwigni) i naciągi obu lin osobno (messenger_tension to ich suma)
     bool cascade { false };
-    double messenger2_end[ 3 ] { 0.0, 0.0, 0.0 };
+    bool fixed { false };                   // kotwienie stałe (bez ciężarów; b, s, naciąg zero)
+    double messenger2_end[ 3 ] { 0.0, 0.0, 0.0 };        // druga lina nośna: z drugiej dźwigni albo za wyrównywaczem kotwienia stałego
     double messenger_tensions[ 2 ] { 0.0, 0.0 };
     std::vector<std::vector<double>> contact_ends;       // gdzie kończą się przewody jezdne
     bool grounded { false };                // ciężary oparte o grunt: sieć bez naciągu od urządzenia

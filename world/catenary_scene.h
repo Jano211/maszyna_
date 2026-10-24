@@ -30,6 +30,7 @@ void catenary_scene_data( std::string const &Directory );
 // Zmiany trafiają do plików sieci dopiero przy catenary_scene_save().
 
 #include <vector>
+#include <utility>
 #include "world/catenary_suspension.h"
 #include "world/catenary_cantilever.h"
 #include "world/catenary_layout.h"
@@ -100,6 +101,13 @@ catenary::tensioner_result const *catenary_anchor_result( std::size_t Index );
 // obrys złożonego urządzenia dla edytora (współrzędne scenerii): czoło słupa i oś rolki ruchomej na wysokości rolek, góra i spód
 // kolumny ciężarów; false gdy usunięte albo niezłożone
 bool catenary_anchor_shape( std::size_t Index, double ( &Shape )[ 4 ][ 3 ] );
+// karty urządzeń kotwienia do wyboru (bez odmian dla typów sieci, np. 0461-2x2): nazwa, kotwienie stałe, rolki szeregowe
+struct catenary_anchor_card {
+    std::string card;
+    bool fixed { false };
+    bool series { false };
+};
+std::vector<catenary_anchor_card> catenary_anchor_devices();
 // łańcuch, który kończy się tym kotwieniem (Start: na początku), -1 gdy żaden
 int catenary_anchor_chain( std::size_t Index, bool &Start );
 // dodaje kotwienie, składa je i przebudowuje łańcuchy, które go używają. zwraca numer

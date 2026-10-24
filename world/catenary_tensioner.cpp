@@ -241,6 +241,20 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
             if( keyword == "messenger" ) { links_of( words, 1, device->messenger ); continue; }
             if( keyword == "contact" ) { links_of( words, 1, device->contact ); continue; }
             if( keyword == "cascade" ) { links_of( words, 1, device->cascade ); continue; }
+            if( keyword == "series" && words.size() >= 4 ) {
+                // series <mała rolka> <odstęp osi w bloku> <zaczep liny od osi dużej stałej> [holder <uchwyt stały>]
+                device->small_pulley = words[ 1 ];
+                if( false == number_of( words[ 2 ], device->small_spacing ) || false == number_of( words[ 3 ], device->dead_end ) ) { report( "series: bad numbers" ); }
+                if( words.size() >= 6 && words[ 4 ] == "holder" ) { device->fixed_holder = words[ 5 ]; }
+                continue;
+            }
+            if( keyword == "messenger_each" ) { links_of( words, 1, device->messenger_each ); continue; }
+            if( keyword == "contact_each" ) { links_of( words, 1, device->contact_each ); continue; }
+            if( keyword == "messenger_equalizer" && words.size() >= 3 ) {
+                device->messenger_equalizer.name = words[ 1 ];
+                if( false == number_of( words[ 2 ], device->messenger_equalizer.length ) ) { report( "bad length \"" + words[ 2 ] + "\"" ); }
+                continue;
+            }
             if( keyword == "messenger2" ) { links_of( words, 1, device->messenger2 ); continue; }
             if( keyword == "guide" && words.size() >= 3 ) {
                 device->guide = words[ 1 ];
@@ -446,6 +460,10 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 else if( key == "lever" ) { device->lever = value; }
                 else if( key == "lever2" ) { device->lever2 = value; }
                 else if( key == "rod" ) { device->rod = value; }
+                else if( key == "kind" ) {
+                    if( value == "fixed" ) { device->fixed = true; }
+                    else if( value != "weights" ) { report( "device " + device->name + ": unknown kind \"" + value + "\"" ); }
+                }
                 else if( key == "rope" ) { device->rope = value; }
                 else if( key == "rope_diameter" ) { number_of( value, device->rope_diameter ); }
                 else if( key == "rope_eye" && k + 2 < words.size() ) { device->rope_eye = value; number_of( words[ k + 2 ], device->rope_eye_length ); ++k; }
@@ -491,11 +509,125 @@ tensioner_device const *tensioner_catalog::device( std::string const &Name ) con
     return nullptr;
 }
 
+namespace {
+
+// kotwienie stałe: przegubowy uchwyt (4430) w parze uchwytów konstrukcji na wysokości liny i drugi na wysokości przewodów,
+// łańcuchy do drutów wycelowane w ostatnie podwieszenie. Uchwyty w układzie konstrukcji (structure_angle) jak przy ciężarowym
+bool solve_fixed( tensioner_device const &Device, tensioner_type const &Type, tensioner_input const &Input, tensioner_result &Result ) {
+    Result.fixed = true;
+    vec const out { 1.0, 0.0, 0.0 };
+    auto const ca { std::cos( Input.structure_angle ) }, sa { std::sin( Input.structure_angle ) };
+    auto const onstructure = [ & ]( vec const &P ) { return vec { ca * P.x - sa * P.y, sa * P.x + ca * P.y, P.z }; };
+    auto const fix = [ & ]( std::size_t const From ) {
+        if( Input.structure_angle == 0.0 ) { return; }
+        for( auto k { From }; k < Result.parts.size(); ++k ) {
+            auto &part { Result.parts[ k ] };
+            auto const p { onstructure( vec { part.position[ 0 ], part.position[ 1 ], part.position[ 2 ] } ) };
+            part.position[ 0 ] = p.x; part.position[ 1 ] = p.y; part.position[ 2 ] = p.z;
+            for( int c = 0; c < 3; ++c ) {
+                auto const q { onstructure( vec { part.rotation[ c ], part.rotation[ 3 + c ], part.rotation[ 6 + c ] } ) };
+                part.rotation[ c ] = q.x; part.rotation[ 3 + c ] = q.y; part.rotation[ 6 + c ] = q.z;
+            }
+        }
+    };
+    auto const *brackets { Input.pole.empty() ? nullptr : Device.brackets_for( Input.pole ) };
+    auto const pivotx { brackets != nullptr ? brackets->hole_out : 0.0 };
+    // wysokości: przewody - podana albo ostatniego podwieszenia; lina - ostatniego podwieszenia albo 1,70 wyżej
+    auto const contactheight { Input.height > 0.0 ? Input.height : Input.aimed ? Input.contact_target[ 2 ] : 5.60 };
+    auto const messengerheight { Input.aimed ? Input.messenger_target[ 2 ] + ( Input.height > 0.0 ? Input.height - Input.contact_target[ 2 ] : 0.0 ) : contactheight + 1.70 };
+    Result.height = contactheight;
+    bool warned { false };
+    auto const aimed = [ & ]( vec const &From, double const *Target ) {
+        if( false == Input.aimed ) { return out; }
+        vec const to { Target[ 0 ] - From.x, Target[ 1 ] - From.y, Target[ 2 ] - From.z };
+        if( to.x < 1.0 ) {
+            if( false == warned ) { Result.warnings.push_back( "the last suspension is behind or too close to the anchor, the wires are pulled level" ); warned = true; }
+            return out;
+        }
+        return unit( to );
+    };
+    // para uchwytów wokół przegubu na wysokości Height (górny wprost, dolny odwrócony), z tyłem po drugiej stronie konstrukcji
+    auto const pair = [ & ]( std::string const &Role, double const Height ) {
+        if( brackets == nullptr ) { return; }
+        auto const from { Result.parts.size() };
+        for( auto const upside : { false, true } ) {
+            vec const at { 0.0, 0.0, upside ? Height - Device.pivot_bottom - brackets->hole_drop : Height + Device.pivot_top + brackets->hole_drop };
+            auto const name { Role + ( upside ? "_bottom" : "_top" ) };
+            if( false == brackets->top_front.empty() ) {
+                auto placement { placed( name, brackets->top_front, at ) };
+                if( upside ) { set_rotation( placement, vec { -1.0, 0.0, 0.0 }, vec { 0.0, 1.0, 0.0 }, vec { 0.0, 0.0, -1.0 } ); }
+                else { set_rotation( placement, vec { -1.0, 0.0, 0.0 }, vec { 0.0, -1.0, 0.0 }, vec { 0.0, 0.0, 1.0 } ); }
+                Result.parts.push_back( placement );
+            }
+            auto const depth { Input.depth ? Input.depth( at.z ) : 0.0 };
+            if( false == brackets->top_back.empty() && depth > 0.0 ) {
+                auto placement { placed( name + ".back", brackets->top_back, vec { -depth, 0.0, at.z } ) };
+                if( upside ) { set_rotation( placement, vec { 1.0, 0.0, 0.0 }, vec { 0.0, -1.0, 0.0 }, vec { 0.0, 0.0, -1.0 } ); }
+                Result.parts.push_back( placement );
+                std::string const text { "the bracket bolts are shorter than the structure is deep" };
+                if( depth > brackets->bolt + 1e-6 && std::find( Result.warnings.begin(), Result.warnings.end(), text ) == Result.warnings.end() ) { Result.warnings.push_back( text ); }
+            }
+        }
+        fix( from );
+    };
+    // łańcuch od przegubu do drutów: przegub obraca się za drutami, za wyrównywaczem każdy drut osobno
+    auto const wires = [ & ]( std::string const &Role, double const Height, double const *Target, std::vector<tensioner_link> const &Links,
+                              tensioner_link const &Equalizer, int const Count, double const Spread, std::vector<tensioner_link> const &Each,
+                              tensioner_link const &Clamp, bool const Vertical, std::vector<vec> &Ends ) {
+        pair( "bracket_" + Role, Height );
+        auto const start { onstructure( vec { pivotx, 0.0, Height } ) };
+        auto const way { aimed( start, Target ) };
+        std::vector<tensioner_link> chain { Device.mount.empty() ? std::vector<tensioner_link> {} : std::vector<tensioner_link> { Device.mount.front() } };
+        chain.insert( chain.end(), Links.begin(), Links.end() );
+        auto end { place_chain( chain, Role, start, way, Result ) };
+        std::vector<vec> starts;
+        if( Count >= 2 && false == Equalizer.name.empty() ) {
+            // przewody obok siebie, liny jedna nad drugą (wyrównywacz obrócony o 90 stopni wokół łańcucha)
+            vec const up { -way.x * way.z, -way.y * way.z, way.x * way.x + way.y * way.y };
+            auto const across { Vertical ? unit( up ) : unit( vec { -way.y, way.x, 0.0 } ) };
+            auto placement { placed_along( Role + "_equalizer", Equalizer.name, end, way ) };
+            if( Vertical ) { set_rotation( placement, way * -1.0, across, cross( way * -1.0, across ) ); }
+            Result.parts.push_back( placement );
+            end = end + way * Equalizer.length;
+            for( int k = 0; k < Count; ++k ) { starts.push_back( end + across * ( ( k - 0.5 * ( Count - 1 ) ) * Spread ) ); }
+        }
+        else { starts.push_back( end ); }
+        for( std::size_t k = 0; k < starts.size(); ++k ) {
+            auto const tag { Role + "_each." + std::to_string( k + 1 ) };
+            auto at { place_chain( Each, tag, starts[ k ], way, Result ) };
+            if( false == Clamp.name.empty() ) {
+                Result.parts.push_back( placed_along( Role + "_clamp." + std::to_string( k + 1 ), Clamp.name, at, way ) );
+                at = at + way * Clamp.length;
+            }
+            Ends.push_back( at );
+        }
+    };
+    std::vector<vec> ropes, contacts;
+    auto messengerclamp { Device.messenger_clamp };
+    if( false == Type.messenger_clamp.empty() ) { messengerclamp.name = Type.messenger_clamp; }
+    wires( "messenger", messengerheight, Input.messenger_target, Device.messenger, Device.messenger_equalizer, Input.messengers, Device.equalizer_spread,
+        Device.messenger_each, messengerclamp, true, ropes );
+    auto const &clamp { Input.old_fittings && false == Device.contact_clamp_old.name.empty() ? Device.contact_clamp_old : Device.contact_clamp };
+    wires( "contact", contactheight, Input.contact_target, Device.contact, Device.equalizer, Input.contacts, Device.equalizer_spread, Device.contact_each, clamp, false, contacts );
+    auto const copy = []( vec const &P, double *Out ) { Out[ 0 ] = P.x; Out[ 1 ] = P.y; Out[ 2 ] = P.z; };
+    // lina nośna przęsła to górna (dolna o odstęp lin niżej, jak w typie sieci)
+    if( false == ropes.empty() ) { copy( ropes.back(), Result.messenger_end ); }
+    if( ropes.size() >= 2 ) { copy( ropes.front(), Result.messenger2_end ); }
+    for( auto const &end : contacts ) { Result.contact_ends.push_back( { end.x, end.y, end.z } ); }
+    // obrys dla edytora: od czoła do końca przegubu, na wysokości przewodów
+    Result.b = pivotx + ( Device.mount.empty() ? 0.0 : Device.mount.front().length );
+    Result.s = contactheight;
+    return true;
+}
+
+} // namespace
+
 bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &Device, tensioner_input const &Input, tensioner_result &Result ) {
     Result = tensioner_result();
     auto const fail = [ & ]( std::string const &Text ) { Result.warnings.push_back( Text ); return false; };
     auto const *type { Device.type( Input.type ) };
     if( type == nullptr ) { return fail( "device " + Device.name + " has no data for network type " + std::to_string( Input.type ) ); }
+    if( Device.fixed ) { return solve_fixed( Device, *type, Input, Result ); }
     auto const *table { Catalog.table( Device.table ) };
     if( table == nullptr ) { return fail( "no table " + Device.table ); }
     auto const *pulley { Catalog.pulley( Device.pulley ) };
@@ -528,6 +660,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     }
     if( cascade && ( Device.cascade.empty() || Device.messenger2.empty() ) ) { return fail( "device " + Device.name + " has no cascade/messenger2 chain for the second lever" ); }
     Result.cascade = cascade;
+    auto const series { false == Device.small_pulley.empty() };
     auto const rodname { type->rod.empty() ? Device.rod : type->rod };
     auto const rodlength { [ & ] { auto const found { Catalog.part_lengths().find( rodname ) }; return found != Catalog.part_lengths().end() ? found->second : table->rod; }() };
 
@@ -676,10 +809,39 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     fix( bracketsfrom );
     // przegub 4450 w otworach uchwytów (przy konstrukcji), dalej urządzenie w stronę drutów
     auto const fixedaxle { place_chain( Device.mount, "mount", onstructure( vec { pivotx, 0.0, height } ), out, Result ) };
-    vec const movingaxle { b, 0.0, height };
+    // rolki szeregowe: b to oś dużej ruchomej (skrajnej), uchwyt dźwigni zaczyna się na małej ruchomej
+    auto const *small { series ? Catalog.pulley( Device.small_pulley ) : nullptr };
+    if( series && small == nullptr ) { return fail( "no pulley " + Device.small_pulley ); }
+    vec const movingaxle { series ? b - Device.small_spacing : b, 0.0, height };
+    vec const movingbig { b, 0.0, height };
+    auto const fixedsmall { fixedaxle + out * Device.small_spacing };
     auto const radius { 0.5 * pulley->diameter + 0.5 * Device.rope_diameter };
-    if( movingaxle.x - fixedaxle.x < 2.0 * radius ) { Result.warnings.push_back( "the pulleys overlap: the network pulled the moving one to the structure" ); }
-    {
+    auto const smallradius { series ? 0.5 * small->diameter + 0.5 * Device.rope_diameter : radius };
+    if( series ? movingaxle.x - fixedsmall.x < 2.0 * smallradius : movingaxle.x - fixedaxle.x < 2.0 * radius ) {
+        Result.warnings.push_back( "the pulleys overlap: the network pulled the moving one to the structure" );
+    }
+    if( series ) {
+        double b0 { b }, s0 { 0.0 };
+        table->lookup( 10.0, Input.distance, b0, s0 );
+        auto const travel { b - b0 };
+        // lina przechodzi: mała ruchoma d, mała stała 2d, duża ruchoma 3d, duża stała 4d
+        Result.turn_moving_a = travel / smallradius;
+        Result.turn_fixed_a = 2.0 * travel / smallradius;
+        Result.turn_moving_b = 3.0 * travel / radius;
+        Result.turn_fixed_b = 4.0 * travel / radius;
+        auto const spun = [ & ]( std::string const &Role, std::string const &Part, vec const &Axle, double const Angle ) {
+            auto placement { placed( Role, Part, Axle ) };
+            auto const c { std::cos( Angle ) }, s { std::sin( Angle ) };
+            set_rotation( placement, vec { c, 0.0, -s }, vec { 0.0, 1.0, 0.0 }, vec { s, 0.0, c } );
+            Result.parts.push_back( placement );
+        };
+        spun( "pulley_fixed", pulley->name, fixedaxle, Result.turn_fixed_b );
+        spun( "pulley_fixed_small", small->name, fixedsmall, Result.turn_fixed_a );
+        spun( "pulley_moving", small->name, movingaxle, Result.turn_moving_a );
+        spun( "pulley_moving_big", pulley->name, movingbig, Result.turn_moving_b );
+        if( false == Device.fixed_holder.empty() ) { Result.parts.push_back( placed_along( "holder_fixed", Device.fixed_holder, fixedaxle, out ) ); }
+    }
+    else {
         // krążki obracają się o linę przewiniętą od położenia przy +10 °C (bez wydłużenia). Przy przesunięciu rolki ruchomej
         // o d lina przechodzi kolejno: ruchoma A d, stała A 2d, ruchoma B 3d, stała B 4d (tyle jadą ciężary); wszystkie
         // krążki obracają się w tę samą stronę: przy rolce oddalającej się od konstrukcji lina cofa się w stronę zaczepu,
@@ -879,15 +1041,37 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
             point( vec { Center.x + radius * std::cos( angle ), Y, Center.z + radius * std::sin( angle ) } );
         }
     };
-    point( vec { fixedaxle.x, 0.0, height - radius } );
-    point( vec { movingaxle.x, ya, height - radius } );
-    arc( movingaxle, ya, -0.5 * kPi, 0.5 * kPi );
-    point( vec { fixedaxle.x, ya, height + radius } );
-    arc( fixedaxle, ya, 0.5 * kPi, 1.5 * kPi );
-    point( vec { movingaxle.x, yb, height - radius } );
-    arc( movingaxle, yb, -0.5 * kPi, 0.5 * kPi );
-    point( vec { fixedaxle.x, yb, height + radius } );
-    arc( fixedaxle, yb, 0.5 * kPi, kPi );
+    if( series ) {
+        // zaczep na uchwycie stałym, ukośnie pod małą ruchomą, wokół niej w górę, górą do małej stałej, wokół niej w dół,
+        // dołem do dużej ruchomej, wokół niej w górę, górą do dużej stałej i z jej lewej strony w dół
+        auto const around = [ & ]( vec const &Center, double const Radius, double const From, double const To ) {
+            auto const steps { std::max( 1, static_cast<int>( std::ceil( std::abs( To - From ) / ( kPi / 36.0 ) - 1e-9 ) ) ) };
+            for( int k = 1; k <= steps; ++k ) {
+                auto const angle { From + ( To - From ) * k / steps };
+                point( vec { Center.x + Radius * std::cos( angle ), 0.0, Center.z + Radius * std::sin( angle ) } );
+            }
+        };
+        point( vec { fixedaxle.x + Device.dead_end, 0.0, height } );
+        point( vec { movingaxle.x, 0.0, height - smallradius } );
+        around( movingaxle, smallradius, -0.5 * kPi, 0.5 * kPi );
+        point( vec { fixedsmall.x, 0.0, height + smallradius } );
+        around( fixedsmall, smallradius, 0.5 * kPi, 1.5 * kPi );
+        point( vec { movingbig.x, 0.0, height - radius } );
+        around( movingbig, radius, -0.5 * kPi, 0.5 * kPi );
+        point( vec { fixedaxle.x, 0.0, height + radius } );
+        around( fixedaxle, radius, 0.5 * kPi, kPi );
+    }
+    else {
+        point( vec { fixedaxle.x, 0.0, height - radius } );
+        point( vec { movingaxle.x, ya, height - radius } );
+        arc( movingaxle, ya, -0.5 * kPi, 0.5 * kPi );
+        point( vec { fixedaxle.x, ya, height + radius } );
+        arc( fixedaxle, ya, 0.5 * kPi, 1.5 * kPi );
+        point( vec { movingaxle.x, yb, height - radius } );
+        arc( movingaxle, yb, -0.5 * kPi, 0.5 * kPi );
+        point( vec { fixedaxle.x, yb, height + radius } );
+        arc( fixedaxle, yb, 0.5 * kPi, kPi );
+    }
 
     // pręt z ciężarami pod liną, łączniki między liną a prętem
     double hangerlength { 0.0 };
