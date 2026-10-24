@@ -1,6 +1,6 @@
 # Sieć trakcyjna w exe – lista zadań
 
-Stan na 2026-10-24 14:30. Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
+Stan na 2026-10-24 15:30. Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
 (https://claude.ai/artifact/LboXDQjty15vbb7ieh8AUn) – Jan może odhaczać tam; przy zmianach przenosić tutaj.
 Zestawienie z notatek w `tests/catenary/*.md` (PRZEKAZANIE, KONCEPCJA, KONCEPCJA_EDYTOR, BRAMKI, KOTWIENIA, GLOWACKI,
 ROZSZERZANIE) i z pracy nad kotwieniami 23–24.10.
@@ -120,15 +120,17 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 
 **Kotwienie 0461 – dokończenie**
 
-- [ ] Prowadnica 5070-2 (rura z płytkami, 4,5 m; 5070-1 4,0 m) i pierścień 5080-1 na stosie, oś 0,21 m od osi stosu; długość z drogi ciężarów – **modele 5080 i 5090 Jan robi** (5090 do rozdzielonych)
-- [ ] Mocowania do słupa wg 33-0455: góra pod rolkę (4510-1/-2, 4520-3…-7, 4570-1, 5100-1/-2), dół pod prowadnicę (4520-1/-2, 4530-3, 4560-1, 5100-3/-4) – **modele + przypisanie wykonań 1–12 do modeli słupów (Jan)**
+- [x] Prowadnica 5070-2 i pierścień 5080-1 (24.10, odcinek 2138): `mount` 5070 w `hole_1` uchwytów 5100 (dolny 5100-03/04 na 0,80, górny 5100-01/02 na 5,30), pierścień szeklą po osi prowadnicy 0,200 od osi stosu, 1,00 m nad spodem stosu – ustawia oś stosu 0,31 od czoła (pod rolką byłoby 0,27; lina schodzi 4 cm ukośnie). Bez uchwytów w danych słupa – bez prowadnicy i pierścienia. Do obejrzenia w grze. Do czego 5060-01 i 4480-01?
+- [ ] Mocowania do słupa wg 33-0455: góra pod rolkę (4510-1/-2, 4520-3…-7, 4570-1, 5100-1/-2), dół pod prowadnicę (4520-1/-2, 4530-3, 4560-1, 5100-3/-4) – 5100 (słup 1611, wyk. 11/12) modele Jan robi 24.10; przypisanie reszty wykonań do słupów
+- [x] Uchwyty 5100 wokół 4450 (24.10, odcinek 2138): na ścianach wzdłuż drutów, obrócone o 90° względem wysięgnika (Jan); śruby przez szerokość słupa (nowy klucz `width` słupa w traction_supports.txt: C120 0,12 … C200 0,20, karta 33-1611-E a), rozstaw śrub obejmuje bok kratowy; górny 5100-01/02 za `mount_top` 4450, drugi odwrócony za `mount_bottom`, tyły 05 za słupem; C120/C140 śruby 220 (wyk. 11), C160+ 260 (wyk. 12) – ZAŁOŻENIE. Czoło urządzenia liczone od połowy szerokości (wcześniej połowa głębokości – 5 cm za daleko). Test `tt`, `te`
 - [ ] 6411-01 (łącznik liny z prętem; teraz 0,10 m bez modelu) – model
 - [ ] 4430-01 (`hole_1` −0,0747): ustalić, gdzie stoi
-- [ ] Stary izolator rolkowy (ramka z dwiema porcelanowymi rolkami) zamiast 7150 przy drutach zaśniedziałych – numer, pivoty, czy pręt przed ramką to osobna część, czy na linie nośnej też
+- [x] Stary izolator rolkowy **ESN-2025** (model `esn_2025`, hole_1 0,6004) zamiast 7150 (24.10, odcinek 2138): łańcuchy `messenger_old` / `contact_old` = ESN-2025 – 4420 – [wyrównywacz] – uchwyt, wprost w otworze dźwigni; wpis kotwienia `insulators new|old|messenger|contact`, bez wpisu – rolkowe na obu przy drutach zaśniedziałych; w edytorze lista „Izolatory”; test `tt`, `ts`; na G: traction_tensioners.txt 9593 B
 - [ ] Czy stan „przejściowe” też ma dawać stare złożenie (5110 i izolator rolkowy)
+- [ ] Łańcuch z ESN-2025 bez 4720 przed izolatorem (tak podał Jan) i uchwyt liny nośnej 5120 też w starym złożeniu – do potwierdzenia w grze
 - [ ] Obejrzeć w grze: lina proceduralna (czy siedzi w rowkach), obrót krążków przy suwaku temperatury
 - [ ] Obroty części po komplecie modeli (Jan powie, co stoi krzywo)
-- [ ] Dźwignia przechylona do kierunku drutów (dziś wisi pionowo, łańcuchy już celują w podwieszenie)
+- [x] Dźwignia przechylona do kierunku drutów (24.10, odcinek 2138): staje prostopadle do wypadkowej z obu łańcuchów, uchwyt 4440 wzdłuż wypadkowej (tylko w płaszczyźnie urządzenia); typowo 0,3–0,5° (`lever_tilt`, test `tt`)
 
 **Kolejne rodzaje**
 
@@ -138,10 +140,11 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [ ] Kotwienie środkowe (0406: lina 9831-5, zaciski 1,00 m od słupa środkowego, połączenia V w połowie przęsła); kontrola 12° wysięgnika na skrajnych słupach
 - [ ] Kotwienie środkowe do dźwigara bramki (0463…)
 - [ ] Podniesienie drutu o 0,30 m na słupie, gdzie krzyżują się przęsła naprężenia
+- [ ] Izolatory sekcyjne (przęsło od przęsła) – Jan 24.10: na razie nie. Dwa typy: rolkowe (ESN-2025) i nowe na izolatorach żywicznych; przejezdne i nieprzejezdne (dwa izolatory jak na linie nośnej)
 
 **Wizualizacja i czas**
 
-- [ ] Zaznaczanie i rysowanie kotwienia w oknie edytora (dziś tylko z panelu łańcucha)
+- [x] Zaznaczanie i rysowanie kotwienia w oknie edytora (24.10, odcinek 2138): LPM na urządzeniu (od czoła słupa do rolki ruchomej albo kolumna ciężarów) zaznacza kotwienie i jego łańcuch (strona Druty, panel przewija do kotwienia), Del usuwa; obrys niebieski, z uwagami czerwony, niezłożone – czerwony słup z napisem (`catenary_anchor_shape`, `catenary_anchor_chain`, test `te`)
 - [ ] Obrót wysięgników od temperatury i odległości od kotwienia środkowego (do 12°)
 - [ ] Dobowy przebieg temperatury w scenariuszu
 - [ ] Zerwanie kotwienia (przęsła liczone z zadanej długości drutu)
@@ -151,13 +154,14 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 **Przęsła i łańcuchy**
 
 - [ ] Przęsła naprężenia: dwa łańcuchy na jednym słupie (102x, 0120, zerówki); drugi przewód i druga lina z wyniku wysięgnika (`second_wire`, `wire_b`, `messenger_b`, `arms.N.wire`) do danych przęseł
-- [ ] Wstawianie słupa w środek łańcucha
+- [x] Wstawianie słupa w środek łańcucha (24.10, odcinek 2138): słup postawiony pod przęsłem (punkt drutu do 1,5 m od linii przęsła, nie bliżej niż 2 m od jego końców) wchodzi do łańcucha między te dwa słupy, w pliku łańcucha; podgląd dwóch nowych przęseł; checkbox „W przęsła”
+- [x] Łańcuch w panelu Słupy (24.10): ramka z tym, co zrobi następny klik, „Zakończ łańcuch (Esc)”, „Zakotwij tu i zakończ”; przy zaznaczonym słupie końcowym (albo poza łańcuchem) „Ciągnij łańcuch od tego słupa (C)” – też na stronie Druty; Esc przerywa też rozwieszanie i wybór słupa pod kotwienie
 - [ ] Rozstaw drutów 10 cm przy 6207/6208 przechodzący w 8 cm na pierwszych wieszakach
 - [ ] Zygzak przy słupach po różnych stronach toru (liczyć po stronie drutu, nie do/od słupa) – niski priorytet
 - [ ] Wyciąganie liny nośnej na zewnątrz łuku
 - [ ] Typ wieszaka (pojedynczy / podwójny, karty 0570–0579) w pliku typu sieci
 - [ ] Głowica 4170 obracana w kierunek liny w przęsłach naprężenia
-- [ ] „Rozwieś druty”: czy kończyć też Esc / PPM (pytanie do Jana)
+- [x] „Rozwieś druty”: kończy też Esc (24.10)
 
 **Słupy i podwieszenia**
 
@@ -189,11 +193,12 @@ Te rzeczy są w danych jako ZAŁOŻENIE albo czekają na obejrzenie w grze. Odha
 
 **Do obejrzenia w symulatorze**
 
-- [ ] Kotwienia po przebudowie exe: ucha 4490-02, łączniki 4720 w otworach 6406, łańcuchy pochylone do ostatniego słupa, suwak wysokości rolek
+- [ ] Kotwienia po przebudowie exe: ucha 4490-02, łączniki 4720 w otworach 6406, łańcuchy pochylone do ostatniego słupa, suwak wysokości rolek, dźwignia przechylona, zaznaczanie kotwienia w oknie
 - [ ] Odsuw na łuku z przechyłką (kierunek do środka łuku, wartość w podpowiedzi)
 - [x] Teowniki: 09xx, 0177/0179/0197, 0180, dwie sieci 018x/019x, łuki 0137–0174, 0167/0169
 - [ ] Przęsła łańcuchów po poprawce (linie i bryły nie naraz, nie rozjeżdżają się po edycji sąsiada)
 - [ ] Bramka trzymana od toru przy przeciąganiu; mocowania wysięgnika na słupie bramki (depth = 2·offset)
+- [ ] Łańcuchy: wstawianie w przęsło, ramka „Łańcuch”, C / Esc (24.10, odcinek 2138)
 
 **Założenia w danych**
 

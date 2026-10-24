@@ -5930,3 +5930,129 @@ msgstr "Wysokość osi rolek na słupie; ciężary przesuwają się razem z nimi
 
 msgid ", superelevation %.0f mm"
 msgstr ", przechyłka %.0f mm"
+
+msgid "Click: select the anchor"
+msgstr "Klik: zaznacz kotwienie"
+
+msgid "Anchor %s selected: its settings are below, Del removes it"
+msgstr "Zaznaczone kotwienie %s: ustawienia poniżej, Del je usuwa"
+
+msgid "Anchor %s isn't at the end of any chain"
+msgstr "Kotwienie %s nie kończy żadnego łańcucha"
+
+msgid "Anchor removed"
+msgstr "Kotwienie usunięte"
+
+msgid "(selected in the view)"
+msgstr "(zaznaczone w oknie)"
+
+msgid "LMB on a tensioning device"
+msgstr "LPM na urządzeniu naprężającym"
+
+msgid "selects the anchor and its chain"
+msgstr "zaznacza kotwienie i jego łańcuch"
+
+msgid "removes the selected anchor"
+msgstr "usuwa zaznaczone kotwienie"
+
+msgid "The chain is ended: the next pole starts a new one"
+msgstr "Łańcuch zakończony: następny słup zaczyna nowy"
+
+msgid "The pole is in the middle of a chain: the chain goes on from its ends only"
+msgstr "Słup jest w środku łańcucha: łańcuch można ciągnąć tylko od jego końców"
+
+msgid "The next poles go on from %s: LMB by the track; Esc ends the chain"
+msgstr "Następne słupy idą od %s: LPM przy torze; Esc kończy łańcuch"
+
+msgid "; put into chain %s between %s and %s"
+msgstr "; wstawiony do łańcucha %s między %s a %s"
+
+msgid "into the span %s - %s"
+msgstr "w przęsło %s - %s"
+
+msgid "In the middle of chain %s (pole %zu of %zu)"
+msgstr "W środku łańcucha %s (słup %zu z %zu)"
+
+msgid "Go on with the chain from this pole (C)"
+msgstr "Ciągnij łańcuch od tego słupa (C)"
+
+msgid "Start a chain from this pole (C)"
+msgstr "Zacznij łańcuch od tego słupa (C)"
+
+msgid "The poles placed next by the track are joined to this one with spans, one after another; Esc ends the chain"
+msgstr "Kolejne słupy stawiane przy torze łączą się z tym przęsłami, jeden za drugim; Esc kończy łańcuch"
+
+msgid "start of chain %s"
+msgstr "początek łańcucha %s"
+
+msgid "end of chain %s"
+msgstr "koniec łańcucha %s"
+
+msgid "Into spans"
+msgstr "W przęsła"
+
+msgid "A pole placed under the span of a chain (its wire point within 1.5 m of the span, not at its ends) goes into that chain between the two poles"
+msgstr "Słup postawiony pod przęsłem łańcucha (punkt drutu do 1,5 m od przęsła, nie przy jego końcach) wchodzi do łańcucha między te dwa słupy"
+
+msgid "The next pole starts a new chain; LMB on a pole and C goes on from it"
+msgstr "Następny słup zaczyna nowy łańcuch; LPM na słupie i C – ciągnięcie od niego"
+
+msgid "Next pole: a span from %s, at the end of chain %s (%zu poles)"
+msgstr "Następny słup: przęsło od %s, na końcu łańcucha %s (%zu słupów)"
+
+msgid "Next pole: a span from %s, at the start of chain %s (%zu poles)"
+msgstr "Następny słup: przęsło od %s, na początku łańcucha %s (%zu słupów)"
+
+msgid "Next pole: a new chain from %s"
+msgstr "Następny słup: nowy łańcuch od %s"
+
+msgid "End the chain (Esc)"
+msgstr "Zakończ łańcuch (Esc)"
+
+msgid "Anchor here and end"
+msgstr "Zakotwij tu i zakończ"
+
+msgid "Anchored and ended: the anchor pole is 24 m past the last pole; its settings are on the Wires page"
+msgstr "Zakotwiono i zakończono: słup kotwowy 24 m za ostatnim słupem; ustawienia na stronie Druty"
+
+msgid "An anchor pole 24 m past the last pole, in line with it, with the weight tensioning device; the chain is ended"
+msgstr "Słup kotwowy 24 m za ostatnim słupem, w jego linii, z urządzeniem naprężającym; łańcuch zostaje zakończony"
+
+msgid "Catenary: the selected pole follows the settings below; C goes on with the chain from it"
+msgstr "Sieć trakcyjna: zaznaczony słup idzie za ustawieniami poniżej; C ciągnie od niego łańcuch"
+
+msgid "Catenary: LMB by the track places the next pole of the chain; Esc ends the chain"
+msgstr "Sieć trakcyjna: LPM przy torze stawia następny słup łańcucha; Esc kończy łańcuch"
+
+msgid "LMB under a span"
+msgstr "LPM pod przęsłem"
+
+msgid "puts the pole into the chain between the two poles"
+msgstr "wstawia słup do łańcucha między te dwa słupy"
+
+msgid "ends the chain: the next pole starts a new one"
+msgstr "kończy łańcuch: następny słup zaczyna nowy"
+
+msgid "the chain goes on from the selected pole"
+msgstr "łańcuch idzie dalej od zaznaczonego słupa"
+
+msgid "by the wires (roller ones when tarnished)"
+msgstr "wg drutów (rolkowe przy zaśniedziałych)"
+
+msgid "resin 7150"
+msgstr "żywiczne 7150"
+
+msgid "roller ESN-2025 on both"
+msgstr "rolkowe ESN-2025 na obu"
+
+msgid "roller on the messenger only"
+msgstr "rolkowy tylko na linie nośnej"
+
+msgid "roller on the contact wires only"
+msgstr "rolkowe tylko na przewodach"
+
+msgid "Insulators"
+msgstr "Izolatory"
+
+msgid "Old assemblies have the roller insulator ESN-2025 straight in the lever hole, then the turnbuckle and the clamp; by default the roller ones come with tarnished wires, as the 5110 clamps do"
+msgstr "Stare złożenia mają izolator rolkowy ESN-2025 wprost w otworze dźwigni, za nim śrubę rzymską i uchwyt; domyślnie rolkowe są przy drutach zaśniedziałych, tak jak uchwyty 5110"

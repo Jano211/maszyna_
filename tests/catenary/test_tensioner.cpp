@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <algorithm>
 #include <fstream>
 #include <map>
 #include <sstream>
@@ -175,6 +176,34 @@ int main( int argc, char **argv ) {
         for( auto const &part : result.parts ) { if( part.role.rfind( "contact_clamp", 0 ) == 0 && part.part == "5110-01" ) { ++old; } }
         check( old == 2, "stare zlozenie: uchwyty krancowe 5110 na obu przewodach" );
     }
+    // izolator rolkowy ESN-2025 zamiast 7150 (bez łączników 4720): osobno na linie i na przewodach; łańcuch krótszy o 0,432 m
+    {
+        auto const insulator = []( catenary::tensioner_result const &Result, std::string const &Role ) {
+            std::string found;
+            for( auto const &part : Result.parts ) {
+                if( part.role.rfind( Role + ".", 0 ) == 0 && ( part.part == "esn_2025" || part.part == "7150-01" ) ) { found = part.part; }
+            }
+            return found;
+        };
+        catenary::tensioner_input input;
+        catenary::tensioner_result fresh, both, line, wires;
+        catenary::solve_tensioner( catalog, *device, input, fresh );
+        input.old_messenger = input.old_contact = true;
+        catenary::solve_tensioner( catalog, *device, input, both );
+        input.old_contact = false;
+        catenary::solve_tensioner( catalog, *device, input, line );
+        input.old_messenger = false; input.old_contact = true;
+        catenary::solve_tensioner( catalog, *device, input, wires );
+        auto const shorter { fresh.messenger_end[ 0 ] - both.messenger_end[ 0 ] };
+        int links { 0 };
+        for( auto const &part : both.parts ) { if( part.role.rfind( "contact.", 0 ) == 0 ) { ++links; } }
+        check( insulator( fresh, "messenger" ) == "7150-01" && insulator( both, "messenger" ) == "esn_2025" && insulator( both, "contact" ) == "esn_2025"
+            && insulator( line, "messenger" ) == "esn_2025" && insulator( line, "contact" ) == "7150-01"
+            && insulator( wires, "messenger" ) == "7150-01" && insulator( wires, "contact" ) == "esn_2025"
+            && links == 2 && std::abs( shorter - 0.432 ) < 1e-6,
+            "izolator rolkowy ESN-2025: na linie, na przewodach albo na obu; ESN-2025 + 4420, lancuch krotszy o "
+            + std::to_string( shorter ) + " m" );
+    }
 
     // dzwignia: lancuchy zaczynaja sie w otworach modelu (otwor w modelu: X = -odsuniecie, Z = wzdluz osi od zera)
     {
@@ -202,6 +231,91 @@ int main( int argc, char **argv ) {
             check( body && messenger && contact && fits( messenger, type.messenger_hole ) && fits( contact, type.contact_hole ),
                 "typ " + std::to_string( type.code ) + ": lacznik 4720 liny i przewodow w otworach dzwigni " + type.messenger_hole + "/" + type.contact_hole );
         }
+    }
+
+    // prowadnica i pierścień tylko na uchwytach: słup bez uchwytów w danych - bez nich (nie ma ich gdzie przykręcić), bez uwag
+    {
+        catenary::tensioner_input input;
+        catenary::tensioner_result result;
+        catenary::solve_tensioner( catalog, *device, input, result );
+        auto none { true };
+        for( auto const &part : result.parts ) { if( part.role == "guide" || part.role == "ring" ) { none = false; } }
+        check( none && false == result.has_guide && result.warnings.empty(), "bez uchwytow (slup spoza danych): bez prowadnicy i pierscienia, bez uwag" );
+    }
+
+    // uchwyty 5100 na słupie 1611: górny trzyma 4450 za mount_top, dolny (odwrócony) za mount_bottom; tyły po drugiej stronie słupa
+    {
+        // uchwyty jeszcze zakomentowane w danych: ustawione tutaj
+        auto withbrackets { *device };
+        catenary::tensioner_device::bracket_set set;
+        set.poles = { "1611" }; set.hole_out = 0.04; set.hole_drop = 0.04; set.bolt = 0.217;
+        set.top_front = "5100-01"; set.top_back = "5100-05"; set.bottom_front = "5100-03"; set.bottom_back = "5100-06";
+        withbrackets.brackets = { set };
+        withbrackets.pivot_top = 0.03436; withbrackets.pivot_bottom = 0.02561;
+        catenary::tensioner_input input;
+        input.pole = "1611-11";
+        input.depth = []( double ) { return 0.20; };
+        catenary::tensioner_result result;
+        catenary::solve_tensioner( catalog, withbrackets, input, result );
+        std::map<std::string, catenary::tensioner_placement const *> by;
+        for( auto const &part : result.parts ) { by[ part.role ] = &part; }
+        auto const hole = []( catenary::tensioner_placement const *P, int const A ) {
+            double const local[ 3 ] { -0.04, 0.0, -0.04 };
+            return P->position[ A ] + P->rotation[ 3 * A ] * local[ 0 ] + P->rotation[ 3 * A + 1 ] * local[ 1 ] + P->rotation[ 3 * A + 2 ] * local[ 2 ];
+        };
+        auto good { by.count( "bracket_top" ) && by.count( "bracket_bottom" ) && by.count( "bracket_top.back" ) && by.count( "bracket_bottom.back" ) && by.count( "mount.1" ) };
+        if( good ) {
+            auto const *pivot { by[ "mount.1" ] };
+            auto const *top { by[ "bracket_top" ] }, *bottom { by[ "bracket_bottom" ] };
+            good = std::abs( pivot->position[ 0 ] - 0.04 ) < 1e-9
+                && std::abs( hole( top, 0 ) - 0.04 ) < 1e-9 && std::abs( hole( top, 2 ) - ( pivot->position[ 2 ] + 0.03436 ) ) < 1e-9
+                && std::abs( hole( bottom, 0 ) - 0.04 ) < 1e-9 && std::abs( hole( bottom, 2 ) - ( pivot->position[ 2 ] - 0.02561 ) ) < 1e-9
+                && std::abs( by[ "bracket_top.back" ]->position[ 0 ] + 0.20 ) < 1e-9 && top->part == "5100-01" && by[ "bracket_top.back" ]->part == "5100-05"
+                && result.warnings.empty();
+        }
+        check( good, "uchwyty 5100 na slupie 1611: otwory w mount_top / mount_bottom 4450 (0,04 przed czolem), tyly za slupem" );
+        input.depth = []( double ) { return 0.25; };
+        catenary::solve_tensioner( catalog, withbrackets, input, result );
+        check( std::find( result.warnings.begin(), result.warnings.end(), std::string( "the bracket bolts are shorter than the structure is deep" ) ) != result.warnings.end(),
+            "uchwyty 5100: uwaga, gdy sruby krotsze niz slup gleboki" );
+        // prowadnica na uchwytach: mount 5070 w hole_1 uchwytu, pierścień po osi prowadnicy, stos 0,04 + 0,07 + 0,20 od czoła
+        {
+            auto full { withbrackets };
+            full.guide = "5070-02"; full.guide_length = 4.50; full.guide_mount = 0.07; full.guide_bottom = 0.80;
+            full.ring = "5080-01"; full.ring_arm = 0.200; full.ring_at = 1.00;
+            catenary::tensioner_input in;
+            in.pole = "1611-11";
+            in.depth = []( double ) { return 0.12; };
+            catenary::tensioner_result r;
+            catenary::solve_tensioner( catalog, full, in, r );
+            std::map<std::string, catenary::tensioner_placement const *> at;
+            for( auto const &part : r.parts ) { at[ part.role ] = &part; }
+            auto ok { at.count( "guide" ) && at.count( "ring" ) && at.count( "rod" ) && at.count( "bracket_guide_low" ) && at.count( "bracket_guide_high" ) && r.warnings.empty() };
+            if( ok ) {
+                ok = std::abs( at[ "guide" ]->position[ 0 ] - 0.11 ) < 1e-9 && std::abs( at[ "ring" ]->position[ 0 ] - 0.31 ) < 1e-9 && std::abs( at[ "rod" ]->position[ 0 ] - 0.31 ) < 1e-9
+                    && std::abs( hole( at[ "bracket_guide_low" ], 0 ) - r.guide_mount[ 0 ] ) < 1e-9 && std::abs( hole( at[ "bracket_guide_low" ], 2 ) - 0.80 ) < 1e-9
+                    && std::abs( hole( at[ "bracket_guide_high" ], 2 ) - 5.30 ) < 1e-9 && at[ "bracket_guide_low" ]->part == "5100-03" && at[ "bracket_guide_high" ]->part == "5100-01"
+                    && std::abs( r.rope.back()[ 0 ] - 0.31 ) < 1e-9;
+            }
+            std::printf( "      prowadnica na uchwytach: os 0.110, stos %.3f m od czola, lina z rolki schodzi o %.3f m ukosnie\n",
+                at.count( "rod" ) ? at[ "rod" ]->position[ 0 ] : 0.0, at.count( "rod" ) ? at[ "rod" ]->position[ 0 ] - ( 0.04 + 0.0747 + 0.27 - 0.116 ) : 0.0 );
+            for( auto const &w : r.warnings ) { std::printf( "      %s\n", w.c_str() ); }
+            check( ok, "prowadnica 5070 w hole_1 uchwytow 5100 (0,80 i 5,30), pierscien po osi prowadnicy, stos 0,31 od czola" );
+            // pierścień 1,00 m nad spodem stosu zostaje na prowadnicy od -25 do +40 °C (karta 23-0018-2)
+            auto stays { true };
+            for( double const t : { -25.0, 40.0 } ) {
+                in.temperature = t;
+                catenary::solve_tensioner( catalog, full, in, r );
+                stays = stays && r.warnings.empty();
+                std::printf( "      %+.0f °C: pierscien %.2f m, prowadnica %.2f..%.2f m\n", t, r.s + 1.0, r.guide_mount[ 2 ], r.guide_end[ 2 ] );
+            }
+            check( stays, "pierscien na prowadnicy od -25 do +40 °C, bez uwag" );
+        }
+        input.pole = "1701";
+        catenary::solve_tensioner( catalog, withbrackets, input, result );
+        auto none { true };
+        for( auto const &part : result.parts ) { if( part.role.rfind( "bracket", 0 ) == 0 ) { none = false; } }
+        check( none, "slup bez uchwytow w danych: bez uchwytow, 4450 na czole" );
     }
 
     // wyzej na slupie: rolki i ciezary o tyle samo wyzej, lina ta sama
@@ -238,6 +352,55 @@ int main( int argc, char **argv ) {
         };
         check( along( "messenger.1", messenger ) && along( "contact.1", contact ), "lancuchy do drutow skierowane na ostatnie podwieszenie" );
         check( aimed.messenger_end[ 2 ] > level.messenger_end[ 2 ] && aimed.messenger_end[ 1 ] > level.messenger_end[ 1 ] && aimed.warnings.empty(), "lina nosna podchodzi w gore i w bok, bez uwag" );
+        // dźwignia w równowadze: moment sił łańcuchów względem osi (wokół Y urządzenia) zero, uchwyt wzdłuż wypadkowej
+        {
+            catenary::tensioner_placement const *lever { nullptr }, *holder { nullptr }, *m { nullptr }, *c { nullptr };
+            for( auto const &part : aimed.parts ) {
+                if( part.role == "lever" ) { lever = &part; }
+                if( part.role == "holder.1" ) { holder = &part; }
+                if( part.role == "messenger.1" ) { m = &part; }
+                if( part.role == "contact.1" ) { c = &part; }
+            }
+            // oś dźwigni = zero modelu przesunięte o otwór osi (model: X = -odsunięcie, Z = wzdłuż)
+            auto const *lv { catalog.lever( "6406-01" ) };
+            auto const *type { device->type( input.type ) };
+            auto const &ah { lv->holes.at( type->axis_hole ) };
+            double const local[ 3 ] { -ah.second, 0.0, ah.first };
+            double axis[ 3 ], fm[ 3 ], fc[ 3 ], fsum[ 3 ];
+            for( int a = 0; a < 3; ++a ) {
+                axis[ a ] = lever->position[ a ] + lever->rotation[ 3 * a ] * local[ 0 ] + lever->rotation[ 3 * a + 2 ] * local[ 2 ];
+                fm[ a ] = -m->rotation[ 3 * a ] * aimed.messenger_tension;
+                fc[ a ] = -c->rotation[ 3 * a ] * aimed.contact_tension;
+                fsum[ a ] = fm[ a ] + fc[ a ];
+            }
+            auto const moment_y = [ & ]( catenary::tensioner_placement const *At, double const *F ) {
+                double const r[ 3 ] { At->position[ 0 ] - axis[ 0 ], 0.0, At->position[ 2 ] - axis[ 2 ] };
+                return r[ 2 ] * F[ 0 ] - r[ 0 ] * F[ 2 ];
+            };
+            auto const moment { moment_y( m, fm ) + moment_y( c, fc ) };
+            auto const scale { aimed.tension * 0.4 };
+            // uchwyt biegnie w -X części: -kolumna X = kierunek od rolki do dźwigni
+            double const hx { -holder->rotation[ 0 ] }, hz { -holder->rotation[ 6 ] };
+            auto const fl { std::sqrt( fsum[ 0 ] * fsum[ 0 ] + fsum[ 2 ] * fsum[ 2 ] ) };
+            auto const inline_ { ( hx * fsum[ 0 ] + hz * fsum[ 2 ] ) / fl };
+            check( std::abs( moment ) < 1e-3 * scale && std::abs( inline_ ) > 0.99999, // uchwyt "~4440": odwrocony, znak bez znaczenia
+                "dzwignia przechylona do drutow: moment " + std::to_string( moment ) + " daNm, uchwyt wzdluz wypadkowej, odchylenie "
+                + std::to_string( aimed.lever_tilt * 180.0 / 3.14159265358979 ) + " st., wzdluz " + std::to_string( inline_ ) + ", skala " + std::to_string( scale ) );
+            check( std::abs( level.lever_tilt ) < 1e-12, "bez celu dzwignia pionowo" );
+        }
+        // typowo: podwieszenie 50 m dalej, lina 7,20, przewód 5,60 nad główką - druty ciągną w dół, dźwignia u góry do konstrukcji
+        for( auto const &type : device->types ) {
+            catenary::tensioner_input typical { input };
+            typical.type = type.code;
+            double const tm[ 3 ] { 50.0, 0.0, 7.20 }, tc[ 3 ] { 50.0, 0.0, 5.60 };
+            std::copy( tm, tm + 3, typical.messenger_target );
+            std::copy( tc, tc + 3, typical.contact_target );
+            catenary::tensioner_result result;
+            catenary::solve_tensioner( catalog, *device, typical, result );
+            std::printf( "      typ %d: dzwignia odchylona o %.2f st.\n", type.code, result.lever_tilt * 180.0 / 3.14159265358979 );
+            check( result.lever_tilt > 0.0 && result.lever_tilt < 0.2 && result.warnings.empty(),
+                "typ " + std::to_string( type.code ) + ": druty nizej niz dzwignia - dzwignia pochylona, mniej niz 11 st." );
+        }
     }
 
     // lina jako bryla proceduralna z uchami: ucha w koncach liny, rura od ucha do ucha bez lacznikow, scianki na zewnatrz

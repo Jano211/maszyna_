@@ -99,6 +99,8 @@ struct scene_anchor {
     double temperature { 0.0 };                // temperatura, przy której złożono
     catenary::tensioner_result result;
     std::vector<catenary::solid_vertex> rope;  // lina jako bryła proceduralna (trójkąty, współrzędne scenerii); rysuje ją przęsło do kotwienia
+    // obrys urządzenia dla edytora (współrzędne scenerii): czoło słupa i rolka ruchoma na wysokości rolek, góra i spód kolumny ciężarów
+    double shape[ 4 ][ 3 ] { { 0.0, 0.0, 0.0 }, { 0.0, 0.0, 0.0 }, { 0.0, 0.0, 0.0 }, { 0.0, 0.0, 0.0 } };
 };
 std::vector<scene_anchor> Anchors;
 
@@ -663,12 +665,26 @@ assemble_anchor( scene_anchor &Anchor ) {
     input.missing = data.missing;
     input.ground = data.ground;
     input.height = data.height;
+    // uchwyty do słupa: tył po drugiej stronie słupa; zero urządzenia na czole przy wysokości rolek, słup zbieżny
+    input.pole = poletype;
+    {
+        auto const *devicetable { devices->table( device->table ) };
+        auto const rollers { data.height > 0.0 ? data.height : devicetable != nullptr ? devicetable->height : 6.7 };
+        // słup z szerokością wzdłuż toru (161x): urządzenie i uchwyty na ścianach wzdłuż drutów, śruby przez szerokość
+        input.depth = [ pole, rollers ]( double const Height ) { return pole->width > 0.0 ? pole->width : 0.5 * pole->depth( rollers ) + 0.5 * pole->depth( Height ); };
+    }
     input.color = data.color;
     input.top_color = data.top_color;
     // stare złożenie: łańcuch z tym kotwieniem ma druty zaśniedziałe (stan 1)
     for( auto const &chain : Chains ) {
         if( chain.removed || chain.file != Anchor.file || data.name.empty() ) { continue; }
         if( chain.data.anchor_start == data.name || chain.data.anchor_end == data.name ) { input.old_fittings = ( chain.data.state == 1 ); }
+    }
+    // izolatory: rolkowe ESN-2025 z wyboru, a bez wyboru przy drutach zaśniedziałych (jak uchwyty 5110)
+    if( data.insulators.empty() ) { input.old_messenger = input.old_contact = input.old_fittings; }
+    else {
+        input.old_messenger = ( data.insulators == "old" || data.insulators == "messenger" );
+        input.old_contact = ( data.insulators == "old" || data.insulators == "contact" );
     }
     // kierunek drutów w planie; zero urządzenia na czole słupa
     glm::dvec3 const axis { polepoint[ 0 ], polepoint[ 1 ], polepoint[ 2 ] };
@@ -678,7 +694,8 @@ assemble_anchor( scene_anchor &Anchor ) {
     dx /= along;
     dz /= along;
     auto const table { devices->table( device->table ) };
-    auto const face { 0.5 * pole->depth( data.height > 0.0 ? data.height : table != nullptr ? table->height : 6.7 ) };
+    // czoło: kotwienie ciągnie wzdłuż toru, więc słup kratowy z szerokością wzdłuż toru ma czoło w połowie szerokości
+    auto const face { pole->width > 0.0 ? 0.5 * pole->width : 0.5 * pole->depth( data.height > 0.0 ? data.height : table != nullptr ? table->height : 6.7 ) };
     glm::dvec3 const origin { axis.x + dx * face, axis.y, axis.z + dz * face };
     auto const heading { std::atan2( dz, -dx ) };
     auto const toscene = [ & ]( double const *Point ) {
@@ -773,6 +790,21 @@ assemble_anchor( scene_anchor &Anchor ) {
         Anchor.messenger[ 1 ] = messenger.y;
         Anchor.messenger[ 2 ] = messenger.z;
         for( int k = 0; k < 3; ++k ) { Anchor.contact[ k ] = contact[ k ] / ends; }
+    }
+    {
+        // obrys dla edytora: czoło słupa i rolka ruchoma na wysokości rolek, kolumna ciężarów od wolnego końca liny do spodu
+        auto const column { result.rope.empty() ? std::vector<double> { 0.0, 0.0, result.height } : result.rope.back() };
+        double const points[ 4 ][ 3 ] {
+            { 0.0, 0.0, result.height },
+            { result.b, 0.0, result.height },
+            { column[ 0 ], column[ 1 ], column[ 2 ] },
+            { column[ 0 ], column[ 1 ], result.s } };
+        for( int k = 0; k < 4; ++k ) {
+            auto const at { toscene( points[ k ] ) };
+            Anchor.shape[ k ][ 0 ] = at.x;
+            Anchor.shape[ k ][ 1 ] = at.y;
+            Anchor.shape[ k ][ 2 ] = at.z;
+        }
     }
     Anchor.solved = true;
 
@@ -1646,6 +1678,26 @@ catenary::tensioner_result const *
 catenary_anchor_result( std::size_t const Index ) {
     if( Index >= Anchors.size() || Anchors[ Index ].removed ) { return nullptr; }
     return &Anchors[ Index ].result;
+}
+
+bool
+catenary_anchor_shape( std::size_t const Index, double ( &Shape )[ 4 ][ 3 ] ) {
+    if( Index >= Anchors.size() || Anchors[ Index ].removed || false == Anchors[ Index ].solved ) { return false; }
+    for( int k = 0; k < 4; ++k ) { std::copy( std::begin( Anchors[ Index ].shape[ k ] ), std::end( Anchors[ Index ].shape[ k ] ), Shape[ k ] ); }
+    return true;
+}
+
+int
+catenary_anchor_chain( std::size_t const Index, bool &Start ) {
+    if( Index >= Anchors.size() || Anchors[ Index ].removed ) { return -1; }
+    auto const &anchor { Anchors[ Index ] };
+    for( std::size_t k = 0; k < Chains.size(); ++k ) {
+        auto const &chain { Chains[ k ] };
+        if( chain.removed || chain.file != anchor.file || anchor.data.name.empty() ) { continue; }
+        if( chain.data.anchor_start == anchor.data.name ) { Start = true; return static_cast<int>( k ); }
+        if( chain.data.anchor_end == anchor.data.name ) { Start = false; return static_cast<int>( k ); }
+    }
+    return -1;
 }
 
 std::size_t

@@ -185,6 +185,12 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else if( key == "missing" ) { double value { 0.0 }; number( value ); line.missing = static_cast<int>( value ); }
                 else if( key == "ground" ) { number( line.ground ); }
                 else if( key == "height" ) { number( line.height ); }
+                else if( key == "insulators" ) {
+                    line.insulators = one();
+                    if( line.insulators != "new" && line.insulators != "old" && line.insulators != "messenger" && line.insulators != "contact" ) {
+                        report( line.name, "\"insulators\" takes new, old, messenger or contact" ); good = false;
+                    }
+                }
                 else if( key == "skin" ) { line.skin = one(); }
                 else { report( line.name, "unexpected token \"" + key + "\" in an anchor" ); good = false; }
             }
@@ -389,6 +395,7 @@ std::string write_anchor( anchor const &Entry ) {
     if( Entry.missing != 0 ) { text += " missing " + std::to_string( Entry.missing ); }
     if( Entry.ground != -0.50 ) { text += " ground " + number( Entry.ground, 2 ); }
     if( Entry.height > 0.0 ) { text += " height " + number( Entry.height, 3 ); }
+    if( false == Entry.insulators.empty() ) { text += " insulators " + Entry.insulators; }
     if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
     return text + " endanchor";
 }

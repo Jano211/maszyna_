@@ -114,6 +114,7 @@ struct cantilever_pole {
     double length { 0.0 };              // długość, na której biegnie zbieżność, liczona od góry
     double depth_top { 0.0 };           // wymiar od toru w głąb (prostopadle do toru) u góry
     double depth_base { 0.0 };          // to samo na końcu długości zbieżności
+    double width { 0.0 };               // wzdłuż toru (słup kratowy 161x: wysokość ceownika, karta 33-1611-E wymiar a); 0 = nieznana
     double mount_max { 0.0 };           // najwyżej położona oś śrub mocowania; 0 = bez ograniczenia (zwis na bramce: ujemna, pod dźwigarem)
     double mount_min { 0.0 };           // najniżej położona oś śrub mocowania (zwis: nad jego końcem); tylko gdy has_mount_min
     bool   has_mount_min { false };

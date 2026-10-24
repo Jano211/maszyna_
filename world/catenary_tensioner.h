@@ -33,8 +33,11 @@ http://mozilla.org/MPL/2.0/.
 //                       modelu (w stronę drutów); przy otworze liny poniżej otworu przewodów dźwignia odwrócona (180 wokół Y)
 //   pręt 6401/6402      zero na dole (pod stosem), w +Z do zaczepu na górze (długość z danych)
 //   ciężar 63xx         zero w środku spodu, w +Z; kolejne obracane o "turn" wokół Z; kolor numerem wykonania modelu
+//   prowadnica 5070     zero w osi przesuwu pierścienia na dole, w +Z; mocowania do wsporników w -X (w stronę konstrukcji)
+//   pierścień 5080      zero w osi stosu, poziomo, punkt przesuwu po prowadnicy w -X (w stronę konstrukcji); ring_at nad spodem stosu
 //   lina                linka rozciągana (część typu cord, zero w zaczepie, w +Z, skalowana wzdłuż Z)
 #pragma once
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -115,6 +118,9 @@ struct tensioner_device {
     std::vector<tensioner_link> hanger; // od rolki stałej w dół do pręta (bez liny)
     std::vector<tensioner_link> messenger; // od otworu dźwigni do uchwytu krańcowego liny nośnej (bez uchwytu)
     std::vector<tensioner_link> contact;   // od otworu dźwigni do wyrównywacza albo uchwytu krańcowego przewodu
+    // stare złożenia: izolator rolkowy ESN-2025 zamiast 7150 (Jan 2026-10-24: ESN-2025 - 4420 - [wyrównywacz] - uchwyt);
+    // puste = jak nowe
+    std::vector<tensioner_link> messenger_old, contact_old;
     tensioner_link messenger_clamp, contact_clamp;
     tensioner_link contact_clamp_old;   // uchwyt krańcowy przewodów w starych złożeniach (5110, stara karta 33-0401); pusty = jak nowe
     tensioner_link equalizer;           // wyrównywacz przewodów jezdnych (tylko przy dwóch przewodach)
@@ -123,6 +129,29 @@ struct tensioner_device {
     std::string safety_fixed, safety_moving;
     double safety_arm { 1.0 };          // rozstaw otworów ramienia
     double safety_offset { 0.06 };      // odsunięcie każdej pary od środka rolki w bok
+    // prowadnica ciężarów (5070, karta 33-0455) i pierścień prowadzący na wierzchu stosu (5080). Model prowadnicy: zero w osi
+    // przesuwu pierścienia na dole, w +Z (długość), punkty "mount"/"end" mocowań do wsporników o guide_mount w -X (w stronę
+    // konstrukcji). Pierścień: zero w osi stosu, poziomo, "mount" o ring_arm w -X (w osi przesuwu po prowadnicy); pusty = bez nich
+    std::string guide, ring;
+    double guide_length { 4.50 };
+    double guide_mount { 0.07 };
+    double guide_bottom { 0.80 };       // spód prowadnicy nad główką szyny (karta 23-0018-2: 0,80, prowadnica 4,50 do 5,30)
+    double ring_arm { 0.200 };          // od osi stosu do osi szekli, która chodzi po prowadnicy (karta 23-5080 wyk. 1: 200)
+    double ring_turn { 0.0 };           // stopnie wokół osi stosu: 0 = prowadnica w stronę konstrukcji, 90 = w bok (+Y)
+    double ring_at { 1.00 };            // wysokość pierścienia nad spodem stosu (karta 23-0018-2: 1,00 m); ujemna = na wierzchu stosu
+    // uchwyty do konstrukcji (karta 33-0455): para przód + tył ściśnięta śrubami przez słup, na ścianach wzdłuż drutów (obrócone
+    // o 90 stopni względem wysięgnika; rozstaw śrub obejmuje słup w poprzek). Przód: zero na czole konstrukcji, śruby w +X modelu
+    // (w głąb), hole_1 o hole_out przed czołem i hole_drop pod zerem. Tył: ten sam układ, po drugiej stronie.
+    // Uchwyt przegubowy 4450 (pierwsza część "mount") trzymają dwa: górny wprost za mount_top, dolny odwrócony o 180 stopni za
+    // mount_bottom (pivot_top / pivot_bottom nad / pod zerem 4450)
+    struct bracket_set {
+        std::vector<std::string> poles; // przedrostki nazw słupów, np. 1611-11 (najdłuższy pasujący wygrywa)
+        double hole_out { 0.04 }, hole_drop { 0.04 }, bolt { 0.217 };
+        std::string top_front, top_back, bottom_front, bottom_back;
+    };
+    std::vector<bracket_set> brackets;
+    double pivot_top { 0.0 }, pivot_bottom { 0.0 };
+    bracket_set const *brackets_for( std::string const &Pole ) const;
     std::vector<tensioner_type> types;
     tensioner_type const *type( int Code ) const;
 };
@@ -157,7 +186,8 @@ struct tensioner_input {
     int missing { 0 };                  // brakujące ciężary (z góry stosu)
     std::string color;                  // kolor ciężarów (tensioner_color); pusty = szary
     std::string top_color;              // kolor najwyższego ciężaru; pusty = jak reszta
-    bool old_fittings { false };
+    bool old_fittings { false };            // uchwyty krańcowe przewodów 5110 (druty zaśniedziałe)
+    bool old_messenger { false }, old_contact { false }; // izolatory rolkowe (łańcuchy messenger_old / contact_old) na linie / przewodach
     // punkty, w które celują łańcuchy do liny nośnej i do przewodów jezdnych (ostatnie podwieszenie, układ urządzenia);
     // bez nich łańcuchy poziomo wzdłuż +X
     bool aimed { false };
@@ -166,6 +196,10 @@ struct tensioner_input {
     double height { 0.0 };              // oś rolek nad główką szyny; 0 = z tablicy. Wyżej/niżej: ciężary o tyle samo (lina ta sama)
     double ground { -0.50 };            // najniższe położenie spodu ciężarów względem główki szyny (grunt, fundament); ZAŁOŻENIE
     double gravity { 0.981 };           // daN/kg
+    // konstrukcja: nazwa słupa (dobór uchwytów) i jej grubość od czoła do tyłu (wzdłuż drutów; słup 161x - szerokość wzdłuż toru,
+    // przez nią idą śruby uchwytów) na wysokości nad główką; puste = bez uchwytów
+    std::string pole;
+    std::function<double( double )> depth;
 };
 
 struct tensioner_placement {
@@ -182,6 +216,7 @@ struct tensioner_result {
     double b { 0.0 }, s { 0.0 };            // położenie rolki ruchomej i spodu ciężarów
     double stack_height { 0.0 };
     double height { 0.0 };                  // oś rolek nad główką szyny
+    double lever_tilt { 0.0 };              // radiany: odchylenie uchwytu dźwigni od poziomu w dół (dźwignia od pionu w stronę konstrukcji u góry)
     // obrót krążków (radiany wokół +Y urządzenia) od położenia przy +10 °C: lina przewinięta przez rowek / promień
     double turn_fixed_a { 0.0 }, turn_fixed_b { 0.0 }, turn_moving_a { 0.0 }, turn_moving_b { 0.0 };
     int weights { 0 };                      // zawieszone ciężary
@@ -190,6 +225,9 @@ struct tensioner_result {
     double messenger_end[ 3 ] { 0.0, 0.0, 0.0 };         // gdzie kończy się lina nośna (uchwyt krańcowy)
     std::vector<std::vector<double>> contact_ends;       // gdzie kończą się przewody jezdne
     bool grounded { false };                // ciężary oparte o grunt: sieć bez naciągu od urządzenia
+    // mocowania prowadnicy do wsporników na konstrukcji (dolne i górne, układ urządzenia); has_guide = false bez prowadnicy
+    bool has_guide { false };
+    double guide_mount[ 3 ] { 0.0, 0.0, 0.0 }, guide_end[ 3 ] { 0.0, 0.0, 0.0 };
     std::vector<std::string> warnings;
 };
 

@@ -70,7 +70,10 @@ part 6402-04 length 3.00
 
 // device <karta> table pulley lever rod rope rope_diameter
 //   mount / holder / hanger / messenger / contact  <czesc dlugosc>...   lancuchy czesci liniowych ("~czesc" - odwrocona)
+//   messenger_old / contact_old <czesc dlugosc>...   to samo w starych zlozeniach (izolator rolkowy)
 //   messenger_clamp / contact_clamp <czesc dlugosc>, equalizer <czesc dlugosc> spread <rozstaw przewodow>
+//   brackets <slupy...> hole <przed czolem> <pod zerem> bolt <dlugosc srub> top <przod> <tyl> bottom <przod> <tyl>, pivot <4450 gora> <dol>
+//   guide <prowadnica> <dlugosc> mount <od osi pierscienia do mocowan> bottom <spod nad glowka>, ring <pierscien> <od osi stosu do prowadnicy>
 //   safety <ramie przy rolce stalej> <ramie przy ruchomej> <rozstaw otworow> <odsuniecie w bok>
 //   type <traction_code> stack <ciezar liczba>... (od dolu) lever <otwor liny> <otwor przewodow> <otwor osi> [rod <pret>] [clamp <uchwyt liny>]
 // Dlugosci czesci liniowych: ZALOZENIE do czasu modeli (Jan 2026-10-23 szykuje); 4440: hole_1 z modeli (01-03 0,270, 04 0,320,
@@ -84,14 +87,31 @@ part 6402-04 length 3.00
 // zastepuje 63-0401). Zeliwne na dole stosu.
 device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   mount 4450-01 0.0747 4440-02 0.27
+  pivot 0.03436 0.02561       // 4450-01: mount_top / mount_bottom nad / pod zerem - tu wchodza uchwyty 5100 (gorny i dolny odwrocony)
+  // uchwyty do kotwien 13-5100 (slupy 161x, karta 33-0455 wyk. 11/12) na scianach wzdluz drutow, obrocone o 90 st. wzgledem wysiegnika
+  // (Jan 2026-10-24): sruby przez szerokosc slupa (C120..C200, karta 33-1611-E a), rozstaw srub obejmuje bok kratowy (5100 a 220-250
+  // gora / 290-320 dol). Z modeli: hole_1 0,04 przed czolem i 0,04 pod zerem; sruby 0,217 (wyk. 1, 3) / 0,257 (wyk. 2, 4); tyl 05 do
+  // 1 i 2, 06 do 3 i 4. Dwa uchwyty wokol 4450 (gorny wprost, dolny odwrocony). Wyk. 11 (sruby M16x220) C140-160, wyk. 12 (M16x260)
+  // C180-200 - dopiski na kartach 43-0456 i 13-0457; C120 jak 11.
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
   holder ~4440-01 0.27
   hanger 6411-01 0.10 4720-01 0.10
   messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
   contact 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
+  // stare zlozenia (Jan 2026-10-24): izolator rolkowy ESN-2025 (model esn_2025, zero w pierwszym mocowaniu, hole_1 0,6004 w -X)
+  // zamiast 7150, wprost w otworze dzwigni: ESN-2025 - 4420 - [wyrownywacz] - uchwyt. Na linie, na przewodach albo na obu (wpis "insulators")
+  messenger_old esn_2025 0.6004 4420-01 0.93
+  contact_old esn_2025 0.6004 4420-01 0.93
   messenger_clamp 5120-01 0.058     // uchwyt krancowy 5120 (wyk. 5-8 roznia sie tylko wkladka pod lub/przewod) - jeden model Jana, wire 0,058
   contact_clamp 5120-01 0.058
   contact_clamp_old 5110-01 0.0632    // stare zlozenia (druty zasniedziale, Jan 2026-10-24): uchwyt klinowy 5110 jak w starej karcie 33-0401
   equalizer 4410-01 0.1541 spread 0.08
+  // prowadnica 5070-2 (karta 33-0455; z modelu: mount/end 0,07 od osi) od 0,80 do 5,30 nad glowka (karta 23-0018-2), mount w hole_1
+  // uchwytow 5100 (dol bottom, gora top); pierscien 5080-1 jezdzi szekla po osi prowadnicy (0,200 od osi stosu, karta 23-5080), 1,00 m
+  // nad spodem stosu - on ustawia os stosu (0,31 od czola), lina z rolki schodzi lekko ukosnie (Jan 2026-10-24)
+  guide 5070-02 4.50 mount 0.07 bottom 0.80
+  ring 5080-01 0.200 at 1.00
   safety 4600-01 4600-02 1.00 0.06     // zabezpieczenie 4600 wyk. 1 (karta 23-4600): ramiona 1,00 m z modeli, para po obu stronach rolek (0,06 - ZALOZENIE)
   type 3 stack 6321-1 8 6323-1 18 lever IV I II
   type 4 stack 6321-1 4 6323-1 20 lever VI I III

@@ -330,6 +330,21 @@ int main( int, char *argv[] ) {
         catenary_scene_temperature();
         result = catenary_anchor_result( 0 );
         check( result->b > warm + 0.3 && mock_span_bodies.size() == 1, "mroz: rolka dalej od slupa, przeslo do kotwienia od nowa" );
+        // obrys urządzenia dla edytora: czoło słupa w stronę s0002 na wysokości rolek, rolka ruchoma dalej, kolumna ciężarów pionowo;
+        // kotwienie kończy łańcuch l1 (koniec)
+        {
+            double shape[ 4 ][ 3 ];
+            bool start { true };
+            auto const has { catenary_anchor_shape( 0, shape ) };
+            auto const chain { catenary_anchor_chain( 0, start ) };
+            auto const height { result->height + 0.2 };
+            auto good { has && chain == 0 && false == start };
+            good = good && std::abs( shape[ 0 ][ 1 ] - height ) < 1e-6 && shape[ 0 ][ 2 ] < 184.0 && shape[ 0 ][ 2 ] > 183.5;
+            good = good && std::abs( ( shape[ 0 ][ 2 ] - shape[ 1 ][ 2 ] ) - result->b ) < 0.05;
+            good = good && std::abs( shape[ 2 ][ 0 ] - shape[ 3 ][ 0 ] ) < 1e-9 && std::abs( shape[ 2 ][ 2 ] - shape[ 3 ][ 2 ] ) < 1e-9 && std::abs( shape[ 3 ][ 1 ] - ( result->s + 0.2 ) ) < 1e-6;
+            std::printf( "  obrys kotwienia: czolo %.2f %.2f %.2f, rolka ruchoma %.2f %.2f %.2f, ciezary %.2f..%.2f\n", shape[ 0 ][ 0 ], shape[ 0 ][ 1 ], shape[ 0 ][ 2 ], shape[ 1 ][ 0 ], shape[ 1 ][ 1 ], shape[ 1 ][ 2 ], shape[ 3 ][ 1 ], shape[ 2 ][ 1 ] );
+            check( good, "kotwienie: obrys dla edytora (czolo slupa, rolka ruchoma, kolumna ciezarow) i lancuch, ktory konczy" );
+        }
         // kotwienie na istniejącym słupie (podwieszenie s0003 za s0002): bez własnego słupa, za słupem idzie po przesunięciu
         {
             auto pole3 { entry };

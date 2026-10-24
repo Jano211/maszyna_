@@ -85,6 +85,8 @@ z zadanej długości drutu → naciąg).
   kotwienia → `solid.rope` w rendererach), ucha 4490-02 jako modele. Segmenty 4490-01 i `tensioner_rope_parts` usunięte.
 - Rolki: `sheave 4460-11` w `pulley`; obroty w `tensioner_result::turn_*`.
 - Czekają na Jana: 5070-2 / 5080-1 / 5090, mocowania 0455 + przypisanie wykonań do słupów, 6411-01, izolator rolkowy, 4430-01.
+- 2026-10-24 popołudnie (odcinek 2138): dźwignia przechylona do wypadkowej łańcuchów (kilka przybliżeń, `lever_tilt`, najwyżej 45°),
+  zaznaczanie kotwienia w oknie edytora (obrys z `catenary_anchor_shape`).
 
 ## Do zrobienia (Jan 2026-10-24, rano)
 - **Lina 4490 – porządek.** Teraz lina jest rysowana modelem odciągu 9832-02, który ma oko (kauszę) na końcu, więc na
@@ -109,6 +111,96 @@ z zadanej długości drutu → naciąg).
   rolkowy: ramka z dwiema porcelanowymi rolkami (zdjęcie od Jana). Czeka na: numer/model, pivoty (zero + `hole_1`), czy pręt
   przed ramką to osobna część i czy zastępuje 4720/4420, czy też na linie nośnej, czy przy stanie „przejściowe” też
   (5110 jest teraz tylko przy zaśniedziałych).
+
+## Prowadnica, pierścień, uchwyty 5100 (karty przeczytane 2026-10-24 15:50)
+- **23-0018-2** (Uzup. 2 s. 8, usytuowanie ciężarów Ø306, kotwienie wspólne): prowadnica od **0,80 m** do 0,80 + 4,50 = 5,30 m nad
+  główką; pierścień prowadzący ok. **1,00 m nad spodem stosu** (na wysokości górnej części żeliwnych), przy +40 °C/750 m spód stosu
+  −0,07, pierścień ~0,93 – tuż nad spodem prowadnicy. Ciężar polimerobetonowy h = 100 mm. Rolki 6,70 m, 0,05 m nad rolką lina.
+- **33-0455** (Uzup. 2 s. 13): wyk. 7÷12 – dwa uchwyty poz. 1 na górze (pod urządzenie), jeden poz. 1 w połowie (górny koniec
+  prowadnicy), na dole poz. 2 (wyk. 11: 3 × 5100-1 + 1 × 5100-3; wyk. 12: 3 × 5100-2 + 1 × 5100-4). Prowadnica przed czołem słupa.
+- **13-5100** (t5 s. 76): uchwyty do kotwień, **słup 1611**; dwa kątowniki 40×40 ściągnięte śrubami M16; wyk. 1/2: a 220–250
+  (górą, węższy słup), wyk. 3/4: a 290–320 (dołem); śruby M16×220 (wyk. 1, 3) albo ×260 (wyk. 2, 4) – wg słupa (wyk. 11 / 12 w 0455).
+  Modele Jana: 5100-01…-04 przody, -05 tył do 1 i 2, -06 tył do 3 i 4, każdy z `eye`.
+- **23-5080** (t5 s. 74): pierścień wyk. 1 Ø310; po prowadnicy chodzi **szekla, 200 mm od osi** (Jan 15:51; model `mount` w jej osi,
+  Jan poprawia z 0,194 na 0,200); po drugiej stronie śruba M12×55 ściągająca końce pierścienia, 210 mm; wyk. 2 Ø405 / 235. **13-5090** (s. 75): uchwyty prowadnic (rozdzielone).
+
+## Pozostałe kotwienia – jakie klocki (przegląd kart 2026-10-24 16:40, Uzup. 2 + tom 1 + tom 5)
+Lista dla Jana z pivotami: Claude Docs „Kotwienia – modele do zrobienia i pivoty” (https://claude.ai/artifact/11FrwpXXy3aCEq7qm4paPk).
+Oznaczenia: **[jest]** model w `components`, **[brak]** – do zrobienia. Liczby z tabel kart.
+
+### 1. Wspólne, rolki równoległe – zrobione (0461 z izolacją; 0462 bez izolacji = te same części bez 7150, 3 × 4720)
+- 0411 (tom 1) – to samo z ciężarami samymi żeliwnymi 6321-1 (26/24/20/33) i prętem 6401-1.
+
+### 2. Wspólne, rolki szeregowe (cała sieć na jednym stosie)
+Karty: 13-0471 / 13-0472 (Ø400, z / bez izolacji), 23-0480 / 23-0481 (Ø306 + żeliwne). Typy 3, 4, 10, 26; dźwignia 6406 jak w 0461.
+- Rolki: 2 × 4460-2 + 2 × 4460-3 **[jest]**; uchwyty 4440-5, 4440-6 i 4440-7 (Ø400) albo 4440-4 (Ø306) **[jest]**; 4450-1 **[jest]**
+- Cięgło 4490-2 (L 10,00 m; u nas lina proceduralna) ; zabezpieczenie 4600-2 **[jest]**
+- Ø400: 6322-1 (26/24/20/33), pręt 6401-3 (typ 3, 4) / 6401-2 (10) / 6401-1 (26) **[jest]**
+- Ø306: 6321-1 + 6323-1 jak 0461, pręt 6402-1 / 6402-3 **[jest]**
+- Reszta jak 0461 (4410, 4420, 4720, 5120, 6406, 6411, 7150) – brakuje tylko 6411-01
+- Zamocowania Ø400: 13-0470 – jak 0455, ale pierścień 5080-2 **[jest]**, prowadnica 5070-2 **[jest]**, skrajnia 2,40 m
+- Usytuowanie Ø400 (13-0018-3): prowadnica 0,80–5,30, ciężar 57 mm, pierścień 0,70 nad spodem stosu (+10 °C)
+- Do zrobienia w solverze: przebieg liny przez 4 rolki szeregowe (dwa rowki różnej średnicy), tablice 0011-5…-8
+
+### 3. Rozdzielone – dwa stosy (osobno lina nośna i przewody jezdne)
+Sieci 20, 30, 32, 35 (YC120-2CS, 2C…). Usytuowanie 23-0019-2 (Ø306+żeliwne) / 23-0019-3 (Ø400): **rolki liny 7,00 m, przewodów
+6,30 m** nad główką, prowadnice od **0,40 m**, długość 5,50 m (4470-4), pręty 2,50/2,30 (Ø306) i 2,00/1,70 (Ø400).
+Ciężary lina / przewody: Ø306 typ 20 15/18+7ż, 30 15/18, 32 16+14ż/15+5ż, 35 15+12ż/18; Ø400 20 15/25, 30 15/18, 32 30/20, 35 27/18.
+- Urządzenie liny (23-0482 z izol. / 0484 bez; Ø400 33-0486 / 0488): rolki szeregowe jak wyżej (4440-5, 4440-4, 4440-6, 4450-1,
+  2 × 4460-2, 2 × 4460-3, 4490-2, 4600-2), 4420-1, 7150-1 (z izol.), uchwyt 5120-7; **bez dźwigni 6406** – lina wprost z rolki.
+  - **Sieć 32 (dwie liny nośne): dźwignia równoramienna 6403-1** **[jest]** rozdziela na dwie liny: 2 × 4420, 2 × 7150, 5 × 4720, 2 × 5120-7
+  - **Sieć 35: wyrównywacz 4410-1** **[jest]** zamiast dźwigni: 1 × 4420 przed nim, 2 × 7150, 3 × 4720, 2 × 5120-7
+- Urządzenie przewodów (23-0483 / 0485; Ø400 23-0487 / 33-0489): rolki szeregowe, uchwyt rolki stałej 4440-5 bez 4450 (dla 20 i 35
+  osobno dodatkowo 4440-4 (Ø400: 4440-7) + 4450-1), 4410-1 wyrównywacz dwóch przewodów, 4420, 7150, 5120-6 / 5120-7.
+- Zamocowania (23-0457 Ø306 / 23-0458 Ø400 / tom 1 13-0450 żeliwne): 2 prowadnice **4470-4** **[jest]**, 2 pierścienie 5080-1 / 5080-2
+  **[jest]**, **5040-2 / 5040-3** uchwyt rolek wydłużony (wysięgnik pod niższe urządzenie) **[jest]**, **2 × 5090-1/-2/-3** uchwyty
+  prowadnic **[brak]**, uchwyty do słupa poz. 1 ×4–6 (5100-1/-2 ×5 w wyk. 11/12) i poz. 2 (5100-3/-4).
+- Tereny górnicze 23-0477 / 23-0478: uchwyty **4530-1/-2/-3 ×6** **[brak]**, reszta jak 0457 / 0458.
+
+### 4. „2 + 2 na jednym stosie”
+W tych katalogach **nie ma** urządzenia, które ciągnie dwie liny i dwa przewody jednym stosem: karty całej sieci (0411, 0461, 0462,
+0471, 0472, 0480, 0481) są tylko dla typów 3, 4, 10, 26 (jedna lina). Dwie liny nośne (32, 35) są tylko w kotwieniu rozdzielonym
+(dźwignia 6403 albo wyrównywacz 4410 na linie, 4410 na przewodach). Skąd Jan zna 2+2 na jednym stosie – do ustalenia (zdjęcie? stary
+katalog kolprojekt1?).
+
+### 5. Kotwienia stałe (tom 1: 63-0403 sieci z izolacją, 0404 przewodów, 0405 lin nośnych, 0413 bez izolacji)
+- Na konstrukcji: **4430-1** przegubowy uchwyt kotwienia **[jest]** (lina i przewody osobno, 2 szt.)
+- Lina: 7150-1 + 5120-6/-7 (sieć 32/35: **4710-1 łącznik pojedynczy 75** [brak], 4720-1, 4410-1, 2 × 7150, 2 × 5120-7)
+- Przewody: **4730-1 łącznik skręcony 170** (obrót 90°) [brak], 4720-1, 7150-1, 4410-1, 5120-6 (sieć 20/32/35: 5120-7)
+- Bez izolacji (0413): 4430-1, 4710-1 / 4730-1, 4410-1, 5120-6/-7
+- Zamocowania 43-0453: dwie pary uchwytów (góra lina, dół przewody) – 5100-1/-2 ×4 w wyk. 11/12 **[jest]**, inne wyk. 4510/4520/4570
+  **[brak]**; do dźwigara bramki 43-0463: **4590-1…4** (wg kątownika dźwigara 45×5 / 50×6 / 60×6–8 / 75×8) + 2 × 4720-1 **[brak 4590]**
+
+### 6. Kotwienia środkowe (tom 1: 63-0406 dwustronna izolacja, 0408 bez, 73-0418 jednostronna, 63-0416 do dźwigara bramki)
+- Lina kotwienia środkowego **9831-5** – 130–142 m (do dźwigara 14 m) – od skrajnych słupów przez słup środkowy; proceduralna jak lina
+- Na końcach: 4430-1 na konstrukcji, 7150-1, 4720-1, 4420-1 (jedna strona), uchwyty krańcowe **5120-5** (jeden model 5120 [jest])
+- Przy słupie środkowym: zaciski na linie nośnej 1,00 m od słupa – **5560-5** (sieć 4, 10) / **5570-5** (pozostałe) ×6 **[brak]**
+- W połowie przęseł: połączenia z przewodami w kształcie V (1,50 + 1,50 m) – złączki **6410-5** ×2 **[brak]**
+- Bez izolacji (0408): zamiast 7150 **6511-1** **[brak]**
+- Do dźwigara bramki (0416): 2 × 4730-1, 2 × 4720-1, 2 × 7150, lina 14 m, zaciski 5560/5570 ×8; zamocowanie 43-0466: 4590-1…4 + 4720
+- Zamocowania na słupie 43-0456: para uchwytów 5100-1/-2 **[jest]** (dopiski: wyk. 11 M16×220 C140–160, wyk. 12 M16×260 C180–200)
+
+### 7. Stare kotwienie wspólne 23-0454 (prowadnica z lin?)
+- 4550-1/-2/-5/-6/-7 uchwyty **[brak]**, **5050-1 ×8** **[brak]**, **5060-1 ×2** **[jest]** – to stąd 5060-01. 4480-01: w tomie 5 karty
+  4480 **nie ma** (po 4470 jest 4490) – do czego Jan go zrobił?
+
+### Modele do zrobienia (zbiorczo)
+- Uchwyty do konstrukcji (wg rodzaju słupa, 0455/0457/0458/0453/0456): **4510-1/-2, 4520-1…-7, 4530-1/-2/-3, 4560-1, 4570-1**
+- Do dźwigara bramki: **4590-1…-4**
+- Rozdzielone: **5090-1/-2/-3** (uchwyty prowadnic)
+- Stałe: **4710-1** (łącznik pojedynczy 75), **4730-1** (łącznik skręcony 170)
+- Środkowe: **5560-5, 5570-5** (zaciski), **6410-5** (złączka V), **6511-1** (łącznik zamiast izolatora)
+- Stare 0454: **4550-x, 5050-1**
+- Wcześniej: **6411-01**
+
+## Izolator rolkowy ESN-2025 (Jan 2026-10-24 14:49–14:58, model `esn_2025.t3d`)
+- Stary izolator rolkowy (ramka z dwiema rolkami; zdjęcie i stary rysunek od Jana). Zero w pierwszym mocowaniu, `hole_1` w drugim,
+  0,6004 m w −X (jak 7150 0,8324). 5 faz LOD.
+- W kotwieniu do słupa zamiast 7150, wprost w otworze dźwigni: ESN-2025 – 4420 – [wyrównywacz] – uchwyt (5110 przy przewodach).
+  Bywa na samej linie nośnej, na samych przewodach albo na obu – wpis kotwienia `insulators new|old|messenger|contact`; bez wpisu
+  rolkowe na obu przy drutach zaśniedziałych (jak 5110).
+- Izolatory sekcyjne (przęsło od przęsła) – na razie nie (Jan): rolkowe i nowe żywiczne, przejezdne i nieprzejezdne (dwa izolatory
+  jak na linie nośnej).
 
 ## Kolprojekt_2010-1.PDF (88 s., katalog sieci YC150-2CS150 kod 36 i YC120-2CS150 kod 37, CuAg, 200 km/h)
 Strony PDF: s. 11–13 0017-1/2/3 lina kotwienia środkowego (Fe 70, Cu 120, Cu 150); s. 14–16 **0019-1/2/3 usytuowanie
