@@ -1171,7 +1171,36 @@ assemble_middle( scene_chain &Chain ) {
         // połowa przęsła: przewód jezdny (prosto między końcami), lina nośna nad nim na wysokości najkrótszego wieszaka
         auto const wiremiddle { ( vec( wires[ 1 ] ) + vec( wires[ neighbour ] ) ) * 0.5 };
         auto const alongspan { glm::normalize( glm::dvec3 { wires[ neighbour ][ 0 ] - wires[ 1 ][ 0 ], 0.0, wires[ neighbour ][ 2 ] - wires[ 1 ][ 2 ] } ) };
-        auto const messengerlow { std::max( 0.30, data.hangers[ 0 ] ) };
+        // lina nośna w przęśle tak, jak ją rysuje przęsło: solver sieci z odstępami wieszaków z tablicy typu (t - ułamek
+        // przęsła od podwieszenia środkowego); bez typu - prosto między podwieszeniami
+        auto const spanlength { glm::length( glm::dvec2 { wires[ neighbour ][ 0 ] - wires[ 1 ][ 0 ], wires[ neighbour ][ 2 ] - wires[ 1 ][ 2 ] } ) };
+        catenary::span_solution solution;
+        auto solved { false };
+        if( type != nullptr ) {
+            catenary::span_points points;
+            points.contact_start = catenary::vec3 { wires[ 1 ][ 0 ], wires[ 1 ][ 1 ], wires[ 1 ][ 2 ] };
+            points.contact_end = catenary::vec3 { wires[ neighbour ][ 0 ], wires[ neighbour ][ 1 ], wires[ neighbour ][ 2 ] };
+            points.messenger_start = catenary::vec3 { ropes[ 1 ][ 0 ], ropes[ 1 ][ 1 ], ropes[ 1 ][ 2 ] };
+            points.messenger_end = catenary::vec3 { ropes[ neighbour ][ 0 ], ropes[ neighbour ][ 1 ], ropes[ neighbour ][ 2 ] };
+            std::string error;
+            auto const gaps { catenary::types().hanger_gaps( type->hanger_table, spanlength ) };
+            solved = catenary::solve_span_points( *type, gaps, points, true, true, solution, error ) && solution.result.messenger.size() >= 2;
+        }
+        auto const messengerat = [ & ]( double const T ) {
+            auto const wire { vec( wires[ 1 ] ) + ( vec( wires[ neighbour ] ) - vec( wires[ 1 ] ) ) * T };
+            if( false == solved ) { return vec( ropes[ 1 ] ) + ( vec( ropes[ neighbour ] ) - vec( ropes[ 1 ] ) ) * T; }
+            auto const &line { solution.result.messenger };
+            auto const x { T * solution.length };
+            auto above { line.back().y };
+            for( std::size_t k = 1; k < line.size(); ++k ) {
+                if( line[ k ].x >= x ) {
+                    auto const f { line[ k ].x > line[ k - 1 ].x ? ( x - line[ k - 1 ].x ) / ( line[ k ].x - line[ k - 1 ].x ) : 0.0 };
+                    above = line[ k - 1 ].y + ( line[ k ].y - line[ k - 1 ].y ) * f;
+                    break;
+                }
+            }
+            return wire + glm::dvec3 { 0.0, above, 0.0 };
+        };
         // koniec liny na słupie sąsiedniego podwieszenia: urządzenie kotwienia stałego tylko z liną
         auto const index { suspension_named( Chain.file, data.suspensions[ position + ( side == 0 ? -1 : 1 ) ] ) };
         glm::dvec3 ropeend { vec( ropes[ neighbour ] ) };
@@ -1280,7 +1309,8 @@ assemble_middle( scene_chain &Chain ) {
         add_tube( solid, rope, ropeheight );
         // V (złączka 6410-5 na przewodzie w połowie przęsła, ramiona do liny nośnej 1,50 m w obie strony wzdłuż przęsła): luźne
         // linki zwisające między zaciskiem na linie nośnej a przewodem
-        auto const a { wiremiddle - alongspan * 1.5 + glm::dvec3 { 0.0, messengerlow, 0.0 } }, b { wiremiddle + alongspan * 1.5 + glm::dvec3 { 0.0, messengerlow, 0.0 } };
+        auto const reach { spanlength > 4.0 ? 1.5 / spanlength : 0.0 };
+        auto const a { messengerat( 0.5 - reach ) }, b { messengerat( 0.5 + reach ) };
         add_tube( solid, hanging( a, wiremiddle, 0.12, 12 ), ropeheight );
         add_tube( solid, hanging( wiremiddle, b, 0.12, 12 ), ropeheight );
         // bryły zastępcze: zaciski 5560/5570 (na linie nośnej przy słupie środkowym i na końcach V), złączka 6410 na przewodzie
