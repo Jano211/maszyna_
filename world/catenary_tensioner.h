@@ -96,6 +96,7 @@ struct tensioner_lever {
 struct tensioner_link {
     std::string name;
     double length { 0.0 };
+    double roll { 0.0 };    // stopnie wokół osi łańcucha (w danych "<część>@<stopnie>"), np. 90 - sworzeń obrócony do następnej części
 };
 
 // stos ciężarów i otwory dźwigni dla typu sieci (numer typu z karty 0002 = traction_code)

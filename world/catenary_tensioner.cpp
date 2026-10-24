@@ -107,7 +107,18 @@ vec place_chain( std::vector<tensioner_link> const &Links, std::string const &Ro
         auto const reversed { false == link.name.empty() && link.name[ 0 ] == '~' };
         auto const name { reversed ? link.name.substr( 1 ) : link.name };
         auto const end { From + step * link.length };
-        Result.parts.push_back( placed_along( Role + "." + std::to_string( ++index ), name, reversed ? end : From, reversed ? step * -1.0 : step ) );
+        auto placement { placed_along( Role + "." + std::to_string( ++index ), name, reversed ? end : From, reversed ? step * -1.0 : step ) };
+        if( link.roll != 0.0 ) {
+            // obrót wokół osi części (kolumna X): Y i Z obracają się w swojej płaszczyźnie
+            auto const angle { link.roll * kPi / 180.0 };
+            auto const c { std::cos( angle ) }, s { std::sin( angle ) };
+            for( int r = 0; r < 3; ++r ) {
+                auto const y { placement.rotation[ r * 3 + 1 ] }, z { placement.rotation[ r * 3 + 2 ] };
+                placement.rotation[ r * 3 + 1 ] = c * y + s * z;
+                placement.rotation[ r * 3 + 2 ] = -s * y + c * z;
+            }
+        }
+        Result.parts.push_back( placement );
         From = end;
     }
     return From;
@@ -182,6 +193,10 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
         for( auto k { From }; k + 1 < Words.size(); k += 2 ) {
             tensioner_link link;
             link.name = Words[ k ];
+            if( auto const at { link.name.find( '@' ) }; at != std::string::npos ) {
+                if( false == number_of( link.name.substr( at + 1 ), link.roll ) ) { report( "bad roll in \"" + link.name + "\"" ); }
+                link.name.erase( at );
+            }
             if( false == number_of( Words[ k + 1 ], link.length ) ) { report( "bad length \"" + Words[ k + 1 ] + "\"" ); return; }
             Links.push_back( link );
         }
