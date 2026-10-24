@@ -86,6 +86,12 @@ part 6402-04 length 3.00
 // zastepuje 63-0401). Zeliwne na dole stosu.
 device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   mount 4450-01 0.0747 4440-02 0.27
+  pivot 0.03436 0.02561       // 4450-01: mount_top / mount_bottom nad / pod zerem - tu wchodza uchwyty 5100 (gorny i dolny odwrocony)
+  // uchwyty do kotwien 13-5100 (slup 1611, karta 33-0455 wyk. 11): przod 5100-01 + tyl 5100-05 dwa razy wokol 4450, z modeli: hole_1
+  // 0,04 przed czolem i 0,04 pod zerem, sruby 0,217 (wyk. 12 = 5100-02/-04, sruby 0,257 - do ktorych slupow: CZEKA NA JANA)
+  // CZEKA NA JANA: wymiar a karty 5100 (220-250 / 290-320) = glebokosc slupa 1611 na 6,7 / 0,8 m - sruby chyba w poprzek szerokosci,
+  // a nie przez glebokosc jak w modelu (sruba 0,217 < glebokosc 0,218 na wysokosci rolek)
+  // brackets 1611 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
   holder ~4440-01 0.27
   hanger 6411-01 0.10 4720-01 0.10
   messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93

@@ -665,6 +665,13 @@ assemble_anchor( scene_anchor &Anchor ) {
     input.missing = data.missing;
     input.ground = data.ground;
     input.height = data.height;
+    // uchwyty do słupa: tył po drugiej stronie słupa; zero urządzenia na czole przy wysokości rolek, słup zbieżny
+    input.pole = poletype;
+    {
+        auto const *devicetable { devices->table( device->table ) };
+        auto const rollers { data.height > 0.0 ? data.height : devicetable != nullptr ? devicetable->height : 6.7 };
+        input.depth = [ pole, rollers ]( double const Height ) { return 0.5 * pole->depth( rollers ) + 0.5 * pole->depth( Height ); };
+    }
     input.color = data.color;
     input.top_color = data.top_color;
     // stare złożenie: łańcuch z tym kotwieniem ma druty zaśniedziałe (stan 1)

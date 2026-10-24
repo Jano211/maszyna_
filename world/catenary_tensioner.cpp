@@ -250,6 +250,28 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 }
                 continue;
             }
+            if( keyword == "brackets" && words.size() >= 2 ) {
+                tensioner_device::bracket_set set;
+                set.pole = words[ 1 ];
+                for( std::size_t k = 2; k < words.size(); ) {
+                    auto const &key { words[ k ] };
+                    if( ( key == "top" || key == "bottom" ) && k + 2 < words.size() ) {
+                        ( key == "top" ? set.top_front : set.bottom_front ) = words[ k + 1 ];
+                        ( key == "top" ? set.top_back : set.bottom_back ) = words[ k + 2 ];
+                        k += 3;
+                    }
+                    else if( key == "hole" && k + 2 < words.size() ) { number_of( words[ k + 1 ], set.hole_out ); number_of( words[ k + 2 ], set.hole_drop ); k += 3; }
+                    else if( key == "bolt" && k + 1 < words.size() ) { number_of( words[ k + 1 ], set.bolt ); k += 2; }
+                    else { report( "unknown brackets keyword \"" + key + "\"" ); break; }
+                }
+                device->brackets.push_back( set );
+                continue;
+            }
+            if( keyword == "pivot" && words.size() >= 3 ) {
+                number_of( words[ 1 ], device->pivot_top );
+                number_of( words[ 2 ], device->pivot_bottom );
+                continue;
+            }
             if( keyword == "ring" && words.size() >= 3 ) {
                 device->ring = words[ 1 ];
                 if( false == number_of( words[ 2 ], device->ring_arm ) ) { report( "bad ring arm \"" + words[ 2 ] + "\"" ); }
@@ -438,6 +460,14 @@ tensioner_pulley const *tensioner_catalog::pulley( std::string const &Name ) con
     for( auto const &entry : m_pulleys ) { if( entry.name == Name ) { return &entry; } }
     return nullptr;
 }
+tensioner_device::bracket_set const *tensioner_device::brackets_for( std::string const &Pole ) const {
+    bracket_set const *best { nullptr };
+    for( auto const &set : brackets ) {
+        if( Pole.rfind( set.pole, 0 ) == 0 && ( best == nullptr || set.pole.size() > best->pole.size() ) ) { best = &set; }
+    }
+    return best;
+}
+
 tensioner_lever const *tensioner_catalog::lever( std::string const &Name ) const {
     for( auto const &entry : m_levers ) { if( entry.name == Name ) { return &entry; } }
     return nullptr;
@@ -513,7 +543,35 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     vec const out { 1.0, 0.0, 0.0 }, down { 0.0, 0.0, -1.0 };
 
     // rolka stała na uchwytach od czoła konstrukcji, rolka ruchoma w b
-    auto const fixedaxle { place_chain( Device.mount, "mount", vec { 0.0, 0.0, height }, out, Result ) };
+    // uchwyty do konstrukcji: 4450 zaczyna się w otworach uchwytów, hole_out przed czołem
+    auto const *brackets { Input.pole.empty() ? nullptr : Device.brackets_for( Input.pole ) };
+    auto const pivotx { brackets != nullptr ? brackets->hole_out : 0.0 };
+    if( brackets != nullptr ) {
+        // przód: -X modelu przed czoło (obrót o 180 stopni wokół pionu); dolny dodatkowo do góry nogami (otwór nad zerem)
+        auto const front = [ & ]( std::string const &Role, std::string const &Part, double const Z, bool const Upside ) {
+            auto placement { placed( Role, Part, vec { 0.0, 0.0, Z } ) };
+            if( Upside ) { set_rotation( placement, vec { -1.0, 0.0, 0.0 }, vec { 0.0, 1.0, 0.0 }, vec { 0.0, 0.0, -1.0 } ); }
+            else { set_rotation( placement, vec { -1.0, 0.0, 0.0 }, vec { 0.0, -1.0, 0.0 }, vec { 0.0, 0.0, 1.0 } ); }
+            Result.parts.push_back( placement );
+        };
+        // tył: na tylnej ścianie konstrukcji, -X modelu na zewnątrz (w -X urządzenia)
+        auto const back = [ & ]( std::string const &Role, std::string const &Part, double const Z, bool const Upside ) {
+            if( Part.empty() ) { return; }
+            auto const depth { Input.depth ? Input.depth( Z ) : 0.0 };
+            if( depth <= 0.0 ) { return; }
+            auto placement { placed( Role, Part, vec { -depth, 0.0, Z } ) };
+            if( Upside ) { set_rotation( placement, vec { 1.0, 0.0, 0.0 }, vec { 0.0, -1.0, 0.0 }, vec { 0.0, 0.0, -1.0 } ); }
+            Result.parts.push_back( placement );
+            if( depth > brackets->bolt + 1e-6 ) { Result.warnings.push_back( "the bracket bolts are shorter than the structure is deep" ); }
+        };
+        auto const top { height + Device.pivot_top + brackets->hole_drop };
+        auto const bottom { height - Device.pivot_bottom - brackets->hole_drop };
+        front( "bracket_top", brackets->top_front, top, false );
+        back( "bracket_top.back", brackets->top_back, top, false );
+        front( "bracket_bottom", brackets->top_front, bottom, true );
+        back( "bracket_bottom.back", brackets->top_back, bottom, true );
+    }
+    auto const fixedaxle { place_chain( Device.mount, "mount", vec { pivotx, 0.0, height }, out, Result ) };
     vec const movingaxle { b, 0.0, height };
     auto const radius { 0.5 * pulley->diameter + 0.5 * Device.rope_diameter };
     if( movingaxle.x - fixedaxle.x < 2.0 * radius ) { Result.warnings.push_back( "the pulleys overlap: the network pulled the moving one to the structure" ); }

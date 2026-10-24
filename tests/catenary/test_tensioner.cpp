@@ -275,6 +275,41 @@ int main( int argc, char **argv ) {
         check( false == off( cold ) && false == off( warm ), "pierscien 1,00 m nad spodem stosu na prowadnicy 0,80..5,30 od -25 do +40 °C" );
     }
 
+    // uchwyty 5100 na słupie 1611: górny trzyma 4450 za mount_top, dolny (odwrócony) za mount_bottom; tyły po drugiej stronie słupa
+    {
+        catenary::tensioner_input input;
+        input.pole = "1611-11";
+        input.depth = []( double ) { return 0.20; };
+        catenary::tensioner_result result;
+        catenary::solve_tensioner( catalog, *device, input, result );
+        std::map<std::string, catenary::tensioner_placement const *> by;
+        for( auto const &part : result.parts ) { by[ part.role ] = &part; }
+        auto const hole = []( catenary::tensioner_placement const *P, int const A ) {
+            double const local[ 3 ] { -0.04, 0.0, -0.04 };
+            return P->position[ A ] + P->rotation[ 3 * A ] * local[ 0 ] + P->rotation[ 3 * A + 1 ] * local[ 1 ] + P->rotation[ 3 * A + 2 ] * local[ 2 ];
+        };
+        auto good { by.count( "bracket_top" ) && by.count( "bracket_bottom" ) && by.count( "bracket_top.back" ) && by.count( "bracket_bottom.back" ) && by.count( "mount.1" ) };
+        if( good ) {
+            auto const *pivot { by[ "mount.1" ] };
+            auto const *top { by[ "bracket_top" ] }, *bottom { by[ "bracket_bottom" ] };
+            good = std::abs( pivot->position[ 0 ] - 0.04 ) < 1e-9
+                && std::abs( hole( top, 0 ) - 0.04 ) < 1e-9 && std::abs( hole( top, 2 ) - ( pivot->position[ 2 ] + 0.03436 ) ) < 1e-9
+                && std::abs( hole( bottom, 0 ) - 0.04 ) < 1e-9 && std::abs( hole( bottom, 2 ) - ( pivot->position[ 2 ] - 0.02561 ) ) < 1e-9
+                && std::abs( by[ "bracket_top.back" ]->position[ 0 ] + 0.20 ) < 1e-9 && top->part == "5100-01" && by[ "bracket_top.back" ]->part == "5100-05"
+                && result.warnings.empty();
+        }
+        check( good, "uchwyty 5100 na slupie 1611: otwory w mount_top / mount_bottom 4450 (0,04 przed czolem), tyly za slupem" );
+        input.depth = []( double ) { return 0.25; };
+        catenary::solve_tensioner( catalog, *device, input, result );
+        check( std::find( result.warnings.begin(), result.warnings.end(), std::string( "the bracket bolts are shorter than the structure is deep" ) ) != result.warnings.end(),
+            "uchwyty 5100: uwaga, gdy sruby krotsze niz slup gleboki" );
+        input.pole = "1701";
+        catenary::solve_tensioner( catalog, *device, input, result );
+        auto none { true };
+        for( auto const &part : result.parts ) { if( part.role.rfind( "bracket", 0 ) == 0 ) { none = false; } }
+        check( none, "slup bez uchwytow w danych: bez uchwytow, 4450 na czole" );
+    }
+
     // wyzej na slupie: rolki i ciezary o tyle samo wyzej, lina ta sama
     {
         catenary::tensioner_input input;
