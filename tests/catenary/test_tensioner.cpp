@@ -310,6 +310,31 @@ int main( int argc, char **argv ) {
                 std::printf( "      %+.0f °C: pierscien %.2f m, prowadnica %.2f..%.2f m\n", t, r.s + 1.0, r.guide_mount[ 2 ], r.guide_end[ 2 ] );
             }
             check( stays, "pierscien na prowadnicy od -25 do +40 °C, bez uwag" );
+            // konstrukcja obrócona o 10 stopni względem drutów: uchwyty, prowadnica i stos obracają się wokół czoła razem ze
+            // słupem, urządzenie od przegubu 4450 dalej w +X
+            in.temperature = 10.0;
+            catenary::solve_tensioner( catalog, full, in, r );
+            std::map<std::string, catenary::tensioner_placement> straight;
+            for( auto const &part : r.parts ) { straight[ part.role ] = part; }
+            auto const angle { 10.0 * 3.14159265358979 / 180.0 };
+            in.structure_angle = angle;
+            catenary::tensioner_result turned;
+            catenary::solve_tensioner( catalog, full, in, turned );
+            auto const rotated = [ & ]( catenary::tensioner_placement const &A, catenary::tensioner_placement const &B ) {
+                auto const x { std::cos( angle ) * A.position[ 0 ] - std::sin( angle ) * A.position[ 1 ] };
+                auto const y { std::sin( angle ) * A.position[ 0 ] + std::cos( angle ) * A.position[ 1 ] };
+                return std::abs( x - B.position[ 0 ] ) < 1e-9 && std::abs( y - B.position[ 1 ] ) < 1e-9 && std::abs( A.position[ 2 ] - B.position[ 2 ] ) < 1e-9;
+            };
+            auto glued { true };
+            for( auto const &part : turned.parts ) {
+                auto const structural { part.role.rfind( "bracket", 0 ) == 0 || part.role == "guide" || part.role == "ring" || part.role == "rod" || part.role.rfind( "weight.", 0 ) == 0 };
+                if( structural ) { glued = glued && rotated( straight[ part.role ], part ); }
+            }
+            auto const *pivot { [ & ]() -> catenary::tensioner_placement const * { for( auto const &p : turned.parts ) { if( p.role == "mount.1" ) { return &p; } } return nullptr; }() };
+            auto const *holder { [ & ]() -> catenary::tensioner_placement const * { for( auto const &p : turned.parts ) { if( p.role == "mount.2" ) { return &p; } } return nullptr; }() };
+            glued = glued && pivot != nullptr && holder != nullptr && rotated( straight[ "mount.1" ], *pivot )
+                && std::abs( holder->position[ 1 ] - pivot->position[ 1 ] ) < 1e-9;   // od przegubu dalej wzdłuż drutów
+            check( glued, "konstrukcja obrocona o 10 st.: uchwyty, prowadnica, pierscien i stos przy slupie, urzadzenie od 4450 wzdluz drutow" );
         }
         input.pole = "1701";
         catenary::solve_tensioner( catalog, withbrackets, input, result );

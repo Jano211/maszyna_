@@ -552,6 +552,21 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     // uchwyty do konstrukcji: 4450 zaczyna się w otworach uchwytów, hole_out przed czołem
     auto const *brackets { Input.pole.empty() ? nullptr : Device.brackets_for( Input.pole ) };
     auto const pivotx { brackets != nullptr ? brackets->hole_out : 0.0 };
+    // układ konstrukcji: obrócony o structure_angle wokół pionu przez zero (czoło); części konstrukcji liczone w nim, potem tu
+    auto const ca { std::cos( Input.structure_angle ) }, sa { std::sin( Input.structure_angle ) };
+    auto const onstructure = [ & ]( vec const &P ) { return vec { ca * P.x - sa * P.y, sa * P.x + ca * P.y, P.z }; };
+    auto const fix = [ & ]( std::size_t const From ) {
+        if( Input.structure_angle == 0.0 ) { return; }
+        for( auto k { From }; k < Result.parts.size(); ++k ) {
+            auto &part { Result.parts[ k ] };
+            auto const at { onstructure( vec { part.position[ 0 ], part.position[ 1 ], part.position[ 2 ] } ) };
+            part.position[ 0 ] = at.x; part.position[ 1 ] = at.y; part.position[ 2 ] = at.z;
+            for( int column = 0; column < 3; ++column ) {
+                auto const axis { onstructure( vec { part.rotation[ column ], part.rotation[ 3 + column ], part.rotation[ 6 + column ] } ) };
+                part.rotation[ column ] = axis.x; part.rotation[ 3 + column ] = axis.y; part.rotation[ 6 + column ] = axis.z;
+            }
+        }
+    };
     // przód: -X modelu przed czoło (obrót o 180 stopni wokół pionu); Upside: do góry nogami (otwór nad zerem)
     auto const front = [ & ]( std::string const &Role, std::string const &Part, vec const &At, bool const Upside ) {
         if( Part.empty() ) { return; }
@@ -573,6 +588,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
             if( std::find( Result.warnings.begin(), Result.warnings.end(), text ) == Result.warnings.end() ) { Result.warnings.push_back( text ); }
         }
     };
+    auto const bracketsfrom { Result.parts.size() };
     if( brackets != nullptr ) {
         // dwa uchwyty wokół 4450: górny za mount_top, dolny odwrócony za mount_bottom
         vec const top { 0.0, 0.0, height + Device.pivot_top + brackets->hole_drop };
@@ -582,7 +598,9 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         front( "bracket_bottom", brackets->top_front, bottom, true );
         back( "bracket_bottom.back", brackets->top_back, bottom, true );
     }
-    auto const fixedaxle { place_chain( Device.mount, "mount", vec { pivotx, 0.0, height }, out, Result ) };
+    fix( bracketsfrom );
+    // przegub 4450 w otworach uchwytów (przy konstrukcji), dalej urządzenie w stronę drutów
+    auto const fixedaxle { place_chain( Device.mount, "mount", onstructure( vec { pivotx, 0.0, height } ), out, Result ) };
     vec const movingaxle { b, 0.0, height };
     auto const radius { 0.5 * pulley->diameter + 0.5 * Device.rope_diameter };
     if( movingaxle.x - fixedaxle.x < 2.0 * radius ) { Result.warnings.push_back( "the pulleys overlap: the network pulled the moving one to the structure" ); }
@@ -781,11 +799,13 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     vec const toward { -std::cos( turn ), std::sin( turn ), 0.0 };   // od osi stosu do prowadnicy
     auto const onbrackets { brackets != nullptr && false == Device.guide.empty() && false == Device.ring.empty() };
     vec const guideaxis { onbrackets ? vec { brackets->hole_out, 0.0, 0.0 } - toward * Device.guide_mount : vec {} };
+    // z prowadnicą stos liczony w układzie konstrukcji (fix na końcu), bez niej - pod rolką, w układzie urządzenia
     auto const columnx { onbrackets ? guideaxis.x - toward.x * Device.ring_arm : fixedaxle.x - radius };
     auto const columny { onbrackets ? guideaxis.y - toward.y * Device.ring_arm : yb };
     vec const ropeend { columnx, columny, s + rodlength + hangerlength };
     if( ropeend.z > height - 0.05 ) { Result.warnings.push_back( "the weights would hang above the pulley: rod or hangers too long for the table" ); }
-    point( ropeend );
+    point( onbrackets ? onstructure( ropeend ) : ropeend );
+    auto const stackfrom { Result.parts.size() };
     place_chain( Device.hanger, "hanger", ropeend, down, Result );
     {
         auto placement { placed( "rod", rodname, vec { columnx, columny, s } ) };
@@ -836,17 +856,24 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         if( mount[ 0 ] < 0.0 ) { Result.warnings.push_back( "the guide mounts are behind the face of the structure" ); }
         // uchwyty prowadnicy (karta 33-0455): dolny poz. 2 przy spodzie, górny poz. 1 przy końcu; otwory w mount / end
         if( onbrackets ) {
-            vec const low { 0.0, at.y, Result.guide_mount[ 2 ] + brackets->hole_drop };
+            // dolny odwrócony o 180 stopni (karta 33-0455): otwór nad zerem
+            vec const low { 0.0, at.y, Result.guide_mount[ 2 ] - brackets->hole_drop };
             vec const high { 0.0, at.y, Result.guide_end[ 2 ] + brackets->hole_drop };
-            front( "bracket_guide_low", brackets->bottom_front, low, false );
-            back( "bracket_guide_low.back", brackets->bottom_back, low, false );
+            front( "bracket_guide_low", brackets->bottom_front, low, true );
+            back( "bracket_guide_low.back", brackets->bottom_back, low, true );
             front( "bracket_guide_high", brackets->top_front, high, false );
             back( "bracket_guide_high.back", brackets->top_back, high, false );
         }
         if( false == Device.ring.empty() && ( ringz < Device.guide_bottom || ringz > Device.guide_bottom + Device.guide_length ) ) {
             Result.warnings.push_back( "the guide ring is off the guide" );
         }
+        // mocowania prowadnicy w układzie urządzenia
+        for( auto *point : { Result.guide_mount, Result.guide_end } ) {
+            auto const p { onstructure( vec { point[ 0 ], point[ 1 ], point[ 2 ] } ) };
+            point[ 0 ] = p.x; point[ 1 ] = p.y; point[ 2 ] = p.z;
+        }
     }
+    if( onbrackets ) { fix( stackfrom ); }
     return true;
 }
 

@@ -640,6 +640,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     // na istniejącym słupie: typ i punkt z podwieszenia, które go stawia
     auto poletype { data.pole_type };
     double polepoint[ 3 ] { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
+    double cantilever[ 2 ] { 0.0, 0.0 };   // na istniejącym słupie: kierunek jego wysięgnika w planie
     if( false == data.on.empty() ) {
         auto const index { suspension_named( Anchor.file, data.on ) };
         if( index >= Suspensions.size() || false == Suspensions[ index ].data.has_pole ) {
@@ -648,6 +649,11 @@ assemble_anchor( scene_anchor &Anchor ) {
         }
         poletype = Suspensions[ index ].data.pole_type;
         std::copy( std::begin( Suspensions[ index ].data.pole ), std::end( Suspensions[ index ].data.pole ), polepoint );
+        // płaszczyzna wysięgnika tego słupa (od słupa do drutu): oś słupa wzdłuż toru jest do niej prostopadła
+        if( Suspensions[ index ].data.has_at ) {
+            cantilever[ 0 ] = Suspensions[ index ].data.at[ 0 ] - polepoint[ 0 ];
+            cantilever[ 1 ] = Suspensions[ index ].data.at[ 2 ] - polepoint[ 2 ];
+        }
     }
     auto const *pole { catalog->pole( poletype ) };
     if( pole == nullptr ) { ErrorLog( label + "uses pole \"" + poletype + "\" which isn't in the supports catalogue" ); return 0; }
@@ -696,7 +702,21 @@ assemble_anchor( scene_anchor &Anchor ) {
     auto const table { devices->table( device->table ) };
     // czoło: kotwienie ciągnie wzdłuż toru, więc słup kratowy z szerokością wzdłuż toru ma czoło w połowie szerokości
     auto const face { pole->width > 0.0 ? 0.5 * pole->width : 0.5 * pole->depth( data.height > 0.0 ? data.height : table != nullptr ? table->height : 6.7 ) };
-    glm::dvec3 const origin { axis.x + dx * face, axis.y, axis.z + dz * face };
+    // oś słupa wzdłuż toru (w stronę kotwionego przęsła): własny słup kotwowy stoi w linii drutów; istniejący - prostopadle
+    // do swojego wysięgnika. Uchwyty, prowadnica i stos są przy słupie, urządzenie od przegubu ciągnie do drutów
+    auto ax { dx }, az { dz };
+    if( auto const reach { std::hypot( cantilever[ 0 ], cantilever[ 1 ] ) }; reach > 0.1 ) {
+        ax = -cantilever[ 1 ] / reach;
+        az = cantilever[ 0 ] / reach;
+        if( ax * dx + az * dz < 0.0 ) { ax = -ax; az = -az; }
+    }
+    glm::dvec3 const origin { axis.x + ax * face, axis.y, axis.z + az * face };
+    {
+        // urządzenie od czoła w stronę ostatniego podwieszenia
+        auto const ex { data.toward[ 0 ] - origin.x }, ez { data.toward[ 2 ] - origin.z };
+        auto const reach { std::hypot( ex, ez ) };
+        if( reach > 0.5 ) { dx = ex / reach; dz = ez / reach; }
+    }
     auto const heading { std::atan2( dz, -dx ) };
     auto const toscene = [ & ]( double const *Point ) {
         catenary::cantilever_placement placement;
@@ -719,6 +739,9 @@ assemble_anchor( scene_anchor &Anchor ) {
             glm::dvec3 const d { Point[ 0 ] - base.x, Point[ 1 ] - base.y, Point[ 2 ] - base.z };
             for( int a = 0; a < 3; ++a ) { Out[ a ] = glm::dot( d, axes[ a ] ); }
         };
+        // oś słupa w układzie urządzenia
+        glm::dvec3 const structure { ax, 0.0, az };
+        input.structure_angle = std::atan2( glm::dot( structure, axes[ 1 ] ), glm::dot( structure, axes[ 0 ] ) );
         for( auto const &chain : Chains ) {
             if( chain.removed || chain.file != Anchor.file || data.name.empty() || chain.data.suspensions.empty() ) { continue; }
             std::string neighbour;
