@@ -46,6 +46,7 @@ struct catenary_editor
 		glm::dvec2 forward{0.0, 1.0};
 		int side{1}; // the pole on the right (+1) or on the left (-1) of the direction of the path
 		double radius{0.0}; // of the track there, 0 on a straight
+		int inward{0}; // the centre of the bend: +1 on the right of the direction of the path, -1 on the left, 0 straight
 		bool curve{false};
 		bool toward{true}; // the wires are offset towards the pole
 		double reach{0.0}; // A: from the wires to the face of the pole
@@ -159,6 +160,10 @@ struct catenary_editor
 	mutable std::vector<std::pair<TTrack const *, int>> m_switch_paths; // the paths of switches, gathered again when the number of tracks changes
 	mutable std::size_t m_switch_tracks{static_cast<std::size_t>(-1)};
 	mutable std::map<std::size_t, switch_check> m_switch_checks;
+	// superelevation of the track at the spot (radians, unsigned) and the horizontal shift of the axis of a leaning
+	// pantograph at Height above the rail heads, towards the inside of the bend (table 23-0007, curve with superelevation)
+	static double catenary_cant(catenary_spot const &Spot);
+	static glm::dvec3 catenary_cant_shift(catenary_spot const &Spot, double Height);
 	void catenary_compose(catenary_spot &Spot, double const Clearance, double const Stagger, bool const Toward, std::string const &Pole = {}) const;
 	bool catenary_on_mast(catenary::gantry const &Gantry, double const Stagger, catenary_spot &Spot) const;
 	catenary_spot const *catenary_spot_of(std::size_t const Index);
