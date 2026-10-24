@@ -240,24 +240,35 @@ int main( int argc, char **argv ) {
         check( aimed.messenger_end[ 2 ] > level.messenger_end[ 2 ] && aimed.messenger_end[ 1 ] > level.messenger_end[ 1 ] && aimed.warnings.empty(), "lina nosna podchodzi w gore i w bok, bez uwag" );
     }
 
-    // lina z uchami: ucho na obu końcach z zaczepem w skrajnym punkcie liny, odcinki liny bez uch, ta sama długość razem
+    // lina jako bryla proceduralna z uchami: ucha w koncach liny, rura od ucha do ucha bez lacznikow, scianki na zewnatrz
     {
         catenary::tensioner_input input;
         catenary::tensioner_result result;
         catenary::solve_tensioner( catalog, *device, input, result );
         auto const first { result.rope.front() }, last { result.rope.back() };
-        catenary::tensioner_rope_parts( result, "4490-01", 1.0, 1.0, "4490-02", 0.15 );
+        std::vector<catenary::tensioner_vertex> tube;
+        catenary::tensioner_rope_solid( result, 0.006, 8, "4490-02", 0.205, tube );
         std::vector<catenary::tensioner_placement const *> eyes;
-        double stretched { 0.0 };
-        for( auto const &part : result.parts ) {
-            if( part.role.rfind( "rope_eye.", 0 ) == 0 ) { eyes.push_back( &part ); }
-            else if( part.role.rfind( "rope.", 0 ) == 0 ) { stretched += part.scale[ 2 ]; }
-        }
-        auto const tip = []( catenary::tensioner_placement const *Eye, int const A ) { return Eye->position[ A ] + 0.15 * Eye->rotation[ 3 * A + 2 ]; };
+        for( auto const &part : result.parts ) { if( part.role.rfind( "rope_eye.", 0 ) == 0 ) { eyes.push_back( &part ); } }
+        auto const tip = []( catenary::tensioner_placement const *Eye, int const A ) { return Eye->position[ A ] + 0.205 * Eye->rotation[ 3 * A + 2 ]; };
         auto const at = [ & ]( catenary::tensioner_placement const *Eye, std::vector<double> const &P ) {
             return std::abs( tip( Eye, 0 ) - P[ 0 ] ) < 1e-6 && std::abs( tip( Eye, 1 ) - P[ 1 ] ) < 1e-6 && std::abs( tip( Eye, 2 ) - P[ 2 ] ) < 1e-6; };
         check( eyes.size() == 2 && at( eyes[ 0 ], first ) && at( eyes[ 1 ], last ), "lina: uszy 4490-02 zaczepione w obu koncach liny" );
-        check( std::abs( stretched + 0.30 - rope_length( result ) ) < 1e-6, "lina: odcinki 4490-01 krotsze o dwa uszy" );
+        // kazdy wierzcholek 6 mm od osi liny (punkt w polowie trojkata po normalnej do srodka trafia w poblize osi),
+        // normalne trojkatow na zewnatrz: iloczyn krawedzi zgodny z normalnymi wierzcholkow
+        int outward { 0 }, triangles { static_cast<int>( tube.size() / 3 ) };
+        for( std::size_t k = 0; k + 2 < tube.size(); k += 3 ) {
+            double e1[ 3 ], e2[ 3 ], n[ 3 ];
+            for( int a = 0; a < 3; ++a ) { e1[ a ] = tube[ k + 1 ].position[ a ] - tube[ k ].position[ a ]; e2[ a ] = tube[ k + 2 ].position[ a ] - tube[ k ].position[ a ]; }
+            n[ 0 ] = e1[ 1 ] * e2[ 2 ] - e1[ 2 ] * e2[ 1 ]; n[ 1 ] = e1[ 2 ] * e2[ 0 ] - e1[ 0 ] * e2[ 2 ]; n[ 2 ] = e1[ 0 ] * e2[ 1 ] - e1[ 1 ] * e2[ 0 ];
+            double d { 0.0 };
+            for( int a = 0; a < 3; ++a ) { d += n[ a ] * ( tube[ k ].normal[ a ] + tube[ k + 1 ].normal[ a ] + tube[ k + 2 ].normal[ a ] ); }
+            if( d > 0.0 ) { ++outward; }
+        }
+        std::printf( "      rura liny: %d trojkatow\n", triangles );
+        check( triangles > 0 && outward == triangles, "lina: rura proceduralna, wszystkie scianki na zewnatrz" );
+        // pierscienie: na luku rolki co 5 stopni (polokrag = 36 odcinkow)
+        check( result.rope.size() > 3 * 36, "lina: luki na rolkach co 5 stopni" );
     }
 
     // zabezpieczenie 4600: cztery ramiona, dolna śruba pod rolkami
