@@ -13,15 +13,13 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   sworzniu ucha, `@90` – obrót części łańcucha, rodzaj kotwienia w edytorze, typ sieci kotwienia z łańcucha.
 - **Kolejka PO środzie (Jan, nie ruszać wcześniej):** kotwienie samej liny / samych przewodów (0405 / 0404, ciężarowe z
   połówek rozdzielonego) + łańcuch „lina kończy się na kotwieniu X, przewód idzie dalej” i przęsła samego przewodu (koncepcja
-  zaakceptowana 01:05, praktyka do sprawdzenia; Jan ma papiery na podwieszenia mostowe/tunelowe), LPN-y, przewody wzmacniające,
-  kotwienia środkowe 0416 (do dźwigara) i 0418,
-  sieci Y 36/37 w kotwieniach (Kolprojekt 2010 s. 21–29: części 5505-17/18, 6410-17/18, 9811-7/8, 5120-7/8), obejma dodatkowa
-  przy teowych wysięgnikach w kotwieniu środkowym.
+  zaakceptowana 01:05, praktyka do sprawdzenia; Jan ma papiery na podwieszenia mostowe/tunelowe), LPN-y, przewody wzmacniające.
 - **Na niedzielę 25.10 (Jan 01:05, wyjątek od zakazu nowych tematów): parasole wstawiane z edytora – na zwisach bramek
   i wysięgniki rozstawione.**
 - **Przed środą (Jan 01:06 – to też kotwienia):** sieci Y 36/37 w kotwieniach (Kolprojekt 2010 s. 21–29: stałe 0403/0413/0423
   jak sieć 20, rozdzielone 36: 18/28, 37: 15/28 ciężarów, środkowe z częściami 5505-17/18, 6410-17/18, 9811-7/8, 5120-7/8) i
-  obejma dodatkowa przy wysięgnikach teowych w kotwieniu środkowym.
+  obejma dodatkowa przy wysięgnikach teowych w kotwieniu środkowym; do tego kotwienia środkowe 0416 (do dźwigara bramki, 4590)
+  i 0418 (jednostronna izolacja) – też kotwienia.
 - MSVC: nie nazywać zmiennych `small`, `near`, `far`, `interface`, `hyper` (makra Windows); /tmp/claude-0/syn.sh ma je dodane.
 
 - **Jan buduje exe z gałęzi `wszystko`** (sieć + bujanie + radio): po każdej zmianie kodu scalić `siec-trakcyjna` do `wszystko` i wypchnąć obie (24.10: zapomniane – Jan zbudował bez `width`, słupy 161x odrzucone).
