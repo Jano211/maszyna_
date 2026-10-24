@@ -214,8 +214,8 @@ device 0403-10 kind fixed
   contact 7150-01 0.8324 4720-01 0.10
   type 10
 enddevice
-// siec 20: lina 4430-7150-5120-7; przewody 4430-4730-4720-4410, za nim kazdy 7150-5120-7 (na rysunku 4720 za 4410, ale w tabeli
-// tylko jeden - przed wyrownywaczem)
+// siec 20: lina 4430-7150-5120-7; przewody 4430-4730-4410, za nim kazdy 4720-7150-5120-7 (jak na rysunku; tabela karty ma jeden
+// 4720 - literowka, Jan 2026-10-25: 4720 spina wyrownywacz z izolatorem, dwa razy)
 device 0403-20 kind fixed
   mount 4430-01 0.0747
   pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
@@ -228,8 +228,8 @@ device 0403-20 kind fixed
   contact_clamp_old 5110-01 0.0632
   equalizer 4410-01 0.1541 spread 0.08
   messenger 7150-01 0.8324
-  contact 4730-01 0.17 4720-01 0.10
-  contact_each 7150-01 0.8324
+  contact 4730-01 0.17
+  contact_each 4720-01 0.10 7150-01 0.8324
   type 20
 enddevice
 // sieci 32, 35 (dwie liny nosne): liny 4430-4710-4410 (jedna nad druga), za nim kazda 4720-7150-5120-7; przewody 4430-4730-4410,
@@ -345,7 +345,7 @@ device 0423-10 kind fixed
   contact 4740-01 0.45 4720-01@90 0.10 7150-01@90 0.8324 4720-01 0.10
   type 10
 enddevice
-// siec 20: lina 4430-7150-5120-7; przewody 4430-4740-4720-4410, za nim kazdy 7150-5120-7
+// siec 20: lina 4430-7150-5120-7; przewody 4430-4740-4410, za nim kazdy 4720-7150-5120-7 (jak 0403-20)
 device 0423-20 kind fixed
   mount 4430-01 0.0747
   pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
@@ -358,8 +358,8 @@ device 0423-20 kind fixed
   contact_clamp_old 5110-01 0.0632
   equalizer 4410-01 0.1541 spread 0.08
   messenger 7150-01 0.8324
-  contact 4740-01 0.45 4720-01@90 0.10
-  contact_each 7150-01@90 0.8324
+  contact 4740-01 0.45
+  contact_each 4720-01@90 0.10 7150-01@90 0.8324
   type 20
 enddevice
 // sieci 32, 35: liny jak 0403-32 (4710-4410, kazda 4720-7150-5120-7); przewody 4430-4740-4410, kazdy 4720-7150-5120-6
