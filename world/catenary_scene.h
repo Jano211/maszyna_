@@ -106,6 +106,7 @@ struct catenary_anchor_card {
     std::string card;
     bool fixed { false };
     bool series { false };
+    bool split { false };   // dwa stosy (lina i przewody osobno)
 };
 std::vector<catenary_anchor_card> catenary_anchor_devices();
 // łańcuch, który kończy się tym kotwieniem (Start: na początku), -1 gdy żaden

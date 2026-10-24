@@ -674,7 +674,7 @@ assemble_anchor( scene_anchor &Anchor ) {
                 auto const card { data.device.substr( 0, data.device.find( '-' ) ) };
                 catenary::tensioner_device const *same { nullptr }, *kind { nullptr };
                 for( auto const &other : devices->devices() ) {
-                    if( other.fixed != device->fixed || other.type( input.type ) == nullptr ) { continue; }
+                    if( other.fixed != device->fixed || false == other.only.empty() || other.type( input.type ) == nullptr ) { continue; }
                     if( same == nullptr && other.name.substr( 0, other.name.find( '-' ) ) == card ) { same = &other; }
                     if( kind == nullptr ) { kind = &other; }
                 }
@@ -805,6 +805,13 @@ assemble_anchor( scene_anchor &Anchor ) {
     {
         std::vector<catenary::tensioner_vertex> tube;
         catenary::tensioner_rope_solid( result, 0.5 * device->rope_diameter, 8, device->rope_eye, device->rope_eye_length, tube );
+        // kotwienie rozdzielone: druga lina (urządzenie przewodów), z uchami
+        if( false == result.rope2.empty() ) {
+            catenary::tensioner_result second;
+            second.rope = result.rope2;
+            catenary::tensioner_rope_solid( second, 0.5 * device->rope_diameter, 8, device->rope_eye, device->rope_eye_length, tube );
+            for( auto part : second.parts ) { part.role = "contact_device." + part.role; result.parts.push_back( part ); }
+        }
         double const zero[ 3 ] { 0.0, 0.0, 0.0 };
         auto const base { toscene( zero ) };
         glm::dvec3 axes[ 3 ];
@@ -1784,7 +1791,7 @@ catenary_anchor_devices() {
     std::vector<catenary_anchor_card> result;
     if( auto const *devices { tensioners() }; devices != nullptr ) {
         for( auto const &device : devices->devices() ) {
-            if( device.name.find( '-' ) == std::string::npos ) { result.push_back( { device.name, device.fixed, false == device.small_pulley.empty() } ); }
+            if( device.name.find( '-' ) == std::string::npos ) { result.push_back( { device.name, device.fixed, false == device.small_pulley.empty() || device.split, device.split } ); }
         }
     }
     return result;

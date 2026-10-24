@@ -6080,3 +6080,6 @@ msgstr "Kotwienie stałe: przewody %.2f m nad główką szyny"
 
 msgid "weights, pulleys in series (card %s)"
 msgstr "ciężarowe, rolki szeregowe (karta %s)"
+
+msgid "weights, messenger and contact wires separately (card %s)"
+msgstr "ciężarowe rozdzielone, lina i przewody osobno (karta %s)"

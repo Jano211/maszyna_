@@ -134,6 +134,19 @@ struct tensioner_device {
     // (dead_end od osi dużej) przez małą ruchomą, małą stałą, dużą ruchomą i dużą stałą w dół. b z tablicy = oś dużej ruchomej.
     // Puste small_pulley = rolki równoległe (podwójne)
     std::string small_pulley, fixed_holder;
+    // kotwienie rozdzielone: urządzenie tylko liny albo tylko przewodów (only), bez dźwigni - łańcuch wprost z uchwytu rolki
+    // ruchomej; dwa takie składa urządzenie "kind split" (split <liny> <przewodów>). Prowadnica na ramach 5090 (frame <rama>
+    // <od czoła do osi prowadnic> <prowadnica w Y> <strona stosu: -1 przy konstrukcji, +1 dalej> [owner]): stos pod liną (Y 0),
+    // pierścień obrócony tak, żeby szekla trafiała w prowadnicę; owner stawia ramy i ich uchwyty
+    std::string only;
+    bool split { false };
+    std::string split_messenger, split_contact;
+    std::string frame;
+    double frame_length { 0.0 }, frame_y { 0.0 };
+    int frame_side { -1 };
+    bool frame_owner { false };
+    double messenger_spread { 0.08 };   // rozstaw dwóch lin za messenger_equalizer
+    bool messenger_equalizer_z { false }; // otwory messenger_equalizer w Z modelu (dźwignia 6403), a nie w Y (wyrównywacz 4410)
     double small_spacing { 0.336 }, dead_end { 0.703 };
     std::vector<tensioner_link> messenger_each, contact_each;
     tensioner_link messenger_equalizer;
@@ -255,6 +268,7 @@ struct tensioner_result {
     double shortening { 0.0 };              // m, o ile rolka odjechała od tablicy przez mniejszy naciąg (sprężystość i zwis)
     double messenger_tension { 0.0 }, contact_tension { 0.0 };
     double messenger_end[ 3 ] { 0.0, 0.0, 0.0 };         // gdzie kończy się lina nośna (uchwyt krańcowy)
+    std::vector<std::vector<double>> rope2;  // kotwienie rozdzielone: lina urządzenia przewodów (rope - urządzenia liny)
     // dźwignie szeregowo: druga lina nośna (z drugiej dźwigni) i naciągi obu lin osobno (messenger_tension to ich suma)
     bool cascade { false };
     bool fixed { false };                   // kotwienie stałe (bez ciężarów; b, s, naciąg zero)

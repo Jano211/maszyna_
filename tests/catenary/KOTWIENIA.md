@@ -126,7 +126,14 @@ z zadanej długości drutu → naciąg).
   Tablica 0011-5: b do osi skrajnej (dużej ruchomej) bn 2,50. Zabezpieczenie 4600-2 (trapez pod rolkami) jeszcze nie stawiane.
 - Edytor: „Rodzaj” kotwienia = karta (ciężarowe 0461, szeregowe 0471/0480, stałe 0403); odmiany dla typów sieci (0461-2x2,
   0403-32 …) dobiera sam (najpierw ta sama karta, potem ten sam rodzaj).
-- **Rozdzielone (dwa stosy)** – czeka na układ od Jana (gdzie 5040-2 wystaje i jak stoją dwie prowadnice względem toru).
+- **Rozdzielone (dwa stosy)** – zrobione (`kind split`): 0482 (Ø306 + żeliwne, 23-0482/0483, zamocowania 0457) i 0486 (Ø400,
+  0486/0487, 0458). Urządzenie liny (`only messenger`, rolki szeregowe 7,00 m, tablica 0011-6, 4450 + 4440-4) i przewodów
+  (`only contact`, 6,30 m, 0011-7, na 5040-2 0,785 wzdłuż drutów – Jan 23:18), bez dźwigni 6406. Sieć 32: dźwignia 6403 na dwie liny
+  (`<karta>-m-32`), 35: wyrównywacz 4410 (`-m-35`). Prowadnice 4470-4 (0,40 m, 5,50) w otworach 2 i 3 ram 5090 (±0,0575 w poprzek
+  toru), stosy pod linami (lina przy słupie x 0,29 / 0,38, przewody dalej 0,67 / 0,79), pierścień obrócony do swojej prowadnicy
+  (Jan 23:19) – zgadza się ze zdjęciem transportszynowy (dwa urządzenia jedno nad drugim, dolne na trójkącie 5040, stosy jeden
+  za drugim). Naciągi = typy 32/35 (test). Liczby ciężarów z 0019-2 / 0019-3. ZAŁOŻENIA: 5040 trzymany w uchwytach jak 4450,
+  kolejność części w łańcuchach, brakujące ciężary ze stosu liny, 6403 rozstaw lin 0,5 m (zbiegają się dopiero w przęśle).
 
 ## Brakujące ciężary skracają sieć (2026-10-24 wieczór)
 
