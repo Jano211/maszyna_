@@ -21,8 +21,8 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   jak sieć 20, rozdzielone 36: 18/28, 37: 15/28 ciężarów, środkowe z częściami 5505-17/18, 6410-17/18, 9811-7/8, 5120-7/8) i
   obejma dodatkowa przy wysięgnikach teowych w kotwieniu środkowym; do tego kotwienia środkowe 0416 (do dźwigara bramki, 4590)
   i 0418 (jednostronna izolacja) – też kotwienia.
-- Jeśli kolega Jana podeśle modele **izolatorów plastikowych** – podmiana (wysięgniki mają już `insulators plastic`; w kotwieniach
-  wybór izolatorów jak przy ESN-2025).
+- Jeśli kolega Jana podeśle modele **izolatorów plastikowych do wysięgników** – podmiana w wysięgnikach (wpis podwieszenia ma już
+  `insulators plastic`). Kotwień to nie dotyczy.
 - MSVC: nie nazywać zmiennych `small`, `near`, `far`, `interface`, `hyper` (makra Windows); /tmp/claude-0/syn.sh ma je dodane.
 
 - **Jan buduje exe z gałęzi `wszystko`** (sieć + bujanie + radio): po każdej zmianie kodu scalić `siec-trakcyjna` do `wszystko` i wypchnąć obie (24.10: zapomniane – Jan zbudował bez `width`, słupy 161x odrzucone).
