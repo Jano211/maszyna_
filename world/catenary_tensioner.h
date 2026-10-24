@@ -79,6 +79,9 @@ struct tensioner_pulley {
     double diameter { 0.220 };              // po dnie rowka
     double width { 0.080 };
     int grooves { 2 };
+    // krążek drugiego rowka jako osobny model (4460-11), stawiany w osi rolki; model rolki niesie wtedy oś i krążek
+    // pierwszego rowka. Oba obracają się osobno o przewiniętą linę; pusty = cała rolka jednym modelem, obracana z rowkiem A
+    std::string sheave;
 };
 
 struct tensioner_lever {
@@ -179,6 +182,8 @@ struct tensioner_result {
     double b { 0.0 }, s { 0.0 };            // położenie rolki ruchomej i spodu ciężarów
     double stack_height { 0.0 };
     double height { 0.0 };                  // oś rolek nad główką szyny
+    // obrót krążków (radiany wokół +Y urządzenia) od położenia przy +10 °C: lina przewinięta przez rowek / promień
+    double turn_fixed_a { 0.0 }, turn_fixed_b { 0.0 }, turn_moving_a { 0.0 }, turn_moving_b { 0.0 };
     int weights { 0 };                      // zawieszone ciężary
     double tension { 0.0 };                 // daN, całkowity naciąg sieci od ciężarów (zero, gdy ciężary stoją na gruncie)
     double messenger_tension { 0.0 }, contact_tension { 0.0 };

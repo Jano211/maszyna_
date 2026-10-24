@@ -49,7 +49,7 @@ weight 6322-1w height 0.092 mass 27 turn 90 model 6322 offset 4     // polimerob
 
 // rolka linowa 4460 (tom 5 s. 27): diameter po dnie rowka, z pustych wezlow groove_a/groove_b modeli Jana (2026-10-23):
 // rowki 107,4 mm od osi (karta D 220 -> 110), rozstaw rowkow 41,2 mm; 4460-03 160 mm (karta D 320)
-pulley 4460-01 diameter 0.2148 width 0.0824 grooves 2
+pulley 4460-01 diameter 0.2148 width 0.0824 grooves 2 sheave 4460-11   // 4460-01 = os + krazek rowka A (groove_a Y -0,0206), 4460-11 = krazek rowka B (groove_b Y +0,0206); obracane osobno (Jan 2026-10-24)
 pulley 4460-02 diameter 0.2148 width 0.044 grooves 1
 pulley 4460-03 diameter 0.3200 width 0.044 grooves 1
 
