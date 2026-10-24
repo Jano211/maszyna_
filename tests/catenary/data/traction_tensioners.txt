@@ -118,3 +118,32 @@ device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 r
   type 10 stack 6323-1 20 lever V I III
   type 26 stack 6321-1 14 6323-1 19 lever I V III rod 6402-03
 enddevice
+
+// 2 liny + 2 przewody na jednym stosie (siec 32, 35): urzadzenie jak 0461 (dwie podwojne rolki 1:4), dwie dzwignie 6406 szeregowo.
+// Ze zdjecia transportszynowy.pl IMG_0144 i opisu Jana (prawdopodobnie Kolprojekt z lat 80, karty nie mamy) - wymiary i otwory ZALOZONE.
+device 0461-2x2 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+  mount 4450-01 0.0747 4440-02 0.27
+  pivot 0.03436 0.02561       // 4450-01: mount_top / mount_bottom nad / pod zerem - tu wchodza uchwyty 5100 (gorny i dolny odwrocony)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  holder ~4440-01 0.27
+  hanger 6411-01 0.10 4720-01 0.10
+  messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
+  contact 4720-01 0.10 4420-01 0.93        // druga dzwignia - sruba rzymska - wyrownywacz 4410 - uchwyty
+  messenger_clamp 5120-01 0.058     // uchwyt krancowy 5120 (wyk. 5-8 roznia sie tylko wkladka pod lub/przewod) - jeden model Jana, wire 0,058
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632    // stare zlozenia (druty zasniedziale, Jan 2026-10-24): uchwyt klinowy 5110 jak w starej karcie 33-0401
+  equalizer 4410-01 0.1541 spread 0.08
+  guide 5070-02 4.50 mount 0.07 bottom 0.80
+  ring 5080-01 0.200 at 1.00
+  safety 4600-01 4600-02 1.00 0.06     // zabezpieczenie 4600 wyk. 1 (karta 23-4600): ramiona 1,00 m z modeli, para po obu stronach rolek (0,06 - ZALOZENIE)
+  // pierwsza dzwignia: gorny otwor lina nosna 1 (jak 0461), dolny przez izolator zywiczny 7150 do osi drugiej 6406;
+  // druga: lina nosna 2 i przewody przez sruby rzymskie 4420 (Jan 2026-10-24)
+  cascade 4720-01 0.10 7150-01 0.8324 4720-01 0.10
+  messenger2 4720-01 0.10 4420-01 0.93
+  // otwory "na oko" (najblizej naciagow typu z otworow I, IV, V, VI): pierwsza I-IV os III daje linie 1 36%, druga I-V os III
+  // linie 2 45% reszty; liny nierowno (ok. 1840 / 1460 daN), przewody ok. 1780 daN przy typie 32. Ciezary Ø400 na precie 3,00 m
+  // (stos ok. 2,8 m) - ZALOZENIE, karty nie ma
+  type 32 stack 6322-1 48 lever I IV III second I V III rod 6402-04
+  type 35 stack 6322-1 43 lever I IV III second I V III rod 6402-04
+enddevice

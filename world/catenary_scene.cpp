@@ -667,6 +667,12 @@ assemble_anchor( scene_anchor &Anchor ) {
             input.messenger_stiffness = net.messenger_count * type->messenger_wire.area * type->messenger_wire.modulus * 0.1;
             input.contact_stiffness = net.contact_count * type->contact_wire.area * type->contact_wire.modulus * 0.1;
             input.load = ( net.messenger_count * net.messenger_mass + net.contact_count * net.contact_mass ) * input.gravity;
+            // urządzenie bez danych dla tego typu (np. 0461 dla dwóch lin nośnych): pierwsze, które je ma (0461-2x2)
+            if( device->type( input.type ) == nullptr ) {
+                for( auto const &other : devices->devices() ) {
+                    if( other.type( input.type ) != nullptr ) { device = &other; break; }
+                }
+            }
         }
         else { ErrorLog( label + "uses network type \"" + data.network + "\" which has no file" ); }
     }

@@ -182,7 +182,13 @@ katalog kolprojekt1?).
 - 2026-10-24: zdjęcie transportszynowy.pl IMG_0144 (Jan: prawdopodobnie Kolprojekt z lat 80, karty nie mamy). Widać:
   wspornik kratowy z ramieniem przegubowym (trójkąt z prętów) na słupie, na końcu jeden krążek; lina z krążka w dół wzdłuż
   słupa do stosu; od krążka dwie dźwignie pionowe jedna za drugą (bliższa i dalsza), każda dzieli na górny i dolny drut, czyli
-  2 liny + 2 przewody jednym stosem. Przełożenie, element łączący krążek z dźwigniami i wymiary – nieznane.
+  2 liny + 2 przewody jednym stosem.
+- Jan 20:19–20:29: dwie podwójne rolki (jak 0461, 1:4), dźwignie 6406. Pierwsza: górny otwór lina nośna 1, dolny przez izolator
+  żywiczny 7150 do drugiej 6406; druga: przez dwie śruby rzymskie 4420 na linę nośną 2 i na wyrównywacz 4410 przewodów. „Licz na oko”.
+- Zrobione jako urządzenie **0461-2x2** (typy 32, 35; edytor sam je bierze, gdy 0461 nie ma danych dla typu sieci). Otwory 6406
+  (tylko I, IV, V, VI na druty) nie dają równych lin: najbliżej I-IV oś III + I-V oś III → typ 32: 48 × Ø400 = 5086 daN, liny
+  1840 / 1464, przewody 1781 (typ: 1588 / 1588 / 2118); typ 35: 43 szt. Pręt 6402-04 3,00 m, stos 2,8 m, mieści się od −25 do
+  +40 °C przy 750 m. Wszystko ZAŁOŻENIE do potwierdzenia w terenie.
 
 ### 5. Kotwienia stałe (tom 1: 63-0403 sieci z izolacją, 0404 przewodów, 0405 lin nośnych, 0413 bez izolacji)
 - Na konstrukcji: **4430-1** przegubowy uchwyt kotwienia **[jest]** (lina i przewody osobno, 2 szt.)
