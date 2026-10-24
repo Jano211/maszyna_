@@ -141,7 +141,7 @@ enddevice
 
 // 2 liny + 2 przewody na jednym stosie (siec 32, 35): urzadzenie jak 0461 (dwie podwojne rolki 1:4), dwie dzwignie 6406 szeregowo.
 // Ze zdjecia transportszynowy.pl IMG_0144 i opisu Jana (prawdopodobnie Kolprojekt z lat 80, karty nie mamy) - wymiary i otwory ZALOZONE.
-device 0461-2x2 table 0011-1 pulley 4460-01 lever 6403-01 lever2 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
+device 0461-2x2 table 0011-1 pulley 4460-01 lever 6403-01 lever2 6403-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   title 2+2 na jednym stosie
   mount 4450-01 0.0747 4440-02 0.27
   pivot 0.03436 0.02561       // 4450-01: mount_top / mount_bottom nad / pod zerem - tu wchodza uchwyty 5100 (gorny i dolny odwrocony)
@@ -167,10 +167,11 @@ device 0461-2x2 table 0011-1 pulley 4460-01 lever 6403-01 lever2 6406-01 rod 640
   // 7150 do drugiej - 6406 na dolnym mocowaniu (II, zero modelu); z niej przez sruby rzymskie 4420 lina nosna 2 i wyrownywacz 4410
   cascade 4720-01 0.10 7150-01 0.8324 4720-01 0.10
   messenger2 4720-01 0.10 4420-01 0.93
-  // 6403 dzieli po polowie: lina 1 dostaje pol calego naciagu. Otwory 6406 "na oko": VI lina 2, I przewody (najwiecej na przewody).
+  // obie dzwignie 6403 (Jan 2026-10-25: tam chodzi inne ustrojstwo, papierow brak - dwie takie same krotkie lepsze niz dluga 6406,
+  // przy ktorej lina wchodzila w line). 6403 dzieli po polowie: lina 1 polowa calego naciagu, lina 2 i przewody po cwierci.
   // Ciezary Ø400 wysokie: 32 sztuki ze zdjecia przy DW755 (Jan), na precie 3,00 m (stos 2,94 m) - ZALOZENIE, karty nie ma
-  type 32 stack 6322-1w 32 lever hole_1 hole_2 axis second VI I II rod 6402-04
-  type 35 stack 6322-1w 28 lever hole_1 hole_2 axis second VI I II rod 6402-04
+  type 32 stack 6322-1w 32 lever hole_1 hole_2 axis second hole_1 hole_2 axis rod 6402-04
+  type 35 stack 6322-1w 28 lever hole_1 hole_2 axis second hole_1 hole_2 axis rod 6402-04
 enddevice
 
 // ---- kotwienia stale (kind fixed) ---------------------------------------------------------------------------------------
