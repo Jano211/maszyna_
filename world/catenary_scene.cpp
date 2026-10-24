@@ -98,6 +98,7 @@ struct scene_anchor {
     double contact[ 3 ] { 0.0, 0.0, 0.0 };     // koniec przewodów jezdnych (środek między przewodami)
     double temperature { 0.0 };                // temperatura, przy której złożono
     catenary::tensioner_result result;
+    std::vector<catenary::solid_vertex> rope;  // lina jako bryła proceduralna (trójkąty, współrzędne scenerii); rysuje ją przęsło do kotwienia
 };
 std::vector<scene_anchor> Anchors;
 
@@ -725,10 +726,36 @@ assemble_anchor( scene_anchor &Anchor ) {
     for( auto const &warning : result.warnings ) {
         if( Notes.insert( warning ).second ) { WriteLog( ( "Catenary: " + warning + " (first seen in anchor \"" + data.name + "\")" ).c_str() ); }
     }
-    if( auto const *cord { catalog->part( device->rope ) }; cord != nullptr ) {
-        catenary::tensioner_rope_parts( result, device->rope, cord->length, cord->girth, device->rope_eye, device->rope_eye_length );
+    // lina: ucha jako części, reszta jedną bryłą proceduralną (bez łączeń na łukach rolek), przeliczoną na scenerię;
+    // rysuje ją z bliska przęsło dochodzące do kotwienia (rebuild_span)
+    {
+        std::vector<catenary::tensioner_vertex> tube;
+        catenary::tensioner_rope_solid( result, 0.5 * device->rope_diameter, 8, device->rope_eye, device->rope_eye_length, tube );
+        double const zero[ 3 ] { 0.0, 0.0, 0.0 };
+        auto const base { toscene( zero ) };
+        glm::dvec3 axes[ 3 ];
+        for( int a = 0; a < 3; ++a ) {
+            double unit[ 3 ] { 0.0, 0.0, 0.0 };
+            unit[ a ] = 1.0;
+            axes[ a ] = toscene( unit ) - base;
+        }
+        // przeliczenie na scenerię może odbijać (zamiana osi): wtedy odwrócić kolejność wierzchołków trójkątów
+        auto const &ax { axes[ 0 ] }, &ay { axes[ 1 ] }, &az { axes[ 2 ] };
+        auto const mirrored { ax.x * ( ay.y * az.z - ay.z * az.y ) + ax.y * ( ay.z * az.x - ay.x * az.z ) + ax.z * ( ay.x * az.y - ay.y * az.x ) < 0.0 };
+        Anchor.rope.clear();
+        Anchor.rope.reserve( tube.size() );
+        for( std::size_t k = 0; k < tube.size(); ++k ) {
+            auto const &item { tube[ mirrored ? ( k - k % 3 ) + ( 2 - k % 3 ) : k ] };
+            auto const at { toscene( item.position ) };
+            catenary::solid_vertex vertex;
+            vertex.position = catenary::vec3 { at.x, at.y, at.z };
+            vertex.normal = catenary::vec3 {
+                ax.x * item.normal[ 0 ] + ay.x * item.normal[ 1 ] + az.x * item.normal[ 2 ],
+                ax.y * item.normal[ 0 ] + ay.y * item.normal[ 1 ] + az.y * item.normal[ 2 ],
+                ax.z * item.normal[ 0 ] + ay.z * item.normal[ 1 ] + az.z * item.normal[ 2 ] };
+            Anchor.rope.push_back( vertex );
+        }
     }
-    else { ErrorLog( label + "rope part \"" + device->rope + "\" isn't in the cantilever catalogue, the rope isn't drawn" ); }
     Anchor.temperature = Global.AirTemperature;
 
     {
@@ -898,6 +925,18 @@ rebuild_span( scene_chain &Chain, std::size_t const Span ) {
     auto const body { span_body( Chain, Span ) };
     if( body.empty() ) { return; }
     Chain.spans[ Span ] = catenary_span_create( span_name( Chain, Span ), Chain.data.range_max, Chain.data.range_min, body, Initialized );
+    // przęsło do kotwienia rysuje z bliska jego linę (bryła proceduralna urządzenia naprężającego)
+    if( auto *span { Chain.spans[ Span ] }; span != nullptr ) {
+        std::vector<catenary::solid_vertex> rope;
+        auto const ends { chain_points( Chain ) };
+        for( auto const *name : { Span == 0 ? &Chain.data.anchor_start : nullptr, Span + 2 == ends ? &Chain.data.anchor_end : nullptr } ) {
+            if( name == nullptr || name->empty() ) { continue; }
+            if( auto const *anchor { anchor_named( Chain.file, *name ) }; anchor != nullptr && anchor->solved ) {
+                rope.insert( rope.end(), anchor->rope.begin(), anchor->rope.end() );
+            }
+        }
+        if( false == rope.empty() ) { catenary_span_attach( *span, rope ); }
+    }
 }
 
 // wszystkie przęsła łańcucha od nowa (zmiana typu, materiału, listy podwieszeń)

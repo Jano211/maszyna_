@@ -596,8 +596,8 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     auto &rope { Result.rope };
     auto const point = [ & ]( vec const &P ) { rope.push_back( { P.x, P.y, P.z } ); };
     auto const arc = [ & ]( vec const &Center, double const Y, double const From, double const To ) {
-        // kąt w płaszczyźnie X-Z od +X w stronę +Z; punkty co najwyżej co 15 stopni, bez pierwszego
-        auto const steps { std::max( 1, static_cast<int>( std::ceil( std::abs( To - From ) / ( kPi / 12.0 ) ) ) ) };
+        // kąt w płaszczyźnie X-Z od +X w stronę +Z; punkty co najwyżej co 5 stopni (gładka rura liny), bez pierwszego
+        auto const steps { std::max( 1, static_cast<int>( std::ceil( std::abs( To - From ) / ( kPi / 36.0 ) - 1e-9 ) ) ) };
         for( int k = 1; k <= steps; ++k ) {
             auto const angle { From + ( To - From ) * k / steps };
             point( vec { Center.x + radius * std::cos( angle ), Y, Center.z + radius * std::sin( angle ) } );
@@ -649,45 +649,65 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     return true;
 }
 
-void tensioner_rope_parts( tensioner_result &Result, std::string const &Cord, double const Length, double const Girth, std::string const &Eye, double const EyeLength ) {
+void tensioner_rope_solid( tensioner_result &Result, double const Radius, int const Sides, std::string const &Eye, double const EyeLength, std::vector<tensioner_vertex> &Triangles ) {
     std::vector<vec> points;
     for( auto const &point : Result.rope ) {
         vec const p { point[ 0 ], point[ 1 ], point[ 2 ] };
         if( points.empty() || length( p - points.back() ) > 1e-6 ) { points.push_back( p ); }
     }
-    if( points.size() < 2 ) { return; }
-    auto const segment = [ & ]( std::string const &Role, std::string const &Part, vec const &From, vec const &To, bool const Stretch ) {
-        auto const span { length( To - From ) };
-        if( span < 1e-6 ) { return; }
-        auto const z { unit( To - From ) };
-        auto const y { side_of( z ) };
-        auto placement { placed( Role, Part, From ) };
-        set_rotation( placement, cross( y, z ), y, z );
-        if( Stretch ) {
-            placement.scale[ 0 ] = Girth;
-            placement.scale[ 1 ] = Girth;
-            placement.scale[ 2 ] = Length > 1e-9 ? span / Length : 1.0;
-        }
-        Result.parts.push_back( placement );
-    };
-    // ucha: zaczep ("eye") w skrajnym punkcie liny, zero ucha w stronę liny; pierwszy i ostatni odcinek skrócone
-    auto const eyes { false == Eye.empty() && EyeLength > 1e-6 };
-    if( eyes ) {
+    if( points.size() < 2 || Radius <= 0.0 ) { return; }
+    // ucha: zaczep ("eye") w skrajnym punkcie liny, zero ucha w stronę liny; rura zaczyna się i kończy w zerze ucha
+    if( false == Eye.empty() && EyeLength > 1e-6 ) {
+        auto const eye = [ & ]( std::string const &Role, vec const &Joint, vec const &Toward ) {
+            auto const z { unit( Toward ) };
+            auto const y { side_of( z ) };
+            auto placement { placed( Role, Eye, Joint ) };
+            set_rotation( placement, cross( y, z ), y, z );
+            Result.parts.push_back( placement );
+        };
         auto const n { points.size() };
         auto const startdir { unit( points[ 1 ] - points[ 0 ] ) };
         auto const enddir { unit( points[ n - 1 ] - points[ n - 2 ] ) };
-        auto const startcut { std::min( EyeLength, length( points[ 1 ] - points[ 0 ] ) ) };
-        auto const endcut { std::min( EyeLength, length( points[ n - 1 ] - points[ n - 2 ] ) ) };
-        auto const start { points[ 0 ] + startdir * startcut };
-        auto const end { points[ n - 1 ] - enddir * endcut };
-        // ucho: zero w styku z liną, +Z modelu do zaczepu
-        segment( "rope_eye.1", Eye, start, start - startdir * EyeLength, false );
-        segment( "rope_eye.2", Eye, end, end + enddir * EyeLength, false );
+        auto const start { points[ 0 ] + startdir * std::min( EyeLength, length( points[ 1 ] - points[ 0 ] ) ) };
+        auto const end { points[ n - 1 ] - enddir * std::min( EyeLength, length( points[ n - 1 ] - points[ n - 2 ] ) ) };
+        eye( "rope_eye.1", start, startdir * -1.0 );
+        eye( "rope_eye.2", end, enddir );
         points.front() = start;
         points.back() = end;
     }
-    for( std::size_t k = 1; k < points.size(); ++k ) {
-        segment( "rope." + std::to_string( k ), Cord, points[ k - 1 ], points[ k ], true );
+    // pierścienie przekroju w każdym punkcie ścieżki, w płaszczyźnie dwusiecznej sąsiednich odcinków; oś odniesienia
+    // przekroju przenoszona z punktu do punktu bez skręcania (rura się nie skręca na łukach)
+    auto const count { points.size() };
+    auto const sides { std::max( 3, Sides ) };
+    std::vector<vec> along( count ), across( count );
+    for( std::size_t k = 0; k < count; ++k ) {
+        auto const before { k > 0 ? unit( points[ k ] - points[ k - 1 ] ) : vec {} };
+        auto const after { k + 1 < count ? unit( points[ k + 1 ] - points[ k ] ) : vec {} };
+        along[ k ] = k == 0 ? after : k + 1 == count ? before : unit( before + after );
+        auto const reference { k == 0 ? side_of( along[ 0 ] ) : across[ k - 1 ] };
+        across[ k ] = unit( reference - along[ k ] * dot( reference, along[ k ] ) );
+    }
+    auto const ring = [ & ]( std::size_t const Point, int const Side, vec &Position, vec &Normal ) {
+        auto const angle { 2.0 * kPi * ( Side % sides ) / sides };
+        auto const u { across[ Point ] };
+        auto const v { cross( along[ Point ], u ) };
+        Normal = u * std::cos( angle ) + v * std::sin( angle );
+        Position = points[ Point ] + Normal * Radius;
+    };
+    auto const emit = [ & ]( vec const &Position, vec const &Normal ) {
+        Triangles.push_back( { { Position.x, Position.y, Position.z }, { Normal.x, Normal.y, Normal.z } } );
+    };
+    Triangles.reserve( Triangles.size() + ( count - 1 ) * sides * 6 );
+    for( std::size_t k = 0; k + 1 < count; ++k ) {
+        for( int side = 0; side < sides; ++side ) {
+            vec p00, n00, p01, n01, p10, n10, p11, n11;
+            ring( k, side, p00, n00 );
+            ring( k, side + 1, p01, n01 );
+            ring( k + 1, side, p10, n10 );
+            ring( k + 1, side + 1, p11, n11 );
+            emit( p00, n00 ); emit( p11, n11 ); emit( p10, n10 );
+            emit( p00, n00 ); emit( p01, n01 ); emit( p11, n11 );
+        }
     }
 }
 

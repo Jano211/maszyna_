@@ -191,8 +191,16 @@ struct tensioner_result {
 // składa urządzenie. false, gdy brakuje danych (urządzenia, typu, tablicy, rolki, dźwigni, otworów)
 bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &Device, tensioner_input const &Input, tensioner_result &Result );
 
-// lina jako odcinki linki rozciąganej (część Cord o długości spoczynkowej Length, skala w poprzek Girth)
-// Eye (gdy niepusty): ucho o długości EyeLength na obu końcach, punkt "eye" w zaczepie, lina skrócona o ucho
-void tensioner_rope_parts( tensioner_result &Result, std::string const &Cord, double Length, double Girth, std::string const &Eye = {}, double EyeLength = 0.0 );
+// wierzchołek bryły proceduralnej w układzie urządzenia; kolejne trójki to trójkąty, obchodzone przeciwnie do ruchu
+// wskazówek zegara patrząc z zewnątrz (w prawoskrętnym układzie urządzenia)
+struct tensioner_vertex {
+    double position[ 3 ];
+    double normal[ 3 ];
+};
+
+// lina jako jedna bryła proceduralna: rura o promieniu Radius i Sides ścianach po całej ścieżce Result.rope (łuki na
+// rolkach co 5°), bez łączeń. Eye (gdy niepusty): ucho o długości EyeLength (zero w styku z liną, punkt "eye" w +Z w
+// zaczepie) na obu końcach, dopisywane do Result.parts; rura skrócona o ucha
+void tensioner_rope_solid( tensioner_result &Result, double Radius, int Sides, std::string const &Eye, double EyeLength, std::vector<tensioner_vertex> &Triangles );
 
 } // namespace catenary

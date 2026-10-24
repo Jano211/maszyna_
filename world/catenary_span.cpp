@@ -31,6 +31,7 @@ struct catenary_span {
     gfx::geometrybank_handle solidbank;                         // osobny bank na bryły tego przęsła
     catenary_solid solid;                                       // bryły do oglądania z bliska
     bool solidloaded { false };
+    std::vector<catenary::solid_vertex> attached;               // bryła dołączona (lina kotwienia), układ scenerii
 };
 
 namespace {
@@ -274,6 +275,13 @@ catenary_span_assign( TTraction &Traction, std::string const &Symbol ) {
             std::hypot( Traction.pPoint2.x - Traction.pPoint1.x, Traction.pPoint2.z - Traction.pPoint1.z ) );
 }
 
+// wygląd liny stalowej (ocynk, lekko zmatowiały)
+catenary_metal const &
+catenary_rope_metal() {
+    static catenary_metal const steel { { 0.56f, 0.57f, 0.58f }, 0.8f, 0.30f, 0.20f };
+    return steel;
+}
+
 // symbol typu sieci przypisany przęsłu; pusty gdy brak
 std::string
 catenary_span_symbol( TTraction const &Traction ) {
@@ -318,6 +326,7 @@ catenary_span_solid( TTraction &Traction, glm::dvec3 const &Camera ) {
             // kamera daleko: zwolnienie pamięci, linie wystarczą
             release( span.solid.wires );
             release( span.solid.fittings );
+            release( span.solid.rope );
             span.solid = {};
             span.solidloaded = false;
             return {};
@@ -344,6 +353,10 @@ catenary_span_solid( TTraction &Traction, glm::dvec3 const &Camera ) {
         auto data { vertices( Traction, fittings ) };
         span.solid.fittings = GfxRenderer->Insert( data, userdata, span.solidbank, GL_TRIANGLES );
     }
+    if( false == span.attached.empty() ) {
+        auto data { vertices( Traction, span.attached ) };
+        span.solid.rope = GfxRenderer->Insert( data, userdata, span.solidbank, GL_TRIANGLES );
+    }
     span.solidloaded = ( span.solid.wires != null_handle );
     return ( span.solidloaded ? span.solid : catenary_solid() );
 }
@@ -358,6 +371,7 @@ drop_solid( TTraction &Traction ) {
     if( false == span.solidloaded ) { return; }
     release( span.solid.wires );
     release( span.solid.fittings );
+    release( span.solid.rope );
     span.solid = {};
     span.solidloaded = false;
 }
@@ -382,4 +396,13 @@ void
 catenary_span_release( TTraction &Traction ) {
     drop_solid( Traction );
     release( Traction.m_geometry );
+}
+
+// bryła spoza przęsła rysowana razem z nim (lina kotwienia); zrobi się przy następnym podejściu kamery
+bool
+catenary_span_attach( TTraction &Traction, std::vector<catenary::solid_vertex> const &Triangles ) {
+    if( false == static_cast<bool>( Traction.m_catenaryspan ) ) { return false; }
+    drop_solid( Traction );
+    Traction.m_catenaryspan->attached = Triangles;
+    return ( Traction.m_catenaryspan->definition != nullptr );
 }
