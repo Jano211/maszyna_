@@ -95,11 +95,12 @@ part 6402-04 length 3.00
 // Lina 4490-1 (8,70 m z kauszami): od 2026-10-24 bryla proceduralna (rura po calej sciezce, luki na rolkach co 5 stopni,
 // bez laczen) o srednicy rope_diameter (12 mm jak model 4490-01 Jana), stal; rysuje ja z bliska przeslo dochodzace do kotwienia.
 // "rope" (4490-01) zostaje jako nazwa czesci liny, na razie nieuzywana. Ucho 4490-02 ("rope_eye <czesc> <zero-eye>",
-// nieskalowane) na obu koncach: zero w styku z lina, eye 0,205 w +Z (i -0,004 w Y - pomijane).
+// nieskalowane) na obu koncach: zero w styku z lina, eye 0,205 w +Z (i -0,004 w Y - pomijane); obrocone o 90 st. wokol liny (Jan 2026-10-25).
+// Przekladka slizgowa 6411-01 ("rope_spacer", walec 0,016 w +Z) na sworzniu ucha przy precie ciezarow (Jan 2026-10-25) - nie w lancuchu hanger.
 
 // 23-0461 kotwienie ciezarowe sieci z izolacja, rolki rownolegle, ciezary polimerobetonowe i zeliwne Ø306 (Uzup. 2 s. 16;
 // zastepuje 63-0401). Zeliwne na dole stosu.
-device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   mount 4450-01 0.0747 4440-02 0.27
   pivot 0.03436 0.02561       // 4450-01: mount_top / mount_bottom nad / pod zerem - tu wchodza uchwyty 5100 (gorny i dolny odwrocony)
   // uchwyty do kotwien 13-5100 (slupy 161x, karta 33-0455 wyk. 11/12) na scianach wzdluz drutow, obrocone o 90 st. wzgledem wysiegnika
@@ -115,7 +116,7 @@ device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 r
   // slup betonowy 1701: wyk. 3 - 4520-3 (Jan 2026-10-24), sruby 0,257; dol prowadnicy wg 0455 to 4530-3 - do czasu modelu tez 4520-3
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
   holder ~4440-01 0.27
-  hanger 6411-01 0.10 4720-01 0.10
+  hanger 4720-01 0.10
   messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
   contact 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
   // stare zlozenia (Jan 2026-10-24): izolator rolkowy ESN-2025 (model esn_2025, zero w pierwszym mocowaniu, hole_1 0,6004 w -X)
@@ -140,7 +141,7 @@ enddevice
 
 // 2 liny + 2 przewody na jednym stosie (siec 32, 35): urzadzenie jak 0461 (dwie podwojne rolki 1:4), dwie dzwignie 6406 szeregowo.
 // Ze zdjecia transportszynowy.pl IMG_0144 i opisu Jana (prawdopodobnie Kolprojekt z lat 80, karty nie mamy) - wymiary i otwory ZALOZONE.
-device 0461-2x2 table 0011-1 pulley 4460-01 lever 6403-01 lever2 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0461-2x2 table 0011-1 pulley 4460-01 lever 6403-01 lever2 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   title 2+2 na jednym stosie
   mount 4450-01 0.0747 4440-02 0.27
   pivot 0.03436 0.02561       // 4450-01: mount_top / mount_bottom nad / pod zerem - tu wchodza uchwyty 5100 (gorny i dolny odwrocony)
@@ -152,7 +153,7 @@ device 0461-2x2 table 0011-1 pulley 4460-01 lever 6403-01 lever2 6406-01 rod 640
   // slup betonowy 1701: wyk. 3 - 4520-3 (Jan 2026-10-24), sruby 0,257; dol prowadnicy wg 0455 to 4530-3 - do czasu modelu tez 4520-3
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
   holder ~4440-01 0.27
-  hanger 6411-01 0.10 4720-01 0.10
+  hanger 4720-01 0.10
   messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
   contact 4720-01 0.10 4420-01 0.93        // druga dzwignia - sruba rzymska - wyrownywacz 4410 - uchwyty
   messenger_clamp 5120-01 0.058     // uchwyt krancowy 5120 (wyk. 5-8 roznia sie tylko wkladka pod lub/przewod) - jeden model Jana, wire 0,058
@@ -386,7 +387,7 @@ enddevice
 // 4450 + 4440-7, duza 4460-3, na 4440-6 mala 4460-2; wozek: mala 4460-2 i duza 4460-3 na 4440-5, dalej dzwignia 6406 jak 0461.
 // Ciezary 6322-1 (26/24/20/33), prety 6401-3 (typ 3, 4) / -2 (10) / -1 (26); zamocowania 13-0470: pierscien 5080-2 0,70 nad spodem
 // stosu (13-0018-3). Zabezpieczenie 4600-2: trapez pod malymi rolkami (ramiona 4600-3/-4, drazek 4600-5).
-device 0471 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0471 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06   // mala rolka 0,336 za duza (hole_1 4440-6 i 4440-5), zaczep liny w hole_2 4440-6 (0,703)
   safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06   // 4600 wyk. 2: ramiona 0,463 z osi malych rolek, drazek 1,30 (modele Jana); para po obu stronach
   mount 4450-01 0.0747 4440-07 0.41
@@ -396,7 +397,7 @@ device 0471 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 r
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
   holder 4440-05 0.703                       // od malej ruchomej: duza w hole_1 (0,336), dzwignia w hole_2 (0,703)
-  hanger 6411-01 0.10 4720-01 0.10
+  hanger 4720-01 0.10
   messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
   contact 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
   messenger_old esn_2025 0.6004 4420-01 0.93
@@ -414,7 +415,7 @@ device 0471 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 r
 enddevice
 
 // 23-0480 to samo z ciezarami Ø306 i zeliwnymi (stos jak 0461), przy slupie 4440-4; pierscien 5080-1 jak 0461 - ZALOZENIE
-device 0480 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0480 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06   // mala rolka 0,336 za duza (hole_1 4440-6 i 4440-5), zaczep liny w hole_2 4440-6 (0,703)
   safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06   // 4600 wyk. 2: ramiona 0,463 z osi malych rolek, drazek 1,30 (modele Jana); para po obu stronach
   mount 4450-01 0.0747 4440-04 0.32
@@ -424,7 +425,7 @@ device 0480 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 r
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
   holder 4440-05 0.703                       // od malej ruchomej: duza w hole_1 (0,336), dzwignia w hole_2 (0,703)
-  hanger 6411-01 0.10 4720-01 0.10
+  hanger 4720-01 0.10
   messenger 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
   contact 4720-01 0.10 7150-01 0.8324 4720-01 0.10 4420-01 0.93
   messenger_old esn_2025 0.6004 4420-01 0.93
@@ -449,14 +450,14 @@ enddevice
 // siebie w poprzek toru), stosy pod linami: lina przy slupie, przewody dalej; pierscienie 5080 obrocone do swoich prowadnic (Jan).
 // Prety 2,50 (lina) / 2,30 (przewody). Brakujace ciezary - ze stosu liny. ZALOZENIA: 5040 trzymany jak 4450 (pivot), kolejnosc
 // czesci w lancuchach (karty daja liczby), zero liny na tablicy b do osi skrajnej rolki.
-device 0482 kind split
+device 0482 kind split rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016   // lina obu urzadzen
   split 0482-m 0482-c
   type 20
   type 30
   type 32
   type 35
 enddevice
-device 0482-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0482-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06
   safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 4450-01 0.0747 4440-04 0.32
@@ -466,7 +467,7 @@ device 0482-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
   holder 4440-05 0.703
-  hanger 6411-01 0.10 4720-01 0.10
+  hanger 4720-01 0.10
   only messenger
   messenger 4720-01 0.10 4420-01 0.93 4720-01 0.10 7150-01 0.8324
   messenger_clamp 5120-01 0.058
@@ -479,7 +480,7 @@ device 0482-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01
   type 20 stack 6323-1 15
   type 30 stack 6323-1 15
 enddevice
-device 0482-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0482-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06
   safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 4450-01 0.0747 4440-04 0.32
@@ -489,7 +490,7 @@ device 0482-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
   holder 4440-05 0.703
-  hanger 6411-01 0.10 4720-01 0.10
+  hanger 4720-01 0.10
   only messenger
   messenger 4720-01 0.10
   messenger_equalizer 6403-01 0.04 spread 0.5075 z
@@ -503,7 +504,7 @@ device 0482-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490
   frame 5090-02 0.44252 -0.0575 -1 owner
   type 32 stack 6321-1 14 6323-1 16
 enddevice
-device 0482-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0482-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06
   safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 4450-01 0.0747 4440-04 0.32
@@ -513,7 +514,7 @@ device 0482-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
   holder 4440-05 0.703
-  hanger 6411-01 0.10 4720-01 0.10
+  hanger 4720-01 0.10
   only messenger
   messenger 4720-01 0.10 4420-01 0.93
   messenger_equalizer 4410-01 0.1541 spread 0.08
@@ -527,7 +528,7 @@ device 0482-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490
   frame 5090-02 0.44252 -0.0575 -1 owner
   type 35 stack 6321-1 12 6323-1 15
 enddevice
-device 0482-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0482-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06
   safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 5040-02 0.785
@@ -537,7 +538,7 @@ device 0482-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
   holder 4440-05 0.703
-  hanger 6411-01 0.10 4720-01 0.10
+  hanger 4720-01 0.10
   only contact
   contact 4720-01 0.10 4420-01 0.93 4720-01 0.10 7150-01 0.8324 4720-01 0.10
   messenger_clamp 5120-01 0.058
@@ -555,14 +556,14 @@ enddevice
 
 // 33-0486 (lina) + 23-0487 (przewody): to samo z ciezarami Ø400 (usytuowanie 23-0019-3, zamocowania 23-0458: ramy 5090-3,
 // pierscienie 5080-2), prety 2,00 / 1,70
-device 0486 kind split
+device 0486 kind split rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016   // lina obu urzadzen
   split 0486-m 0486-c
   type 20
   type 30
   type 32
   type 35
 enddevice
-device 0486-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0486-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06
   safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 4450-01 0.0747 4440-04 0.32
@@ -572,7 +573,7 @@ device 0486-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
   holder 4440-05 0.703
-  hanger 6411-01 0.10 4720-01 0.10
+  hanger 4720-01 0.10
   only messenger
   messenger 4720-01 0.10 4420-01 0.93 4720-01 0.10 7150-01 0.8324
   messenger_clamp 5120-01 0.058
@@ -585,7 +586,7 @@ device 0486-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01
   type 20 stack 6322-1 15
   type 30 stack 6322-1 15
 enddevice
-device 0486-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0486-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06
   safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 4450-01 0.0747 4440-04 0.32
@@ -595,7 +596,7 @@ device 0486-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
   holder 4440-05 0.703
-  hanger 6411-01 0.10 4720-01 0.10
+  hanger 4720-01 0.10
   only messenger
   messenger 4720-01 0.10
   messenger_equalizer 6403-01 0.04 spread 0.5075 z
@@ -609,7 +610,7 @@ device 0486-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490
   frame 5090-03 0.54767 -0.0575 -1 owner
   type 32 stack 6322-1 30
 enddevice
-device 0486-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0486-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06
   safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 4450-01 0.0747 4440-04 0.32
@@ -619,7 +620,7 @@ device 0486-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
   holder 4440-05 0.703
-  hanger 6411-01 0.10 4720-01 0.10
+  hanger 4720-01 0.10
   only messenger
   messenger 4720-01 0.10 4420-01 0.93
   messenger_equalizer 4410-01 0.1541 spread 0.08
@@ -633,7 +634,7 @@ device 0486-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490
   frame 5090-03 0.54767 -0.0575 -1 owner
   type 35 stack 6322-1 27
 enddevice
-device 0486-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6401-03 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+device 0486-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6401-03 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06
   safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 5040-02 0.785
@@ -643,7 +644,7 @@ device 0486-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6401-03 rope 4490-01
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
   holder 4440-05 0.703
-  hanger 6411-01 0.10 4720-01 0.10
+  hanger 4720-01 0.10
   only contact
   contact 4720-01 0.10 4420-01 0.93 4720-01 0.10 7150-01 0.8324 4720-01 0.10
   messenger_clamp 5120-01 0.058

@@ -118,6 +118,8 @@ struct tensioner_device {
     double rope_diameter { 0.010 };
     std::string rope_eye;               // ucho (kausza) na obu końcach liny, nieskalowane; pusty = lina bez uch
     double rope_eye_length { 0.0 };     // od zera ucha (styk z liną) do punktu "eye" (zaczep), wzdłuż +Z modelu
+    std::string rope_spacer;            // przekładka na sworzniu ucha przy pręcie (6411, oś w +Z modelu); pusta = bez
+    double rope_spacer_length { 0.0 };
     std::vector<tensioner_link> mount;  // od czoła konstrukcji do osi rolki stałej
     std::vector<tensioner_link> holder; // od osi rolki ruchomej do osi dźwigni
     std::vector<tensioner_link> hanger; // od rolki stałej w dół do pręta (bez liny)
@@ -304,6 +306,8 @@ struct tensioner_vertex {
 // lina jako jedna bryła proceduralna: rura o promieniu Radius i Sides ścianach po całej ścieżce Result.rope (łuki na
 // rolkach co 5°), bez łączeń. Eye (gdy niepusty): ucho o długości EyeLength (zero w styku z liną, punkt "eye" w +Z w
 // zaczepie) na obu końcach, dopisywane do Result.parts; rura skrócona o ucha
-void tensioner_rope_solid( tensioner_result &Result, double Radius, int Sides, std::string const &Eye, double EyeLength, std::vector<tensioner_vertex> &Triangles );
+// Spacer: przekładka ślizgowa (6411) na sworzniu ucha przy pręcie ciężarów (koniec liny), oś wzdłuż sworznia; pusta = bez
+void tensioner_rope_solid( tensioner_result &Result, double Radius, int Sides, std::string const &Eye, double EyeLength, std::vector<tensioner_vertex> &Triangles,
+    std::string const &Spacer = {}, double SpacerLength = 0.0 );
 
 } // namespace catenary

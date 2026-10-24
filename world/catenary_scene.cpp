@@ -841,12 +841,12 @@ assemble_anchor( scene_anchor &Anchor ) {
     // rysuje ją z bliska przęsło dochodzące do kotwienia (rebuild_span)
     {
         std::vector<catenary::tensioner_vertex> tube;
-        catenary::tensioner_rope_solid( result, 0.5 * device->rope_diameter, 8, device->rope_eye, device->rope_eye_length, tube );
+        catenary::tensioner_rope_solid( result, 0.5 * device->rope_diameter, 8, device->rope_eye, device->rope_eye_length, tube, device->rope_spacer, device->rope_spacer_length );
         // kotwienie rozdzielone: druga lina (urządzenie przewodów), z uchami
         if( false == result.rope2.empty() ) {
             catenary::tensioner_result second;
             second.rope = result.rope2;
-            catenary::tensioner_rope_solid( second, 0.5 * device->rope_diameter, 8, device->rope_eye, device->rope_eye_length, tube );
+            catenary::tensioner_rope_solid( second, 0.5 * device->rope_diameter, 8, device->rope_eye, device->rope_eye_length, tube, device->rope_spacer, device->rope_spacer_length );
             for( auto part : second.parts ) { part.role = "contact_device." + part.role; result.parts.push_back( part ); }
         }
         double const zero[ 3 ] { 0.0, 0.0, 0.0 };

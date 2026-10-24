@@ -460,13 +460,25 @@ int main( int argc, char **argv ) {
         catenary::solve_tensioner( catalog, *device, input, result );
         auto const first { result.rope.front() }, last { result.rope.back() };
         std::vector<catenary::tensioner_vertex> tube;
-        catenary::tensioner_rope_solid( result, 0.006, 8, "4490-02", 0.205, tube );
+        catenary::tensioner_rope_solid( result, 0.006, 8, "4490-02", 0.205, tube, "6411-01", 0.016 );
         std::vector<catenary::tensioner_placement const *> eyes;
         for( auto const &part : result.parts ) { if( part.role.rfind( "rope_eye.", 0 ) == 0 ) { eyes.push_back( &part ); } }
         auto const tip = []( catenary::tensioner_placement const *Eye, int const A ) { return Eye->position[ A ] + 0.205 * Eye->rotation[ 3 * A + 2 ]; };
         auto const at = [ & ]( catenary::tensioner_placement const *Eye, std::vector<double> const &P ) {
             return std::abs( tip( Eye, 0 ) - P[ 0 ] ) < 1e-6 && std::abs( tip( Eye, 1 ) - P[ 1 ] ) < 1e-6 && std::abs( tip( Eye, 2 ) - P[ 2 ] ) < 1e-6; };
         check( eyes.size() == 2 && at( eyes[ 0 ], first ) && at( eyes[ 1 ], last ), "lina: uszy 4490-02 zaczepione w obu koncach liny" );
+        {
+            // przekładka 6411 na sworzniu ucha przy pręcie: środek o pół długości obok końca liny, oś w poprzek liny
+            catenary::tensioner_placement const *spacer { nullptr };
+            for( auto const &part : result.parts ) { if( part.role == "rope_spacer" ) { spacer = &part; } }
+            auto good { spacer != nullptr && spacer->part == "6411-01" };
+            if( good ) {
+                double d { 0.0 };
+                for( int a = 0; a < 3; ++a ) { d += ( spacer->position[ a ] - last[ a ] ) * ( spacer->position[ a ] - last[ a ] ); }
+                good = std::abs( std::sqrt( d ) - 0.008 ) < 1e-6 && std::abs( spacer->rotation[ 8 ] ) < 1e-6;   // oś (kolumna Z) pozioma
+            }
+            check( good, "przekladka 6411 na sworzniu ucha przy precie (os w poprzek liny)" );
+        }
         // kazdy wierzcholek 6 mm od osi liny (punkt w polowie trojkata po normalnej do srodka trafia w poblize osi),
         // normalne trojkatow na zewnatrz: iloczyn krawedzi zgodny z normalnymi wierzcholkow
         int outward { 0 }, triangles { static_cast<int>( tube.size() / 3 ) };
