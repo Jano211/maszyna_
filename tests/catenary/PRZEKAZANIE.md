@@ -14,9 +14,11 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 - **Kolejka PO środzie (Jan, nie ruszać wcześniej):** kotwienie samej liny / samych przewodów (0405 / 0404, ciężarowe z
   połówek rozdzielonego) + łańcuch „lina kończy się na kotwieniu X, przewód idzie dalej” i przęsła samego przewodu (koncepcja
   zaakceptowana 01:05, praktyka do sprawdzenia; Jan ma papiery na podwieszenia mostowe/tunelowe), LPN-y, przewody wzmacniające,
-  parasole wstawiane z edytora (na zwisach bramek i wysięgniki rozstawione), kotwienia środkowe 0416 (do dźwigara) i 0418,
+  kotwienia środkowe 0416 (do dźwigara) i 0418,
   sieci Y 36/37 w kotwieniach (Kolprojekt 2010 s. 21–29: części 5505-17/18, 6410-17/18, 9811-7/8, 5120-7/8), obejma dodatkowa
   przy teowych wysięgnikach w kotwieniu środkowym.
+- **Na niedzielę 25.10 (Jan 01:05, wyjątek od zakazu nowych tematów): parasole wstawiane z edytora – na zwisach bramek
+  i wysięgniki rozstawione.**
 - MSVC: nie nazywać zmiennych `small`, `near`, `far`, `interface`, `hyper` (makra Windows); /tmp/claude-0/syn.sh ma je dodane.
 
 - **Jan buduje exe z gałęzi `wszystko`** (sieć + bujanie + radio): po każdej zmianie kodu scalić `siec-trakcyjna` do `wszystko` i wypchnąć obie (24.10: zapomniane – Jan zbudował bez `width`, słupy 161x odrzucone).
