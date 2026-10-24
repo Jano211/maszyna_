@@ -438,10 +438,27 @@ void build_geometry( network_definition const &Definition, span_solution const &
         if( type.messenger_count > 1 ) {
             std::vector<vec3> middle;
             if( false == start.empty() ) { middle.push_back( start.back() ); }
+            // końce dolnej liny podane osobno (kotwienie): przesunięcie rozłożone liniowo wzdłuż przęsła
+            vec3 shiftstart { 0.0, 0.0, 0.0 }, shiftend { 0.0, 0.0, 0.0 };
+            if( Points.messenger2_start_set && false == result.messenger.empty() ) {
+                auto const from { rope( result.messenger.front().x, result.messenger.front().y - type.messenger_stack ) };
+                shiftstart = vec3 { Points.messenger2_start.x - from.x, Points.messenger2_start.y - from.y, Points.messenger2_start.z - from.z };
+            }
+            if( Points.messenger2_end_set && false == result.messenger.empty() ) {
+                auto const to { rope( result.messenger.back().x, result.messenger.back().y - type.messenger_stack ) };
+                shiftend = vec3 { Points.messenger2_end.x - to.x, Points.messenger2_end.y - to.y, Points.messenger2_end.z - to.z };
+            }
             for( auto const &point : result.messenger ) {
                 auto const instart { reachstart > 0.0 && point.x < reachstart + 1e-6 };
                 auto const inend { reachend > 0.0 && point.x > length - reachend - 1e-6 };
-                if( false == instart && false == inend ) { middle.push_back( rope( point.x, point.y - type.messenger_stack ) ); }
+                if( false == instart && false == inend ) {
+                    auto at { rope( point.x, point.y - type.messenger_stack ) };
+                    auto const t { length > 1e-9 ? point.x / length : 0.0 };
+                    at.x += shiftstart.x * ( 1.0 - t ) + shiftend.x * t;
+                    at.y += shiftstart.y * ( 1.0 - t ) + shiftend.y * t;
+                    at.z += shiftstart.z * ( 1.0 - t ) + shiftend.z * t;
+                    middle.push_back( at );
+                }
             }
             if( false == end.empty() ) { middle.push_back( end.front() ); }
             polyline( middle, element_kind::messenger );

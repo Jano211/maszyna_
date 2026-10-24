@@ -35,6 +35,8 @@ struct catenary_span {
     bool solidloaded { false };
     std::vector<catenary::solid_vertex> attached;               // bryła dołączona (lina kotwienia), układ scenerii
     std::shared_ptr<catenary::network_definition> own;          // kopia typu z naciągiem z dopisku "tension"
+    bool rope2set[ 2 ] { false, false };                        // końce drugiej liny nośnej z dopisku "rope2"
+    catenary::vec3 rope2[ 2 ];
 };
 
 namespace {
@@ -47,11 +49,19 @@ definition( TTraction const &Traction ) {
 
 catenary::span_points
 points( TTraction const &Traction ) {
-    return {
+    catenary::span_points result {
         { Traction.pPoint1.x, Traction.pPoint1.y, Traction.pPoint1.z },
         { Traction.pPoint2.x, Traction.pPoint2.y, Traction.pPoint2.z },
         { Traction.pPoint3.x, Traction.pPoint3.y, Traction.pPoint3.z },
         { Traction.pPoint4.x, Traction.pPoint4.y, Traction.pPoint4.z } };
+    if( Traction.m_catenaryspan ) {
+        auto const &span { *Traction.m_catenaryspan };
+        result.messenger2_start_set = span.rope2set[ 0 ];
+        result.messenger2_end_set = span.rope2set[ 1 ];
+        result.messenger2_start = span.rope2[ 0 ];
+        result.messenger2_end = span.rope2[ 1 ];
+    }
+    return result;
 }
 
 // długość podwieszenia Y, jaką typ sieci przewiduje dla tego przęsła; 0 gdy brak
@@ -253,13 +263,17 @@ catenary_span_metal( TTraction const &Traction, bool const Fitting ) {
 
 // przypisuje przęsłu typ sieci z dopisku "type" i dobiera rozstaw wieszaków
 void
-catenary_span_assign( TTraction &Traction, std::string const &Symbol, double const Messenger, double const Contact ) {
+catenary_span_assign( TTraction &Traction, std::string const &Symbol, double const Messenger, double const Contact, glm::dvec3 const *Rope2, bool const *Rope2set ) {
 
     Traction.m_catenaryspan.reset();
     if( Symbol.empty() ) { return; }
 
     auto span { std::make_shared<catenary_span>() };
     span->symbol = Symbol;
+    for( int end = 0; end < 2 && Rope2 != nullptr && Rope2set != nullptr; ++end ) {
+        span->rope2set[ end ] = Rope2set[ end ];
+        span->rope2[ end ] = catenary::vec3 { Rope2[ end ].x, Rope2[ end ].y, Rope2[ end ].z };
+    }
     Traction.m_catenaryspan = span;
     if( false == Global.CatenaryProcedural ) { return; }
 
