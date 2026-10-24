@@ -200,6 +200,9 @@ struct tensioner_input {
     // przez nią idą śruby uchwytów) na wysokości nad główką; puste = bez uchwytów
     std::string pole;
     std::function<double( double )> depth;
+    // kąt osi konstrukcji (od czoła w stronę kotwionego przęsła) w układzie urządzenia, radiany wokół +Z: urządzenie od przegubu
+    // 4450 ciągnie do drutów, a uchwyty, prowadnica, pierścień i stos zostają przy konstrukcji (0 = konstrukcja w linii drutów)
+    double structure_angle { 0.0 };
 };
 
 struct tensioner_placement {
