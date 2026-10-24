@@ -4,6 +4,7 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 
 ## START TUTAJ – stan na 2026-10-24 (kotwienia; wcześniej edytor sieci, bramki, łańcuchy)
 
+- **Jan buduje exe z gałęzi `wszystko`** (sieć + bujanie + radio): po każdej zmianie kodu scalić `siec-trakcyjna` do `wszystko` i wypchnąć obie (24.10: zapomniane – Jan zbudował bez `width`, słupy 161x odrzucone).
 - **NOWY CZAT: najpierw `ZADANIA.md`** (pełna lista zadań: zrobione / do zrobienia / do potwierdzenia / odłożone,
   stan 2026-10-24; kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”), potem `KOTWIENIA.md` (kotwienia:
   mapa kart, części, plan, rzeczy czekające na modele), potem ten plik.
