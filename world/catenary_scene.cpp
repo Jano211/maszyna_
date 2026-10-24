@@ -690,6 +690,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     input.missing = data.missing;
     input.ground = data.ground;
     input.height = data.height;
+    input.rope_height = data.rope_height;
     // uchwyty do słupa: tył po drugiej stronie słupa; zero urządzenia na czole przy wysokości rolek, słup zbieżny
     input.pole = poletype;
     {

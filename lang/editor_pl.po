@@ -6075,11 +6075,20 @@ msgstr "Kotwienie przewodów nad główką szyny (m)"
 msgid "Height of the anchor of the contact wires on the mast (the messenger one goes as much higher as at the last pole); by default at the height of the wires at the last pole. Drag or Ctrl+click to type"
 msgstr "Wysokość zakotwienia przewodów jezdnych na słupie (lina nośna o tyle wyżej, co przy ostatnim słupie); domyślnie na wysokości drutów przy ostatnim słupie. Przeciągnij albo Ctrl+klik, żeby wpisać"
 
-msgid "Fixed anchor: contact wires %.2f m over the rails"
-msgstr "Kotwienie stałe: przewody %.2f m nad główką szyny"
+msgid "Fixed anchor: messenger %.2f m, contact wires %.2f m over the rails"
+msgstr "Kotwienie stałe: lina %.2f m, przewody %.2f m nad główką szyny"
 
 msgid "weights, pulleys in series (card %s)"
 msgstr "ciężarowe, rolki szeregowe (karta %s)"
 
 msgid "weights, messenger and contact wires separately (card %s)"
 msgstr "ciężarowe rozdzielone, lina i przewody osobno (karta %s)"
+
+msgid "Messenger anchor above the rail heads (m)"
+msgstr "Kotwienie liny nośnej nad główką szyny (m)"
+
+msgid "Height of the anchor of the messenger on the mast; by default as at the last pole. Drag or Ctrl+click to type"
+msgstr "Wysokość zakotwienia liny nośnej na słupie; domyślnie jak przy ostatnim słupie. Przeciągnij albo Ctrl+klik, żeby wpisać"
+
+msgid "Heights as at the last pole"
+msgstr "Wysokości jak przy ostatnim słupie"

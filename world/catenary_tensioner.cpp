@@ -554,7 +554,8 @@ bool solve_fixed( tensioner_device const &Device, tensioner_type const &Type, te
     auto const pivotx { brackets != nullptr ? brackets->hole_out : 0.0 };
     // wysokości: przewody - podana albo ostatniego podwieszenia; lina - ostatniego podwieszenia albo 1,70 wyżej
     auto const contactheight { Input.height > 0.0 ? Input.height : Input.aimed ? Input.contact_target[ 2 ] : 5.60 };
-    auto const messengerheight { Input.aimed ? Input.messenger_target[ 2 ] + ( Input.height > 0.0 ? Input.height - Input.contact_target[ 2 ] : 0.0 ) : contactheight + 1.70 };
+    auto const messengerheight { Input.rope_height > 0.0 ? Input.rope_height : Input.aimed ? Input.messenger_target[ 2 ] + ( Input.height > 0.0 ? Input.height - Input.contact_target[ 2 ] : 0.0 ) : contactheight + 1.70 };
+    Result.rope_height = messengerheight;
     Result.height = contactheight;
     bool warned { false };
     auto const aimed = [ & ]( vec const &From, double const *Target ) {

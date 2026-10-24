@@ -2169,6 +2169,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 					{
 						data.device = devices[k].card;
 						data.height = 0.0;
+						data.rope_height = 0.0;
 						fixed = devices[k].fixed;
 						edited = true;
 					}
@@ -2278,6 +2279,23 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", fixed ? STR_C("Height of the anchor of the contact wires on the mast (the messenger one goes as much higher as at the last pole); by default at the height of the wires at the last pole. Drag or Ctrl+click to type")
 				                              : STR_C("Height of the pulley axles on the mast; the weights move up or down with them. The mounting table gives 6.70 m. Drag or Ctrl+click to type"));
+			if (fixed)
+			{
+				auto rope{static_cast<float>(data.rope_height > 0.0 ? data.rope_height : (solved != nullptr && solved->rope_height > 0.0 ? solved->rope_height : 7.40))};
+				if (ImGui::SliderFloat(STR_C("Messenger anchor above the rail heads (m)"), &rope, 5.0f, 10.0f, "%.2f"))
+				{
+					data.rope_height = rope;
+					edited = true;
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("Height of the anchor of the messenger on the mast; by default as at the last pole. Drag or Ctrl+click to type"));
+				if ((data.height > 0.0 || data.rope_height > 0.0) && ImGui::Button(STR_C("Heights as at the last pole")))
+				{
+					data.height = 0.0;
+					data.rope_height = 0.0;
+					edited = true;
+				}
+			}
 		}
 		ImGui::PopItemWidth();
 		if (edited)
@@ -2298,7 +2316,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 		if (auto const *result{catenary_anchor_result(index)}; result != nullptr)
 		{
 			if (result->fixed)
-				ImGui::TextDisabled("%s", format(STR_C("Fixed anchor: contact wires %.2f m over the rails"), result->height).c_str());
+				ImGui::TextDisabled("%s", format(STR_C("Fixed anchor: messenger %.2f m, contact wires %.2f m over the rails"), result->rope_height, result->height).c_str());
 			else
 				ImGui::TextDisabled("%s", format(STR_C("%.1f deg C: pulley %.2f m from the pole, weights %.2f m over the rails; %d weights, messenger %.0f daN, contact wires %.0f daN"),
 				                                   Global.AirTemperature, result->b, result->s, result->weights, result->messenger_tension, result->contact_tension).c_str());
