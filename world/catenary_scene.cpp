@@ -670,7 +670,8 @@ assemble_anchor( scene_anchor &Anchor ) {
     {
         auto const *devicetable { devices->table( device->table ) };
         auto const rollers { data.height > 0.0 ? data.height : devicetable != nullptr ? devicetable->height : 6.7 };
-        input.depth = [ pole, rollers ]( double const Height ) { return 0.5 * pole->depth( rollers ) + 0.5 * pole->depth( Height ); };
+        // słup z szerokością wzdłuż toru (161x): urządzenie i uchwyty na ścianach wzdłuż drutów, śruby przez szerokość
+        input.depth = [ pole, rollers ]( double const Height ) { return pole->width > 0.0 ? pole->width : 0.5 * pole->depth( rollers ) + 0.5 * pole->depth( Height ); };
     }
     input.color = data.color;
     input.top_color = data.top_color;
@@ -693,7 +694,8 @@ assemble_anchor( scene_anchor &Anchor ) {
     dx /= along;
     dz /= along;
     auto const table { devices->table( device->table ) };
-    auto const face { 0.5 * pole->depth( data.height > 0.0 ? data.height : table != nullptr ? table->height : 6.7 ) };
+    // czoło: kotwienie ciągnie wzdłuż toru, więc słup kratowy z szerokością wzdłuż toru ma czoło w połowie szerokości
+    auto const face { pole->width > 0.0 ? 0.5 * pole->width : 0.5 * pole->depth( data.height > 0.0 ? data.height : table != nullptr ? table->height : 6.7 ) };
     glm::dvec3 const origin { axis.x + dx * face, axis.y, axis.z + dz * face };
     auto const heading { std::atan2( dz, -dx ) };
     auto const toscene = [ & ]( double const *Point ) {

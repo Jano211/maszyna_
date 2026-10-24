@@ -252,8 +252,11 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
             }
             if( keyword == "brackets" && words.size() >= 2 ) {
                 tensioner_device::bracket_set set;
-                set.pole = words[ 1 ];
-                for( std::size_t k = 2; k < words.size(); ) {
+                std::size_t k { 1 };
+                for( ; k < words.size() && words[ k ] != "top" && words[ k ] != "bottom" && words[ k ] != "hole" && words[ k ] != "bolt"; ++k ) {
+                    set.poles.push_back( words[ k ] );
+                }
+                for( ; k < words.size(); ) {
                     auto const &key { words[ k ] };
                     if( ( key == "top" || key == "bottom" ) && k + 2 < words.size() ) {
                         ( key == "top" ? set.top_front : set.bottom_front ) = words[ k + 1 ];
@@ -462,8 +465,11 @@ tensioner_pulley const *tensioner_catalog::pulley( std::string const &Name ) con
 }
 tensioner_device::bracket_set const *tensioner_device::brackets_for( std::string const &Pole ) const {
     bracket_set const *best { nullptr };
+    std::size_t length { 0 };
     for( auto const &set : brackets ) {
-        if( Pole.rfind( set.pole, 0 ) == 0 && ( best == nullptr || set.pole.size() > best->pole.size() ) ) { best = &set; }
+        for( auto const &pole : set.poles ) {
+            if( Pole.rfind( pole, 0 ) == 0 && ( best == nullptr || pole.size() > length ) ) { best = &set; length = pole.size(); }
+        }
     }
     return best;
 }

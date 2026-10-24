@@ -280,7 +280,7 @@ int main( int argc, char **argv ) {
         // uchwyty jeszcze zakomentowane w danych: ustawione tutaj
         auto withbrackets { *device };
         catenary::tensioner_device::bracket_set set;
-        set.pole = "1611"; set.hole_out = 0.04; set.hole_drop = 0.04; set.bolt = 0.217;
+        set.poles = { "1611" }; set.hole_out = 0.04; set.hole_drop = 0.04; set.bolt = 0.217;
         set.top_front = "5100-01"; set.top_back = "5100-05"; set.bottom_front = "5100-03"; set.bottom_back = "5100-06";
         withbrackets.brackets = { set };
         withbrackets.pivot_top = 0.03436; withbrackets.pivot_bottom = 0.02561;

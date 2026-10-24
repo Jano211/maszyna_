@@ -280,6 +280,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     else if( key == "top" ) { number( pole.top, good ); }
                     else if( key == "length" ) { number( pole.length, good ); }
                     else if( key == "depth" ) { number( pole.depth_top, good ); number( pole.depth_base, good ); }
+                    else if( key == "width" ) { number( pole.width, good ); }
                     else if( key == "mount_max" ) { number( pole.mount_max, good ); }
                     else if( key == "mount_min" ) { number( pole.mount_min, good ); pole.has_mount_min = true; }
                     else if( key == "turn" ) { number( pole.turn, good ); }

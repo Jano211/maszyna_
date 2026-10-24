@@ -139,12 +139,13 @@ struct tensioner_device {
     double ring_arm { 0.200 };          // od osi stosu do osi szekli, która chodzi po prowadnicy (karta 23-5080 wyk. 1: 200)
     double ring_turn { 0.0 };           // stopnie wokół osi stosu: 0 = prowadnica w stronę konstrukcji, 90 = w bok (+Y)
     double ring_at { 1.00 };            // wysokość pierścienia nad spodem stosu (karta 23-0018-2: 1,00 m); ujemna = na wierzchu stosu
-    // uchwyty do konstrukcji (karta 33-0455): para przód + tył ściśnięta śrubami przez słup. Przód: zero na czole konstrukcji,
-    // śruby w +X modelu (w głąb), hole_1 o hole_out przed czołem i hole_drop pod zerem. Tył: ten sam układ, po drugiej stronie.
+    // uchwyty do konstrukcji (karta 33-0455): para przód + tył ściśnięta śrubami przez słup, na ścianach wzdłuż drutów (obrócone
+    // o 90 stopni względem wysięgnika; rozstaw śrub obejmuje słup w poprzek). Przód: zero na czole konstrukcji, śruby w +X modelu
+    // (w głąb), hole_1 o hole_out przed czołem i hole_drop pod zerem. Tył: ten sam układ, po drugiej stronie.
     // Uchwyt przegubowy 4450 (pierwsza część "mount") trzymają dwa: górny wprost za mount_top, dolny odwrócony o 180 stopni za
     // mount_bottom (pivot_top / pivot_bottom nad / pod zerem 4450)
     struct bracket_set {
-        std::string pole;               // przedrostek nazwy słupa, np. 1611
+        std::vector<std::string> poles; // przedrostki nazw słupów, np. 1611-11 (najdłuższy pasujący wygrywa)
         double hole_out { 0.04 }, hole_drop { 0.04 }, bolt { 0.217 };
         std::string top_front, top_back, bottom_front, bottom_back;
     };
@@ -195,7 +196,8 @@ struct tensioner_input {
     double height { 0.0 };              // oś rolek nad główką szyny; 0 = z tablicy. Wyżej/niżej: ciężary o tyle samo (lina ta sama)
     double ground { -0.50 };            // najniższe położenie spodu ciężarów względem główki szyny (grunt, fundament); ZAŁOŻENIE
     double gravity { 0.981 };           // daN/kg
-    // konstrukcja: nazwa słupa (dobór uchwytów) i jego głębokość od czoła do tyłu na wysokości nad główką; puste = bez uchwytów
+    // konstrukcja: nazwa słupa (dobór uchwytów) i jej grubość od czoła do tyłu (wzdłuż drutów; słup 161x - szerokość wzdłuż toru,
+    // przez nią idą śruby uchwytów) na wysokości nad główką; puste = bez uchwytów
     std::string pole;
     std::function<double( double )> depth;
 };
