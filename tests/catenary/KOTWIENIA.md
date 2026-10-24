@@ -179,6 +179,10 @@ W tych katalogach **nie ma** urządzenia, które ciągnie dwie liny i dwa przewo
 0471, 0472, 0480, 0481) są tylko dla typów 3, 4, 10, 26 (jedna lina). Dwie liny nośne (32, 35) są tylko w kotwieniu rozdzielonym
 (dźwignia 6403 albo wyrównywacz 4410 na linie, 4410 na przewodach). Skąd Jan zna 2+2 na jednym stosie – do ustalenia (zdjęcie? stary
 katalog kolprojekt1?).
+- 2026-10-24: zdjęcie transportszynowy.pl IMG_0144 (Jan: prawdopodobnie Kolprojekt z lat 80, karty nie mamy). Widać:
+  wspornik kratowy z ramieniem przegubowym (trójkąt z prętów) na słupie, na końcu jeden krążek; lina z krążka w dół wzdłuż
+  słupa do stosu; od krążka dwie dźwignie pionowe jedna za drugą (bliższa i dalsza), każda dzieli na górny i dolny drut, czyli
+  2 liny + 2 przewody jednym stosem. Przełożenie, element łączący krążek z dźwigniami i wymiary – nieznane.
 
 ### 5. Kotwienia stałe (tom 1: 63-0403 sieci z izolacją, 0404 przewodów, 0405 lin nośnych, 0413 bez izolacji)
 - Na konstrukcji: **4430-1** przegubowy uchwyt kotwienia **[jest]** (lina i przewody osobno, 2 szt.)
