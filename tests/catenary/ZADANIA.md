@@ -124,7 +124,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [ ] Mocowania do słupa wg 33-0455: góra pod rolkę (4510-1/-2, 4520-3…-7, 4570-1, 5100-1/-2), dół pod prowadnicę (4520-1/-2, 4530-3, 4560-1, 5100-3/-4) – **modele + przypisanie wykonań 1–12 do modeli słupów (Jan)**
 - [ ] 6411-01 (łącznik liny z prętem; teraz 0,10 m bez modelu) – model
 - [ ] 4430-01 (`hole_1` −0,0747): ustalić, gdzie stoi
-- [ ] Stary izolator rolkowy (ramka z dwiema porcelanowymi rolkami) zamiast 7150 przy drutach zaśniedziałych – numer, pivoty, czy pręt przed ramką to osobna część, czy na linie nośnej też
+- [ ] Stary izolator rolkowy = **ESN-2025** (model Jana 24.10) zamiast 7150 przy drutach zaśniedziałych – zero i drugi zaczep modelu, czy w kotwieniu też (Jan podał użycie w izolacji przęsła od przęsła)
 - [ ] Czy stan „przejściowe” też ma dawać stare złożenie (5110 i izolator rolkowy)
 - [ ] Obejrzeć w grze: lina proceduralna (czy siedzi w rowkach), obrót krążków przy suwaku temperatury
 - [ ] Obroty części po komplecie modeli (Jan powie, co stoi krzywo)
@@ -138,6 +138,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [ ] Kotwienie środkowe (0406: lina 9831-5, zaciski 1,00 m od słupa środkowego, połączenia V w połowie przęsła); kontrola 12° wysięgnika na skrajnych słupach
 - [ ] Kotwienie środkowe do dźwigara bramki (0463…)
 - [ ] Podniesienie drutu o 0,30 m na słupie, gdzie krzyżują się przęsła naprężenia
+- [ ] Izolacja sieci przęsło od przęsła (0447): łańcuch ESN-2025 – 4420 – wyrównywacz – 5110 (Jan 24.10)
 
 **Wizualizacja i czas**
 
