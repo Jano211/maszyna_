@@ -125,6 +125,7 @@ z zadanej długości drutu → naciąg).
   Jan poprawia z 0,194 na 0,200); po drugiej stronie śruba M12×55 ściągająca końce pierścienia, 210 mm; wyk. 2 Ø405 / 235. **13-5090** (s. 75): uchwyty prowadnic (rozdzielone).
 
 ## Pozostałe kotwienia – jakie klocki (przegląd kart 2026-10-24 16:40, Uzup. 2 + tom 1 + tom 5)
+Lista dla Jana z pivotami: Claude Docs „Kotwienia – modele do zrobienia i pivoty” (https://claude.ai/artifact/11FrwpXXy3aCEq7qm4paPk).
 Oznaczenia: **[jest]** model w `components`, **[brak]** – do zrobienia. Liczby z tabel kart.
 
 ### 1. Wspólne, rolki równoległe – zrobione (0461 z izolacją; 0462 bez izolacji = te same części bez 7150, 3 × 4720)
