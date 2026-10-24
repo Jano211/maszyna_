@@ -874,13 +874,13 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     // przegub 4450 w otworach uchwytów (przy konstrukcji), dalej urządzenie w stronę drutów
     auto const fixedaxle { place_chain( Device.mount, "mount", onstructure( vec { pivotx, 0.0, height } ), out, Result ) };
     // rolki szeregowe: b to oś dużej ruchomej (skrajnej), uchwyt dźwigni zaczyna się na małej ruchomej
-    auto const *small { series ? Catalog.pulley( Device.small_pulley ) : nullptr };
-    if( series && small == nullptr ) { return fail( "no pulley " + Device.small_pulley ); }
+    auto const *smallpulley { series ? Catalog.pulley( Device.small_pulley ) : nullptr };
+    if( series && smallpulley == nullptr ) { return fail( "no pulley " + Device.small_pulley ); }
     vec const movingaxle { series ? b - Device.small_spacing : b, 0.0, height };
     vec const movingbig { b, 0.0, height };
     auto const fixedsmall { fixedaxle + out * Device.small_spacing };
     auto const radius { 0.5 * pulley->diameter + 0.5 * Device.rope_diameter };
-    auto const smallradius { series ? 0.5 * small->diameter + 0.5 * Device.rope_diameter : radius };
+    auto const smallradius { series ? 0.5 * smallpulley->diameter + 0.5 * Device.rope_diameter : radius };
     if( series ? movingaxle.x - fixedsmall.x < 2.0 * smallradius : movingaxle.x - fixedaxle.x < 2.0 * radius ) {
         Result.warnings.push_back( "the pulleys overlap: the network pulled the moving one to the structure" );
     }
@@ -900,8 +900,8 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
             Result.parts.push_back( placement );
         };
         spun( "pulley_fixed", pulley->name, fixedaxle, Result.turn_fixed_b );
-        spun( "pulley_fixed_small", small->name, fixedsmall, Result.turn_fixed_a );
-        spun( "pulley_moving", small->name, movingaxle, Result.turn_moving_a );
+        spun( "pulley_fixed_small", smallpulley->name, fixedsmall, Result.turn_fixed_a );
+        spun( "pulley_moving", smallpulley->name, movingaxle, Result.turn_moving_a );
         spun( "pulley_moving_big", pulley->name, movingbig, Result.turn_moving_b );
         if( false == Device.fixed_holder.empty() ) { Result.parts.push_back( placed_along( "holder_fixed", Device.fixed_holder, fixedaxle, out ) ); }
     }
