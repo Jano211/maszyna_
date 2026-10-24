@@ -457,6 +457,9 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     s -= 4.0 * Input.elongation;
     // pręt innej długości niż w tablicy: spód ciężarów niżej o różnicę (uwaga 3 na karcie 0011-1), góra pręta na tej samej linie
     s -= rodlength - table->rod;
+    // urządzenie wyżej albo niżej na konstrukcji niż w tablicy: lina ta sama, ciężary przesunięte o tyle samo
+    auto const height { Input.height > 0.0 ? Input.height : table->height };
+    s += height - table->height;
 
     // stos ciężarów od dołu, brakujące z góry
     std::vector<tensioner_weight const *> stack;
@@ -483,7 +486,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     Result.b = b;
     Result.s = s;
 
-    auto const height { table->height };
+    Result.height = height;
     vec const out { 1.0, 0.0, 0.0 }, down { 0.0, 0.0, -1.0 };
 
     // rolka stała na uchwytach od czoła konstrukcji, rolka ruchoma w b
@@ -520,7 +523,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     // model dźwigni (Jan): zero w otworze osi II, otwory na drutach odsunięte w -X modelu, czyli w stronę drutów;
     // -X modelu idzie więc w +X urządzenia (obrót o 180 stopni wokół pionu), odwrócona dodatkowo o 180 wokół Y
     auto const holepoint = [ & ]( std::pair<double, double> const &Hole ) {
-        return axispoint + vec { -sign * ( Hole.second - axishole->second ), 0.0, sign * ( Hole.first - axishole->first ) };
+        return axispoint + vec { sign * ( Hole.second - axishole->second ), 0.0, sign * ( Hole.first - axishole->first ) };
     };
     {
         auto placement { placed( "lever", lever->name, holepoint( { 0.0, 0.0 } ) ) };

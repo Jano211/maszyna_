@@ -661,6 +661,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     input.elongation = data.elongation;
     input.missing = data.missing;
     input.ground = data.ground;
+    input.height = data.height;
     input.color = data.color;
     input.top_color = data.top_color;
     // stare złożenie: łańcuch z tym kotwieniem ma druty zaśniedziałe (stan 1)
@@ -676,7 +677,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     dx /= along;
     dz /= along;
     auto const table { devices->table( device->table ) };
-    auto const face { 0.5 * pole->depth( table != nullptr ? table->height : 6.7 ) };
+    auto const face { 0.5 * pole->depth( data.height > 0.0 ? data.height : table != nullptr ? table->height : 6.7 ) };
     glm::dvec3 const origin { axis.x + dx * face, axis.y, axis.z + dz * face };
     auto const heading { std::atan2( dz, -dx ) };
     auto const toscene = [ & ]( double const *Point ) {

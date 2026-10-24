@@ -160,6 +160,7 @@ struct tensioner_input {
     bool aimed { false };
     double messenger_target[ 3 ] { 0.0, 0.0, 0.0 };
     double contact_target[ 3 ] { 0.0, 0.0, 0.0 };        // stare złożenie (druty zaśniedziałe): uchwyty krańcowe przewodów 5110 zamiast 5120
+    double height { 0.0 };              // oś rolek nad główką szyny; 0 = z tablicy. Wyżej/niżej: ciężary o tyle samo (lina ta sama)
     double ground { -0.50 };            // najniższe położenie spodu ciężarów względem główki szyny (grunt, fundament); ZAŁOŻENIE
     double gravity { 0.981 };           // daN/kg
 };
@@ -177,6 +178,7 @@ struct tensioner_result {
     std::vector<std::vector<double>> rope;  // punkty liny (x, y, z) po kolei, od zaczepu przy rolce stałej do pręta
     double b { 0.0 }, s { 0.0 };            // położenie rolki ruchomej i spodu ciężarów
     double stack_height { 0.0 };
+    double height { 0.0 };                  // oś rolek nad główką szyny
     int weights { 0 };                      // zawieszone ciężary
     double tension { 0.0 };                 // daN, całkowity naciąg sieci od ciężarów (zero, gdy ciężary stoją na gruncie)
     double messenger_tension { 0.0 }, contact_tension { 0.0 };

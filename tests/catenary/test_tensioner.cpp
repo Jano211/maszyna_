@@ -176,6 +176,44 @@ int main( int argc, char **argv ) {
         check( old == 2, "stare zlozenie: uchwyty krancowe 5110 na obu przewodach" );
     }
 
+    // dzwignia: lancuchy zaczynaja sie w otworach modelu (otwor w modelu: X = -odsuniecie, Z = wzdluz osi od zera)
+    {
+        auto const *lever { catalog.lever( "6406-01" ) };
+        for( auto const &type : device->types ) {
+            catenary::tensioner_input input;
+            input.type = type.code;
+            catenary::tensioner_result result;
+            catenary::solve_tensioner( catalog, *device, input, result );
+            catenary::tensioner_placement const *body { nullptr }, *messenger { nullptr }, *contact { nullptr };
+            for( auto const &part : result.parts ) {
+                if( part.role == "lever" ) { body = &part; }
+                if( part.role == "messenger.1" ) { messenger = &part; }
+                if( part.role == "contact.1" ) { contact = &part; }
+            }
+            auto const fits = [ & ]( catenary::tensioner_placement const *Link, std::string const &Hole ) {
+                auto const &h { lever->holes.at( Hole ) };
+                double const model[ 3 ] { -h.second, 0.0, h.first };
+                for( int a = 0; a < 3; ++a ) {
+                    auto const at { body->position[ a ] + body->rotation[ 3 * a ] * model[ 0 ] + body->rotation[ 3 * a + 1 ] * model[ 1 ] + body->rotation[ 3 * a + 2 ] * model[ 2 ] };
+                    if( std::abs( at - Link->position[ a ] ) > 1e-6 ) { return false; }
+                }
+                return true;
+            };
+            check( body && messenger && contact && fits( messenger, type.messenger_hole ) && fits( contact, type.contact_hole ),
+                "typ " + std::to_string( type.code ) + ": lacznik 4720 liny i przewodow w otworach dzwigni " + type.messenger_hole + "/" + type.contact_hole );
+        }
+    }
+
+    // wyzej na slupie: rolki i ciezary o tyle samo wyzej, lina ta sama
+    {
+        catenary::tensioner_input input;
+        catenary::tensioner_result low, high;
+        catenary::solve_tensioner( catalog, *device, input, low );
+        input.height = 7.20;
+        catenary::solve_tensioner( catalog, *device, input, high );
+        check( std::abs( high.s - low.s - 0.50 ) < 1e-9 && std::abs( high.height - 7.20 ) < 1e-9 && std::abs( rope_length( high ) - rope_length( low ) ) < 1e-9, "rolki 0,5 m wyzej: ciezary 0,5 m wyzej, lina ta sama" );
+    }
+
     // łańcuchy wycelowane w ostatnie podwieszenie: konce drutow na prostej od otworu dzwigni do podwieszenia
     {
         catenary::tensioner_input input;

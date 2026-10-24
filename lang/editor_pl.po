@@ -5921,3 +5921,9 @@ msgstr "Klik: urządzenie naprężające na tym słupie"
 
 msgid "Wires: LMB on the pole the tensioning device goes on"
 msgstr "Druty: LPM na słup, na którym ma stanąć urządzenie naprężające"
+
+msgid "Pulleys above the rail heads (m)"
+msgstr "Rolki nad główką szyny (m)"
+
+msgid "Height of the pulley axles on the mast; the weights move up or down with them. The mounting table gives 6.70 m. Drag or Ctrl+click to type"
+msgstr "Wysokość osi rolek na słupie; ciężary przesuwają się razem z nimi. Tablica montażowa podaje 6,70 m. Przeciągnij albo Ctrl+klik, żeby wpisać"

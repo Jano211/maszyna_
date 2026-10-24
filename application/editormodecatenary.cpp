@@ -1984,6 +1984,15 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("Creep and wear of an old network: the weights hang 4 times this much lower; on the ground the network loses its tension"));
+			auto const *solved{catenary_anchor_result(index)};
+			auto height{static_cast<float>(data.height > 0.0 ? data.height : (solved != nullptr && solved->height > 0.0 ? solved->height : 6.70))};
+			if (ImGui::SliderFloat(STR_C("Pulleys above the rail heads (m)"), &height, 5.0f, 9.0f, "%.2f"))
+			{
+				data.height = height;
+				edited = true;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Height of the pulley axles on the mast; the weights move up or down with them. The mounting table gives 6.70 m. Drag or Ctrl+click to type"));
 		}
 		ImGui::PopItemWidth();
 		if (edited)
