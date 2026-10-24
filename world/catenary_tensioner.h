@@ -162,6 +162,12 @@ struct tensioner_device {
     std::string safety_fixed, safety_moving;
     double safety_arm { 1.0 };          // rozstaw otworów ramienia
     double safety_offset { 0.06 };      // odsunięcie każdej pary od środka rolki w bok
+    // zabezpieczenie 4600 wyk. 2 (rolki szeregowe, karta 13-0421 poz. 10): ramiona z osi małych rolek (stałej i ruchomej) w dół,
+    // na końcach drążek; puste = bez niego. safety_series <ramię przy stałej> <ramię przy ruchomej> <drążek> <ramię> <drążek> <w bok>
+    std::string series_arm_fixed, series_arm_moving, series_bar;
+    double series_arm { 0.46268 }, series_bar_length { 1.30 };
+    // tytuł do wyboru w edytorze (karta z odmianą widoczna na liście mimo "-" w nazwie); puste = bez
+    std::string title;
     // prowadnica ciężarów (5070, karta 33-0455) i pierścień prowadzący na wierzchu stosu (5080). Model prowadnicy: zero w osi
     // przesuwu pierścienia na dole, w +Z (długość), punkty "mount"/"end" mocowań do wsporników o guide_mount w -X (w stronę
     // konstrukcji). Pierścień: zero w osi stosu, poziomo, "mount" o ring_arm w -X (w osi przesuwu po prowadnicy); pusty = bez nich

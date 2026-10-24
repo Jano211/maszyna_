@@ -401,7 +401,8 @@ int main( int, char *argv[] ) {
             auto const devices { catenary_anchor_devices() };
             auto const listed { std::count_if( devices.begin(), devices.end(), []( catenary_anchor_card const &Item ) { return Item.card == "0403" && Item.fixed; } ) == 1
                 && std::count_if( devices.begin(), devices.end(), []( catenary_anchor_card const &Item ) { return Item.card == "0471" && Item.series && false == Item.fixed; } ) == 1
-                && std::none_of( devices.begin(), devices.end(), []( catenary_anchor_card const &Item ) { return Item.card.find( '-' ) != std::string::npos; } ) };
+                && std::none_of( devices.begin(), devices.end(), []( catenary_anchor_card const &Item ) { return Item.card.find( '-' ) != std::string::npos && Item.title.empty(); } )
+                && std::count_if( devices.begin(), devices.end(), []( catenary_anchor_card const &Item ) { return Item.card == "0461-2x2" && false == Item.title.empty(); } ) == 1 };
             std::printf( "  kotwienie stale: czesci %d, uwagi %d, przesel od nowa %d\n", static_cast<int>( catenary_anchor_parts( 0 ) ), fixed != nullptr ? static_cast<int>( fixed->warnings.size() ) : -1, static_cast<int>( mock_span_bodies.size() ) );
             check( listed && fixed != nullptr && fixed->fixed && fixed->weights == 0 && catenary_anchor_parts( 0 ) > 10 && mock_span_bodies.size() == 2,
                 "kotwienie stale 0403 w scenerii: lista kart, bez ciezarow, przesla od nowa" );

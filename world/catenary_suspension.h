@@ -62,6 +62,7 @@ struct chain {
     // i karta (0406 z izolacją, 0408 bez); lina idzie do słupów sąsiednich podwieszeń. Puste = brak
     std::string middle;
     std::string middle_device { "0406" };
+    double      middle_heights[ 2 ] { 0.0, 0.0 };  // uchwyty liny kotwienia na słupach przed i za (nad główką); 0 = lina nośna sąsiada
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
 };
 

@@ -662,8 +662,14 @@ assemble_anchor( scene_anchor &Anchor ) {
     auto const *pole { catalog->pole( poletype ) };
     if( pole == nullptr ) { ErrorLog( label + "uses pole \"" + poletype + "\" which isn't in the supports catalogue" ); return 0; }
     catenary::tensioner_input input;
-    if( false == data.network.empty() ) {
-        if( auto const *type { catenary::types().find( data.network ) }; type != nullptr ) {
+    // typ sieci: łańcucha, który się na tym kotwieniu kończy (zmiana typu w łańcuchu zmienia kotwienie), inaczej z wpisu
+    auto network { data.network };
+    for( auto const &chain : Chains ) {
+        if( chain.removed || chain.file != Anchor.file || data.name.empty() || chain.data.type.empty() ) { continue; }
+        if( chain.data.anchor_start == data.name || chain.data.anchor_end == data.name ) { network = chain.data.type; break; }
+    }
+    if( false == network.empty() ) {
+        if( auto const *type { catenary::types().find( network ) }; type != nullptr ) {
             input.type = type->type.code;
             input.contacts = type->type.contact_count;
             input.messengers = type->type.messenger_count;
@@ -686,7 +692,7 @@ assemble_anchor( scene_anchor &Anchor ) {
                 else if( kind != nullptr ) { device = kind; }
             }
         }
-        else { ErrorLog( label + "uses network type \"" + data.network + "\" which has no file" ); }
+        else { ErrorLog( label + "uses network type \"" + network + "\" which has no file" ); }
     }
     input.temperature = Global.AirTemperature;
     input.distance = data.distance;
@@ -1162,11 +1168,10 @@ assemble_middle( scene_chain &Chain ) {
         // zacisk na linie nośnej 1,00 m od środkowego podwieszenia w stronę sąsiedniego
         auto const towards { vec( ropes[ neighbour ] ) - middlerope };
         auto const clamp { middlerope + towards * ( 1.0 / std::max( 1.0, glm::length( glm::dvec2 { towards.x, towards.z } ) ) ) };
-        // połowa przęsła: przewód jezdny (prosto między końcami) i wierzchołek V 1,30 m nad nim (ramiona 1,50, rozstaw 1,50)
+        // połowa przęsła: przewód jezdny (prosto między końcami), lina nośna nad nim na wysokości najkrótszego wieszaka
         auto const wiremiddle { ( vec( wires[ 1 ] ) + vec( wires[ neighbour ] ) ) * 0.5 };
         auto const alongspan { glm::normalize( glm::dvec3 { wires[ neighbour ][ 0 ] - wires[ 1 ][ 0 ], 0.0, wires[ neighbour ][ 2 ] - wires[ 1 ][ 2 ] } ) };
-        auto const vdepth { std::sqrt( 1.5 * 1.5 - 0.75 * 0.75 ) };
-        auto const vtop { wiremiddle + glm::dvec3 { 0.0, vdepth, 0.0 } };
+        auto const messengerlow { std::max( 0.30, data.hangers[ 0 ] ) };
         // koniec liny na słupie sąsiedniego podwieszenia: urządzenie kotwienia stałego tylko z liną
         auto const index { suspension_named( Chain.file, data.suspensions[ position + ( side == 0 ? -1 : 1 ) ] ) };
         glm::dvec3 ropeend { vec( ropes[ neighbour ] ) };
@@ -1216,9 +1221,9 @@ assemble_middle( scene_chain &Chain ) {
                 input.depth = [ pole ]( double const Height ) { return pole->width > 0.0 ? pole->width : pole->depth( Height ); };
                 input.structure_angle = std::atan2( glm::dot( glm::dvec3 { structure.x, 0.0, structure.y }, axes[ 1 ] ), glm::dot( glm::dvec3 { structure.x, 0.0, structure.y }, axes[ 0 ] ) );
                 input.aimed = true;
-                todevice( vtop, input.messenger_target );
+                todevice( clamp, input.messenger_target );
                 todevice( vec( wires[ neighbour ] ), input.contact_target );
-                input.rope_height = ropes[ neighbour ][ 1 ] - axis.y;
+                input.rope_height = data.middle_heights[ side ] > 0.0 ? data.middle_heights[ side ] : ropes[ neighbour ][ 1 ] - axis.y;
                 input.height = wires[ neighbour ][ 1 ] - axis.y;
                 catenary::tensioner_result result;
                 if( catenary::solve_tensioner( *devices, *device, input, result ) ) {
@@ -1247,34 +1252,37 @@ assemble_middle( scene_chain &Chain ) {
                 }
             }
         }
-        // lina: od końca na sąsiednim słupie, przez wierzchołek V w połowie przęsła (parabola po odległości w planie), do zacisku
-        std::vector<glm::dvec3> rope;
-        auto const flat = []( glm::dvec3 const &A, glm::dvec3 const &B ) { return glm::length( glm::dvec2 { A.x - B.x, A.z - B.z } ); };
-        auto const total { flat( ropeend, clamp ) };
-        auto const tv { total > 1e-6 ? flat( ropeend, vtop ) / total : 0.5 };
-        int const steps { 24 };
-        for( int k = 0; k <= steps; ++k ) {
-            auto const t { static_cast<double>( k ) / steps };
-            auto point { ropeend + ( clamp - ropeend ) * t };
-            // wysokość: kwadratowa przez koniec (t 0), wierzchołek V (tv) i zacisk (t 1)
-            auto const y0 { ropeend.y }, y1 { vtop.y }, y2 { clamp.y };
-            auto const l0 { ( t - tv ) * ( t - 1.0 ) / ( ( 0.0 - tv ) * ( 0.0 - 1.0 ) ) }, l1 { ( t - 0.0 ) * ( t - 1.0 ) / ( ( tv - 0.0 ) * ( tv - 1.0 ) ) },
-                       l2 { ( t - 0.0 ) * ( t - tv ) / ( ( 1.0 - 0.0 ) * ( 1.0 - tv ) ) };
-            point.y = ( tv > 1e-3 && tv < 1.0 - 1e-3 ) ? y0 * l0 + y1 * l1 + y2 * l2 : point.y;
-            rope.push_back( point );
-        }
-        // przez słup środkowy do zacisku po drugiej stronie (połowa na każdą stronę)
-        rope.push_back( clamp + ( middlerope - clamp ) * 1.0 );
-        add_tube( solid, rope, ropeheight );
-        // V: ramiona z liny po 0,75 m w obie strony od wierzchołka do przewodu (złączka 6410-5)
-        auto const ropeat = [ & ]( glm::dvec3 const &Near ) {
-            // punkt liny najbliżej w planie
-            auto best { rope.front() };
-            for( auto const &point : rope ) { if( flat( point, Near ) < flat( best, Near ) ) { best = point; } }
-            return best;
+        // lina kotwienia: od końca na sąsiednim słupie do zacisku przy słupie środkowym, zwisa jak lina (parabola, 0,5 m
+        // na 60 m - ZAŁOŻENIE), nad liną nośną
+        auto const hanging = [ & ]( glm::dvec3 const &From, glm::dvec3 const &To, double const Sag, int const Steps ) {
+            std::vector<glm::dvec3> points;
+            for( int k = 0; k <= Steps; ++k ) {
+                auto const t { static_cast<double>( k ) / Steps };
+                auto point { From + ( To - From ) * t };
+                point.y -= 4.0 * Sag * t * ( 1.0 - t );
+                points.push_back( point );
+            }
+            return points;
         };
-        auto const a { ropeat( wiremiddle - alongspan * 0.75 ) }, b { ropeat( wiremiddle + alongspan * 0.75 ) };
-        add_tube( solid, { a, wiremiddle, b }, ropeheight );
+        auto const flat = []( glm::dvec3 const &A, glm::dvec3 const &B ) { return glm::length( glm::dvec2 { A.x - B.x, A.z - B.z } ); };
+        auto rope { hanging( ropeend, clamp, 0.5 * flat( ropeend, clamp ) / 60.0, 24 ) };
+        // między zaciskami przy słupie środkowym lina zwisa swobodnie pod uchwytem liny nośnej (Jan 2026-10-25): do połowy
+        // odległości (słup środkowy) 0,25 m poniżej liny nośnej
+        {
+            auto const below { hanging( clamp, middlerope, 0.0, 6 ) };
+            for( std::size_t k = 1; k < below.size(); ++k ) {
+                auto point { below[ k ] };
+                auto const t { static_cast<double>( k ) / ( below.size() - 1 ) };
+                point.y -= 0.25 * std::sin( 0.5 * 3.14159265358979323846 * t );
+                rope.push_back( point );
+            }
+        }
+        add_tube( solid, rope, ropeheight );
+        // V (złączka 6410-5 na przewodzie w połowie przęsła, ramiona do liny nośnej 1,50 m w obie strony wzdłuż przęsła): luźne
+        // linki zwisające między zaciskiem na linie nośnej a przewodem
+        auto const a { wiremiddle - alongspan * 1.5 + glm::dvec3 { 0.0, messengerlow, 0.0 } }, b { wiremiddle + alongspan * 1.5 + glm::dvec3 { 0.0, messengerlow, 0.0 } };
+        add_tube( solid, hanging( a, wiremiddle, 0.12, 12 ), ropeheight );
+        add_tube( solid, hanging( wiremiddle, b, 0.12, 12 ), ropeheight );
         // bryły zastępcze: zaciski 5560/5570 (na linie nośnej przy słupie środkowym i na końcach V), złączka 6410 na przewodzie
         add_box( solid, clamp, towards, 0.10, 0.045 );
         add_box( solid, a, alongspan, 0.08, 0.04 );
@@ -2050,7 +2058,9 @@ catenary_anchor_devices() {
     std::vector<catenary_anchor_card> result;
     if( auto const *devices { tensioners() }; devices != nullptr ) {
         for( auto const &device : devices->devices() ) {
-            if( device.name.find( '-' ) == std::string::npos && device.only.empty() ) { result.push_back( { device.name, device.fixed, false == device.small_pulley.empty() || device.split, device.split } ); }
+            if( ( device.name.find( '-' ) == std::string::npos || false == device.title.empty() ) && device.only.empty() ) {
+                result.push_back( { device.name, device.fixed, false == device.small_pulley.empty() || device.split, device.split, device.title } );
+            }
         }
     }
     return result;

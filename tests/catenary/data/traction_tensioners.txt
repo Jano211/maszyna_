@@ -141,6 +141,7 @@ enddevice
 // 2 liny + 2 przewody na jednym stosie (siec 32, 35): urzadzenie jak 0461 (dwie podwojne rolki 1:4), dwie dzwignie 6406 szeregowo.
 // Ze zdjecia transportszynowy.pl IMG_0144 i opisu Jana (prawdopodobnie Kolprojekt z lat 80, karty nie mamy) - wymiary i otwory ZALOZONE.
 device 0461-2x2 table 0011-1 pulley 4460-01 lever 6403-01 lever2 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
+  title 2+2 na jednym stosie
   mount 4450-01 0.0747 4440-02 0.27
   pivot 0.03436 0.02561       // 4450-01: mount_top / mount_bottom nad / pod zerem - tu wchodza uchwyty 5100 (gorny i dolny odwrocony)
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
@@ -384,9 +385,10 @@ enddevice
 // 13-0471 kotwienie ciezarowe sieci z izolacja, rolki szeregowe, ciezary Ø400 (rysunek ukladu jak 13-0421, tom 1 s. 98): przy slupie
 // 4450 + 4440-7, duza 4460-3, na 4440-6 mala 4460-2; wozek: mala 4460-2 i duza 4460-3 na 4440-5, dalej dzwignia 6406 jak 0461.
 // Ciezary 6322-1 (26/24/20/33), prety 6401-3 (typ 3, 4) / -2 (10) / -1 (26); zamocowania 13-0470: pierscien 5080-2 0,70 nad spodem
-// stosu (13-0018-3). Zabezpieczenie 4600-2 (trapez pod rolkami) - jeszcze nie stawiane.
+// stosu (13-0018-3). Zabezpieczenie 4600-2: trapez pod malymi rolkami (ramiona 4600-3/-4, drazek 4600-5).
 device 0471 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   series 4460-02 0.336 0.703 holder 4440-06   // mala rolka 0,336 za duza (hole_1 4440-6 i 4440-5), zaczep liny w hole_2 4440-6 (0,703)
+  safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06   // 4600 wyk. 2: ramiona 0,463 z osi malych rolek, drazek 1,30 (modele Jana); para po obu stronach
   mount 4450-01 0.0747 4440-07 0.41
   pivot 0.03436 0.02561
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
@@ -414,6 +416,7 @@ enddevice
 // 23-0480 to samo z ciezarami Ø306 i zeliwnymi (stos jak 0461), przy slupie 4440-4; pierscien 5080-1 jak 0461 - ZALOZENIE
 device 0480 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   series 4460-02 0.336 0.703 holder 4440-06   // mala rolka 0,336 za duza (hole_1 4440-6 i 4440-5), zaczep liny w hole_2 4440-6 (0,703)
+  safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06   // 4600 wyk. 2: ramiona 0,463 z osi malych rolek, drazek 1,30 (modele Jana); para po obu stronach
   mount 4450-01 0.0747 4440-04 0.32
   pivot 0.03436 0.02561
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
@@ -455,6 +458,7 @@ device 0482 kind split
 enddevice
 device 0482-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   series 4460-02 0.336 0.703 holder 4440-06
+  safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 4450-01 0.0747 4440-04 0.32
   pivot 0.03436 0.02561
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
@@ -477,6 +481,7 @@ device 0482-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01
 enddevice
 device 0482-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   series 4460-02 0.336 0.703 holder 4440-06
+  safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 4450-01 0.0747 4440-04 0.32
   pivot 0.03436 0.02561
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
@@ -500,6 +505,7 @@ device 0482-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490
 enddevice
 device 0482-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   series 4460-02 0.336 0.703 holder 4440-06
+  safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 4450-01 0.0747 4440-04 0.32
   pivot 0.03436 0.02561
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
@@ -523,6 +529,7 @@ device 0482-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490
 enddevice
 device 0482-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   series 4460-02 0.336 0.703 holder 4440-06
+  safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 5040-02 0.785
   pivot 0.03436 0.02561
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
@@ -557,6 +564,7 @@ device 0486 kind split
 enddevice
 device 0486-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   series 4460-02 0.336 0.703 holder 4440-06
+  safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 4450-01 0.0747 4440-04 0.32
   pivot 0.03436 0.02561
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
@@ -579,6 +587,7 @@ device 0486-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01
 enddevice
 device 0486-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   series 4460-02 0.336 0.703 holder 4440-06
+  safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 4450-01 0.0747 4440-04 0.32
   pivot 0.03436 0.02561
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
@@ -602,6 +611,7 @@ device 0486-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490
 enddevice
 device 0486-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   series 4460-02 0.336 0.703 holder 4440-06
+  safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 4450-01 0.0747 4440-04 0.32
   pivot 0.03436 0.02561
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
@@ -625,6 +635,7 @@ device 0486-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490
 enddevice
 device 0486-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6401-03 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205
   series 4460-02 0.336 0.703 holder 4440-06
+  safety_series 4600-03 4600-04 4600-05 0.46268 1.30 0.06
   mount 5040-02 0.785
   pivot 0.03436 0.02561
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06

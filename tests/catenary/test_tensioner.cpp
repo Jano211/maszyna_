@@ -591,9 +591,9 @@ int main( int argc, char **argv ) {
             input.depth = []( double ) { return 0.12; };
             catenary::tensioner_result result;
             good = good && catenary::solve_tensioner( catalog, *series, input, result ) && result.warnings.empty();
-            int pulleys { 0 };
-            for( auto const &part : result.parts ) { pulleys += part.role.rfind( "pulley_", 0 ) == 0; }
-            good = good && pulleys == 4;
+            int pulleys { 0 }, safety { 0 };
+            for( auto const &part : result.parts ) { pulleys += part.role.rfind( "pulley_", 0 ) == 0; safety += part.part.rfind( "4600-0", 0 ) == 0; }
+            good = good && pulleys == 4 && safety == 6;
             lengths[ index ] = rope_length( result );
             bs[ index ] = result.b;
             ss[ index ] = result.s;
@@ -602,7 +602,7 @@ int main( int argc, char **argv ) {
         good = good && std::abs( lengths[ 0 ] - lengths[ 1 ] ) < 0.03 && std::abs( lengths[ 2 ] - lengths[ 1 ] ) < 0.03 && std::abs( lengths[ 1 ] - 10.0 ) < 0.6;
         good = good && std::abs( ( ss[ 0 ] - ss[ 2 ] ) - 4.0 * ( bs[ 0 ] - bs[ 2 ] ) ) < 1e-6 && std::abs( bs[ 1 ] - 2.50 ) < 1e-6;
         std::printf( "    %s: lina %.2f / %.2f / %.2f m, b %.2f..%.2f\n", name, lengths[ 0 ], lengths[ 1 ], lengths[ 2 ], bs[ 2 ], bs[ 0 ] );
-        check( good, std::string( "rolki szeregowe " ) + name + ": 4 rolki, lina stalej dlugosci (karta 4490-2: 10,00 m), ciezary 4 razy b, tablica 0011-5 bn 2,50" );
+        check( good, std::string( "rolki szeregowe " ) + name + ": 4 rolki, zabezpieczenie 4600-3/-4/-5 (2 komplety), lina stalej dlugosci (karta 4490-2: 10,00 m), ciezary 4 razy b, tablica 0011-5 bn 2,50" );
     }
 
     // kotwienie rozdzielone 0482 (Ø306) i 0486 (Ø400): dwa urzadzenia (7,00 i 6,30), dwa stosy, naciagi jak w typach sieci

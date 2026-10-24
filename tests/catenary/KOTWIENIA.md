@@ -126,7 +126,8 @@ z zadanej długości drutu → naciąg).
   i 0480 (Ø306 + żeliwne jak 0461, 4440-4). Układ z rysunku 13-0421: przy słupie duża 4460-3 i na 4440-6 mała 4460-2 (0,336),
   wózek: mała i duża na 4440-5 (dźwignia w hole_2 0,703); lina od zaczepu w hole_2 4440-6 przez małą ruchomą, małą stałą,
   dużą ruchomą i dużą stałą w dół – 1:4, długość 9,6 / 10,0 m (karta 4490-2: 10,00) stała od −25 do +40 °C.
-  Tablica 0011-5: b do osi skrajnej (dużej ruchomej) bn 2,50. Zabezpieczenie 4600-2 (trapez pod rolkami) jeszcze nie stawiane.
+  Tablica 0011-5: b do osi skrajnej (dużej ruchomej) bn 2,50. Zabezpieczenie 4600-2: ramiona 4600-3 / -4 (0,463) z osi małych
+  rolek, drążek 4600-5 (1,30) między ich końcami – trapez jak na karcie 0421 (para po obu stronach rolek).
 - Edytor: „Rodzaj” kotwienia = karta (ciężarowe 0461, szeregowe 0471/0480, stałe 0403); odmiany dla typów sieci (0461-2x2,
   0403-32 …) dobiera sam (najpierw ta sama karta, potem ten sam rodzaj).
 - **Rozdzielone (dwa stosy)** – zrobione (`kind split`): 0482 (Ø306 + żeliwne, 23-0482/0483, zamocowania 0457) i 0486 (Ø400,
@@ -149,6 +150,12 @@ z zadanej długości drutu → naciąg).
   lina i V – rury 9 mm (ZAŁOŻENIE, przekroju 9831-5 brak). Wszystko doczepione do brył przęseł przed i za słupem środkowym.
 - Kotwienia ciężarowe łańcucha z kotwieniem środkowym liczą `distance` same – wzdłuż łańcucha od podwieszenia środkowego do
   słupa kotwienia (suwak w edytorze znika). Edytor: „Kotwienie środkowe” (wybór słupa wewnątrz łańcucha) i rodzaj 0406 / 0408.
+- Poprawki Jana 2026-10-25 00:30: V łączy **linę nośną** z przewodem (nie linę kotwienia): złączka 6410 w połowie przęsła,
+  ramiona do zacisków na linie nośnej 1,50 m w obie strony, luźne (zwis 0,12); lina nośna tam na wysokości najkrótszego wieszaka.
+  Lina kotwienia od słupa sąsiedniego do zacisku – zwis 0,5 m / 60 m (ZAŁOŻENIE), między zaciskami przy słupie środkowym zwisa
+  0,25 m pod linę nośną (pod jej uchwytem). Wysokości uchwytów na słupach przed i za – suwaki (`middle_height <przed> <za>`).
+  Wcześniej rozstaw V raz 1,5 raz 0 – brał najbliższe punkty liny co 1/24 długości; teraz liczony wprost.
+- Sieć teownikowa ma przy słupie dodatkową obejmę jak na linie nośnej – nie zrobione (Jan ma tylko rurowe).
 - Jeszcze nie: jednostronna izolacja 0418, do dźwigara bramki 0416 (4590).
 
 ## Brakujące ciężary skracają sieć (2026-10-24 wieczór)

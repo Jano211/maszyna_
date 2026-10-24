@@ -6116,3 +6116,15 @@ msgstr "brak"
 
 msgid "Distance from the middle anchor: along the chain"
 msgstr "Odległość od kotwienia środkowego: wzdłuż łańcucha"
+
+msgid "Anchor rope on the pole before (m)"
+msgstr "Lina kotwienia na słupie przed (m)"
+
+msgid "Anchor rope on the pole after (m)"
+msgstr "Lina kotwienia na słupie za (m)"
+
+msgid "Height of the anchor of the middle anchor rope on that pole above the rail heads; by default at the messenger. Move it when it hits the cantilever"
+msgstr "Wysokość zakotwienia liny kotwienia środkowego na tym słupie nad główką szyny; domyślnie przy linie nośnej. Przesuń, gdy wchodzi w wysięgnik"
+
+msgid "Anchor rope at the messenger"
+msgstr "Lina kotwienia przy linie nośnej"
