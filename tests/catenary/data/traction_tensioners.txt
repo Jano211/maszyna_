@@ -645,3 +645,86 @@ device 0486-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6401-03 rope 4490-01
   type 32 stack 6322-1 20
   type 35 stack 6322-1 18
 enddevice
+
+// ---- kotwienia srodkowe (lina kotwienia srodkowego 9831-5; wpis "middle <podwieszenie>" w lancuchu) ----------------------------
+// 63-0406 z dwustronna izolacja (tom 1 s. 92): na slupach sasiednich podwieszen 4430-1 w parze uchwytow, z jednej strony
+// 7150-5120-5, z drugiej 4420-4720-7150-5120-5 (sruba rzymska do regulacji); lina 9831-5 (130-142 m) zacisnieta na linie nosnej
+// 1,00 m z kazdej strony slupa srodkowego (5560-5 / 5570-5), w polowie sasiednich przesel V 1,50 + 1,50 m do przewodu jezdnego
+// (6410-5). Zaciski i zlaczki - bryly zastepcze (modeli brak), lina - rura. 63-0408 bez izolacji: 6511-1 zamiast 7150.
+// Wysokosc uchwytu: lina nosna przy slupie sasiednim.
+device 0406 kind fixed
+  only messenger
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  messenger 7150-01 0.8324
+  type 3
+  type 4
+  type 10
+  type 20
+  type 26
+  type 30
+  type 32
+  type 35
+enddevice
+device 0406-2 kind fixed
+  only messenger
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  messenger 4420-01 0.93 4720-01 0.10 7150-01 0.8324
+  type 3
+  type 4
+  type 10
+  type 20
+  type 26
+  type 30
+  type 32
+  type 35
+enddevice
+device 0408 kind fixed
+  only messenger
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  messenger 6511-01 0.075
+  type 3
+  type 4
+  type 10
+  type 20
+  type 26
+  type 30
+  type 32
+  type 35
+enddevice
+device 0408-2 kind fixed
+  only messenger
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  messenger 4420-01 0.93 4720-01 0.10 6511-01 0.075
+  type 3
+  type 4
+  type 10
+  type 20
+  type 26
+  type 30
+  type 32
+  type 35
+enddevice

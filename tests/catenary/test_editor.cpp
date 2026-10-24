@@ -285,6 +285,48 @@ int main( int, char *argv[] ) {
             check( singlegood, "pojedynczy element 3021 na slupie przelotowym: zapis z tip, sam dzwigar (slup stawia przeslo), 7,1 m od sciany slupa" );
         }
     }
+    // 6a. kotwienie środkowe przy środkowym z trzech podwieszeń: części na słupach sąsiednich, lina z V w obu przęsłach,
+    // kotwienie ciężarowe na końcu liczy odległość od niego
+    {
+        auto a { entry }, b { entry }, c { entry };
+        a.name = "m1"; b.name = "m2"; c.name = "m3";
+        b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] = 160.247;
+        c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 220.247;
+        catenary::anchor anchor;
+        anchor.name = "km"; anchor.network = "C120-2C"; anchor.pole_type = "1611-11";
+        anchor.pole[ 0 ] = -2.4; anchor.pole[ 1 ] = 0.2; anchor.pole[ 2 ] = 244.0;
+        anchor.toward[ 0 ] = c.at[ 0 ]; anchor.toward[ 1 ] = c.at[ 1 ]; anchor.toward[ 2 ] = c.at[ 2 ];
+        anchor.distance = 700.0;
+        catenary::chain line;
+        line.name = "lm"; line.power = "pwr01"; line.type = "C120-2C"; line.anchor_end = "km"; line.middle = "m2";
+        line.suspensions = { "m1", "m2", "m3" };
+        auto const written { catenary::write_chain( line ) };
+        std::string text { catenary::write_suspension( a ) + "\n" + catenary::write_suspension( b ) + "\n" + catenary::write_suspension( c ) + "\n"
+            + catenary::write_anchor( anchor ) + "\n" + written + "\n" };
+        { std::ofstream out { "tests/catenary/td_srodek_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear(); mock_deleted_spans = 0;
+        Global.AirTemperature = 10.f;
+        cParser directive( "td_srodek_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        std::size_t parts { 0 }, triangles { 0 };
+        auto const built { catenary_chain_middle( 0, parts, triangles ) };
+        auto const *anchored { catenary_anchor_result( 0 ) };
+        double b0, s0;
+        std::printf( "  kotwienie srodkowe: czesci %d, trojkaty %d, bledy %d; kotwienie ciezarowe b %.2f\n", static_cast<int>( parts ), static_cast<int>( triangles ), static_cast<int>( errors.size() ), anchored != nullptr ? anchored->b : 0.0 );
+        for( auto const &error : errors ) { std::printf( "    %s\n", error.c_str() ); }
+        (void)b0; (void)s0;
+        check( written.find( " middle m2" ) != std::string::npos && built && parts >= 2 * 6 && triangles > 200 && errors.empty(),
+            "kotwienie srodkowe: zapis w lancuchu, na obu slupach 4430 z uchwytami i izolatorem, lina z V w obu przeslach" );
+        // odległość kotwienia ciężarowego od środkowego: 60 + 23,8 m zamiast 700 - rolka bliżej tablicy +10 °C (bez zmian), przy mrozie mniej
+        Global.AirTemperature = -20.f;
+        catenary_scene_temperature();
+        auto const *cold { catenary_anchor_result( 0 ) };
+        if( cold != nullptr ) { std::printf( "  przy -20 °C: b %.3f, uwagi %d\n", cold->b, static_cast<int>( cold->warnings.size() ) ); for( auto const &w : cold->warnings ) { std::printf( "    %s\n", w.c_str() ); } }
+        check( cold != nullptr && cold->b > 1.75 && cold->b < 1.75 + 84.0 * 17e-6 * 30.0 + 0.01, "kotwienie ciezarowe liczy odleglosc od kotwienia srodkowego (84 m, nie 700)" );
+        Global.AirTemperature = 10.f;
+    }
+
     // 6. kotwienie ciężarowe na końcu łańcucha: słup i urządzenie, ostatnie przęsło bez wieszaków do uchwytów krańcowych,
     // temperatura przestawia ciężary i przęsło
     {

@@ -2089,6 +2089,52 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 	if (members.size() < 2)
 		return;
 	ImGui::Separator();
+	// middle anchor (cards 63-0406 / 0408): at one of the inner poles of the chain, the anchor rope goes to the poles on both sides
+	{
+		auto changed{*chain};
+		std::vector<std::string> labels{STR("none")};
+		int chosen{0};
+		for (std::size_t k = 1; k + 1 < chain->suspensions.size(); ++k)
+		{
+			labels.push_back(format(STR_C("pole %d (%s)"), static_cast<int>(k + 1), chain->suspensions[k].c_str()));
+			if (chain->suspensions[k] == chain->middle)
+				chosen = static_cast<int>(labels.size()) - 1;
+		}
+		ImGui::PushItemWidth(180.0f);
+		auto edited{false};
+		if (ImGui::BeginCombo(STR_C("Middle anchor"), labels[chosen].c_str()))
+		{
+			for (std::size_t k = 0; k < labels.size(); ++k)
+				if (ImGui::Selectable(labels[k].c_str(), static_cast<int>(k) == chosen))
+				{
+					changed.middle = k == 0 ? std::string{} : chain->suspensions[k];
+					edited = true;
+				}
+			ImGui::EndCombo();
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("The anchor rope is clamped on the messenger 1 m on each side of this pole and goes to the poles next to it; in the middle of both spans a V ties it to the contact wire. The weight anchors measure their distance from it"));
+		if (false == chain->middle.empty())
+		{
+			int insulated{chain->middle_device == "0408" ? 1 : 0};
+			std::string const kinds[] = {STR("with insulation (card 0406)"), STR("without insulation (card 0408)")};
+			char const *const items[] = {kinds[0].c_str(), kinds[1].c_str()};
+			if (ImGui::Combo(STR_C("Middle anchor kind"), &insulated, items, 2))
+			{
+				changed.middle_device = insulated == 1 ? "0408" : "0406";
+				edited = true;
+			}
+		}
+		ImGui::PopItemWidth();
+		if (edited)
+		{
+			tool.undo.push_back({++tool.group, true, Chain, std::nullopt, *chain, false});
+			catenary_chain_update(Chain, changed);
+			chain = catenary_chain_get(Chain);
+			if (chain == nullptr)
+				return;
+		}
+	}
 	ImGui::TextUnformatted(STR_C("Anchors"));
 	for (int end = 0; end < 2; ++end)
 	{
@@ -2203,7 +2249,9 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			}
 			ImGui::EndCombo();
 		}
-		if (false == fixed)
+		if (false == fixed && false == chain->middle.empty())
+			ImGui::TextDisabled("%s", STR_C("Distance from the middle anchor: along the chain"));
+		else if (false == fixed)
 		{
 			auto distance{static_cast<float>(data.distance)};
 			if (ImGui::SliderFloat(STR_C("From the middle anchor (m)"), &distance, 50.0f, 900.0f, "%.0f"))

@@ -6092,3 +6092,27 @@ msgstr "Wysokość zakotwienia liny nośnej na słupie; domyślnie jak przy osta
 
 msgid "Heights as at the last pole"
 msgstr "Wysokości jak przy ostatnim słupie"
+
+msgid "pole %d (%s)"
+msgstr "słup %d (%s)"
+
+msgid "Middle anchor"
+msgstr "Kotwienie środkowe"
+
+msgid "The anchor rope is clamped on the messenger 1 m on each side of this pole and goes to the poles next to it; in the middle of both spans a V ties it to the contact wire. The weight anchors measure their distance from it"
+msgstr "Lina kotwienia jest zaciśnięta na linie nośnej 1 m po obu stronach tego słupa i idzie do słupów obok; w połowie obu przęseł V wiąże ją z przewodem jezdnym. Kotwienia ciężarowe liczą odległość od niego"
+
+msgid "Middle anchor kind"
+msgstr "Rodzaj kotwienia środkowego"
+
+msgid "with insulation (card 0406)"
+msgstr "z izolacją (karta 0406)"
+
+msgid "without insulation (card 0408)"
+msgstr "bez izolacji (karta 0408)"
+
+msgid "none"
+msgstr "brak"
+
+msgid "Distance from the middle anchor: along the chain"
+msgstr "Odległość od kotwienia środkowego: wzdłuż łańcucha"
