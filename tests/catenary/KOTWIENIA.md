@@ -138,6 +138,19 @@ z zadanej długości drutu → naciąg).
   za drugim). Naciągi = typy 32/35 (test). Liczby ciężarów z 0019-2 / 0019-3. ZAŁOŻENIA: 5040 trzymany w uchwytach jak 4450,
   kolejność części w łańcuchach, brakujące ciężary ze stosu liny, 6403 rozstaw lin 0,5 m (zbiegają się dopiero w przęśle).
 
+## Kotwienie środkowe – zrobione z bryłami zastępczymi (2026-10-24 23:40, Jan: „jebnij placeholdery”)
+
+- Wpis łańcucha `middle <podwieszenie> [middle_device 0408]` (domyślnie 0406 z izolacją). Przy podwieszeniu środkowym lina
+  kotwienia (9831-5) zaciśnięta na linie nośnej 1,00 m w obie strony, dalej do słupów sąsiednich podwieszeń: tam urządzenie
+  kotwienia stałego tylko z liną (`only messenger`): 4430 w parze uchwytów + 7150 + 5120 (z jednej strony – 0406), z drugiej
+  4420 + 4720 + 7150 + 5120 (0406-2, regulacja); 0408 / 0408-2 z 6511 zamiast 7150. Uchwyt na wysokości liny nośnej sąsiada.
+- Lina: parabola od końca na słupie sąsiednim przez wierzchołek V w połowie przęsła (1,30 m nad przewodem – ramiona 1,50,
+  rozstaw 1,50) do zacisku. V do przewodu w połowie przęsła. Zaciski 5560/5570 i złączka 6410 – prostopadłościany,
+  lina i V – rury 9 mm (ZAŁOŻENIE, przekroju 9831-5 brak). Wszystko doczepione do brył przęseł przed i za słupem środkowym.
+- Kotwienia ciężarowe łańcucha z kotwieniem środkowym liczą `distance` same – wzdłuż łańcucha od podwieszenia środkowego do
+  słupa kotwienia (suwak w edytorze znika). Edytor: „Kotwienie środkowe” (wybór słupa wewnątrz łańcucha) i rodzaj 0406 / 0408.
+- Jeszcze nie: jednostronna izolacja 0418, do dźwigara bramki 0416 (4590).
+
 ## Brakujące ciężary skracają sieć (2026-10-24 wieczór)
 
 Naciąg od niepełnego stosu H < H0 (H0 = pełny stos, jak w tablicy). Sieć do kotwienia środkowego (distance) skraca się,

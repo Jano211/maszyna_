@@ -88,6 +88,9 @@ std::size_t catenary_chain_add( std::string const &File, catenary::chain const &
 // zmienia łańcuch i robi jego przęsła od nowa (mniej niż dwa podwieszenia = łańcuch usunięty)
 bool catenary_chain_update( std::size_t Index, catenary::chain const &Data );
 void catenary_chain_remove( std::size_t Index );
+// kotwienie środkowe łańcucha: liczba wstawionych części (na słupach sąsiednich podwieszeń) i trójkątów brył (lina, V, zaciski);
+// false, gdy łańcuch go nie ma albo się nie złożyło
+bool catenary_chain_middle( std::size_t Index, std::size_t &Parts, std::size_t &Triangles );
 // łańcuch, do którego należy podwieszenie, i jego miejsce w łańcuchu; -1 gdy żaden
 int catenary_chain_of( std::size_t Suspension, std::size_t &Position );
 

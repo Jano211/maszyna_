@@ -629,7 +629,10 @@ bool solve_fixed( tensioner_device const &Device, tensioner_type const &Type, te
     wires( "messenger", messengerheight, Input.messenger_target, Device.messenger, Device.messenger_equalizer, Input.messengers, Device.equalizer_spread,
         Device.messenger_each, messengerclamp, true, ropes );
     auto const &clamp { Input.old_fittings && false == Device.contact_clamp_old.name.empty() ? Device.contact_clamp_old : Device.contact_clamp };
-    wires( "contact", contactheight, Input.contact_target, Device.contact, Device.equalizer, Input.contacts, Device.equalizer_spread, Device.contact_each, clamp, false, contacts );
+    // kotwienie środkowe: tylko lina kotwienia (only messenger)
+    if( Device.only != "messenger" ) {
+        wires( "contact", contactheight, Input.contact_target, Device.contact, Device.equalizer, Input.contacts, Device.equalizer_spread, Device.contact_each, clamp, false, contacts );
+    }
     auto const copy = []( vec const &P, double *Out ) { Out[ 0 ] = P.x; Out[ 1 ] = P.y; Out[ 2 ] = P.z; };
     // lina nośna przęsła to górna (dolna o odstęp lin niżej, jak w typie sieci)
     if( false == ropes.empty() ) { copy( ropes.back(), Result.messenger_end ); }

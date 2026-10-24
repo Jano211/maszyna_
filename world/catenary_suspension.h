@@ -58,6 +58,10 @@ struct chain {
     double      hangers[ 4 ] { 0.4, 4.0, 3.0, 0.04 }; // jak w node traction: najniższy wieszak, odstęp, liczba drutów, odstęp drutów
     std::string parallel;                   // przęsło bieżni wspólnej (jak "parallel" w node traction); puste = brak
     std::string anchor_start, anchor_end;   // kotwienia (wpisy "anchor") przed pierwszym i za ostatnim podwieszeniem; puste = brak
+    // kotwienie środkowe (karty 63-0406 / 0408): podwieszenie, przy którym lina kotwienia środkowego jest zaciśnięta na linie nośnej,
+    // i karta (0406 z izolacją, 0408 bez); lina idzie do słupów sąsiednich podwieszeń. Puste = brak
+    std::string middle;
+    std::string middle_device { "0406" };
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
 };
 
