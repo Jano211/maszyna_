@@ -118,7 +118,10 @@ z zadanej długości drutu → naciąg).
   karty, liczby części zgodne z tabelą (test). Na konstrukcji 4430-1 w parze uchwytów poz. 1 (43-0453) na wysokości liny i drugi
   na wysokości przewodów. Wysokość = drutów ostatniego podwieszenia (ZAŁOŻENIE, 0453 jej nie podaje); suwak w edytorze przesuwa
   obie. Dwie liny (32/35) przez 4410 obrócony o 90° (jedna nad drugą). 4430 pivot ZAŁOŻONY jak 4450 (model bez mount_top/bottom).
-  Bez izolacji (0413) i odsunięta izolacja (s. 100) – jeszcze nie.
+  Bez izolacji **63-0413** zrobione (0413, 0413-10, 0413-32; tabela karty ma 4430 ×1 – literówka, w rysunku dwa). 4430-01 ma już
+  mount_top / mount_bottom (= 4450). Wysokości: domyślnie jak druty przy ostatnim słupie, suwaki osobno dla przewodów (height)
+  i liny (rope_height, nowy klucz wpisu anchor). Odsunięta izolacja przewodów **63-0423** czeka: w przewodach łącznik **4740-1**
+  (modelu brak – czy to 4750?).
 - **Rolki szeregowe** (`series`): 0471 (Ø400, 6322-1, pręty 6401-3/-2/-1, pierścień 5080-2 0,70 nad spodem stosu, 4440-7)
   i 0480 (Ø306 + żeliwne jak 0461, 4440-4). Układ z rysunku 13-0421: przy słupie duża 4460-3 i na 4440-6 mała 4460-2 (0,336),
   wózek: mała i duża na 4440-5 (dźwignia w hole_2 0,703); lina od zaczepu w hole_2 4440-6 przez małą ruchomą, małą stałą,

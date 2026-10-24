@@ -178,7 +178,7 @@ enddevice
 // sieci 3, 4, 26, 30: lina 4430-7150-5120; przewody 4430-7150-4720-4730-4410-2x5120
 device 0403 kind fixed
   mount 4430-01 0.0747
-  pivot 0.03436 0.02561       // 4430-01 bez punktow mount_top / mount_bottom - ZALOZENIE jak 4450-01 (ta sama bryla)
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
   brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
@@ -197,7 +197,7 @@ enddevice
 // siec 10 (jeden przewod): przewod 4430-7150-4720-5120 (bez 4730 i 4410)
 device 0403-10 kind fixed
   mount 4430-01 0.0747
-  pivot 0.03436 0.02561       // 4430-01 bez punktow mount_top / mount_bottom - ZALOZENIE jak 4450-01 (ta sama bryla)
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
   brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
@@ -214,7 +214,7 @@ enddevice
 // tylko jeden - przed wyrownywaczem)
 device 0403-20 kind fixed
   mount 4430-01 0.0747
-  pivot 0.03436 0.02561       // 4430-01 bez punktow mount_top / mount_bottom - ZALOZENIE jak 4450-01 (ta sama bryla)
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
   brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
@@ -232,7 +232,7 @@ enddevice
 // za nim kazdy 4720-7150-5120-6
 device 0403-32 kind fixed
   mount 4430-01 0.0747
-  pivot 0.03436 0.02561       // 4430-01 bez punktow mount_top / mount_bottom - ZALOZENIE jak 4450-01 (ta sama bryla)
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
   brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
   brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
@@ -249,6 +249,62 @@ device 0403-32 kind fixed
   type 32
   type 35
 enddevice
+
+// 63-0413 kotwienia stale sieci bez izolacji (tom 1 s. 95): sieci 3, 4, 20, 26, 30: lina 4430-4710-5120; przewody 4430-4730-4410-2x5120
+device 0413 kind fixed
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  messenger 4710-01 0.075
+  contact 4730-01 0.17
+  type 3
+  type 4
+  type 20
+  type 26
+  type 30
+enddevice
+// siec 10: lina i przewod 4430-4710-5120 (bez 4730 i 4410)
+device 0413-10 kind fixed
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  messenger 4710-01 0.075
+  contact 4710-01 0.075
+  type 10
+enddevice
+// sieci 32, 35: liny 4430-4710-4410 (jedna nad druga) - 2x5120-7; przewody 4430-4730-4410-2x5120-6
+device 0413-32 kind fixed
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  messenger 4710-01 0.075
+  messenger_equalizer 4410-01 0.1541
+  contact 4730-01 0.17
+  type 32
+  type 35
+enddevice
+// 63-0423 kotwienia stale z odsunieta izolacja przewodow (tom 1 s. 100): w przewodach lacznik 4740-1 - brak modelu (4750?), na razie bez
 
 // ---- rolki szeregowe (cala siec na jednym stosie) ---------------------------------------------------------------------------
 // 13-0471 kotwienie ciezarowe sieci z izolacja, rolki szeregowe, ciezary Ø400 (rysunek ukladu jak 13-0421, tom 1 s. 98): przy slupie

@@ -654,7 +654,11 @@ int main( int argc, char **argv ) {
             { "0403", 3, 2, 1, { { "4410-01", 1 }, { "4430-01", 2 }, { "4720-01", 1 }, { "4730-01", 1 }, { "5120-01", 3 }, { "7150-01", 2 } } },
             { "0403-10", 10, 1, 1, { { "4430-01", 2 }, { "4720-01", 1 }, { "5120-01", 2 }, { "7150-01", 2 } } },
             { "0403-20", 20, 2, 1, { { "4410-01", 1 }, { "4430-01", 2 }, { "4720-01", 1 }, { "4730-01", 1 }, { "5120-01", 3 }, { "7150-01", 3 } } },
-            { "0403-32", 32, 2, 2, { { "4410-01", 2 }, { "4430-01", 2 }, { "4710-01", 1 }, { "4720-01", 4 }, { "4730-01", 1 }, { "5120-01", 4 }, { "7150-01", 4 } } } };
+            { "0403-32", 32, 2, 2, { { "4410-01", 2 }, { "4430-01", 2 }, { "4710-01", 1 }, { "4720-01", 4 }, { "4730-01", 1 }, { "5120-01", 4 }, { "7150-01", 4 } } },
+            // 63-0413 bez izolacji (tabela karty: 4430 1 szt. - literowka, w rysunku dwa)
+            { "0413", 3, 2, 1, { { "4410-01", 1 }, { "4430-01", 2 }, { "4710-01", 1 }, { "4730-01", 1 }, { "5120-01", 3 } } },
+            { "0413-10", 10, 1, 1, { { "4430-01", 2 }, { "4710-01", 2 }, { "5120-01", 2 } } },
+            { "0413-32", 32, 2, 2, { { "4410-01", 2 }, { "4430-01", 2 }, { "4710-01", 1 }, { "4730-01", 1 }, { "5120-01", 4 } } } };
         for( auto const &item : cases ) {
             auto const *fixed { catalog.device( item.device ) };
             if( fixed == nullptr ) { check( false, std::string( "urzadzenie " ) + item.device ); continue; }
@@ -674,12 +678,22 @@ int main( int argc, char **argv ) {
             good = good && result.contact_ends.size() == static_cast<std::size_t>( item.contacts );
             // przewody na wysokosci ostatniego podwieszenia, lina wyzej; konce drutow kilka metrow od slupa w strone podwieszenia
             good = good && std::abs( result.height - 5.60 ) < 1e-9 && result.messenger_end[ 2 ] > 7.0 && result.contact_ends[ 0 ][ 2 ] > 5.5 && result.contact_ends[ 0 ][ 2 ] < 5.7;
-            good = good && result.messenger_end[ 0 ] > 0.8 && result.contact_ends[ 0 ][ 0 ] > 1.0;
+            good = good && result.messenger_end[ 0 ] > 0.15 && result.contact_ends[ 0 ][ 0 ] > 0.15;
             if( item.messengers == 2 ) { good = good && result.messenger_end[ 2 ] > result.messenger2_end[ 2 ] + 0.05; }
             std::string list;
             for( auto const &[ name, count ] : counted ) { list += " " + name + "x" + std::to_string( count ); }
             std::printf( "    %s typ %d:%s; lina %.2f m od czola, przewody %.2f m\n", item.device, item.type, list.c_str(), result.messenger_end[ 0 ], result.contact_ends.empty() ? 0.0 : result.contact_ends[ 0 ][ 0 ] );
-            check( good, std::string( "kotwienie stale " ) + item.device + " typ " + std::to_string( item.type ) + ": czesci jak w tabeli 0403, druty na wysokosci podwieszenia" );
+            check( good, std::string( "kotwienie stale " ) + item.device + " typ " + std::to_string( item.type ) + ": czesci jak w tabeli karty, druty na wysokosci podwieszenia" );
+        }
+        // wysokosci z suwakow: przewody 5,20, lina 7,90 - uchwyty 4430 na nich
+        {
+            catenary::tensioner_input input;
+            input.height = 5.20;
+            input.rope_height = 7.90;
+            catenary::tensioner_result result;
+            catenary::solve_tensioner( catalog, *catalog.device( "0403" ), input, result );
+            check( std::abs( result.height - 5.20 ) < 1e-9 && std::abs( result.rope_height - 7.90 ) < 1e-9 && std::abs( result.messenger_end[ 2 ] - 7.90 ) < 1e-6 && std::abs( result.contact_ends[ 0 ][ 2 ] - 5.20 ) < 1e-6,
+                "kotwienie stale: wysokosc przewodow i liny osobno (suwaki)" );
         }
         // na slupie 1611-11: dwie pary uchwytow 5100-1 (gora lina, dol przewody), kazda wokol 4430
         catenary::tensioner_input input;

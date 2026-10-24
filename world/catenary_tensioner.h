@@ -234,6 +234,7 @@ struct tensioner_input {
     double messenger_target[ 3 ] { 0.0, 0.0, 0.0 };
     double contact_target[ 3 ] { 0.0, 0.0, 0.0 };        // stare złożenie (druty zaśniedziałe): uchwyty krańcowe przewodów 5110 zamiast 5120
     double height { 0.0 };              // oś rolek nad główką szyny; 0 = z tablicy. Wyżej/niżej: ciężary o tyle samo (lina ta sama)
+    double rope_height { 0.0 };         // kotwienie stałe: uchwyt liny nośnej nad główką; 0 = jak drut przy ostatnim podwieszeniu
     double ground { -0.50 };            // najniższe położenie spodu ciężarów względem główki szyny (grunt, fundament); ZAŁOŻENIE
     double gravity { 0.981 };           // daN/kg
     // konstrukcja: nazwa słupa (dobór uchwytów) i jej grubość od czoła do tyłu (wzdłuż drutów; słup 161x - szerokość wzdłuż toru,
@@ -272,6 +273,7 @@ struct tensioner_result {
     // dźwignie szeregowo: druga lina nośna (z drugiej dźwigni) i naciągi obu lin osobno (messenger_tension to ich suma)
     bool cascade { false };
     bool fixed { false };                   // kotwienie stałe (bez ciężarów; b, s, naciąg zero)
+    double rope_height { 0.0 };             // kotwienie stałe: wysokość uchwytu liny nośnej (height - przewodów)
     double messenger2_end[ 3 ] { 0.0, 0.0, 0.0 };        // druga lina nośna: z drugiej dźwigni albo za wyrównywaczem kotwienia stałego
     double messenger_tensions[ 2 ] { 0.0, 0.0 };
     std::vector<std::vector<double>> contact_ends;       // gdzie kończą się przewody jezdne

@@ -63,7 +63,7 @@ struct chain {
 
 // kotwienie ciężarowe (urządzenie naprężające z pliku traction_tensioners.txt) na słupie kotwowym, wpis
 // "node <max> <min> <nazwa> anchor device <karta> network <symbol typu> pole <słup> x y z [on <podwieszenie>] toward x y z distance <m>
-//  [color <kolor>] [top_color <kolor>] [elongation <m>] [missing <n>] [ground <m>] [height <m>] [insulators <rodzaj>] [skin <tekstura>]
+//  [color <kolor>] [top_color <kolor>] [elongation <m>] [missing <n>] [ground <m>] [height <m>] [rope_height <m>] [insulators <rodzaj>] [skin <tekstura>]
 //  endanchor".
 // pole: oś słupa na wysokości główki szyny; toward: punkt, z którego przychodzą druty (urządzenie leży w tym kierunku od
 // słupa); distance: odległość od kotwienia środkowego albo stałego. Łańcuch przypina się do niego "anchor_start/anchor_end",
@@ -84,7 +84,8 @@ struct anchor {
     double      elongation { 0.0 };
     int         missing { 0 };
     double      ground { -0.50 };
-    double      height { 0.0 };              // oś rolek nad główką szyny; 0 = z tablicy montażowej (6,70)
+    double      height { 0.0 };              // oś rolek nad główką szyny; 0 = z tablicy montażowej (6,70). Kotwienie stałe: przewody
+    double      rope_height { 0.0 };         // kotwienie stałe: uchwyt liny nośnej nad główką szyny; 0 = jak przy ostatnim słupie
     // izolatory w łańcuchach do drutów: puste = auto (rolkowe ESN-2025 na obu przy drutach zaśniedziałych, inaczej żywiczne 7150),
     // "new" żywiczne, "old" rolkowe na obu, "messenger" rolkowy tylko na linie nośnej, "contact" rolkowe tylko na przewodach
     std::string insulators;
