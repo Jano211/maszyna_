@@ -690,6 +690,23 @@ int main( int argc, char **argv ) {
             std::printf( "    %s typ %d:%s; lina %.2f m od czola, przewody %.2f m\n", item.device, item.type, list.c_str(), result.messenger_end[ 0 ], result.contact_ends.empty() ? 0.0 : result.contact_ends[ 0 ][ 0 ] );
             check( good, std::string( "kotwienie stale " ) + item.device + " typ " + std::to_string( item.type ) + ": czesci jak w tabeli karty, druty na wysokosci podwieszenia" );
         }
+        // 0423: lacznik i izolator za 4740 obrocone o 90 st. wokol lancucha (os czesci ta sama, Y i Z zamienione)
+        {
+            catenary::tensioner_input input;
+            catenary::tensioner_result result;
+            catenary::solve_tensioner( catalog, *catalog.device( "0423" ), input, result );
+            catenary::tensioner_placement const *insulator { nullptr }, *plain { nullptr };
+            for( auto const &part : result.parts ) {
+                if( part.part == "7150-01" && part.role.rfind( "contact", 0 ) == 0 ) { insulator = &part; }
+                if( part.part == "7150-01" && part.role.rfind( "messenger", 0 ) == 0 ) { plain = &part; }
+            }
+            auto good { insulator != nullptr && plain != nullptr };
+            // os czesci (kolumna X) bez zmian, kolumna Y izolatora przewodow = kolumna Z zwyklego (z dokladnoscia do znaku)
+            for( int r = 0; good && r < 3; ++r ) {
+                good = std::abs( insulator->rotation[ r * 3 ] - plain->rotation[ r * 3 ] ) < 1e-9 && std::abs( std::abs( insulator->rotation[ r * 3 + 1 ] ) - std::abs( plain->rotation[ r * 3 + 2 ] ) ) < 1e-9;
+            }
+            check( good, "0423: 4720 i 7150 za 4740 obrocone o 90 st. (\"@90\" w danych)" );
+        }
         // wysokosci z suwakow: przewody 5,20, lina 7,90 - uchwyty 4430 na nich
         {
             catenary::tensioner_input input;

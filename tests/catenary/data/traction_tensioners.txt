@@ -82,7 +82,8 @@ part 6402-04 length 3.00
 // 6511-01 0,075 (zamiast izolatora 7150 w kotwieniu srodkowym bez izolacji)
 
 // device <karta> table pulley lever rod rope rope_diameter
-//   mount / holder / hanger / messenger / contact  <czesc dlugosc>...   lancuchy czesci liniowych ("~czesc" - odwrocona)
+//   mount / holder / hanger / messenger / contact  <czesc dlugosc>...   lancuchy czesci liniowych ("~czesc" - odwrocona,
+//     "czesc@90" - obrocona o 90 st. wokol osi lancucha)
 //   messenger_old / contact_old <czesc dlugosc>...   to samo w starych zlozeniach (izolator rolkowy)
 //   messenger_clamp / contact_clamp <czesc dlugosc>, equalizer <czesc dlugosc> spread <rozstaw przewodow>
 //   brackets <slupy...> hole <przed czolem> <pod zerem> bolt <dlugosc srub> top <przod> <tyl> bottom <przod> <tyl>, pivot <4450 gora> <dol>
@@ -305,7 +306,8 @@ device 0413-32 kind fixed
   type 35
 enddevice
 // 63-0423 kotwienia stale z odsunieta izolacja przewodow (tom 1 s. 100): w przewodach lacznik 4740-1 (0,45 - model Jana, najpierw
-// nazwany 4750) odsuwa izolator od slupa. Sieci 3, 4, 26, 30: lina 4430-7150-5120; przewody 4430-4740-4720-7150-4410-2x5120
+// nazwany 4750) odsuwa izolator od slupa. Lacznik i izolator za nim obrocone o 90 st. wokol lancucha ("@90", Jan 2026-10-25),
+// zeby trafialy w 4740; sam 4740 (i 4730 w 0403/0413) Jan obraca w modelu. Sieci 3, 4, 26, 30: lina 4430-7150-5120; przewody 4430-4740-4720-7150-4410-2x5120
 device 0423 kind fixed
   mount 4430-01 0.0747
   pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
@@ -318,7 +320,7 @@ device 0423 kind fixed
   contact_clamp_old 5110-01 0.0632
   equalizer 4410-01 0.1541 spread 0.08
   messenger 7150-01 0.8324
-  contact 4740-01 0.45 4720-01 0.10 7150-01 0.8324
+  contact 4740-01 0.45 4720-01@90 0.10 7150-01@90 0.8324
   type 3
   type 4
   type 26
@@ -337,7 +339,7 @@ device 0423-10 kind fixed
   contact_clamp_old 5110-01 0.0632
   equalizer 4410-01 0.1541 spread 0.08
   messenger 7150-01 0.8324
-  contact 4740-01 0.45 4720-01 0.10 7150-01 0.8324 4720-01 0.10
+  contact 4740-01 0.45 4720-01@90 0.10 7150-01@90 0.8324 4720-01 0.10
   type 10
 enddevice
 // siec 20: lina 4430-7150-5120-7; przewody 4430-4740-4720-4410, za nim kazdy 7150-5120-7
@@ -353,8 +355,8 @@ device 0423-20 kind fixed
   contact_clamp_old 5110-01 0.0632
   equalizer 4410-01 0.1541 spread 0.08
   messenger 7150-01 0.8324
-  contact 4740-01 0.45 4720-01 0.10
-  contact_each 7150-01 0.8324
+  contact 4740-01 0.45 4720-01@90 0.10
+  contact_each 7150-01@90 0.8324
   type 20
 enddevice
 // sieci 32, 35: liny jak 0403-32 (4710-4410, kazda 4720-7150-5120-7); przewody 4430-4740-4410, kazdy 4720-7150-5120-6
@@ -373,7 +375,7 @@ device 0423-32 kind fixed
   messenger_equalizer 4410-01 0.1541
   messenger_each 4720-01 0.10 7150-01 0.8324
   contact 4740-01 0.45
-  contact_each 4720-01 0.10 7150-01 0.8324
+  contact_each 4720-01@90 0.10 7150-01@90 0.8324
   type 32
   type 35
 enddevice
