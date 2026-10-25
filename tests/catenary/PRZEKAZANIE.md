@@ -28,7 +28,15 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
     solver: `cantilever_umbrella::spread/console_x/console_parts`, mocowania -06, konsola na rolę (ukośnik, odciąg, wysięg),
     `spread_mounts` (średnie wysokości), `mount 4890-0N console x1 x2 y [back]`, pole `console <nazwa>` – BRAK przypisania
     konsoli do słupów (pytanie do Jana: które wykonanie na jaki słup). Wysięg pomocniczy na razie 4630-06 na 4890; właściwie
-    4690 (karta 0519) – Jan zrobi modele.
+    4690 (karta 0519) – Jan zrobi modele. Na 4690 lądują same wysięgi pomocnicze (zdjęcie Jana 25.10 15:15: dwa wysięgniki
+    samej liny na konsolach + wysięgi pomocnicze z ramionami na 4690). Wykonania 4690 (Jan 15:50): 1 – słup płaski z
+    krawężnikami C120/140/160, 2 – C180/200, 3 – żelbetowy, 4 – kratowy o rozstawie krawężników 600 mm, 5 – wsporniki
+    bramek. Konsole 4890 (Jan 15:42): -01 zwykłe ceownikowe, -02 dwuteowe, -03 rodzina 161x, -04 nie wiadomo (bramki?).
+    Na zwisach rozstawionych 4890 nie ma (tam tylko 4690).
+  - 25.10 15:50 poprawki parasola: dokładniejszy punkt toru najbliżej słupa (nearest_parameter dopracowany wokół najlepszej
+    próbki – na długich torach krok był metrowy i drugi wysięgnik szedł krzywo), zaznaczanie wysięgnika po jego ramieniu
+    (dwa na jednym słupie), przeciąganie słupa parasola/rozstawionych razem z oboma (`catenary_pair_move`), komunikaty
+    o parze tylko przy wczytaniu.
   - Kotwienie środkowe 25.10: góra V na cięciwie liny nośnej (nie nad osią przewodu) i z naciągiem przęsła; ramiona V jako
     sztywna linka (krzywa 3. stopnia, styczne do liny i przewodu, wektory 0,6 odległości – ZAŁOŻENIE z zdjęcia Jana).
 - **Przed środą: WSZYSTKO, co dotyczy kotwień (Jan 01:07, „chyba że wody braknie”):** kotwienie samej liny / samych przewodów

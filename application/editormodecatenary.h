@@ -190,6 +190,8 @@ struct catenary_editor
 	void catenary_keep_pole(catenary_spot &Spot, catenary::suspension const &Current, double Stagger, bool Toward) const;
 	// spread cantilevers on the console of the pole: this one onto the first mount, a second one onto the other, same track
 	void catenary_spread_create(std::size_t Index);
+	// the pole of an umbrella or of spread cantilevers moved to Foot (rail heads): both cantilevers go with it
+	void catenary_pair_move(std::size_t Selected, glm::dvec3 const &Foot);
 	// the span of a chain the spot falls in (in the plan: the wire point near the line of the span, between its ends)
 	struct chain_insert
 	{

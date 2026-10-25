@@ -441,7 +441,7 @@ assemble_alone( std::size_t const Index, catenary::cantilever_catalog const &Cat
 
 // parasol: oba wysięgniki składane najpierw osobno, żeby poznać wysokości mocowań, potem razem na wspólnym słupie
 void
-assemble_umbrella( std::string const &Name, std::vector<std::size_t> const &List, catenary::cantilever_catalog const &Catalog, std::size_t &Assembled, std::size_t &Parts ) {
+assemble_umbrella( std::string const &Name, std::vector<std::size_t> const &List, catenary::cantilever_catalog const &Catalog, std::size_t &Assembled, std::size_t &Parts, bool const Report = true ) {
     auto const alone = [ & ]( std::size_t const Index ) {
         auto const count { assemble_alone( Index, Catalog ) };
         if( count > 0 ) { ++Assembled; Parts += count; }
@@ -450,13 +450,15 @@ assemble_umbrella( std::string const &Name, std::vector<std::size_t> const &List
     auto const *pole { Catalog.pole( first.pole_type ) };
     auto paired { List.size() == 2 && pole != nullptr };
     if( List.size() != 2 ) {
-        ErrorLog( "Bad scenario: umbrella \"" + Name + "\" has " + std::to_string( List.size() ) + " suspension(s), it needs exactly two; they're assembled separately" );
+        // w edytorze (kolejne zmiany obu wpisów pary) to stan chwilowy: komunikat tylko przy wczytaniu
+        if( Report ) { ErrorLog( "Bad scenario: umbrella \"" + Name + "\" has " + std::to_string( List.size() ) + " suspension(s), it needs exactly two; they're assembled separately" ); }
     }
     else {
         auto const &second { Suspensions[ List.back() ].data };
         auto const dx { second.pole[ 0 ] - first.pole[ 0 ] }, dy { second.pole[ 1 ] - first.pole[ 1 ] }, dz { second.pole[ 2 ] - first.pole[ 2 ] };
         if( second.pole_type != first.pole_type || std::sqrt( dx * dx + dy * dy + dz * dz ) > 0.05 ) {
-            ErrorLog( "Bad scenario: umbrella \"" + Name + "\" has its suspensions on different poles; they're assembled separately" );
+            // w edytorze (kolejne zmiany obu wpisów pary) to stan chwilowy: komunikat tylko przy wczytaniu
+            if( Report ) { ErrorLog( "Bad scenario: umbrella \"" + Name + "\" has its suspensions on different poles; they're assembled separately" ); }
             paired = false;
         }
     }
@@ -464,7 +466,8 @@ assemble_umbrella( std::string const &Name, std::vector<std::size_t> const &List
     // wysięgniki rozstawione: oba wpisy z punktem na konsoli; jeden bez niego - błąd, składane osobno
     auto const spread { first.has_spread && Suspensions[ List.back() ].data.has_spread };
     if( spread != ( first.has_spread || Suspensions[ List.back() ].data.has_spread ) ) {
-        ErrorLog( "Bad scenario: umbrella \"" + Name + "\" has \"spread\" in one suspension only; they're assembled separately" );
+        // w edytorze (kolejne zmiany obu wpisów pary) to stan chwilowy: komunikat tylko przy wczytaniu
+        if( Report ) { ErrorLog( "Bad scenario: umbrella \"" + Name + "\" has \"spread\" in one suspension only; they're assembled separately" ); }
         for( auto const index : List ) { alone( index ); }
         return;
     }
@@ -1696,7 +1699,7 @@ reassemble( std::size_t const Index ) {
             return;
         }
         for( auto const index : members ) { drop_parts( Suspensions[ index ] ); }
-        assemble_umbrella( suspension.data.umbrella, members, *catalog, assembled, parts );
+        assemble_umbrella( suspension.data.umbrella, members, *catalog, assembled, parts, false );
         return;
     }
     drop_parts( suspension );

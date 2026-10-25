@@ -63,7 +63,18 @@ double nearest_parameter(TTrack const &Track, int const Path, glm::dvec3 const &
 			parameter = k / 256.0;
 		}
 	}
-	return parameter;
+	// on a long path a step of the search is metres: refined around the best one, so that a point square to the track (a pole
+	// given by another cantilever on it) gets its own foot on the track and not one a metre off
+	auto low{std::max(0.0, parameter - 1.0 / 256.0)}, high{std::min(1.0, parameter + 1.0 / 256.0)};
+	for (int k = 0; k < 40; ++k)
+	{
+		auto const a{low + (high - low) / 3.0}, b{high - (high - low) / 3.0};
+		if (geometry::plan_distance(curve.point(a), Point) < geometry::plan_distance(curve.point(b), Point))
+			high = b;
+		else
+			low = a;
+	}
+	return 0.5 * (low + high);
 }
 
 glm::dvec2 forward_at(TTrack const &Track, int const Path, double const Parameter)
@@ -1013,7 +1024,13 @@ int catenary_editor::catenary_hit() const
 		auto const foot{pole_of(*data)};
 		if (glm::distance(foot, camera) > kCatenaryRange)
 			continue;
-		auto const distance{mouse_to_segment(projection, foot, foot + glm::dvec3{0.0, pole_top(*data), 0.0})};
+		// the pole, or the cantilever from it to the wires (two cantilevers of an umbrella or spread ones share one pole: the
+		// cantilever tells them apart, and wins a tie with the pole)
+		auto const wire{wire_of(*data)};
+		auto const plane{data->has_spread ? glm::dvec3{data->spread[0], foot.y, data->spread[2]} : foot};
+		glm::dvec3 const root{plane.x, wire.y, plane.z};
+		auto const arm{mouse_to_segment(projection, root, root + (wire - root) * 0.85)}; // not up to the wires: the span is picked there
+		auto const distance{std::min(mouse_to_segment(projection, foot, foot + glm::dvec3{0.0, pole_top(*data), 0.0}), arm * 0.999f)};
 		if (distance < best)
 		{
 			best = distance;
@@ -1622,6 +1639,73 @@ void catenary_editor::catenary_spread_create(std::size_t const Index)
 	                     name.c_str(), console->name.c_str(), first.name.c_str(), second.name.c_str(), console->console_x[0] - console->console_x[1]);
 	if (catenary_scene_parts(added) == 0 || catenary_scene_parts(Index) == 0)
 		tool.status += STR(" - the cantilever didn't assemble, see the log");
+}
+
+void catenary_editor::catenary_pair_move(std::size_t const Selected, glm::dvec3 const &Foot)
+{
+	auto &tool{m_catenary};
+	auto const *current{catenary_scene_get(Selected)};
+	if (current == nullptr || current->umbrella.empty())
+		return;
+	auto const name{current->umbrella};
+	auto const oldfoot{pole_of(*current)};
+	std::vector<std::pair<std::size_t, catenary_spot>> moved;
+	for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+	{
+		auto const *data{catenary_scene_get(index)};
+		if (data == nullptr || data->umbrella != name)
+			continue;
+		auto const *found{catenary_spot_of(index)};
+		if (found == nullptr || found->track == nullptr)
+			return;
+		auto const found_copy{*found};
+		// each keeps its place against the pole (its console mount) and its stagger, on its own track
+		auto const plane{data->has_spread ? glm::dvec3{data->spread[0], data->pole[1], data->spread[2]} : pole_of(*data)};
+		auto planenew{Foot + (plane - oldfoot)};
+		planenew.y = Foot.y;
+		auto const right{right_of(found_copy.forward) * static_cast<double>(found_copy.side)};
+		auto const offset{glm::dot(plan_of(wire_of(*data)) - plan_of(found_copy.axis), right)};
+		catenary_spot spot;
+		{
+			without_gantry const plain{tool.gantry_selected};
+			if (false == catenary_spot_at(*found_copy.track, found_copy.path, planenew, Foot, found_copy.side, spot))
+				return;
+		}
+		spot.curve = found_copy.curve;
+		catenary::suspension planned{*data};
+		planned.pole[0] = Foot.x;
+		planned.pole[1] = Foot.y;
+		planned.pole[2] = Foot.z;
+		planned.spread[0] = planenew.x;
+		planned.spread[1] = Foot.y;
+		planned.spread[2] = planenew.z;
+		catenary_keep_pole(spot, planned, std::abs(offset), offset >= 0.0);
+		if (spot.card == 0)
+		{
+			tool.status = spot.problem;
+			return;
+		}
+		auto &result{spot.data};
+		result.name = data->name;
+		result.range_max = data->range_max;
+		result.range_min = data->range_min;
+		result.skin = data->skin;
+		result.overrides = data->overrides;
+		result.umbrella = data->umbrella;
+		moved.emplace_back(index, spot);
+	}
+	// one undo group for the whole drag
+	auto const record{tool.drag_undo == 0};
+	if (record)
+		tool.drag_undo = ++tool.group;
+	for (auto const &[index, spot] : moved)
+	{
+		if (record)
+			tool.undo.push_back({tool.drag_undo, false, index, *catenary_scene_get(index), std::nullopt, false});
+		catenary_scene_update(index, spot.data);
+		tool.spots[index] = spot;
+	}
+	tool.probed = false;
 }
 
 void catenary_editor::catenary_umbrella_break(std::size_t const Index)
@@ -3906,13 +3990,19 @@ void catenary_editor::catenary_drag_update()
 		auto const drop{own != nullptr && false == own->drop.empty()};
 		if (drop || (own != nullptr && own->gantry))
 			return; // a drop, or a cantilever on a mast, goes with its gantry
-		if (false == current->umbrella.empty())
-		{
-			tool.status = STR("Two cantilevers share this pole (umbrella or spread cantilevers): separate them to move it");
-			return;
-		}
 		spot.curve = tool.bend == 2 || (tool.bend == 0 && spot.radius > 0.0 && spot.radius < kCurveRadius);
 		catenary_compose(spot, tool.clearance, tool.stagger, tool.toward);
+		if (false == current->umbrella.empty())
+		{
+			// an umbrella or spread cantilevers: the pole goes where this one puts it, the other cantilever goes with it
+			if (spot.card == 0)
+				return;
+			auto const plane{current->has_spread ? glm::dvec3{current->spread[0], current->pole[1], current->spread[2]} : pole_of(*current)};
+			auto foot{glm::dvec3{spot.data.pole[0], spot.data.pole[1], spot.data.pole[2]} - (plane - pole_of(*current))};
+			foot.y = spot.data.pole[1];
+			catenary_pair_move(static_cast<std::size_t>(tool.selected), foot);
+			return;
+		}
 		if (spot.card != 0)
 			catenary_apply(spot);
 		return;
