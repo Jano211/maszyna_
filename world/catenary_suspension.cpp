@@ -33,7 +33,7 @@ std::string normalize_path( std::string Path ) {
 
 // słowa kluczowe wewnątrz wpisu podwieszenia
 bool is_keyword( std::string const &Token ) {
-    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "at", "attach", "rope", "pole", "umbrella", "spread", "endsuspension" };
+    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "endsuspension" };
     return keywords.find( Token ) != keywords.end();
 }
 
@@ -266,6 +266,10 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 }
                 else { report( entry.name, "\"" + key + "\" needs three numbers: a point in scenery coordinates" ); good = false; }
             }
+            else if( key == "shared_pole" ) {
+                if( list.empty() ) { entry.shared_pole = true; }
+                else { report( entry.name, "\"shared_pole\" takes no values" ); good = false; }
+            }
             else if( key == "spread" ) {
                 if( list.size() == 3 && to_number( list[ 0 ], entry.spread[ 0 ] ) && to_number( list[ 1 ], entry.spread[ 1 ] ) && to_number( list[ 2 ], entry.spread[ 2 ] ) ) { entry.has_spread = true; }
                 else { report( entry.name, "\"spread\" needs three numbers: the point on the console in the plane of the cantilever" ); good = false; }
@@ -290,6 +294,7 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 if( entry.has_attach && entry.has_pole ) { report( entry.name, "\"attach\" and \"pole\" can't be used together" ); good = false; }
                 if( entry.card == 0 ) { report( entry.name, "explicit points need a \"scheme\"" ); good = false; }
                 if( false == entry.umbrella.empty() && false == entry.has_pole ) { report( entry.name, "\"umbrella\" needs a \"pole\"" ); good = false; }
+                if( entry.shared_pole && false == entry.has_pole ) { report( entry.name, "\"shared_pole\" needs a \"pole\"" ); good = false; }
                 if( entry.has_spread && ( entry.umbrella.empty() || false == entry.has_pole ) ) { report( entry.name, "\"spread\" needs a \"pole\" and an \"umbrella\" name pairing it with the other cantilever on the console" ); good = false; }
             }
             else {
@@ -340,6 +345,7 @@ std::string write_suspension( suspension const &Entry ) {
     if( Entry.has_pole ) { text += " pole " + Entry.pole_type + " " + point( Entry.pole ); }
     if( false == Entry.umbrella.empty() ) { text += " umbrella " + Entry.umbrella; }
     if( Entry.has_spread ) { text += " spread " + point( Entry.spread ); }
+    if( Entry.shared_pole ) { text += " shared_pole"; }
     return text + " endsuspension";
 }
 
