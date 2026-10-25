@@ -211,6 +211,8 @@ public:
     tensioner_device const *device( std::string const &Name ) const;
     std::vector<tensioner_device> const &devices() const { return m_devices; }
     std::map<std::string, double> const &part_lengths() const { return m_lengths; } // długości części liniowych (pręt)
+    // numer typu sieci dla urządzeń: sieć bez własnych danych bierze dane innej (wpis "network <symbol> as <kod>"), inaczej jej kod
+    int code_for( std::string const &Symbol, int Code ) const;
 
 private:
     std::vector<tensioner_table> m_tables;
@@ -219,6 +221,7 @@ private:
     std::vector<tensioner_lever> m_levers;
     std::vector<tensioner_device> m_devices;
     std::map<std::string, double> m_lengths;
+    std::map<std::string, int> m_networks;
 };
 
 struct tensioner_input {

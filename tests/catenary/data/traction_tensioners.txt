@@ -6,6 +6,15 @@
 //   row <odleglosc od kotwienia> b <...> s <...> b: os rolki ruchomej od czola konstrukcji, s: spod ciezarow nad glowka
 // endtable
 
+// Sieci bez wlasnych danych w urzadzeniach (Jan 2026-10-25: "byle na oko"): network <symbol> as <traction_code> - biora stosy
+// i dzwignie sieci o najblizszych naciagach. YC95-2C = C95-2C (te same naciagi), YC120-2C ~ C120-2C, SKB70-C ~ C95-C,
+// YpC120-2C / YpC95-2C ~ YwsC120-2C (przewody 1962 daN). Sieci bez wpisu i bez danych - pierwsze dane urzadzenia (log).
+network YC95-2C as 4
+network YC120-2C as 3
+network SKB70-C as 10
+network YpC120-2C as 26
+network YpC95-2C as 26
+
 // 33-0011-1 tablica montazowa urzadzenia naprezajacego cala siec, rolki rownolegle (tom 1 s. 12). bn 1,75 / sn 2,25 przy +10 °C,
 // pret c = 2,00 m. Wiersze przepisane z karty; trzy komorki nie trzymaja przekladni 1:4 (550/+35 b 1,54 - z s wynikaloby 1,51;
 // 750/-15 i 750/+35 o 5 cm w s) - literowki karty.
