@@ -123,6 +123,7 @@ struct cantilever_pole {
     std::string strut;                  // mocowanie ukośnika (część z punktem axis i zawiasem)
     std::string stay;                   // mocowanie izolatora odciągu
     std::string steady;                 // mocowanie izolatora wysięgu pomocniczego (schematy z trzema zaczepami)
+    std::string console;                // konsola wysięgników rozstawionych (wpis "mount ... console"); pusta = słup ich nie nosi
     // słup bramki z wysięgnikiem (zrobiony z wpisu "mast" z mocowaniami): model stawia bramka, nie wysięgnik; mount_max pod
     // dźwigarem bramki liczy sceneria wg jej poziomu (mast_low/mast_high minus below_beam), tu - pod dolnym mocowaniem
     bool   gantry { false };
@@ -141,6 +142,11 @@ struct cantilever_mount {
     std::string hinge;                  // zawias obrotowy stawiany w punkcie axis (wspornik ukośnika)
     std::string rod;                    // pręt z uchem stawiany w punkcie eye (uchwyt odciągu)
     std::string twin;                   // połówka z nakrętkami mocowania dwustronnego (parasol); pusta = mocowanie bez regulacji, parasol z dwóch niezależnych
+    // konsola wysięgników rozstawionych (4890, karty 0517/0518): dwa punkty mocowań w X (wzdłuż toru) i ich odsunięcie od
+    // płaszczyzny słupa (Y, ujemne - w stronę toru); na konsoli mocowania -06 (4610-06, 4620-06, 4630-06)
+    bool   console { false };
+    double console_x[ 2 ] { 0.0, 0.0 };
+    double console_face { 0.0 };
     double point[ 2 ] { 0.0, 0.0 };     // Y, Z punktu axis (gdy jest zawias) albo eye
     double hinge_eye[ 2 ] { 0.0, 0.0 }; // Y, Z ucha zawiasu względem jego zera
     // punkt zaczepu izolatora względem zera mocowania
@@ -294,6 +300,11 @@ struct cantilever_umbrella {
     std::map<std::string, double> shared;   // rola mocowania -> wspólna wysokość osi śrub nad główką szyny
     std::set<std::string> nuts;             // role mocowań, które po tej stronie są połówką z nakrętkami
     bool pole { true };                     // czy stawiać słup (stawia go tylko jedna strona)
+    // wysięgniki rozstawione: oba po tej samej stronie słupa, na konsolach (konsola słupa), mocowania -06 na wspólnych
+    // wysokościach z shared; płaszczyzna wysięgnika przechodzi przez punkt mocowania na konsoli, oś słupa leży w X = ConsoleX
+    bool spread { false };
+    double console_x { 0.0 };
+    bool console_parts { true };            // czy stawiać konsole (stawia je jedna strona)
 };
 bool solve_cantilever_on_pole( cantilever_catalog const &Catalog, cantilever_scheme const &Scheme, cantilever_pole const &Pole,
     double Distance, double RailHead, cantilever_point const &Messenger, std::map<std::string, std::string> const &Overrides,
@@ -305,6 +316,11 @@ bool solve_cantilever_on_pole( cantilever_catalog const &Catalog, cantilever_sch
 // każde mocowanie najwyżej raz. Średnia nie wychodzi ponad mount_max słupa (chyba że obie strony są wyżej - wtedy niższa).
 // Wypełnia shared i nuts obu stron.
 void umbrella_mounts( cantilever_catalog const &Catalog, cantilever_pole const &Pole, cantilever_result const &First, cantilever_result const &Second,
+    cantilever_umbrella &FirstSide, cantilever_umbrella &SecondSide );
+
+// wspólne wysokości mocowań wysięgników rozstawionych: każda rola obu wysięgników na jednej konsoli, na średniej wysokości
+// (nie ponad mount_max słupa). Wypełnia shared obu stron
+void spread_mounts( cantilever_pole const &Pole, cantilever_result const &First, cantilever_result const &Second,
     cantilever_umbrella &FirstSide, cantilever_umbrella &SecondSide );
 
 // część ustawiona w układzie scenerii symulatora (X, Y w górę, Z), względem punktu osi przewodów jezdnych

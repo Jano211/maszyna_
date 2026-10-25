@@ -6188,3 +6188,21 @@ msgstr "Przewody jezdne łańcucha idą przez %s, lina nośna przez %s"
 
 msgid "Another cantilever up to 3 m from this pole holds the messenger of this chain here, this one only its wires: spread cantilevers on a console, a cantilever of the messenger only, chains crossing over in a tension span"
 msgstr "Linę nośną łańcucha trzyma tu inny wysięgnik do 3 m od tego słupa, ten tylko przewody jezdne: wysięgniki rozstawione na konsoli, wysięgnik samej liny, łańcuchy krzyżujące się w przęśle naprężenia"
+
+msgid "Two cantilevers share this pole (umbrella or spread cantilevers): separate them to move it"
+msgstr "Na tym słupie są dwa wysięgniki (parasol albo rozstawione): rozdziel je, żeby go przesunąć"
+
+msgid "Pole %s carries no console for spread cantilevers (\"console\" in its entry in traction_supports.txt)"
+msgstr "Słup %s nie ma konsoli wysięgników rozstawionych (\"console\" w jego wpisie w traction_supports.txt)"
+
+msgid "Spread cantilevers %s on console %s: %s and %s, %.2f m apart; give each its chain, \"Messenger held by\" splits the messenger and the wires between them"
+msgstr "Wysięgniki rozstawione %s na konsoli %s: %s i %s, %.2f m od siebie; każdemu daj jego łańcuch, „Linę nośną trzyma” dzieli linę i przewody między nie"
+
+msgid "Spread cantilevers"
+msgstr "Wysięgniki rozstawione"
+
+msgid "Two cantilevers to this track on consoles 4890 (cards 0517/0518), 1.19 m apart along it: this one goes onto the first mount, the second onto the other; each can then hold any chain or only its messenger or its wires"
+msgstr "Dwa wysięgniki do tego toru na konsolach 4890 (karty 0517/0518), 1,19 m od siebie wzdłuż toru: ten idzie na pierwsze mocowanie, drugi na drugie; potem każdy może trzymać dowolny łańcuch albo samą jego linę nośną lub same przewody"
+
+msgid "Spread cantilevers %s with %s"
+msgstr "Wysięgniki rozstawione %s z %s"

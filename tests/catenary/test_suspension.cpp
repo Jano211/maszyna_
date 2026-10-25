@@ -84,6 +84,7 @@ int main() {
             "node 1000 0 k1 anchor device 0461 network C120-2C pole 1611-11 10 0 20 toward 10 5.6 60 distance 650 color szary top_color zolty missing 3 rope_height 7.85 insulators messenger endanchor "
             "node 1000 0 k2 anchor device 0461 pole 1611-11 10 0 endanchor "    // za malo liczb, brak toward
             "node 1000 0 a suspension scheme 1113 1 at 0 5.6 0 attach -2 0 0 endsuspension node 1000 0 b suspension scheme 1113 1 at 0 5.6 60 attach -2 0 60 endsuspension "
+            "node 1000 0 r1 suspension scheme 1113 1 at 0 5.6 30.6 pole 1701 -2.6 0 30 umbrella rz spread -2.6 0 30.594 endsuspension "
             "node 1000 0 l1 chain power z voltage 3000 current 4500 resistivity 0.01 material cu thickness 3 state 0 anchor_end k1 middle b middle_device 0408 middle_height 6.5 0 messenger_from a b suspensions a b endchain"
             ), "kotwy.scm", file, errors );
         auto good { file.anchors.size() == 1 && errors.size() >= 1 && file.chains.size() == 1 && file.chains[ 0 ].anchor_end == "k1"
@@ -96,6 +97,10 @@ int main() {
             good = none.empty() && again.anchors.size() == 1 && again.anchors[ 0 ].network == "C120-2C" && again.anchors[ 0 ].pole_type == "1611-11"
                 && again.anchors[ 0 ].missing == 3 && again.anchors[ 0 ].insulators == "messenger" && again.anchors[ 0 ].rope_height == 7.85 && again.chains.size() == 1 && again.chains[ 0 ].anchor_end == "k1" && again.chains[ 0 ].middle == "b" && again.chains[ 0 ].middle_device == "0408" && again.chains[ 0 ].middle_heights[ 0 ] == 6.5 && again.chains[ 0 ].middle_heights[ 1 ] == 0.0
                 && again.chains[ 0 ].messenger_from.size() == 1 && again.chains[ 0 ].messenger_from[ 0 ].second == "b";
+            catenary::suspension_file spreadfile; std::vector<std::string> spreaderrors;
+            catenary::parse_suspensions( words( catenary::write_suspension( file.entries[ 2 ] ) ), "rozstaw.scm", spreadfile, spreaderrors );
+            good = good && file.entries.size() == 3 && file.entries[ 2 ].has_spread && spreaderrors.empty() && spreadfile.entries.size() == 1
+                && spreadfile.entries[ 0 ].has_spread && std::abs( spreadfile.entries[ 0 ].spread[ 2 ] - 30.594 ) < 1e-9 && spreadfile.entries[ 0 ].umbrella == "rz";
         }
         std::printf( "kotwienie: wpisow %zu, komunikatow %zu, zapis i odczyt  %s\n", file.anchors.size(), errors.size(), good ? "OK" : "BLAD" );
         if( false == good ) { for( auto const &e : errors ) { std::printf( "  %s\n", e.c_str() ); } }

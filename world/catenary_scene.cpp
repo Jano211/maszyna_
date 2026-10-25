@@ -461,21 +461,43 @@ assemble_umbrella( std::string const &Name, std::vector<std::size_t> const &List
         }
     }
     if( false == paired ) { for( auto const index : List ) { alone( index ); } return; }
-    glm::dvec3 wires[ 2 ], ropes[ 2 ], poles[ 2 ];
+    // wysięgniki rozstawione: oba wpisy z punktem na konsoli; jeden bez niego - błąd, składane osobno
+    auto const spread { first.has_spread && Suspensions[ List.back() ].data.has_spread };
+    if( spread != ( first.has_spread || Suspensions[ List.back() ].data.has_spread ) ) {
+        ErrorLog( "Bad scenario: umbrella \"" + Name + "\" has \"spread\" in one suspension only; they're assembled separately" );
+        for( auto const index : List ) { alone( index ); }
+        return;
+    }
+    glm::dvec3 wires[ 2 ], ropes[ 2 ], poles[ 2 ], attach[ 2 ];
     catenary::cantilever_result probes[ 2 ];
+    catenary::cantilever_umbrella sides[ 2 ];
     auto probed { true };
     for( int side = 0; side < 2; ++side ) {
         auto &suspension { Suspensions[ List[ side ] ] };
         entry_points( suspension.data, wires[ side ], ropes[ side ], poles[ side ] );
-        probed = probed && assemble( suspension, Catalog, wires[ side ], ( suspension.data.has_rope ? &ropes[ side ] : nullptr ), poles[ 0 ], nullptr, &probes[ side ] ) > 0;
+        attach[ side ] = poles[ 0 ];
+        if( spread ) {
+            // płaszczyzna wysięgnika przez punkt mocowania na konsoli; oś słupa przesunięta od niej wzdłuż osi X wysięgnika
+            auto const &point { suspension.data.spread };
+            attach[ side ] = { point[ 0 ], poles[ 0 ].y, point[ 2 ] };
+            auto const heading { std::atan2( attach[ side ].x - wires[ side ].x, attach[ side ].z - wires[ side ].z ) };
+            glm::dvec3 const xaxis { -std::cos( heading ), 0.0, std::sin( heading ) };
+            sides[ side ].spread = true;
+            sides[ side ].console_x = glm::dot( poles[ 0 ] - attach[ side ], xaxis );
+        }
+        auto probe { sides[ side ] };
+        probe.console_parts = false;
+        probe.pole = false;
+        probed = probed && assemble( suspension, Catalog, wires[ side ], ( suspension.data.has_rope ? &ropes[ side ] : nullptr ), attach[ side ], ( spread ? &probe : nullptr ), &probes[ side ] ) > 0;
     }
     if( false == probed ) { for( auto const index : List ) { alone( index ); } return; }
-    catenary::cantilever_umbrella sides[ 2 ];
-    catenary::umbrella_mounts( Catalog, *pole, probes[ 0 ], probes[ 1 ], sides[ 0 ], sides[ 1 ] );
+    if( spread ) { catenary::spread_mounts( *pole, probes[ 0 ], probes[ 1 ], sides[ 0 ], sides[ 1 ] ); }
+    else { catenary::umbrella_mounts( Catalog, *pole, probes[ 0 ], probes[ 1 ], sides[ 0 ], sides[ 1 ] ); }
     sides[ 1 ].pole = false;
+    sides[ 1 ].console_parts = false;
     for( int side = 0; side < 2; ++side ) {
         auto &suspension { Suspensions[ List[ side ] ] };
-        auto const count { assemble( suspension, Catalog, wires[ side ], ( suspension.data.has_rope ? &ropes[ side ] : nullptr ), poles[ 0 ], &sides[ side ] ) };
+        auto const count { assemble( suspension, Catalog, wires[ side ], ( suspension.data.has_rope ? &ropes[ side ] : nullptr ), attach[ side ], &sides[ side ] ) };
         if( count > 0 ) { ++Assembled; Parts += count; }
     }
 }

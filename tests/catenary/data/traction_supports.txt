@@ -55,6 +55,14 @@ mount 4630-08 eye -0.0970 0.0395 back 4610-21 twin 4660-05 endmount
 mount 4610-10 axis -0.1487 0.0243 hinge 4610-00 -0.0798 0.0344 back 4610-22 twin 4640-10 endmount
 mount 4620-10 eye -0.1800 0.0000 rod 4620-00 back 4610-22 twin 4650-10 endmount
 mount 4630-10 eye -0.0970 0.0395 back 4610-22 twin 4660-10 endmount
+// ---- konsole wysiegnikow rozstawionych 4890 (karty 0517/0518; modele Jana 2026-10-25) ------------------------
+// mount <nazwa> console <X mount_1> <X mount_2> <Y mocowan> [back <czesc>] endmount: zero na plaszczyznie przylegania do slupa,
+// punkty mount_1/mount_2 z modelu (wzdluz toru), Y ujemne = przed slupem; na konsoli mocowania -06 (4610-06, 4620-06, 4630-06).
+// Slup nosi konsole wpisem "console <nazwa>" w swoim wpisie pole. Tyl z nakretkami 4890-05 do wykonan 2, 3, 4 (Jan 2026-10-25)
+mount 4890-01 console 0.59374 -0.59425 -0.07684 endmount
+mount 4890-02 console 0.59374 -0.59425 -0.07684 back 4890-05 endmount
+mount 4890-03 console 0.59374 -0.59425 -0.07684 back 4890-05 endmount
+mount 4890-04 console 0.59374 -0.59425 -0.07684 back 4890-05 endmount
 
 // ---- slupy -----------------------------------------------------------------------------------------------------
 pole 1701 model siec_trakcyjna/slupy/1701 top 7.4600 length 8.7500 depth 0.1750 0.3850 width 0.2100 mount_max 7.3000 strut 4610-03 stay 4620-03 steady 4630-03 endpole   // slup betonowy (2026-10-11); wzdluz toru 210 mm stale na calej wysokosci, tak samo 1711 (Jan 2026-10-24)
