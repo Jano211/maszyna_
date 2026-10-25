@@ -6224,3 +6224,21 @@ msgstr "do dźwigara bramki (karta 0416)"
 
 msgid "0416: the middle pole is a drop of a gantry; the anchor ropes go from the beam above the messenger to clamps on it about 3 m on both sides, the poles next to it carry nothing"
 msgstr "0416: podwieszenie środkowe jest na zwisie bramki; liny kotwienia idą od dźwigara nad liną nośną do zacisków na niej ok. 3 m z obu stron, słupy sąsiednie nic nie niosą"
+
+msgid "Contact wires anchored apart: on another pole"
+msgstr "Przewody jezdne zakotwione osobno: na innym słupie"
+
+msgid "LMB on the pole the anchor of the contact wires goes on"
+msgstr "LPM na słupie, na którym ma być kotwienie przewodów jezdnych"
+
+msgid "The messenger stays on the anchor above (it becomes one of the messenger only: 0405 or the messenger of a split one), the contact wires go to an anchor of their own on the pole picked (0404 or the wires of a split one)"
+msgstr "Lina nośna zostaje na kotwieniu wyżej (staje się kotwieniem samej liny: 0405 albo liną rozdzielonego), przewody jezdne idą na własne kotwienie na wskazanym słupie (0404 albo przewody rozdzielonego)"
+
+msgid "The contact wires are anchored on their own; the other anchor holds the messenger only"
+msgstr "Przewody jezdne zakotwione osobno; drugie kotwienie trzyma samą linę nośną"
+
+msgid "contact wires"
+msgstr "przewody jezdne"
+
+msgid "messenger"
+msgstr "lina nośna"

@@ -112,7 +112,10 @@ struct catenary_anchor_card {
     bool split { false };   // dwa stosy (lina i przewody osobno)
     std::string title;      // opis z danych (odmiany pokazane osobno, np. 0461-2x2)
 };
-std::vector<catenary_anchor_card> catenary_anchor_devices();
+// Only: puste - kotwienia całości; "messenger" / "contact" - samej liny / samych przewodów (przewody zakotwione osobno)
+std::vector<catenary_anchor_card> catenary_anchor_devices( std::string const &Only = {} );
+// katalog urządzeń naprężających (traction_tensioners.txt); nullptr, gdy go nie ma
+catenary::tensioner_catalog const *catenary_scene_tensioners();
 // łańcuch, który kończy się tym kotwieniem (Start: na początku), -1 gdy żaden
 int catenary_anchor_chain( std::size_t Index, bool &Start );
 // dodaje kotwienie, składa je i przebudowuje łańcuchy, które go używają. zwraca numer

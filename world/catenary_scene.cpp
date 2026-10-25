@@ -18,6 +18,7 @@ http://mozilla.org/MPL/2.0/.
 #include "world/catenary_tensioner.h"
 #include "world/Traction.h"
 #include "model/AnimModel.h"
+#include <set>
 #include "simulation/simulation.h"
 #include "utilities/Globals.h"
 
@@ -644,6 +645,14 @@ assemble_gantry( scene_gantry &Gantry ) {
 }
 
 std::size_t suspension_named( std::string const &File, std::string const &Name );
+// czy łańcuch kończy się na tym kotwieniu (lina z całością albo same przewody: anchor_*_contact); Start - na początku łańcucha
+inline bool
+anchors_chain( catenary::chain const &Chain, std::string const &Name, bool *Start = nullptr ) {
+    if( Name.empty() ) { return false; }
+    auto const start { Chain.anchor_start == Name || Chain.anchor_start_contact == Name };
+    if( Start != nullptr ) { *Start = start; }
+    return start || Chain.anchor_end == Name || Chain.anchor_end_contact == Name;
+}
 void follow_anchor( scene_anchor const &Anchor );
 void add_tube( std::vector<catenary::solid_vertex> &Triangles, std::vector<glm::dvec3> const &Points, double Radius );
 void rope_of( catenary::suspension const &Data, double *Rope );
@@ -707,7 +716,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     auto network { data.network };
     for( auto const &chain : Chains ) {
         if( chain.removed || chain.file != Anchor.file || data.name.empty() || chain.data.type.empty() ) { continue; }
-        if( chain.data.anchor_start == data.name || chain.data.anchor_end == data.name ) { network = chain.data.type; break; }
+        if( anchors_chain( chain.data, data.name ) ) { network = chain.data.type; break; }
     }
     if( false == network.empty() ) {
         if( auto const *type { catenary::types().find( network ) }; type != nullptr ) {
@@ -726,7 +735,7 @@ assemble_anchor( scene_anchor &Anchor ) {
                 auto const card { data.device.substr( 0, data.device.find( '-' ) ) };
                 catenary::tensioner_device const *same { nullptr }, *kind { nullptr };
                 for( auto const &other : devices->devices() ) {
-                    if( other.fixed != device->fixed || false == other.only.empty() || other.type( input.type ) == nullptr ) { continue; }
+                    if( other.fixed != device->fixed || other.only != device->only || other.type( input.type ) == nullptr ) { continue; }
                     if( same == nullptr && other.name.substr( 0, other.name.find( '-' ) ) == card ) { same = &other; }
                     if( kind == nullptr ) { kind = &other; }
                 }
@@ -756,14 +765,15 @@ assemble_anchor( scene_anchor &Anchor ) {
     // stare złożenie: łańcuch z tym kotwieniem ma druty zaśniedziałe (stan 1); średnia rozpiętość jego przęseł między podwieszeniami
     for( auto const &chain : Chains ) {
         if( chain.removed || chain.file != Anchor.file || data.name.empty() ) { continue; }
-        if( chain.data.anchor_start == data.name || chain.data.anchor_end == data.name ) {
+        if( anchors_chain( chain.data, data.name ) ) {
             input.old_fittings = ( chain.data.state == 1 );
             // łańcuch z kotwieniem środkowym: odległość od niego liczona wzdłuż łańcucha (podwieszenia aż do słupa kotwienia)
             if( false == chain.data.middle.empty() ) {
                 auto const &names { chain.data.suspensions };
                 auto const middle { std::find( names.begin(), names.end(), chain.data.middle ) };
                 if( middle != names.end() ) {
-                    auto const start { chain.data.anchor_start == data.name };
+                    bool start { false };
+                    anchors_chain( chain.data, data.name, &start );
                     auto const from { static_cast<std::ptrdiff_t>( middle - names.begin() ) };
                     auto const to { start ? std::ptrdiff_t { 0 } : static_cast<std::ptrdiff_t>( names.size() ) - 1 };
                     double along { 0.0 };
@@ -858,9 +868,9 @@ assemble_anchor( scene_anchor &Anchor ) {
         for( auto const &chain : Chains ) {
             if( chain.removed || chain.file != Anchor.file || data.name.empty() || chain.data.suspensions.empty() ) { continue; }
             std::string neighbour;
-            if( chain.data.anchor_start == data.name ) { neighbour = chain.data.suspensions.front(); }
-            else if( chain.data.anchor_end == data.name ) { neighbour = chain.data.suspensions.back(); }
-            else { continue; }
+            bool start { false };
+            if( false == anchors_chain( chain.data, data.name, &start ) ) { continue; }
+            neighbour = ( start ? chain.data.suspensions.front() : chain.data.suspensions.back() );
             auto const index { suspension_named( Anchor.file, neighbour ) };
             if( index >= Suspensions.size() || false == Suspensions[ index ].data.has_at ) { break; }
             double rope[ 3 ];
@@ -1064,7 +1074,11 @@ chain_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *
     }
     if( Anchored ) {
         if( anchor == nullptr || false == anchor->solved ) { return false; }
-        std::copy( std::begin( anchor->contact ), std::end( anchor->contact ), Wire );
+        // przewody zakotwione osobno: ich koniec z drugiego kotwienia
+        auto const &contactname { Point == 0 && false == data.anchor_start.empty() ? data.anchor_start_contact : data.anchor_end_contact };
+        auto const *contact { contactname.empty() ? anchor : anchor_named( Chain.file, contactname ) };
+        if( contact == nullptr || false == contact->solved ) { return false; }
+        std::copy( std::begin( contact->contact ), std::end( contact->contact ), Wire );
         std::copy( std::begin( anchor->messenger ), std::end( anchor->messenger ), Rope );
         return true;
     }
@@ -1444,7 +1458,8 @@ rebuild_span( scene_chain &Chain, std::size_t const Span ) {
     if( auto *span { Chain.spans[ Span ] }; span != nullptr ) {
         std::vector<catenary::solid_vertex> rope;
         auto const ends { chain_points( Chain ) };
-        for( auto const *name : { Span == 0 ? &Chain.data.anchor_start : nullptr, Span + 2 == ends ? &Chain.data.anchor_end : nullptr } ) {
+        for( auto const *name : { Span == 0 ? &Chain.data.anchor_start : nullptr, Span + 2 == ends ? &Chain.data.anchor_end : nullptr,
+                                  Span == 0 ? &Chain.data.anchor_start_contact : nullptr, Span + 2 == ends ? &Chain.data.anchor_end_contact : nullptr } ) {
             if( name == nullptr || name->empty() ) { continue; }
             if( auto const *anchor { anchor_named( Chain.file, *name ) }; anchor != nullptr && anchor->solved ) {
                 rope.insert( rope.end(), anchor->rope.begin(), anchor->rope.end() );
@@ -1463,7 +1478,7 @@ rebuild_span( scene_chain &Chain, std::size_t const Span ) {
 void
 rebuild_chain( scene_chain &Chain ) {
     // kotwienia łańcucha od nowa (stan drutów, kierunek do pierwszego/ostatniego podwieszenia), przed przęsłami do nich
-    for( auto const *name : { &Chain.data.anchor_start, &Chain.data.anchor_end } ) {
+    for( auto const *name : { &Chain.data.anchor_start, &Chain.data.anchor_end, &Chain.data.anchor_start_contact, &Chain.data.anchor_end_contact } ) {
         if( auto *anchor { anchor_named( Chain.file, *name ) }; anchor != nullptr ) { assemble_anchor( *anchor ); }
     }
     assemble_middle( Chain );
@@ -1759,6 +1774,11 @@ follow_chains( std::size_t const Index ) {
             std::string const *end { position == 0 ? &chain.data.anchor_start : position + 1 == names.size() ? &chain.data.anchor_end : nullptr };
             if( end != nullptr && false == end->empty() ) {
                 if( auto *anchor { anchor_named( chain.file, *end ) }; anchor != nullptr ) { assemble_anchor( *anchor ); }
+            }
+            // przewody zakotwione osobno
+            std::string const *endcontact { position == 0 ? &chain.data.anchor_start_contact : position + 1 == names.size() ? &chain.data.anchor_end_contact : nullptr };
+            if( endcontact != nullptr && false == endcontact->empty() ) {
+                if( auto *anchor { anchor_named( chain.file, *endcontact ) }; anchor != nullptr ) { assemble_anchor( *anchor ); }
             }
             auto const point { position + ( chain.data.anchor_start.empty() ? 0 : 1 ) };
             // kotwienie środkowe przy tym podwieszeniu albo przy sąsiednim: od nowa, z oboma przęsłami przy nim
@@ -2167,7 +2187,7 @@ void
 follow_anchor( scene_anchor const &Anchor ) {
     for( auto &chain : Chains ) {
         if( chain.removed || chain.file != Anchor.file || Anchor.data.name.empty() ) { continue; }
-        if( chain.data.anchor_start != Anchor.data.name && chain.data.anchor_end != Anchor.data.name ) { continue; }
+        if( false == anchors_chain( chain.data, Anchor.data.name ) ) { continue; }
         for( std::size_t span = 0; span < chain.spans.size(); ++span ) { rebuild_span( chain, span ); }
     }
 }
@@ -2202,16 +2222,27 @@ catenary_anchor_result( std::size_t const Index ) {
 }
 
 std::vector<catenary_anchor_card>
-catenary_anchor_devices() {
+catenary_anchor_devices( std::string const &Only ) {
     std::vector<catenary_anchor_card> result;
+    // urządzenia kotwienia środkowego (lina kotwienia środkowego) nie są kotwieniem końca łańcucha
+    static std::set<std::string> const middle { "0406", "0406-2", "0408", "0408-2", "0418", "0418-2" };
     if( auto const *devices { tensioners() }; devices != nullptr ) {
         for( auto const &device : devices->devices() ) {
-            if( ( device.name.find( '-' ) == std::string::npos || false == device.title.empty() ) && device.only.empty() ) {
+            if( device.only != Only || middle.count( device.name ) ) { continue; }
+            // odmiany dla typów sieci (-10, -32, ...) dobiera się samo; połówki rozdzielonego (-m, -c) i nazwane - na liście
+            auto const dash { device.name.find( '-' ) };
+            auto const half { dash != std::string::npos && ( device.name.substr( dash ) == "-m" || device.name.substr( dash ) == "-c" ) };
+            if( dash == std::string::npos || false == device.title.empty() || ( false == Only.empty() && half ) ) {
                 result.push_back( { device.name, device.fixed, false == device.small_pulley.empty() || device.split, device.split, device.title } );
             }
         }
     }
     return result;
+}
+
+catenary::tensioner_catalog const *
+catenary_scene_tensioners() {
+    return tensioners();
 }
 
 bool
@@ -2228,8 +2259,7 @@ catenary_anchor_chain( std::size_t const Index, bool &Start ) {
     for( std::size_t k = 0; k < Chains.size(); ++k ) {
         auto const &chain { Chains[ k ] };
         if( chain.removed || chain.file != anchor.file || anchor.data.name.empty() ) { continue; }
-        if( chain.data.anchor_start == anchor.data.name ) { Start = true; return static_cast<int>( k ); }
-        if( chain.data.anchor_end == anchor.data.name ) { Start = false; return static_cast<int>( k ); }
+        if( anchors_chain( chain.data, anchor.data.name, &Start ) ) { return static_cast<int>( k ); }
     }
     return -1;
 }

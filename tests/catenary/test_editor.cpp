@@ -404,6 +404,46 @@ int main( int, char *argv[] ) {
             "lina nosna z innego wysiegnika (messenger_from): oba przesla przy m2 z lina przez h2, przewodem przez m2" );
     }
 
+    // 6d. lina i przewody zakotwione osobno: lina na 0405 (k1 na słupie 184 m), przewody na 0404 (k2 na słupie 190 m)
+    {
+        auto a { entry }, c { entry };
+        a.name = "s0001"; c.name = "s0002";
+        c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 160.0;
+        catenary::anchor rope, wires;
+        rope.name = "k1"; rope.device = "0405"; rope.network = "C120-2C"; rope.pole_type = "1611-11";
+        rope.pole[ 0 ] = -2.4; rope.pole[ 1 ] = 0.2; rope.pole[ 2 ] = 184.0;
+        std::copy( std::begin( c.at ), std::end( c.at ), rope.toward );
+        wires = rope;
+        wires.name = "k2"; wires.device = "0404"; wires.pole[ 2 ] = 190.0;
+        catenary::chain line;
+        line.name = "l1"; line.power = "pwr01"; line.type = "C120-2C"; line.anchor_end = "k1"; line.anchor_end_contact = "k2";
+        line.suspensions = { "s0001", "s0002" };
+        auto const written { catenary::write_chain( line ) };
+        std::string text { catenary::write_suspension( a ) + "\n" + catenary::write_suspension( c ) + "\n" + catenary::write_anchor( rope ) + "\n" + catenary::write_anchor( wires ) + "\n" + written + "\n" };
+        { std::ofstream out { "tests/catenary/td_kotwa2_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear(); mock_deleted_spans = 0;
+        cParser directive( "td_kotwa2_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        double wire[ 3 ] { 0.0, 0.0, 0.0 }, messenger[ 3 ] { 0.0, 0.0, 0.0 };
+        auto good { mock_span_bodies.size() == 2 && catenary_anchor_size() == 2 };
+        if( good ) {
+            std::istringstream body { mock_span_bodies.back() };
+            std::string skip;
+            std::getline( body, skip );
+            std::getline( body, skip );
+            body >> wire[ 0 ] >> wire[ 1 ] >> wire[ 2 ];
+            std::getline( body, skip );
+            std::getline( body, skip );
+            body >> messenger[ 0 ] >> messenger[ 1 ] >> messenger[ 2 ];
+        }
+        for( auto const &error : errors ) { std::printf( "    %s\n", error.c_str() ); }
+        std::printf( "  osobno: przewody do %.2f, lina do %.2f\n", wire[ 2 ], messenger[ 2 ] );
+        check( good && errors.empty() && written.find( " anchor_end_contact k2" ) != std::string::npos && wire[ 2 ] > 184.5 && wire[ 2 ] < 190.0 && messenger[ 2 ] < 184.0 && messenger[ 2 ] > 182.0,
+            "lina na 0405 i przewody na 0404 na innym slupie: ostatnie przeslo konczy line na jednym, przewody na drugim" );
+        std::remove( "tests/catenary/td_kotwa2_test.scm" );
+    }
+
     // 6. kotwienie ciężarowe na końcu łańcucha: słup i urządzenie, ostatnie przęsło bez wieszaków do uchwytów krańcowych,
     // temperatura przestawia ciężary i przęsło
     {

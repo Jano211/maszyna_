@@ -1973,7 +1973,7 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		if (tool.anchor_pick >= 0)
 		{
 			// the tensioning device on this pole
-			if (catenary_anchor_create(static_cast<std::size_t>(tool.anchor_pick), tool.anchor_pick_start, Intent.index))
+			if (catenary_anchor_create(static_cast<std::size_t>(tool.anchor_pick), tool.anchor_pick_start, Intent.index, tool.anchor_pick_contact))
 				tool.anchor_pick = -1;
 			return;
 		}
@@ -2190,7 +2190,11 @@ bool catenary_editor::catenary_delete_selected()
 			return false;
 		bool start{false};
 		if (auto const chain{catenary_anchor_chain(picked, start)}; chain >= 0)
-			catenary_anchor_delete(static_cast<std::size_t>(chain), start);
+		{
+			auto const *owner{catenary_chain_get(static_cast<std::size_t>(chain))};
+			auto const contact{owner != nullptr && (start ? owner->anchor_start_contact : owner->anchor_end_contact) == anchor->name};
+			catenary_anchor_delete(static_cast<std::size_t>(chain), start, contact);
+		}
 		else
 		{
 			catenary_change removed;
@@ -2400,9 +2404,9 @@ void catenary_editor::render_catenary_chain_ui()
 	}
 }
 
-std::size_t catenary_editor::catenary_anchor_of(catenary::chain const &Chain, std::string const &File, bool const Start) const
+std::size_t catenary_editor::catenary_anchor_of(catenary::chain const &Chain, std::string const &File, bool const Start, bool const Contact) const
 {
-	auto const &name{Start ? Chain.anchor_start : Chain.anchor_end};
+	auto const &name{Contact ? (Start ? Chain.anchor_start_contact : Chain.anchor_end_contact) : (Start ? Chain.anchor_start : Chain.anchor_end)};
 	if (name.empty())
 		return catenary_anchor_size();
 	for (std::size_t index = 0; index < catenary_anchor_size(); ++index)
@@ -2428,7 +2432,7 @@ int weight_color_index(std::string const &Name)
 
 } // namespace
 
-bool catenary_editor::catenary_anchor_create(std::size_t const Chain, bool const Start, int const On)
+bool catenary_editor::catenary_anchor_create(std::size_t const Chain, bool const Start, int const On, bool const Contact)
 {
 	auto &tool{m_catenary};
 	auto const *chain{catenary_chain_get(Chain)};
@@ -2491,8 +2495,34 @@ bool catenary_editor::catenary_anchor_create(std::size_t const Chain, bool const
 	data.color = "szary";
 	data.top_color = "zolty";
 	auto changed{*chain};
-	(Start ? changed.anchor_start : changed.anchor_end) = data.name;
 	++tool.group;
+	if (Contact)
+	{
+		// the contact wires by themselves (0404, or the wires of a split one); the anchor of the messenger keeps the messenger only
+		auto const main{catenary_anchor_of(*chain, file, Start)};
+		auto const *messenger{main < catenary_anchor_size() ? catenary_anchor_get(main) : nullptr};
+		if (messenger == nullptr)
+			return false;
+		auto const *devices{catenary_scene_tensioners()};
+		auto const *device{devices != nullptr ? devices->device(messenger->device) : nullptr};
+		auto const fixed{device == nullptr || device->fixed};
+		data.device = fixed ? "0404" : "0482-c";
+		if (device == nullptr || device->only != "messenger")
+		{
+			auto changedmessenger{*messenger};
+			changedmessenger.device = fixed ? "0405" : "0482-m";
+			catenary_change before;
+			before.group = tool.group;
+			before.anchor = true;
+			before.index = main;
+			before.anchor_before = *messenger;
+			tool.undo.push_back(before);
+			catenary_anchor_update(main, changedmessenger);
+		}
+		(Start ? changed.anchor_start_contact : changed.anchor_end_contact) = data.name;
+	}
+	else
+		(Start ? changed.anchor_start : changed.anchor_end) = data.name;
 	catenary_change added;
 	added.group = tool.group;
 	added.anchor = true;
@@ -2505,7 +2535,8 @@ bool catenary_editor::catenary_anchor_create(std::size_t const Chain, bool const
 	linked.chain_before = *chain;
 	tool.undo.push_back(linked);
 	catenary_chain_update(Chain, changed);
-	tool.status = STR("Anchored: the last span goes without droppers to the tensioning device");
+	tool.anchor_pick_contact = false;
+	tool.status = Contact ? STR("The contact wires are anchored on their own; the other anchor holds the messenger only") : STR("Anchored: the last span goes without droppers to the tensioning device");
 	return true;
 }
 
@@ -2603,15 +2634,39 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 		}
 	}
 	ImGui::TextUnformatted(STR_C("Anchors"));
-	for (int end = 0; end < 2; ++end)
+	// each end: the anchor of the network (or of the messenger only), then the one of the contact wires when they're anchored apart
+	for (int slot = 0; slot < 4; ++slot)
 	{
+		auto const end{slot / 2};
+		auto const contact{slot % 2 == 1};
 		auto const start{end == 0};
-		ImGui::PushID(end);
+		auto const separate{false == (start ? chain->anchor_start_contact : chain->anchor_end_contact).empty()};
+		ImGui::PushID(slot);
 		// the last two poles at this end: the wires come along them to the anchor
 		auto const *last{catenary_scene_get(start ? members.front() : members.back())};
 		auto const *previous{catenary_scene_get(start ? members[1] : members[members.size() - 2])};
-		auto const index{catenary_anchor_of(*chain, file, start)};
+		auto const index{catenary_anchor_of(*chain, file, start, contact)};
 		auto const *anchor{index < catenary_anchor_size() ? catenary_anchor_get(index) : nullptr};
+		if (contact && anchor == nullptr)
+		{
+			// the contact wires apart from the messenger (0405 + 0404, or the two halves of a split one): on another pole
+			if (catenary_anchor_of(*chain, file, start) < catenary_anchor_size())
+			{
+				auto const picking{tool.anchor_pick == static_cast<int>(Chain) && tool.anchor_pick_start == start && tool.anchor_pick_contact};
+				if (ImGui::SmallButton(picking ? STR_C("Stop picking the pole") : STR_C("Contact wires anchored apart: on another pole")))
+				{
+					tool.anchor_pick = picking ? -1 : static_cast<int>(Chain);
+					tool.anchor_pick_start = start;
+					tool.anchor_pick_contact = false == picking;
+					tool.connect_from = -1;
+					tool.status = picking ? std::string{} : STR("LMB on the pole the anchor of the contact wires goes on");
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("The messenger stays on the anchor above (it becomes one of the messenger only: 0405 or the messenger of a split one), the contact wires go to an anchor of their own on the pole picked (0404 or the wires of a split one)"));
+			}
+			ImGui::PopID();
+			continue;
+		}
 		if (last == nullptr || previous == nullptr || false == last->has_at || false == previous->has_at)
 		{
 			ImGui::PopID();
@@ -2639,6 +2694,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			{
 				tool.anchor_pick = picking ? -1 : static_cast<int>(Chain);
 				tool.anchor_pick_start = start;
+				tool.anchor_pick_contact = false;
 				tool.connect_from = -1;
 				tool.status = picking ? std::string{} : STR("LMB on the pole the tensioning device goes on");
 			}
@@ -2649,7 +2705,8 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 		}
 		auto const picked{tool.anchor_selected == static_cast<int>(index)};
 		ImGui::TextColored(picked ? ImVec4(1.0f, 0.85f, 0.2f, 1.0f) : ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s",
-		                   (format(start ? STR_C("Start: anchor %s") : STR_C("End: anchor %s"), anchor->name.c_str()) + (picked ? "  " + STR("(selected in the view)") : std::string{})).c_str());
+		                   (format(start ? STR_C("Start: anchor %s") : STR_C("End: anchor %s"), anchor->name.c_str()) + (contact ? " - " + STR("contact wires") : separate ? " - " + STR("messenger") : std::string{})
+		                    + (picked ? "  " + STR("(selected in the view)") : std::string{})).c_str());
 		if (picked && tool.anchor_scroll)
 		{
 			// picked in the view just now: the panel goes to its settings
@@ -2662,7 +2719,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 		// kind of the anchor: the card of the device (weight tensioning 0461, fixed 0403); variants for network types go by themselves
 		auto fixed{false};
 		{
-			auto const devices{catenary_anchor_devices()};
+			auto const devices{catenary_anchor_devices(contact ? "contact" : separate ? "messenger" : "")};
 			auto card{data.device.substr(0, data.device.find('-'))};
 			for (auto const &item : devices)
 				if (item.card == data.device)
@@ -2846,7 +2903,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 		}
 		if (ImGui::Button(STR_C("Remove the anchor")))
 		{
-			catenary_anchor_delete(Chain, start);
+			catenary_anchor_delete(Chain, start, contact);
 			if (tool.anchor_selected == static_cast<int>(index))
 				tool.anchor_selected = -1;
 		}
@@ -2854,19 +2911,60 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 	}
 }
 
-void catenary_editor::catenary_anchor_delete(std::size_t const Chain, bool const Start)
+void catenary_editor::catenary_anchor_delete(std::size_t const Chain, bool const Start, bool const Contact)
 {
 	auto &tool{m_catenary};
 	auto const *chain{catenary_chain_get(Chain)};
 	if (chain == nullptr)
 		return;
-	auto const index{catenary_anchor_of(*chain, catenary_chain_file(Chain), Start)};
+	auto const file{catenary_chain_file(Chain)};
+	auto const index{catenary_anchor_of(*chain, file, Start, Contact)};
 	auto const *anchor{index < catenary_anchor_size() ? catenary_anchor_get(index) : nullptr};
 	if (anchor == nullptr)
 		return;
 	auto changed{*chain};
-	(Start ? changed.anchor_start : changed.anchor_end).clear();
 	++tool.group;
+	if (Contact)
+	{
+		changed.anchor_start_contact = Start ? std::string{} : changed.anchor_start_contact;
+		changed.anchor_end_contact = Start ? changed.anchor_end_contact : std::string{};
+		// the anchor of the messenger takes the contact wires again: the whole network on it
+		auto const main{catenary_anchor_of(*chain, file, Start)};
+		if (auto const *messenger{main < catenary_anchor_size() ? catenary_anchor_get(main) : nullptr}; messenger != nullptr)
+		{
+			auto const *devices{catenary_scene_tensioners()};
+			auto const *device{devices != nullptr ? devices->device(messenger->device) : nullptr};
+			if (device != nullptr && device->only == "messenger")
+			{
+				auto whole{*messenger};
+				whole.device = device->fixed ? "0403" : "0461";
+				catenary_change before;
+				before.group = tool.group;
+				before.anchor = true;
+				before.index = main;
+				before.anchor_before = *messenger;
+				tool.undo.push_back(before);
+				catenary_anchor_update(main, whole);
+			}
+		}
+	}
+	else
+	{
+		(Start ? changed.anchor_start : changed.anchor_end).clear();
+		// the contact wires anchored apart go with it
+		auto const contact{catenary_anchor_of(*chain, file, Start, true)};
+		if (auto const *wires{contact < catenary_anchor_size() ? catenary_anchor_get(contact) : nullptr}; wires != nullptr)
+		{
+			catenary_change gone;
+			gone.group = tool.group;
+			gone.anchor = true;
+			gone.index = contact;
+			gone.anchor_before = *wires;
+			tool.undo.push_back(gone);
+			catenary_anchor_remove(contact);
+			(Start ? changed.anchor_start_contact : changed.anchor_end_contact).clear();
+		}
+	}
 	catenary_change removed;
 	removed.group = tool.group;
 	removed.anchor = true;

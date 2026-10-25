@@ -101,6 +101,8 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else if( key == "parallel" ) { one( line.parallel ); }
                 else if( key == "anchor_start" ) { one( line.anchor_start ); }
                 else if( key == "anchor_end" ) { one( line.anchor_end ); }
+                else if( key == "anchor_start_contact" ) { one( line.anchor_start_contact ); }
+                else if( key == "anchor_end_contact" ) { one( line.anchor_end_contact ); }
                 else if( key == "middle" ) { one( line.middle ); }
                 else if( key == "middle_device" ) { one( line.middle_device ); }
                 else if( key == "middle_height" ) { number( line.middle_heights[ 0 ] ); number( line.middle_heights[ 1 ] ); }
@@ -372,6 +374,8 @@ std::string write_chain( chain const &Entry ) {
     if( false == Entry.parallel.empty() ) { text += " parallel " + Entry.parallel; }
     if( false == Entry.anchor_start.empty() ) { text += " anchor_start " + Entry.anchor_start; }
     if( false == Entry.anchor_end.empty() ) { text += " anchor_end " + Entry.anchor_end; }
+    if( false == Entry.anchor_start_contact.empty() ) { text += " anchor_start_contact " + Entry.anchor_start_contact; }
+    if( false == Entry.anchor_end_contact.empty() ) { text += " anchor_end_contact " + Entry.anchor_end_contact; }
     if( false == Entry.middle.empty() ) {
         text += " middle " + Entry.middle + ( Entry.middle_device != "0406" ? " middle_device " + Entry.middle_device : std::string() );
         if( Entry.middle_heights[ 0 ] > 0.0 || Entry.middle_heights[ 1 ] > 0.0 ) { text += " middle_height " + number( Entry.middle_heights[ 0 ] ) + " " + number( Entry.middle_heights[ 1 ] ); }

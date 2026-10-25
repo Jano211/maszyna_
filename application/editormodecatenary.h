@@ -101,6 +101,7 @@ struct catenary_editor
 		int umbrella_from{-1}; // an umbrella from this suspension: the next LMB by a track puts the second cantilever on its pole (or drop)
 		int anchor_pick{-1}; // anchoring this chain to an existing pole: the next pole clicked carries the tensioning device
 		bool anchor_pick_start{false}; // ... at the start of the chain, otherwise at its end
+		bool anchor_pick_contact{false}; // ... the contact wires only (anchored apart from the messenger)
 		int anchor_selected{-1}; // the anchor picked in the view: its chain is shown, the panel marks it, Del removes it
 		bool anchor_scroll{false}; // the panel scrolls to the anchor picked in the view, once
 		char power[64]{"none"};
@@ -237,11 +238,11 @@ struct catenary_editor
 	// the anchors at both ends of the selected chain: add, settings, remove
 	void render_catenary_anchor_ui(std::size_t Chain);
 	// the anchor of the chain at its start (Start) or end; catenary_anchor_size() when none
-	std::size_t catenary_anchor_of(catenary::chain const &Chain, std::string const &File, bool Start) const;
+	std::size_t catenary_anchor_of(catenary::chain const &Chain, std::string const &File, bool Start, bool Contact = false) const;
 	// anchors the start or the end of the chain: on a new pole past the last one, or (On >= 0) on that existing pole
-	bool catenary_anchor_create(std::size_t Chain, bool Start, int On);
+	bool catenary_anchor_create(std::size_t Chain, bool Start, int On, bool Contact = false);
 	// removes the anchor at the start or the end of the chain (one undo step with the chain)
-	void catenary_anchor_delete(std::size_t Chain, bool Start);
+	void catenary_anchor_delete(std::size_t Chain, bool Start, bool Contact = false);
 	// the anchor whose tensioning device is under the cursor; -1 if none
 	int catenary_anchor_hit() const;
 	// shows the chain in the panel as a click on its span does
