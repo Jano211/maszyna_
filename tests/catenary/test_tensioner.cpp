@@ -63,6 +63,10 @@ int main( int argc, char **argv ) {
     auto const *device { catalog.device( "0461" ) };
     check( device != nullptr, "urzadzenie 0461" );
     if( device == nullptr ) { return 1; }
+    // sieci bez wlasnych danych (wpis network ... as): kotwienie 0461 dla YC95-2C i SKB70-C
+    check( catalog.code_for( "YC95-2C", 0 ) == 4 && catalog.code_for( "SKB70-C", 5 ) == 10 && catalog.code_for( "C120-2C", 3 ) == 3
+        && device->type( catalog.code_for( "YC95-2C", 0 ) ) != nullptr && device->type( catalog.code_for( "SKB70-C", 5 ) ) != nullptr,
+        "sieci YC95-2C i SKB70-C biora dane C95-2C i C95-C" );
 
     // tablica: wzor ze starej karty 13-0011 wobec wierszy nowej karty 0011-1
     {

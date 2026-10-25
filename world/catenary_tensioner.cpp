@@ -402,6 +402,12 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
             report( "unknown keyword \"" + keyword + "\" in a device" );
             continue;
         }
+        if( keyword == "network" && words.size() >= 4 && words[ 2 ] == "as" ) {
+            double code;
+            if( false == number_of( words[ 3 ], code ) ) { report( "bad network code \"" + words[ 3 ] + "\"" ); continue; }
+            m_networks[ words[ 1 ] ] = static_cast<int>( code );
+            continue;
+        }
         if( keyword == "table" && words.size() >= 2 ) {
             // "table <nazwa> base <inna> shift_b <m> shift_s <m> ..." - jednowierszowa, wartości innej tablicy przesunięte
             // o stałą (tablice 0011-6/-7/-8 różnią się od 0011-1 tylko położeniem nominalnym)
@@ -555,6 +561,11 @@ tensioner_lever const *tensioner_catalog::lever( std::string const &Name ) const
     for( auto const &entry : m_levers ) { if( entry.name == Name ) { return &entry; } }
     return nullptr;
 }
+int tensioner_catalog::code_for( std::string const &Symbol, int const Code ) const {
+    auto const found { m_networks.find( Symbol ) };
+    return ( found != m_networks.end() ? found->second : Code );
+}
+
 tensioner_device const *tensioner_catalog::device( std::string const &Name ) const {
     for( auto const &entry : m_devices ) { if( entry.name == Name ) { return &entry; } }
     return nullptr;

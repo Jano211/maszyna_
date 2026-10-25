@@ -720,7 +720,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     }
     if( false == network.empty() ) {
         if( auto const *type { catenary::types().find( network ) }; type != nullptr ) {
-            input.type = type->type.code;
+            input.type = devices->code_for( type->type.symbol, type->type.code );
             input.contacts = type->type.contact_count;
             input.messengers = type->type.messenger_count;
             input.messenger_stack = type->type.messenger_stack;
@@ -741,6 +741,11 @@ assemble_anchor( scene_anchor &Anchor ) {
                 }
                 if( same != nullptr ) { device = same; }
                 else if( kind != nullptr ) { device = kind; }
+                // nikt nie ma danych dla tej sieci (brak wpisu "network ... as"): pierwsze dane urządzenia, żeby kotwienie stało
+                if( device->type( input.type ) == nullptr && false == device->types.empty() ) {
+                    WriteLog( ( label + "network type \"" + network + "\" has no data in the anchor devices; device " + device->name + " uses the data of network type " + std::to_string( device->types.front().code ) ).c_str() );
+                    input.type = device->types.front().code;
+                }
             }
         }
         else { ErrorLog( label + "uses network type \"" + network + "\" which has no file" ); }
@@ -1381,7 +1386,7 @@ assemble_middle( scene_chain &Chain ) {
                 };
                 catenary::tensioner_input input;
                 if( type != nullptr ) {
-                    input.type = type->type.code;
+                    input.type = devices->code_for( type->type.symbol, type->type.code );
                     input.contacts = type->type.contact_count;
                     input.messengers = type->type.messenger_count;
                 }
