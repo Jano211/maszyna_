@@ -37,6 +37,12 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   do obu sieci. Linki proceduralne, zaciski bryłami zastępczymi (Jan). ZAŁOŻENIA do potwierdzenia: łącznik 1,5 m od słupa
   krzyżowego w stronę przęsła zwartego; „S” do przewodów sieci, która przy tym słupie jedzie pod pantografem (nieporwanej).
   0641 (przez odłącznik) i 0642–0659 (sieć stacyjna, przewód rozdzielczy 3 kV, kabel zasilacza, C120-2C) – razem z zasilaniem.
+- 2026-10-25 20:25 modele 4690 od Jana (components): 4690-01…05 belki 1,80 m, punkty `mount_1`/`mount_2` X ±0,785 (rozstaw 1,57 m
+  jak na karcie 33-0519), Y 0, Z 0; Y modeli: -01 −0,065..0, -02 do +0,119, -03 do +0,267, -04 do +0,041, -05 do +0,170 (obejmy
+  za słup); 4690-06 mała część (X −0,17..0,15, Y −0,03..0) – pewnie tył z nakrętkami. Wykonania wg Jana: 1 C120–160 (161x-11..-13),
+  2 C180/200 (161x-14/-15), 3 beton (1701), 4 kratowy 600 (maszty bramek), 5 wsporniki bramek (zwisy). Pytania: punkty mocowań
+  w Y = 0 (na płaszczyźnie słupa, nie przed belką?), 4690-06 do których wykonań, dwuteowniki 1665–1667, karta samego wysięgu
+  pomocniczego (rura 6111 + izolator + ramiona; czym trzyma się drugi koniec – linka do wysięgnika liny?).
 - **Kolejka PO środzie (Jan, nie ruszać wcześniej):** przęsła samego przewodu jezdnego i podwieszenia mostowe/tunelowe (Jan ma
   papiery), LPN-y, przewody wzmacniające.
 - **Na niedzielę 25.10 (Jan 01:05, wyjątek od zakazu nowych tematów): parasole wstawiane z edytora – na zwisach bramek
