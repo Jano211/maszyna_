@@ -289,6 +289,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     else if( key == "stay" ) { text( pole.stay ); }
                     else if( key == "steady" ) { text( pole.steady ); }
                     else if( key == "console" ) { text( pole.console ); }
+                    else if( key == "steady_console" ) { text( pole.steady_console ); }
                     else { report( entry, "unknown keyword \"" + key + "\"" ); good = false; --index; }
                 }
                 else {
@@ -2159,16 +2160,24 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
         if( mount == nullptr ) { fail( std::string( Use ) + " mount \"" + Name + "\" isn't in the catalogue" ); }
         return mount;
     };
-    // wysięgniki rozstawione: mocowania -06 tej samej karty (4610-06, 4620-06, 4630-06) na konsoli słupa
-    cantilever_mount const *console { nullptr };
+    // wysięgniki rozstawione: mocowania -06 tej samej karty (4610-06, 4620-06, 4630-06) na konsoli słupa (4890); rozstawione
+    // wysięgi pomocnicze (0167, bez ukośnika i odciągu) na belce 4690 (steady_console, karta 33-0519), gdy słup ją ma
     auto const onconsole = [ & ]( std::string const &Name ) {
         if( false == Umbrella.spread || Name.empty() ) { return Name; }
         return Name.substr( 0, Name.find( '-' ) ) + "-06";
     };
+    auto const steadyonly { Scheme.roles.count( "strut" ) == 0 && Scheme.roles.count( "stay" ) == 0 };
+    std::map<std::string, cantilever_mount const *> consoles;
     if( Umbrella.spread ) {
-        console = Pole.console.empty() ? nullptr : Catalog.mount( Pole.console );
-        if( console == nullptr || false == console->console ) {
-            return fail( Pole.console.empty() ? "the pole has no console for spread cantilevers (\"console\" in its entry)" : "console \"" + Pole.console + "\" isn't in the catalogue as a console" );
+        for( auto const *role : { "stay", "strut", "steady" } ) {
+            if( ( std::string( role ) != "steady" && steadyonly ) || ( std::string( role ) == "steady" && false == Scheme.steady_mounted ) ) { continue; }
+            // sam wysięg pomocniczy (0167) na belce 4690; wysięg wysięgnika trzyzaczepowego na tej samej konsoli 4890, co reszta
+            auto const &name { steadyonly && false == Pole.steady_console.empty() ? Pole.steady_console : Pole.console };
+            auto const *found { name.empty() ? nullptr : Catalog.mount( name ) };
+            if( found == nullptr || false == found->console ) {
+                return fail( name.empty() ? "the pole has no console for spread cantilevers (\"console\" / \"steady_console\" in its entry)" : "console \"" + name + "\" isn't in the catalogue as a console" );
+            }
+            consoles[ role ] = found;
         }
     }
     auto const *strut { mountpart( onconsole( Pole.strut ), "strut" ) };
@@ -2202,6 +2211,8 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
         if( height > Pole.top ) { notes.push_back( Role + " mount " + to_text( height - Pole.top ) + " m above the top of the pole" ); }
         auto const depth { Pole.depth( height ) };
         auto face { Distance - 0.5 * depth };
+        auto const found { consoles.find( Role ) };
+        auto const *console { found != consoles.end() ? found->second : nullptr };
         if( console != nullptr ) {
             // konsola na słupie (jedna na rolę, stawia ją jedna strona), mocowanie na jej punkcie, bliżej toru o jej grubość
             if( Umbrella.console_parts ) {

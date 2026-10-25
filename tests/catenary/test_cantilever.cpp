@@ -278,6 +278,28 @@ int main( int argc, char *argv[] ) {
         std::printf( "wysiegniki rozstawione na konsoli 4890: %s\n", good ? "OK" : "BLAD" );
         failed = failed || !good;
     }
+    {
+        // rozstawione wysięgi pomocnicze 0167 na belce 4690-01 (karta 33-0519): tylko mocowanie wysięgu 4630-06 na belce, bez
+        // mocowań ukośnika i odciągu; oś słupa 0,785 m od płaszczyzny wysięgu
+        auto const *pole { catalog.pole( "1611-12" ) };
+        auto const *scheme { catalog.scheme( 167, 2 ) };
+        auto good { pole != nullptr && scheme != nullptr && pole->steady_console == "4690-01" };
+        if( good ) {
+            catenary::cantilever_umbrella side;
+            side.spread = true;
+            side.console_x = -0.785;
+            auto const input { catenary::cantilever_nominal_input( *scheme, 2.0 ) };
+            catenary::cantilever_result result;
+            good = catenary::solve_cantilever_on_pole( catalog, *scheme, *pole, 2.0 + 0.5 * pole->depth( 6.0 ), -5.6, input.messenger, {}, side, result );
+            auto const count = [ & ]( std::string const &Part ) { return std::count_if( result.parts.begin(), result.parts.end(), [ & ]( auto const &P ) { return P.part == Part; } ); };
+            auto const *beam { result.find( "steady_console" ) };
+            good = good && count( "4690-01" ) == 1 && count( "4630-06" ) == 1 && count( "4610-06" ) == 0 && count( "4620-06" ) == 0 && count( "4890-03" ) == 0
+                && beam != nullptr && std::abs( beam->position[ 0 ] + 0.785 ) < 1e-9;
+            for( auto const &w : result.warnings ) { std::printf( "  %s\n", w.c_str() ); }
+        }
+        std::printf( "rozstawione wysiegi pomocnicze 0167 na belce 4690: %s\n", good ? "OK" : "BLAD" );
+        failed = failed || !good;
+    }
 
     std::printf( failed ? "TEST NIE PRZESZEDL\n" : "wszystko OK\n" );
     return failed ? 1 : 0;
