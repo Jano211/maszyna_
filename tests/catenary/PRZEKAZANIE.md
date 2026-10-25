@@ -43,6 +43,11 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   2 C180/200 (161x-14/-15), 3 beton (1701), 4 kratowy 600 (maszty bramek), 5 wsporniki bramek (zwisy). Pytania: punkty mocowań
   w Y = 0 (na płaszczyźnie słupa, nie przed belką?), 4690-06 do których wykonań, dwuteowniki 1665–1667, karta samego wysięgu
   pomocniczego (rura 6111 + izolator + ramiona; czym trzyma się drugi koniec – linka do wysięgnika liny?).
+- 2026-10-25 21:40 ZROBIONE: rozstawione wysięgi pomocnicze = karta 0167 (`aux_steady`: 6111 na 7110, 6203 + 4260, linka do liny
+  nośnej; już w danych i w katalogu edytora – grupa „Teowniki – wysięgniki pomocnicze”) na belce 4690 (`steady_console` w słupie:
+  161x C120–160 → 4690-01, C180/200 → -02, 1701 → -03, zwisy 4850 → -05; maszty -04 jeszcze nie; dwuteowniki – nie występuje, Jan).
+  Wysięgnik bez ukośnika i odciągu w parze rozstawionej idzie na 4690 (rozstaw 1,57 m), reszta na 4890. Punkty 4690 Y = 0 jak w
+  modelu (do potwierdzenia). Test w test_cantilever.cpp.
 - **Kolejka PO środzie (Jan, nie ruszać wcześniej):** przęsła samego przewodu jezdnego i podwieszenia mostowe/tunelowe (Jan ma
   papiery), LPN-y, przewody wzmacniające.
 - **Na niedzielę 25.10 (Jan 01:05, wyjątek od zakazu nowych tematów): parasole wstawiane z edytora – na zwisach bramek

@@ -1583,7 +1583,11 @@ void catenary_editor::catenary_spread_create(std::size_t const Index)
 	auto const *found{catenary_spot_of(Index)};
 	auto const *catalog{catenary_scene_catalog()};
 	auto const *pole{current != nullptr && catalog != nullptr ? catalog->pole(current->pole_type) : nullptr};
-	auto const *console{pole != nullptr && false == pole->console.empty() ? catalog->mount(pole->console) : nullptr};
+	// a cantilever without strut and stay (spread steady arms 0167) goes on the beam 4690, the others on the console 4890
+	auto const *scheme{current != nullptr && catalog != nullptr ? catalog->scheme(current->card, current->execution) : nullptr};
+	auto const steadyonly{scheme != nullptr && scheme->roles.count("strut") == 0 && scheme->roles.count("stay") == 0};
+	auto const consolename{pole == nullptr ? std::string{} : steadyonly && false == pole->steady_console.empty() ? pole->steady_console : pole->console};
+	auto const *console{false == consolename.empty() ? catalog->mount(consolename) : nullptr};
 	if (current == nullptr || found == nullptr || false == current->has_pole || false == current->umbrella.empty())
 		return;
 	if (console == nullptr || false == console->console)
@@ -3436,7 +3440,9 @@ void catenary_editor::render_catenary_cantilever_ui()
 				}
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("%s", STR_C("Two cantilevers on one pole or drop, to the tracks on both sides of it; on adjustable mounts (band round the pole) they share the double mounts 4640-4670 at one height"));
-				if (auto const *own{catalog->pole(data->pole_type)}; own != nullptr && false == own->console.empty())
+				auto const *ownscheme{catalog->scheme(data->card, data->execution)};
+				auto const steadyonly{ownscheme != nullptr && ownscheme->roles.count("strut") == 0 && ownscheme->roles.count("stay") == 0};
+				if (auto const *own{catalog->pole(data->pole_type)}; own != nullptr && (steadyonly ? false == own->steady_console.empty() : false == own->console.empty()))
 				{
 					ImGui::SameLine();
 					if (ImGui::Button(STR_C("Spread cantilevers")))
