@@ -63,8 +63,15 @@ struct chain {
     std::string middle;
     std::string middle_device { "0406" };
     double      middle_heights[ 2 ] { 0.0, 0.0 };  // uchwyty liny kotwienia na słupach przed i za (nad główką); 0 = lina nośna sąsiada
+    // lina nośna z innego podwieszenia niż przewody jezdne (wysięgniki rozstawione na konsoli 4890, wysięgnik samej liny przy
+    // odciągu przewodów): w punkcie łańcucha <podwieszenie z listy> przewody idą przez jego "at", lina przez "rope" podwieszenia
+    // <trzymające linę>. Wpis "messenger_from <z listy> <trzymające linę>", przed "suspensions"
+    std::vector<std::pair<std::string, std::string>> messenger_from;
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
 };
+
+// podwieszenie, które trzyma linę nośną łańcucha w punkcie Listed (samo Listed, gdy nie ma wpisu messenger_from)
+std::string const &messenger_holder( chain const &Chain, std::string const &Listed );
 
 // kotwienie ciężarowe (urządzenie naprężające z pliku traction_tensioners.txt) na słupie kotwowym, wpis
 // "node <max> <min> <nazwa> anchor device <karta> network <symbol typu> pole <słup> x y z [on <podwieszenie>] toward x y z distance <m>

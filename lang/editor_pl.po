@@ -6173,3 +6173,18 @@ msgstr "LPM przy drugim torze"
 
 msgid "the second cantilever of the umbrella on this pole"
 msgstr "drugi wysięgnik parasola na tym słupie"
+
+msgid "%s (this one)"
+msgstr "%s (ten)"
+
+msgid "Messenger held by"
+msgstr "Linę nośną trzyma"
+
+msgid "The messenger goes through this cantilever again"
+msgstr "Lina nośna znowu idzie przez ten wysięgnik"
+
+msgid "The wires of the chain go through %s, its messenger through %s"
+msgstr "Przewody jezdne łańcucha idą przez %s, lina nośna przez %s"
+
+msgid "Another cantilever up to 3 m from this pole holds the messenger of this chain here, this one only its wires: spread cantilevers on a console, a cantilever of the messenger only, chains crossing over in a tension span"
+msgstr "Linę nośną łańcucha trzyma tu inny wysięgnik do 3 m od tego słupa, ten tylko przewody jezdne: wysięgniki rozstawione na konsoli, wysięgnik samej liny, łańcuchy krzyżujące się w przęśle naprężenia"

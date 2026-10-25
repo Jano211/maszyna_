@@ -84,7 +84,7 @@ int main() {
             "node 1000 0 k1 anchor device 0461 network C120-2C pole 1611-11 10 0 20 toward 10 5.6 60 distance 650 color szary top_color zolty missing 3 rope_height 7.85 insulators messenger endanchor "
             "node 1000 0 k2 anchor device 0461 pole 1611-11 10 0 endanchor "    // za malo liczb, brak toward
             "node 1000 0 a suspension scheme 1113 1 at 0 5.6 0 attach -2 0 0 endsuspension node 1000 0 b suspension scheme 1113 1 at 0 5.6 60 attach -2 0 60 endsuspension "
-            "node 1000 0 l1 chain power z voltage 3000 current 4500 resistivity 0.01 material cu thickness 3 state 0 anchor_end k1 middle b middle_device 0408 middle_height 6.5 0 suspensions a b endchain"
+            "node 1000 0 l1 chain power z voltage 3000 current 4500 resistivity 0.01 material cu thickness 3 state 0 anchor_end k1 middle b middle_device 0408 middle_height 6.5 0 messenger_from a b suspensions a b endchain"
             ), "kotwy.scm", file, errors );
         auto good { file.anchors.size() == 1 && errors.size() >= 1 && file.chains.size() == 1 && file.chains[ 0 ].anchor_end == "k1"
             && file.chains[ 0 ].suspensions.size() == 2 && file.anchors[ 0 ].missing == 3 && file.anchors[ 0 ].top_color == "zolty" && file.anchors[ 0 ].insulators == "messenger" && file.anchors[ 0 ].rope_height == 7.85
@@ -94,7 +94,8 @@ int main() {
             catenary::parse_suspensions( words( catenary::write_suspension( file.entries[ 0 ] ) + " " + catenary::write_suspension( file.entries[ 1 ] ) + " " + catenary::write_anchor( file.anchors[ 0 ] ) + " " + catenary::write_chain( file.chains[ 0 ] ) ), "zapis.scm", again, none );
             for( auto const &e : none ) { std::printf( "  %s\n", e.c_str() ); }
             good = none.empty() && again.anchors.size() == 1 && again.anchors[ 0 ].network == "C120-2C" && again.anchors[ 0 ].pole_type == "1611-11"
-                && again.anchors[ 0 ].missing == 3 && again.anchors[ 0 ].insulators == "messenger" && again.anchors[ 0 ].rope_height == 7.85 && again.chains.size() == 1 && again.chains[ 0 ].anchor_end == "k1" && again.chains[ 0 ].middle == "b" && again.chains[ 0 ].middle_device == "0408" && again.chains[ 0 ].middle_heights[ 0 ] == 6.5 && again.chains[ 0 ].middle_heights[ 1 ] == 0.0;
+                && again.anchors[ 0 ].missing == 3 && again.anchors[ 0 ].insulators == "messenger" && again.anchors[ 0 ].rope_height == 7.85 && again.chains.size() == 1 && again.chains[ 0 ].anchor_end == "k1" && again.chains[ 0 ].middle == "b" && again.chains[ 0 ].middle_device == "0408" && again.chains[ 0 ].middle_heights[ 0 ] == 6.5 && again.chains[ 0 ].middle_heights[ 1 ] == 0.0
+                && again.chains[ 0 ].messenger_from.size() == 1 && again.chains[ 0 ].messenger_from[ 0 ].second == "b";
         }
         std::printf( "kotwienie: wpisow %zu, komunikatow %zu, zapis i odczyt  %s\n", file.anchors.size(), errors.size(), good ? "OK" : "BLAD" );
         if( false == good ) { for( auto const &e : errors ) { std::printf( "  %s\n", e.c_str() ); } }

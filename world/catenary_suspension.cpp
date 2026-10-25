@@ -104,6 +104,10 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else if( key == "middle" ) { one( line.middle ); }
                 else if( key == "middle_device" ) { one( line.middle_device ); }
                 else if( key == "middle_height" ) { number( line.middle_heights[ 0 ] ); number( line.middle_heights[ 1 ] ); }
+                else if( key == "messenger_from" ) {
+                    std::string listed, holder;
+                    if( one( listed ) && one( holder ) ) { line.messenger_from.emplace_back( listed, holder ); }
+                }
                 else if( key == "hangers" ) { for( auto &value : line.hangers ) { number( value ); } }
                 else if( key == "suspensions" ) {
                     while( index < count && Tokens[ index ] != "endchain" && Tokens[ index ] != "node" ) { line.suspensions.push_back( Tokens[ index++ ] ); }
@@ -333,6 +337,13 @@ std::string write_suspension( suspension const &Entry ) {
     return text + " endsuspension";
 }
 
+std::string const &messenger_holder( chain const &Chain, std::string const &Listed ) {
+    for( auto const &pair : Chain.messenger_from ) {
+        if( pair.first == Listed && false == pair.second.empty() ) { return pair.second; }
+    }
+    return Listed;
+}
+
 std::string write_chain( chain const &Entry ) {
 
     auto const number = []( double const Value ) {
@@ -353,6 +364,7 @@ std::string write_chain( chain const &Entry ) {
         text += " middle " + Entry.middle + ( Entry.middle_device != "0406" ? " middle_device " + Entry.middle_device : std::string() );
         if( Entry.middle_heights[ 0 ] > 0.0 || Entry.middle_heights[ 1 ] > 0.0 ) { text += " middle_height " + number( Entry.middle_heights[ 0 ] ) + " " + number( Entry.middle_heights[ 1 ] ); }
     }
+    for( auto const &pair : Entry.messenger_from ) { text += " messenger_from " + pair.first + " " + pair.second; }
     text += " suspensions";
     for( auto const &name : Entry.suspensions ) { text += " " + name; }
     return text + " endchain";

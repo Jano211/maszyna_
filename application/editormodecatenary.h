@@ -202,6 +202,7 @@ struct catenary_editor
 	// the chain block of the poles page: what the next click does, end, anchor, go on from the selected pole
 	void render_catenary_chain_state();
 	void catenary_chain_apply();
+	void render_catenary_messenger_from(std::size_t Chain);
 	void catenary_connect(std::size_t const To);
 	int catenary_gantry_hit() const;
 	bool catenary_gantry_beam(std::size_t const Index, glm::dvec3 &From, glm::dvec3 &To, double &Bottom) const;
