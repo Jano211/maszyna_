@@ -98,6 +98,7 @@ struct catenary_editor
 		bool append{true}; // the next pole goes after the last one of the chain, otherwise before the first
 		int chain_selected{-1}; // the chain shown in the panel
 		int connect_from{-1}; // hanging the wires on from this suspension: the next poles clicked get the spans
+		int umbrella_from{-1}; // an umbrella from this suspension: the next LMB by a track puts the second cantilever on its pole (or drop)
 		int anchor_pick{-1}; // anchoring this chain to an existing pole: the next pole clicked carries the tensioning device
 		bool anchor_pick_start{false}; // ... at the start of the chain, otherwise at its end
 		int anchor_selected{-1}; // the anchor picked in the view: its chain is shown, the panel marks it, Del removes it
@@ -179,6 +180,12 @@ struct catenary_editor
 	void catenary_copy(std::vector<std::size_t> const &Targets);
 	bool catenary_propose_toward(bool &Toward);
 	void catenary_place(catenary_spot const &Spot);
+	// the second cantilever of an umbrella on the pole (or drop) of tool.umbrella_from, towards this track; false when it can't
+	// be put there (Spot.problem says why when Spot.card is 0)
+	bool catenary_umbrella_spot(TTrack &Track, int Path, catenary_spot &Spot);
+	void catenary_umbrella_place(catenary_spot const &Spot);
+	// the two cantilevers of the umbrella of this suspension become separate ones
+	void catenary_umbrella_break(std::size_t Index);
 	// the span of a chain the spot falls in (in the plan: the wire point near the line of the span, between its ends)
 	struct chain_insert
 	{

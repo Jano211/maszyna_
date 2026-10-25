@@ -1436,6 +1436,109 @@ void catenary_editor::catenary_place(catenary_spot const &Spot)
 		tool.toward = toward;
 }
 
+bool catenary_editor::catenary_umbrella_spot(TTrack &Track, int const Path, catenary_spot &Spot)
+{
+	auto &tool{m_catenary};
+	auto const *source{tool.umbrella_from >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.umbrella_from)) : nullptr};
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *pole{source != nullptr && catalog != nullptr ? catalog->pole(source->pole_type) : nullptr};
+	if (pole == nullptr || false == source->has_pole || false == source->has_at)
+		return false;
+	auto const foot{pole_of(*source)};
+	{
+		// square to the pole on this track, on the side of the pole; not onto a drop of the selected gantry
+		without_gantry const plain{tool.gantry_selected};
+		if (false == catenary_spot_at(Track, Path, foot, foot, 0, Spot))
+			return false;
+	}
+	// the cantilever on the same pole (or drop): its distance is the one of the pole, the panel gives the rest
+	auto const right{right_of(Spot.forward) * static_cast<double>(Spot.side)};
+	auto const clearance{glm::dot(plan_of(foot) - plan_of(Spot.axis), right) - 0.5 * pole->depth(0.0)};
+	auto const stagger{Spot.curve ? std::max(static_cast<double>(tool.stagger), catenary_scene_layout().curve_stagger()) : static_cast<double>(tool.stagger)};
+	catenary_compose(Spot, clearance, stagger, Spot.toward, source->pole_type);
+	std::copy(std::begin(source->pole), std::end(source->pole), Spot.data.pole);
+	if (Spot.card == 0)
+		return true;
+	// the second cantilever goes the other way from the pole than the first one
+	auto const mine{plan_of(wire_of(Spot.data)) - plan_of(foot)};
+	auto const other{plan_of(wire_of(*source)) - plan_of(foot)};
+	if (glm::dot(mine, other) > 0.0)
+	{
+		Spot.card = 0;
+		Spot.problem = STR("This track is on the same side of the pole as its cantilever: the second cantilever of an umbrella goes to a track on the other side");
+	}
+	return true;
+}
+
+void catenary_editor::catenary_umbrella_place(catenary_spot const &Spot)
+{
+	auto &tool{m_catenary};
+	auto const from{static_cast<std::size_t>(tool.umbrella_from)};
+	auto const *source{tool.umbrella_from >= 0 ? catenary_scene_get(from) : nullptr};
+	tool.umbrella_from = -1;
+	if (source == nullptr)
+		return;
+	++tool.group;
+	auto const file{catenary_scene_file_of(from)};
+	auto sourcedata{*source};
+	tool.undo.push_back({tool.group, false, from, sourcedata, std::nullopt, false});
+	if (sourcedata.name.empty())
+		sourcedata.name = catenary_scene_new_name(file); // a pole from before the editor had no name
+	// a name of the umbrella no other suspension has
+	std::string name;
+	for (int k = 1; name.empty(); ++k)
+	{
+		auto const candidate{"parasol_" + sourcedata.name + (k > 1 ? "_" + std::to_string(k) : std::string{})};
+		auto used{false};
+		for (std::size_t index = 0; index < catenary_scene_size() && false == used; ++index)
+			if (auto const *data{catenary_scene_get(index)}; data != nullptr && data->umbrella == candidate)
+				used = true;
+		if (false == used)
+			name = candidate;
+	}
+	// the first one named first, so that the second gets a name of its own
+	sourcedata.umbrella = name;
+	catenary_scene_update(from, sourcedata);
+	if (auto found{tool.spots.find(from)}; found != tool.spots.end())
+		found->second.data = sourcedata;
+	auto data{Spot.data};
+	data.name = catenary_scene_new_name(file);
+	data.skin = sourcedata.skin;
+	data.umbrella = name;
+	auto const index{catenary_scene_add(file, data)};
+	tool.spots[index] = Spot;
+	tool.spots[index].data = data;
+	tool.undo.push_back({tool.group, false, index, std::nullopt, std::nullopt, false});
+	catenary_select(static_cast<int>(index));
+	tool.status = format(STR_C("Umbrella %s: the second cantilever (card %d execution %d, A = %.2f m) on pole %s of %s; hang its wires with the button below or C"), name.c_str(), Spot.card, data.execution, Spot.reach, data.pole_type.c_str(), sourcedata.name.c_str());
+	if (catenary_scene_parts(index) == 0)
+		tool.status += STR(" - the cantilever didn't assemble, see the log");
+}
+
+void catenary_editor::catenary_umbrella_break(std::size_t const Index)
+{
+	auto &tool{m_catenary};
+	auto const *current{catenary_scene_get(Index)};
+	if (current == nullptr || current->umbrella.empty())
+		return;
+	auto const name{current->umbrella};
+	++tool.group;
+	for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+	{
+		auto const *data{catenary_scene_get(index)};
+		if (data == nullptr || data->umbrella != name)
+			continue;
+		auto changed{*data};
+		tool.undo.push_back({tool.group, false, index, changed, std::nullopt, false});
+		changed.umbrella.clear();
+		catenary_scene_update(index, changed);
+		if (auto found{tool.spots.find(index)}; found != tool.spots.end())
+			found->second.data = changed;
+	}
+	tool.probed = false;
+	tool.status = format(STR_C("Umbrella %s separated: two cantilevers on their own mounts"), name.c_str());
+}
+
 // the span from the suspension the wires are being hung from (tool.connect_from) to To: To goes on the chain at its end,
 // From goes on the chain of To at its end, the two chains become one, or the two make a new chain
 void catenary_editor::catenary_connect(std::size_t const To)
@@ -1593,6 +1696,7 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 				tool.anchor_pick = -1;
 			return;
 		}
+		tool.umbrella_from = -1;
 		if (tool.connect_from >= 0)
 		{
 			// hanging the wires on: the span from the last pole to this one
@@ -1728,6 +1832,17 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 	if (Intent.track == nullptr)
 		return;
 	catenary_spot spot;
+	if (tool.umbrella_from >= 0)
+	{
+		// the second cantilever of an umbrella on the pole of the first one
+		if (false == catenary_umbrella_spot(*Intent.track, Intent.path, spot))
+			return;
+		if (spot.card == 0)
+			tool.status = spot.problem;
+		else
+			catenary_umbrella_place(spot);
+		return;
+	}
 	if (false == catenary_spot_at(*Intent.track, Intent.path, e.m_hover.point, e.cursor_level(e.m_hover.point.y), 0, spot))
 		return;
 	if (spot.card == 0)
@@ -1823,6 +1938,21 @@ bool catenary_editor::catenary_delete_selected()
 		    && std::find(data->suspensions.begin(), data->suspensions.end(), current->name) != data->suspensions.end())
 			tool.undo.push_back({tool.group, true, chain, std::nullopt, *data, false});
 	}
+	// the other cantilever of its umbrella stays alone
+	if (false == current->umbrella.empty())
+		for (std::size_t other = 0; other < catenary_scene_size(); ++other)
+		{
+			auto const *data{catenary_scene_get(other)};
+			if (other == index || data == nullptr || data->umbrella != current->umbrella)
+				continue;
+			auto changed{*data};
+			tool.undo.push_back({tool.group, false, other, changed, std::nullopt, false});
+			changed.umbrella.clear();
+			catenary_scene_update(other, changed);
+			if (auto found{tool.spots.find(other)}; found != tool.spots.end())
+				found->second.data = changed;
+		}
+	current = catenary_scene_get(index);
 	tool.undo.push_back({tool.group, false, index, *current, std::nullopt, true});
 	catenary_scene_remove(index);
 	tool.selected = -1;
@@ -2868,6 +2998,37 @@ void catenary_editor::render_catenary_cantilever_ui()
 			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("Joins this pole with the poles clicked after it: it goes on the chain at its end, a new chain of the two, or two chains become one"));
+			// an umbrella: the second cantilever on this pole (or drop), to the track on its other side
+			if (data->umbrella.empty())
+			{
+				if (ImGui::Button(tool.umbrella_from >= 0 ? STR_C("Stop the umbrella") : STR_C("Umbrella: a cantilever to the other track")))
+				{
+					tool.umbrella_from = tool.umbrella_from >= 0 ? -1 : tool.selected;
+					tool.connect_from = -1;
+					tool.anchor_pick = -1;
+					tool.status = tool.umbrella_from >= 0 ? STR("LMB by the track on the other side of the pole: the second cantilever goes on this pole, with the settings of the panel") : std::string{};
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("Two cantilevers on one pole or drop, to the tracks on both sides of it; on adjustable mounts (band round the pole) they share the double mounts 4640-4670 at one height"));
+			}
+			else
+			{
+				std::string partner;
+				for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+					if (auto const *other{catenary_scene_get(index)}; other != nullptr && static_cast<int>(index) != tool.selected && other->umbrella == data->umbrella)
+						partner = other->name;
+				ImGui::TextUnformatted(format(STR_C("Umbrella %s with %s"), data->umbrella.c_str(), partner.empty() ? "-" : partner.c_str()).c_str());
+				ImGui::SameLine();
+				if (ImGui::SmallButton(STR_C("Separate")))
+				{
+					catenary_umbrella_break(static_cast<std::size_t>(tool.selected));
+					data = catenary_scene_get(static_cast<std::size_t>(tool.selected));
+					if (data == nullptr)
+						return;
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("The two cantilevers stay where they are, each on its own single mounts"));
+			}
 			render_catenary_chain_state();
 			// copying to the neighbours in the chain
 			std::size_t position{0};
@@ -3831,6 +3992,22 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 		Intent.detail = static_cast<int>(intent_detail::chain);
 		return true;
 	}
+	// the second cantilever of an umbrella: by any track, onto the pole of the first one
+	if (m_catenary.umbrella_from >= 0 && e.m_hover.track != nullptr && m_catenary.page != 2)
+	{
+		catenary_spot spot;
+		if (catenary_umbrella_spot(*e.m_hover.track, e.m_hover.path, spot))
+		{
+			Intent.track = e.m_hover.track;
+			Intent.path = e.m_hover.path;
+			Intent.position = spot.axis;
+			Intent.action = spot.card == 0 ? format(STR_C("Umbrella: %s"), spot.problem.c_str())
+			                               : format(STR_C("Click: the second cantilever of the umbrella, card %04d execution %d, A = %.2f m"), spot.card, spot.data.execution, spot.reach);
+			Intent.what = kind::catenary;
+			Intent.detail = static_cast<int>(intent_detail::place);
+			return true;
+		}
+	}
 	// the wires page places nothing, the gantries page places only on the selected gantry
 	if (e.m_hover.track != nullptr && m_catenary.page != 2 && (m_catenary.page != 1 || m_catenary.gantry_selected >= 0))
 	{
@@ -3859,6 +4036,8 @@ std::string catenary_editor::catenary_mode_name() const
 			return STR_C("Gantries: LMB the masts");
 		return m_catenary.gantry_selected >= 0 ? STR_C("Gantries: LMB by a track puts a cantilever on the selected gantry, drag the beam to move it") : STR_C("Gantries: LMB on a gantry selects it, or place a new one below");
 	}
+	if (m_catenary.umbrella_from >= 0)
+		return STR_C("Umbrella: LMB by the track on the other side of the pole puts the second cantilever on it; Esc stops");
 	if (m_catenary.selected >= 0)
 		return STR_C("Catenary: the selected pole follows the settings below; C goes on with the chain from it");
 	if (m_catenary.chaining && m_catenary.last >= 0)
@@ -3875,6 +4054,8 @@ void catenary_editor::catenary_key_hints(std::vector<key_hint> &Hints) const
 		Hints.push_back({"Esc", "ends the chain: the next pole starts a new one"});
 	if (m_catenary.selected >= 0)
 	{
+		if (m_catenary.umbrella_from >= 0)
+			Hints.push_back({"LMB by the other track", "the second cantilever of the umbrella on this pole"});
 		Hints.push_back({"C", "the chain goes on from the selected pole"});
 		Hints.push_back({"Del", "removes the selected pole"});
 	}
@@ -3890,10 +4071,11 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 	if (Key == GLFW_KEY_ESCAPE)
 	{
 		// first what's being picked, then the chain going on; with nothing of that the editor has the key
-		if (tool.anchor_pick >= 0 || tool.connect_from >= 0)
+		if (tool.anchor_pick >= 0 || tool.connect_from >= 0 || tool.umbrella_from >= 0)
 		{
 			tool.anchor_pick = -1;
 			tool.connect_from = -1;
+			tool.umbrella_from = -1;
 			tool.status.clear();
 			return true;
 		}
