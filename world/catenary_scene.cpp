@@ -1206,6 +1206,29 @@ add_tube( std::vector<catenary::solid_vertex> &Triangles, std::vector<glm::dvec3
     }
 }
 
+// czy przęsło k łańcucha ma linkę Y przy końcu End (0: punkt k, 1: punkt k+1) - tak samo jak y_at w catenary_span.cpp:
+// oba przęsła przy podwieszeniu mają wieszaki i tę samą długość Y z tablicy typu
+bool
+span_y_at( scene_chain const &Chain, catenary::network_definition const &Type, std::size_t const Span, int const End ) {
+    if( Type.type.y_tension <= 0.0 ) { return false; }
+    auto const ylength = [ & ]( std::size_t const K, double &Out ) {
+        if( K + 1 >= chain_points( Chain ) ) { return false; }
+        double wirea[ 3 ], ropea[ 3 ], wireb[ 3 ], ropeb[ 3 ];
+        bool anchoreda, anchoredb;
+        if( false == chain_point( Chain, K, wirea, ropea, anchoreda ) || false == chain_point( Chain, K + 1, wireb, ropeb, anchoredb ) ) { return false; }
+        if( anchoreda || anchoredb || Chain.data.hangers[ 1 ] <= 0.0 ) { return false; }  // przęsło bez wieszaków
+        auto const length { std::hypot( wireb[ 0 ] - wirea[ 0 ], wireb[ 2 ] - wirea[ 2 ] ) };
+        auto const y { Type.type.y_length( length ) };
+        Out = ( y < length ? y : 0.0 );
+        return Out > 0.0;
+    };
+    double mine, other;
+    if( false == ylength( Span, mine ) ) { return false; }
+    if( End == 0 && Span == 0 ) { return false; }
+    if( false == ylength( End == 0 ? Span - 1 : Span + 1, other ) ) { return false; }
+    return std::abs( mine - other ) <= 0.01;
+}
+
 // kotwienie środkowe łańcucha (karty 63-0406 / 0408): przy podwieszeniu "middle" lina kotwienia zaciśnięta na linie nośnej 1,00 m
 // z każdej strony, dalej do słupów sąsiednich podwieszeń (tam 4430 w uchwytach i łańcuch z izolatorem - urządzenie <karta>
 // i <karta>-2 z regulacją), w połowie obu przęseł V 1,50 + 1,50 m do przewodu jezdnego. Lina, V i zaciski jako bryły (bez modeli)
@@ -1267,7 +1290,7 @@ assemble_middle( scene_chain &Chain ) {
         // zacisk na linie nośnej 1,00 m od środkowego podwieszenia w stronę sąsiedniego (do dźwigara: ok. 3,00 m; teownik: w obejmie)
         auto const towards { vec( ropes[ neighbour ] ) - middlerope };
         auto const clampdistance { tobeam ? 3.0 : tee ? 0.0 : 1.0 };
-        auto const clamp { middlerope + towards * ( clampdistance / std::max( std::max( clampdistance, 1e-3 ), glm::length( glm::dvec2 { towards.x, towards.z } ) ) ) };
+        auto const clampchord { middlerope + towards * ( clampdistance / std::max( std::max( clampdistance, 1e-3 ), glm::length( glm::dvec2 { towards.x, towards.z } ) ) ) };
         // połowa przęsła: przewód jezdny (prosto między końcami), lina nośna nad nim na wysokości najkrótszego wieszaka
         auto const wiremiddle { ( vec( wires[ 1 ] ) + vec( wires[ neighbour ] ) ) * 0.5 };
         auto const alongspan { glm::normalize( glm::dvec3 { wires[ neighbour ][ 0 ] - wires[ 1 ][ 0 ], 0.0, wires[ neighbour ][ 2 ] - wires[ 1 ][ 2 ] } ) };
@@ -1277,21 +1300,25 @@ assemble_middle( scene_chain &Chain ) {
         catenary::span_solution solution;
         auto solved { false };
         if( type != nullptr ) {
-            // przęsło z brakującymi ciężarami w kotwieniu liczone z tym samym naciągiem, co rysowane (dopisek tension)
+            // przęsło liczone dokładnie jak rysowane: w jego kierunku (od punktu k do k+1), z tym samym naciągiem (dopisek
+            // tension) i z linkami Y tylko tam, gdzie przęsło je dostaje (sąsiednie przęsło z wieszakami i tą samą długością Y)
+            auto const span { position + offset - 1 + side };
             auto definition { *type };
             double messengertension, contacttension;
-            if( span_tension( Chain, position + offset - 1 + side, messengertension, contacttension ) ) {
+            if( span_tension( Chain, span, messengertension, contacttension ) ) {
                 if( messengertension > 0.0 ) { definition.type.messenger_tension = 10.0 * messengertension; }
                 if( contacttension > 0.0 && definition.type.contact_tension > 0.0 ) { definition.type.contact_tension = 10.0 * contacttension; }
             }
+            auto const first { side == 0 ? neighbour : 1 }, second { side == 0 ? 1 : neighbour };
             catenary::span_points points;
-            points.contact_start = catenary::vec3 { wires[ 1 ][ 0 ], wires[ 1 ][ 1 ], wires[ 1 ][ 2 ] };
-            points.contact_end = catenary::vec3 { wires[ neighbour ][ 0 ], wires[ neighbour ][ 1 ], wires[ neighbour ][ 2 ] };
-            points.messenger_start = catenary::vec3 { ropes[ 1 ][ 0 ], ropes[ 1 ][ 1 ], ropes[ 1 ][ 2 ] };
-            points.messenger_end = catenary::vec3 { ropes[ neighbour ][ 0 ], ropes[ neighbour ][ 1 ], ropes[ neighbour ][ 2 ] };
+            points.contact_start = catenary::vec3 { wires[ first ][ 0 ], wires[ first ][ 1 ], wires[ first ][ 2 ] };
+            points.contact_end = catenary::vec3 { wires[ second ][ 0 ], wires[ second ][ 1 ], wires[ second ][ 2 ] };
+            points.messenger_start = catenary::vec3 { ropes[ first ][ 0 ], ropes[ first ][ 1 ], ropes[ first ][ 2 ] };
+            points.messenger_end = catenary::vec3 { ropes[ second ][ 0 ], ropes[ second ][ 1 ], ropes[ second ][ 2 ] };
             std::string error;
             auto const gaps { catenary::types().hanger_gaps( type->hanger_table, spanlength ) };
-            solved = catenary::solve_span_points( definition, gaps, points, true, true, solution, error ) && solution.result.messenger.size() >= 2;
+            solved = catenary::solve_span_points( definition, gaps, points, span_y_at( Chain, *type, span, 0 ), span_y_at( Chain, *type, span, 1 ), solution, error )
+                  && solution.result.messenger.size() >= 2;
         }
         // punkt liny nośnej jak w przęśle: w planie na cięciwie liny (nie nad osią przewodu jezdnego, który idzie zygzakiem),
         // w pionie nad prostą przewodu jezdnego o wysokość z solvera
@@ -1300,7 +1327,7 @@ assemble_middle( scene_chain &Chain ) {
             if( false == solved ) { return chord; }
             auto const wirey { wires[ 1 ][ 1 ] + ( wires[ neighbour ][ 1 ] - wires[ 1 ][ 1 ] ) * T };
             auto const &line { solution.result.messenger };
-            auto const x { T * solution.length };
+            auto const x { ( side == 0 ? 1.0 - T : T ) * solution.length };  // przęsło przed środkowym liczone od sąsiada
             auto above { line.back().y };
             for( std::size_t k = 1; k < line.size(); ++k ) {
                 if( line[ k ].x >= x ) {
@@ -1311,6 +1338,9 @@ assemble_middle( scene_chain &Chain ) {
             }
             return glm::dvec3 { chord.x, wirey + above, chord.z };
         };
+        // zacisk na linie nośnej tam, gdzie ją rysuje przęsło (lina przy podwieszeniu opada, prosta między podwieszeniami
+        // mijała ją o kilka cm)
+        auto const clamp { solved && spanlength > clampdistance ? messengerat( clampdistance / spanlength ) : clampchord };
         // koniec liny na słupie sąsiedniego podwieszenia: urządzenie kotwienia stałego tylko z liną
         auto const index { suspension_named( Chain.file, data.suspensions[ position + ( side == 0 ? -1 : 1 ) ] ) };
         glm::dvec3 ropeend { tobeam ? beam : vec( ropes[ neighbour ] ) };
