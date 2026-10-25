@@ -1250,13 +1250,24 @@ assemble_middle( scene_chain &Chain ) {
         }
         else { beam.y = Suspensions[ index ].data.pole[ 1 ]; }  // spód dźwigara (zero zwisu)
     }
+    // wysięgnik teowy na słupie środkowym: lina kotwienia idzie przez obejmę na wysięgniku (4160, stare karty 33-0418, kolprojekt1
+    // s. 156 poz. 1), bez zacisków 1,00 m od słupa (Jan 2026-10-23: zaciski rozstawione o 1 m tylko przy rurowych). ZAŁOŻENIE:
+    // obejmą jest 4160-1 z karty, lina przechodzi przez nią na wysokości liny nośnej
+    auto tee { false };
+    if( false == tobeam ) {
+        auto const index { suspension_named( Chain.file, data.middle ) };
+        if( index < Suspensions.size() ) {
+            auto const *scheme { catalog->scheme( Suspensions[ index ].data.card, Suspensions[ index ].data.execution ) };
+            tee = scheme != nullptr && scheme->assembly.rfind( "tee_", 0 ) == 0;
+        }
+    }
     for( int side = 0; side < 2; ++side ) {
         auto const neighbour { side == 0 ? 0 : 2 };
         auto &solid { Chain.middle_solid[ side ] };
-        // zacisk na linie nośnej 1,00 m od środkowego podwieszenia w stronę sąsiedniego (do dźwigara: ok. 3,00 m)
+        // zacisk na linie nośnej 1,00 m od środkowego podwieszenia w stronę sąsiedniego (do dźwigara: ok. 3,00 m; teownik: w obejmie)
         auto const towards { vec( ropes[ neighbour ] ) - middlerope };
-        auto const clampdistance { tobeam ? 3.0 : 1.0 };
-        auto const clamp { middlerope + towards * ( clampdistance / std::max( clampdistance, glm::length( glm::dvec2 { towards.x, towards.z } ) ) ) };
+        auto const clampdistance { tobeam ? 3.0 : tee ? 0.0 : 1.0 };
+        auto const clamp { middlerope + towards * ( clampdistance / std::max( std::max( clampdistance, 1e-3 ), glm::length( glm::dvec2 { towards.x, towards.z } ) ) ) };
         // połowa przęsła: przewód jezdny (prosto między końcami), lina nośna nad nim na wysokości najkrótszego wieszaka
         auto const wiremiddle { ( vec( wires[ 1 ] ) + vec( wires[ neighbour ] ) ) * 0.5 };
         auto const alongspan { glm::normalize( glm::dvec3 { wires[ neighbour ][ 0 ] - wires[ 1 ][ 0 ], 0.0, wires[ neighbour ][ 2 ] - wires[ 1 ][ 2 ] } ) };
@@ -1403,7 +1414,11 @@ assemble_middle( scene_chain &Chain ) {
         }
         // między zaciskami przy słupie środkowym lina zwisa swobodnie pod uchwytem liny nośnej (Jan 2026-10-25): do połowy
         // odległości (słup środkowy) 0,25 m poniżej liny nośnej
-        if( false == tobeam ) {
+        if( tee ) {
+            // obejma na wysięgniku teowym nad liną nośną (bryła zastępcza, raz)
+            if( side == 0 ) { add_box( solid, middlerope + glm::dvec3 { 0.0, 0.03, 0.0 }, towards, 0.12, 0.06 ); }
+        }
+        else if( false == tobeam ) {
             auto const below { hanging( clamp, middlerope, 0.0, 6 ) };
             for( std::size_t k = 1; k < below.size(); ++k ) {
                 auto point { below[ k ] };
@@ -1436,7 +1451,7 @@ assemble_middle( scene_chain &Chain ) {
         add_tube( solid, stiff( a, unit( messengerat( 0.5 - reach + step ) - a ), wiremiddle, wiredirection ), ropeheight );
         add_tube( solid, stiff( wiremiddle, wiredirection, b, unit( b - messengerat( 0.5 + reach - step ) ) ), ropeheight );
         // bryły zastępcze: zaciski 5560/5570 (na linie nośnej przy słupie środkowym i na końcach V), złączka 6410 na przewodzie
-        add_box( solid, clamp, towards, 0.10, 0.045 );
+        if( false == tee ) { add_box( solid, clamp, towards, 0.10, 0.045 ); }
         add_box( solid, a, alongspan, 0.08, 0.04 );
         add_box( solid, b, alongspan, 0.08, 0.04 );
         add_box( solid, wiremiddle, alongspan, 0.10, 0.05 );

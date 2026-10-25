@@ -328,9 +328,12 @@ int main( int, char *argv[] ) {
     }
 
     // 6a'. kotwienia środkowe 0418 (jednostronna izolacja) i 0416 (do dźwigara bramki: środkowe podwieszenie na zwisie)
-    for( auto const *card : { "0418", "0416" } ) {
+    for( auto const *card : { "0418", "0416", "tee" } ) {
         auto a { entry }, b { entry }, c { entry };
         a.name = "n1"; b.name = "n2"; c.name = "n3";
+        // wysięgnik teowy (121) na słupie środkowym: lina kotwienia przez obejmę, bez zacisków 1 m
+        auto const tee { std::string( card ) == "tee" };
+        if( tee ) { b.card = 121; b.execution = 3; card = "0406"; }
         b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] = 160.247;
         c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 220.247;
         if( std::string( card ) == "0416" ) { b.pole_type = "4850-3"; b.pole[ 0 ] = 1.2; b.pole[ 1 ] = 8.6; }
@@ -347,7 +350,7 @@ int main( int, char *argv[] ) {
         auto const built { catenary_chain_middle( 0, parts, triangles ) };
         auto middleerrors { 0 };
         for( auto const &error : errors ) { if( error.find( "middle" ) != std::string::npos ) { ++middleerrors; std::printf( "    %s\n", error.c_str() ); } }
-        std::printf( "  kotwienie srodkowe %s: czesci %d, trojkaty %d\n", card, static_cast<int>( parts ), static_cast<int>( triangles ) );
+        std::printf( "  kotwienie srodkowe %s%s: czesci %d, trojkaty %d\n", card, tee ? " (teownik)" : "", static_cast<int>( parts ), static_cast<int>( triangles ) );
         check( built && middleerrors == 0 && triangles > 200 && ( std::string( card ) == "0416" ? parts == 0 : parts >= 2 * 5 ),
             ( std::string( "kotwienie srodkowe " ) + card + ( std::string( card ) == "0416" ? ": liny od dzwigara, bez urzadzen na slupach" : ": urzadzenia na obu slupach (z izolatorem i ze sruba rzymska)" ) ).c_str() );
     }
