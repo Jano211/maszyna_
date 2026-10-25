@@ -27,6 +27,16 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   modele Jana: żywiczny na jeden jezdny, żywiczny na dwa jezdne, ceramiczny (zawsze ten sam); zasilanie w edytorze (podstacje,
   kabiny, sekcje, przęsło zasilane), punkty izolujące 0441–0443, izolacja w przęśle naprężenia 0447; iskry (izolator pod prądem,
   losowo przy mrozie) – cząsteczki + dźwięk. Przepalenie ślizgu – NIE (Jan: „w movera nie wchodzimy”).
+- 2026-10-25 20:10–20:25 KONCEPCJA (PO ŚRODZIE, zaakceptowana): wykrywanie przęseł naprężenia i łączniki międzysekcyjne.
+  Wykrywanie: pary łańcuchów z kotwieniami na przeciwnych końcach i wspólnymi słupami (punkty słupów do ~0,5 m albo przewody
+  równolegle < ~0,6 m na ≥ 20 m); słupy krzyżowe = wewnętrzne słupy części wspólnej (K1, K2 z kart 0060); ten sam zasilacz/sekcja
+  → zwarte (33-0640), różne → izolowane bez łączników; wymuszenie wpisem w łańcuchu (`overlap <łańcuch> insulated|connected`).
+  Przęsła części wspólnej dostają `parallel` same. Łącznik 33-0640 (Kolprojekt 2010 s. 55) „przy każdym słupie krzyżowym”:
+  linka 9815-9 łukiem między linami nośnymi (zaciski 6605-6/-8), wydłużone „S” w dół do przewodów (6601-1/-2), w sieciach
+  dwuprzewodowych mostek 9861-1 1 m; długości linki z tabeli (3,4,26,30: 6,0; 10: 4,0; 20: 9,0; 32,35,36,37: 5,0); sieć 20 pętle
+  do obu sieci. Linki proceduralne, zaciski bryłami zastępczymi (Jan). ZAŁOŻENIA do potwierdzenia: łącznik 1,5 m od słupa
+  krzyżowego w stronę przęsła zwartego; „S” do przewodów sieci, która przy tym słupie jedzie pod pantografem (nieporwanej).
+  0641 (przez odłącznik) i 0642–0659 (sieć stacyjna, przewód rozdzielczy 3 kV, kabel zasilacza, C120-2C) – razem z zasilaniem.
 - **Kolejka PO środzie (Jan, nie ruszać wcześniej):** przęsła samego przewodu jezdnego i podwieszenia mostowe/tunelowe (Jan ma
   papiery), LPN-y, przewody wzmacniające.
 - **Na niedzielę 25.10 (Jan 01:05, wyjątek od zakazu nowych tematów): parasole wstawiane z edytora – na zwisach bramek

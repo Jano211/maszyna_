@@ -147,6 +147,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [ ] Kotwienie środkowe (0406: lina 9831-5, zaciski 1,00 m od słupa środkowego, połączenia V w połowie przęsła); kontrola 12° wysięgnika na skrajnych słupach
 - [x] Kotwienie środkowe do dźwigara bramki (0416) i z jednostronną izolacją (0418)
 - [ ] Podniesienie drutu o 0,30 m na słupie, gdzie krzyżują się przęsła naprężenia
+- [ ] Przęsła naprężenia: wykrywanie + łączniki międzysekcyjne 33-0640 + `parallel` – PO ŚRODZIE, koncepcja w PRZEKAZANIE (25.10 20:25)
 - [ ] Izolatory sekcyjne PO ŚRODZIE (Jan 25.10 20:03: na środku przęsła, 3 modele, iskry; bez Movera) – Dwa typy: rolkowe (ESN-2025) i nowe na izolatorach żywicznych; przejezdne i nieprzejezdne (dwa izolatory jak na linie nośnej)
 
 **Wizualizacja i czas**
