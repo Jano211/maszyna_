@@ -6206,3 +6206,12 @@ msgstr "Dwa wysięgniki do tego toru na konsolach 4890 (karty 0517/0518), 1,19 m
 
 msgid "Spread cantilevers %s with %s"
 msgstr "Wysięgniki rozstawione %s z %s"
+
+msgid "Cantilever %s in the axis of pole %s (card %d execution %d): set its card (a messenger only one: 1002-1015, 1290-1297), hang it in a chain, an umbrella to the other track can go on it too"
+msgstr "Wysięgnik %s w osi słupa %s (karta %d wykonanie %d): ustaw mu kartę (samej liny: 1002–1015, 1290–1297), rozwieś w łańcuchu; może też dostać parasol do drugiego toru"
+
+msgid "A cantilever in the axis of the pole"
+msgstr "Wysięgnik w osi słupa"
+
+msgid "A third cantilever to this track on the same pole, in its axis on the usual mounts (move them apart from the consoles by hand if they meet); the pole stays one"
+msgstr "Trzeci wysięgnik do tego toru na tym samym słupie, w jego osi na zwykłych mocowaniach (jeśli wejdą w konsole, rozsuń ręcznie); słup zostaje jeden"

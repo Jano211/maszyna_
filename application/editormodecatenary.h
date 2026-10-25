@@ -193,6 +193,8 @@ struct catenary_editor
 	// the pole of an umbrella or of spread cantilevers moved to Foot (rail heads): both cantilevers go with it
 	// (Panel: from the distance slider - the selected one takes the stagger of the panel, the slider is one undo group)
 	void catenary_pair_move(std::size_t Selected, glm::dvec3 const &Foot, bool Panel);
+	// a third cantilever on the pole of spread cantilevers, in the axis of the pole, to the same track (shared_pole)
+	void catenary_third_create(std::size_t Index);
 	// the span of a chain the spot falls in (in the plan: the wire point near the line of the span, between its ends)
 	struct chain_insert
 	{

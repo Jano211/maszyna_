@@ -40,6 +40,8 @@ struct suspension {
     std::string umbrella;
     // wysięgnik rozstawiony (konsola 4890, para wpisów z tą samą nazwą "umbrella" po tej samej stronie słupa): punkt na osi
     // płaszczyzny wysięgnika przy słupie (oś słupa przesunięta wzdłuż toru do punktu mocowania na konsoli), "spread x y z"
+    // słup stawia inny wpis w tym samym miejscu (trzeci wysięgnik przy rozstawionych, w osi słupa): ten tylko z niego korzysta
+    bool   shared_pole { false };
     bool   has_spread { false };
     double spread[ 3 ] { 0.0, 0.0, 0.0 };
 };

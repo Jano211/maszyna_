@@ -436,7 +436,10 @@ assemble_alone( std::size_t const Index, catenary::cantilever_catalog const &Cat
     auto &suspension { Suspensions[ Index ] };
     glm::dvec3 wire, rope, attach;
     entry_points( suspension.data, wire, rope, attach );
-    return assemble( suspension, Catalog, wire, ( suspension.data.has_rope ? &rope : nullptr ), attach );
+    // słup stawia inny wpis (trzeci wysięgnik przy rozstawionych)
+    catenary::cantilever_umbrella own;
+    own.pole = false == suspension.data.shared_pole;
+    return assemble( suspension, Catalog, wire, ( suspension.data.has_rope ? &rope : nullptr ), attach, ( suspension.data.shared_pole ? &own : nullptr ) );
 }
 
 // parasol: oba wysięgniki składane najpierw osobno, żeby poznać wysokości mocowań, potem razem na wspólnym słupie
@@ -496,6 +499,7 @@ assemble_umbrella( std::string const &Name, std::vector<std::size_t> const &List
     if( false == probed ) { for( auto const index : List ) { alone( index ); } return; }
     if( spread ) { catenary::spread_mounts( *pole, probes[ 0 ], probes[ 1 ], sides[ 0 ], sides[ 1 ] ); }
     else { catenary::umbrella_mounts( Catalog, *pole, probes[ 0 ], probes[ 1 ], sides[ 0 ], sides[ 1 ] ); }
+    sides[ 0 ].pole = false == first.shared_pole && false == Suspensions[ List.back() ].data.shared_pole;
     sides[ 1 ].pole = false;
     sides[ 1 ].console_parts = false;
     for( int side = 0; side < 2; ++side ) {
