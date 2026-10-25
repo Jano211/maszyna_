@@ -53,8 +53,11 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   jedno złożenie z wahadełkiem przelotowym do liny), 4690-01 poprawiony (obejmy do Y +0,119). Uszynienie grupowe – nowy temat (po środzie). Jan 22:18: niezależne od sieci, idzie
   tylko po konstrukcjach wsporczych: po słupach 6120 (karta 0805; 6120-01/-02/-04/-07 to kompletne złożenia, punkt `wire` X 0,0596
   Y 0 Z 0,1042; -07 ma tył ze śrubami jako 6120-08), po bramkach 6840 (karta 0807; zero na GÓRZE dźwigara = zero dźwigara +
-  wysokość dźwigara 0,90 m z kart; na bramce w dowolnym miejscu, 1–3 sztuki), później 6130 (karta 0806). Do ustalenia: lina
-  (typ, zwis), końce (do szyny?), wysokość i strona 6120 na słupie, osie modelu 6120, przypisanie wykonań 6120 do słupów.
+  wysokość dźwigara 0,90 m z kart; na bramce w dowolnym miejscu, 1–3 sztuki), później 6130 (karta 0806). Jan 22:24: w edytorze
+  NOWA ZAKŁADKA „Uszynienie” obok Słupów, Drutów i Bramek (później dopisze się tam LPN). 6120 patrzy w stronę toru; modele
+  poprawione (były obrócone o 90°): teraz jak mocowania – X wzdłuż toru (±0,128), słup w +Y, punkt `wire` X 0,0099 Y −0,0497
+  Z 0,1042; 6120-08 (tył do -07) Y −0,022..0,293. Do ustalenia: lina (typ, zwis), końce (do szyny?), wysokość 6120 na słupie,
+  przypisanie wykonań 6120 do słupów (1, 2, 4, 7 – jak mocowania?), beton 1701.
 - **Kolejka PO środzie (Jan, nie ruszać wcześniej):** przęsła samego przewodu jezdnego i podwieszenia mostowe/tunelowe (Jan ma
   papiery), LPN-y, przewody wzmacniające.
 - **Na niedzielę 25.10 (Jan 01:05, wyjątek od zakazu nowych tematów): parasole wstawiane z edytora – na zwisach bramek
