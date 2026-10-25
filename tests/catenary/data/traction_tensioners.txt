@@ -259,6 +259,107 @@ device 0403-32 kind fixed
   type 35
 enddevice
 
+// 63-0404 kotwienia stale przewodow jezdnych z izolacja (tom 1 s. 90, Kolprojekt 2010 s. 22): same przewody, lancuchy jak w 0403
+device 0404 kind fixed
+  only contact
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  contact 7150-01 0.8324 4720-01 0.10 4730-01 0.17
+  type 3
+  type 4
+  type 26
+  type 30
+enddevice
+device 0404-10 kind fixed
+  only contact
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  contact 7150-01 0.8324 4720-01 0.10
+  type 10
+enddevice
+device 0404-20 kind fixed
+  only contact
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  contact 4730-01 0.17
+  contact_each 4720-01 0.10 7150-01 0.8324
+  type 20
+  type 36
+  type 37
+enddevice
+device 0404-32 kind fixed
+  only contact
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  contact 4730-01 0.17
+  contact_each 4720-01 0.10 7150-01 0.8324
+  type 32
+  type 35
+enddevice
+// 63-0405 kotwienia stale lin nosnych z izolacja (tom 1 s. 91, Kolprojekt 2010 s. 23): sama lina, lancuchy jak w 0403
+device 0405 kind fixed
+  only messenger
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  messenger 7150-01 0.8324
+  type 3
+  type 4
+  type 10
+  type 20
+  type 26
+  type 30
+  type 36
+  type 37
+enddevice
+device 0405-32 kind fixed
+  only messenger
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  messenger 4710-01 0.075
+  messenger_equalizer 4410-01 0.1541
+  messenger_each 4720-01 0.10 7150-01 0.8324
+  type 32
+  type 35
+enddevice
+
 // 63-0413 kotwienia stale sieci bez izolacji (tom 1 s. 95): sieci 3, 4, 20, 26, 30: lina 4430-4710-5120; przewody 4430-4730-4410-2x5120
 device 0413 kind fixed
   mount 4430-01 0.0747

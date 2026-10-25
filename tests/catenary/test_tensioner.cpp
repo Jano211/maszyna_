@@ -682,6 +682,37 @@ int main( int argc, char **argv ) {
         check( good, std::string( "kotwienie rozdzielone " ) + name + ": sieci Y 36/37 z naciagami typow (Kolprojekt 2010, 33-0019-2/-3)" );
     }
 
+    // kotwienia stale samych przewodow (0404) i samej liny (0405): jeden uchwyt 4430, lancuch jak w 0403
+    {
+        struct expect { char const *device; int type, contacts, messengers; std::map<std::string, int> parts; };
+        std::vector<expect> const cases {
+            { "0404-20", 20, 2, 1, { { "4410-01", 1 }, { "4430-01", 1 }, { "4720-01", 2 }, { "4730-01", 1 }, { "5120-01", 2 }, { "7150-01", 2 } } },
+            { "0404", 3, 2, 1, { { "4410-01", 1 }, { "4430-01", 1 }, { "4720-01", 1 }, { "4730-01", 1 }, { "5120-01", 2 }, { "7150-01", 1 } } },
+            { "0405", 20, 2, 1, { { "4430-01", 1 }, { "5120-01", 1 }, { "7150-01", 1 } } },
+            { "0405-32", 32, 2, 2, { { "4410-01", 1 }, { "4430-01", 1 }, { "4710-01", 1 }, { "4720-01", 2 }, { "5120-01", 2 }, { "7150-01", 2 } } } };
+        for( auto const &item : cases ) {
+            auto const *fixed { catalog.device( item.device ) };
+            if( fixed == nullptr ) { check( false, std::string( "urzadzenie " ) + item.device ); continue; }
+            catenary::tensioner_input input;
+            input.type = item.type;
+            input.contacts = item.contacts;
+            input.messengers = item.messengers;
+            input.aimed = true;
+            double const rope[ 3 ] { 40.0, 0.3, 7.30 }, wire[ 3 ] { 40.0, 0.3, 5.60 };
+            std::copy( rope, rope + 3, input.messenger_target );
+            std::copy( wire, wire + 3, input.contact_target );
+            catenary::tensioner_result result;
+            auto const solved { catenary::solve_tensioner( catalog, *fixed, input, result ) };
+            std::map<std::string, int> counted;
+            for( auto const &part : result.parts ) { ++counted[ part.part ]; }
+            std::string list;
+            for( auto const &part : counted ) { list += " " + part.first + "x" + std::to_string( part.second ); }
+            for( auto const &w : result.warnings ) { std::printf( "      %s\n", w.c_str() ); }
+            std::printf( "    %s typ %d:%s\n", item.device, item.type, list.c_str() );
+            check( solved && result.fixed && result.warnings.empty() && counted == item.parts, ( std::string( "kotwienie stale " ) + item.device + ": czesci jak w tabeli karty" ).c_str() );
+        }
+    }
+
     // kotwienia stale 63-0403: liczby czesci jak w tabeli karty (bez uchwytow do slupa)
     {
         struct expect { char const *device; int type, contacts, messengers; std::map<std::string, int> parts; };
