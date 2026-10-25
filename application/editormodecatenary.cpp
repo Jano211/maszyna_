@@ -2229,8 +2229,7 @@ bool catenary_editor::catenary_delete_selected()
 				continue;
 			auto changed{*data};
 			tool.undo.push_back({tool.group, false, other, changed, std::nullopt, false});
-			changed.umbrella.clear();
-			changed.has_spread = false;
+			changed.umbrella.clear(); // a spread one stays alone on its console
 			catenary_scene_update(other, changed);
 			if (auto found{tool.spots.find(other)}; found != tool.spots.end())
 				found->second.data = changed;
