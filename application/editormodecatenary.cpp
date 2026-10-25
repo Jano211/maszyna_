@@ -1641,7 +1641,7 @@ void catenary_editor::catenary_spread_create(std::size_t const Index)
 		tool.status += STR(" - the cantilever didn't assemble, see the log");
 }
 
-void catenary_editor::catenary_pair_move(std::size_t const Selected, glm::dvec3 const &Foot)
+void catenary_editor::catenary_pair_move(std::size_t const Selected, glm::dvec3 const &Foot, bool const Panel)
 {
 	auto &tool{m_catenary};
 	auto const *current{catenary_scene_get(Selected)};
@@ -1664,7 +1664,10 @@ void catenary_editor::catenary_pair_move(std::size_t const Selected, glm::dvec3 
 		auto planenew{Foot + (plane - oldfoot)};
 		planenew.y = Foot.y;
 		auto const right{right_of(found_copy.forward) * static_cast<double>(found_copy.side)};
-		auto const offset{glm::dot(plan_of(wire_of(*data)) - plan_of(found_copy.axis), right)};
+		auto offset{glm::dot(plan_of(wire_of(*data)) - plan_of(found_copy.axis), right)};
+		// from the panel: the selected one takes its stagger from there
+		if (Panel && index == Selected)
+			offset = tool.toward ? static_cast<double>(tool.stagger) : -static_cast<double>(tool.stagger);
 		catenary_spot spot;
 		{
 			without_gantry const plain{tool.gantry_selected};
@@ -1694,14 +1697,27 @@ void catenary_editor::catenary_pair_move(std::size_t const Selected, glm::dvec3 
 		result.umbrella = data->umbrella;
 		moved.emplace_back(index, spot);
 	}
-	// one undo group for the whole drag
-	auto const record{tool.drag_undo == 0};
-	if (record)
-		tool.drag_undo = ++tool.group;
+	// one undo group for the whole drag (of the pole, or of the slider of its distance)
+	auto record{false};
+	int group{0};
+	if (Panel)
+	{
+		record = tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group;
+		if (record)
+			tool.shift_group = ++tool.group;
+		group = tool.shift_group;
+	}
+	else
+	{
+		record = tool.drag_undo == 0;
+		if (record)
+			tool.drag_undo = ++tool.group;
+		group = tool.drag_undo;
+	}
 	for (auto const &[index, spot] : moved)
 	{
 		if (record)
-			tool.undo.push_back({tool.drag_undo, false, index, *catenary_scene_get(index), std::nullopt, false});
+			tool.undo.push_back({group, false, index, *catenary_scene_get(index), std::nullopt, false});
 		catenary_scene_update(index, spot.data);
 		tool.spots[index] = spot;
 	}
@@ -3134,15 +3150,34 @@ void catenary_editor::render_catenary_cantilever_ui()
 				catenary_compose(spot, glm::dot(plan_of(pole_of(*current)) - plan_of(spot.axis), right) - 0.5 * own->depth(0.0), tool.stagger, tool.toward, current->pole_type);
 				std::copy(std::begin(current->pole), std::end(current->pole), spot.data.pole);
 			}
-			else if (false == drop && false == current->umbrella.empty())
-				catenary_keep_pole(spot, *current, tool.stagger, tool.toward); // an umbrella or spread cantilevers: the pole stays
+			else if (false == drop && false == current->umbrella.empty() && own != nullptr)
+			{
+				// an umbrella or spread cantilevers: the pole stays, unless its face from the track was changed - then it goes
+				// across the track and the other cantilever goes with it
+				auto const plane{current->has_spread ? glm::dvec3{current->spread[0], current->pole[1], current->spread[2]} : pole_of(*current)};
+				auto const right{right_of(spot.forward) * static_cast<double>(spot.side)};
+				auto const clearance{glm::dot(plan_of(plane) - plan_of(spot.axis), right) - 0.5 * own->depth(0.0)};
+				if (std::abs(clearance - static_cast<double>(tool.clearance)) > 1e-4)
+				{
+					catenary_compose(spot, tool.clearance, tool.stagger, tool.toward);
+					if (spot.card != 0)
+					{
+						auto foot{glm::dvec3{spot.data.pole[0], spot.data.pole[1], spot.data.pole[2]} - (plane - pole_of(*current))};
+						foot.y = current->pole[1];
+						catenary_pair_move(static_cast<std::size_t>(tool.selected), foot, true);
+						spot.card = -1; // done
+					}
+				}
+				else
+					catenary_keep_pole(spot, *current, tool.stagger, tool.toward);
+			}
 			else
 				catenary_compose(spot, tool.clearance, tool.stagger, tool.toward, drop ? current->pole_type : std::string{});
 			if (drop)
 				spot.data.pole[1] = current->pole[1];
-			if (spot.card != 0)
+			if (spot.card > 0)
 				catenary_apply(spot);
-			else
+			else if (spot.card == 0)
 				tool.status = spot.problem;
 		}
 	}
@@ -4000,7 +4035,7 @@ void catenary_editor::catenary_drag_update()
 			auto const plane{current->has_spread ? glm::dvec3{current->spread[0], current->pole[1], current->spread[2]} : pole_of(*current)};
 			auto foot{glm::dvec3{spot.data.pole[0], spot.data.pole[1], spot.data.pole[2]} - (plane - pole_of(*current))};
 			foot.y = spot.data.pole[1];
-			catenary_pair_move(static_cast<std::size_t>(tool.selected), foot);
+			catenary_pair_move(static_cast<std::size_t>(tool.selected), foot, false);
 			return;
 		}
 		if (spot.card != 0)
