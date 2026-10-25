@@ -11,6 +11,14 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   (dwa stosy, 5040-2, ramy 5090), 2+2 na jednym stosie 0461-2x2 (dwie 6403), środkowe 0406/0408 (bryły zastępcze zacisków,
   V z liny nośnej z solvera przęsła, suwaki wysokości), uchwyty 4520 dla 1665–1667 i 1701 (width 0,21), przekładka 6411 na
   sworzniu ucha, `@90` – obrót części łańcucha, rodzaj kotwienia w edytorze, typ sieci kotwienia z łańcucha.
+- 2026-10-25 wieczór (Jan 19:10 „zrób wszystko co możesz, bez modeli”): ZROBIONE – sieci Y 36/37 w kotwieniach (stałe jak 20,
+  środkowe, rozdzielone wg 0019-2/-3: Ø306 36: 18 / 14 żel. + 14, 37: 15 / 14 + 14; Ø400 36: 18 / 28, 37: 15 / 28; naciąg
+  przewodów 36/37 2966 daN dopisany do plików typów – z 28 ciężarów), kotwienia środkowe 0418 (jednostronna izolacja: 0418 =
+  7150, 0418-2 = śruba rzymska 4420) i 0416 (do dźwigara bramki: środkowe podwieszenie na zwisie, liny od spodu dźwigara nad
+  liną nośną do zacisków ok. 3,00 m, 4590 i 7150 jako bryły zastępcze, bez urządzeń na słupach), kotwienia stałe 0404 (same
+  przewody) i 0405 (sama lina), w łańcuchu `anchor_start_contact`/`anchor_end_contact` – przewody na osobnym kotwieniu (na innym
+  słupie), główne trzyma samą linę (edytor: „Przewody jezdne zakotwione osobno: na innym słupie”, lista rodzajów wg roli).
+  NIE ZROBIONE: obejma dodatkowa przy wysięgnikach teowych w kotwieniu środkowym (pytanie do Jana: jaka część i gdzie).
 - **Kolejka PO środzie (Jan, nie ruszać wcześniej):** przęsła samego przewodu jezdnego i podwieszenia mostowe/tunelowe (Jan ma
   papiery), LPN-y, przewody wzmacniające.
 - **Na niedzielę 25.10 (Jan 01:05, wyjątek od zakazu nowych tematów): parasole wstawiane z edytora – na zwisach bramek
