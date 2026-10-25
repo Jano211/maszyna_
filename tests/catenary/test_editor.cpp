@@ -344,6 +344,8 @@ int main( int, char *argv[] ) {
         std::printf( "  rozstawione: osobno %zu czesci, pierwszy %zu (slup, konsole), drugi %zu\n", na, n1, n2 );
         for( auto const &error : errors ) { std::printf( "    %s\n", error.c_str() ); }
         check( errors.empty() && na > 10 && n1 > n2 && n2 > 5 && n1 >= na, "wysiegniki rozstawione: para na konsoli 4890 sklada sie bez bledow (slup i konsole stawia pierwszy)" );
+        catenary_scene_remove( second );
+        check( errors.empty() && catenary_scene_parts( first ) == n1, "wysiegnik rozstawiony sam na konsoli: po usunieciu drugiego dalej na konsoli ze slupem" );
     }
 
     // 6b. lina nośna z innego wysięgnika (rozstawione na konsoli): w punkcie m2 przewody przez m2, lina przez h2 1,2 m dalej

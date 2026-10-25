@@ -38,7 +38,7 @@ struct suspension {
     // parasol: dwa wpisy ze słupem i tą samą nazwą parasola to dwa wysięgniki na jednym słupie, po przeciwnych stronach.
     // słup stawia pierwszy z nich; mocowania regulowane (z połówką z nakrętkami) idą na wspólną wysokość
     std::string umbrella;
-    // wysięgnik rozstawiony (konsola 4890, para wpisów z tą samą nazwą "umbrella" po tej samej stronie słupa): punkt na osi
+    // wysięgnik rozstawiony (konsola 4890; para wpisów z tą samą nazwą "umbrella" po tej samej stronie słupa albo jeden): punkt na osi
     // płaszczyzny wysięgnika przy słupie (oś słupa przesunięta wzdłuż toru do punktu mocowania na konsoli), "spread x y z"
     // słup stawia inny wpis w tym samym miejscu (trzeci wysięgnik przy rozstawionych, w osi słupa): ten tylko z niego korzysta
     bool   shared_pole { false };

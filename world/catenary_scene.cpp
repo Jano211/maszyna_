@@ -439,6 +439,15 @@ assemble_alone( std::size_t const Index, catenary::cantilever_catalog const &Cat
     // słup stawia inny wpis (trzeci wysięgnik przy rozstawionych)
     catenary::cantilever_umbrella own;
     own.pole = false == suspension.data.shared_pole;
+    if( suspension.data.has_spread ) {
+        // sam jeden na konsoli: płaszczyzna wysięgnika przez punkt mocowania na konsoli, konsole stawia on
+        auto const &point { suspension.data.spread };
+        glm::dvec3 const plane { point[ 0 ], attach.y, point[ 2 ] };
+        auto const heading { std::atan2( plane.x - wire.x, plane.z - wire.z ) };
+        own.spread = true;
+        own.console_x = glm::dot( attach - plane, glm::dvec3 { -std::cos( heading ), 0.0, std::sin( heading ) } );
+        return assemble( suspension, Catalog, wire, ( suspension.data.has_rope ? &rope : nullptr ), plane, &own );
+    }
     return assemble( suspension, Catalog, wire, ( suspension.data.has_rope ? &rope : nullptr ), attach, ( suspension.data.shared_pole ? &own : nullptr ) );
 }
 

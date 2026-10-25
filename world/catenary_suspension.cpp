@@ -295,7 +295,7 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 if( entry.card == 0 ) { report( entry.name, "explicit points need a \"scheme\"" ); good = false; }
                 if( false == entry.umbrella.empty() && false == entry.has_pole ) { report( entry.name, "\"umbrella\" needs a \"pole\"" ); good = false; }
                 if( entry.shared_pole && false == entry.has_pole ) { report( entry.name, "\"shared_pole\" needs a \"pole\"" ); good = false; }
-                if( entry.has_spread && ( entry.umbrella.empty() || false == entry.has_pole ) ) { report( entry.name, "\"spread\" needs a \"pole\" and an \"umbrella\" name pairing it with the other cantilever on the console" ); good = false; }
+                if( entry.has_spread && false == entry.has_pole ) { report( entry.name, "\"spread\" needs a \"pole\"" ); good = false; }
             }
             else {
                 if( entry.support.empty() ) { report( entry.name, "missing \"support\"" ); good = false; }
