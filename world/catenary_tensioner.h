@@ -192,6 +192,9 @@ struct tensioner_device {
     };
     std::vector<bracket_set> brackets;
     double pivot_top { 0.0 }, pivot_bottom { 0.0 };
+    // otwór na końcu uchwytu (oś stałej rolki) nad jego zerem: uchwyt schodzi o tyle, żeby rolka została na swojej wysokości
+    // (5040: hole_1 0,03 nad mount_bottom; wpis "pivot <góra> <dół> [rise <m>]")
+    double mount_rise { 0.0 };
     bracket_set const *brackets_for( std::string const &Pole ) const;
     std::vector<tensioner_type> types;
     tensioner_type const *type( int Code ) const;
