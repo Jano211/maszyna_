@@ -50,9 +50,11 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   modelu (do potwierdzenia). Test w test_cantilever.cpp.
 - 2026-10-25 22:01 nowe modele Jana: 6840-01 (mocowanie liny uszynienia grupowego na bramce; sam model = kompletne złożenie
   karty 0807; punkt `line` Z 0,131 nad zerem, model X ±0,07, Y ±0,275, Z −0,041..0,173), 6120-01/02/04/07/08 (Jan przerabia –
-  jedno złożenie z wahadełkiem przelotowym do liny), 4690-01 poprawiony (obejmy do Y +0,119). Uszynienie grupowe – nowy temat
-  (po środzie): pytania – gdzie zero 6840 (spód dźwigara?), gdzie na bramce (oś toru, przy maszcie?), lina (typ, zwis), końce
-  (do szyny przez słup/dławik?).
+  jedno złożenie z wahadełkiem przelotowym do liny), 4690-01 poprawiony (obejmy do Y +0,119). Uszynienie grupowe – nowy temat (po środzie). Jan 22:18: niezależne od sieci, idzie
+  tylko po konstrukcjach wsporczych: po słupach 6120 (karta 0805; 6120-01/-02/-04/-07 to kompletne złożenia, punkt `wire` X 0,0596
+  Y 0 Z 0,1042; -07 ma tył ze śrubami jako 6120-08), po bramkach 6840 (karta 0807; zero na GÓRZE dźwigara = zero dźwigara +
+  wysokość dźwigara 0,90 m z kart; na bramce w dowolnym miejscu, 1–3 sztuki), później 6130 (karta 0806). Do ustalenia: lina
+  (typ, zwis), końce (do szyny?), wysokość i strona 6120 na słupie, osie modelu 6120, przypisanie wykonań 6120 do słupów.
 - **Kolejka PO środzie (Jan, nie ruszać wcześniej):** przęsła samego przewodu jezdnego i podwieszenia mostowe/tunelowe (Jan ma
   papiery), LPN-y, przewody wzmacniające.
 - **Na niedzielę 25.10 (Jan 01:05, wyjątek od zakazu nowych tematów): parasole wstawiane z edytora – na zwisach bramek
