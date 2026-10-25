@@ -58,8 +58,8 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   poprawione (były obrócone o 90°): teraz jak mocowania – X wzdłuż toru (±0,128), słup w +Y, punkt `wire` X 0,0099 Y −0,0497
   Z 0,1042; 6120-08 (tył do -07) Y −0,022..0,293. Jan 22:26: 6120 praktycznie
   zawsze na samej górze słupa – w marginesie 15 cm nad `mount_max` (tam ma być); betony (1701/1711) tego nie mają. Końce lin – zwykłe
-  kotwy do słupa (jak przy kotwieniach środkowych); lina i końce są gdzieś w katalogu – szukać po środzie. Do ustalenia jeszcze:
-  przypisanie wykonań 6120 do słupów (1, 2, 4, 7 – jak mocowania?).
+  kotwy do słupa (jak przy kotwieniach środkowych); lina i końce są gdzieś w katalogu – szukać po środzie. Wykonania 6120 jak
+  mocowania (Jan 22:27): -01 C120–160, -02 C180/200, -04 maszty, -07 dwuteowniki (z tyłem 6120-08).
 - **Kolejka PO środzie (Jan, nie ruszać wcześniej):** przęsła samego przewodu jezdnego i podwieszenia mostowe/tunelowe (Jan ma
   papiery), LPN-y, przewody wzmacniające.
 - **Na niedzielę 25.10 (Jan 01:05, wyjątek od zakazu nowych tematów): parasole wstawiane z edytora – na zwisach bramek
