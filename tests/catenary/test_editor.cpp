@@ -327,6 +327,32 @@ int main( int, char *argv[] ) {
         Global.AirTemperature = 10.f;
     }
 
+    // 6a'. kotwienia środkowe 0418 (jednostronna izolacja) i 0416 (do dźwigara bramki: środkowe podwieszenie na zwisie)
+    for( auto const *card : { "0418", "0416" } ) {
+        auto a { entry }, b { entry }, c { entry };
+        a.name = "n1"; b.name = "n2"; c.name = "n3";
+        b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] = 160.247;
+        c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 220.247;
+        if( std::string( card ) == "0416" ) { b.pole_type = "4850-3"; b.pole[ 0 ] = 1.2; b.pole[ 1 ] = 8.6; }
+        catenary::chain line;
+        line.name = "ln"; line.power = "pwr01"; line.type = "C120-2C"; line.middle = "n2"; line.middle_device = card;
+        line.suspensions = { "n1", "n2", "n3" };
+        std::string text { catenary::write_suspension( a ) + "\n" + catenary::write_suspension( b ) + "\n" + catenary::write_suspension( c ) + "\n" + catenary::write_chain( line ) + "\n" };
+        { std::ofstream out { "tests/catenary/td_srodek2_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear();
+        cParser directive( "td_srodek2_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        std::size_t parts { 0 }, triangles { 0 };
+        auto const built { catenary_chain_middle( 0, parts, triangles ) };
+        auto middleerrors { 0 };
+        for( auto const &error : errors ) { if( error.find( "middle" ) != std::string::npos ) { ++middleerrors; std::printf( "    %s\n", error.c_str() ); } }
+        std::printf( "  kotwienie srodkowe %s: czesci %d, trojkaty %d\n", card, static_cast<int>( parts ), static_cast<int>( triangles ) );
+        check( built && middleerrors == 0 && triangles > 200 && ( std::string( card ) == "0416" ? parts == 0 : parts >= 2 * 5 ),
+            ( std::string( "kotwienie srodkowe " ) + card + ( std::string( card ) == "0416" ? ": liny od dzwigara, bez urzadzen na slupach" : ": urzadzenia na obu slupach (z izolatorem i ze sruba rzymska)" ) ).c_str() );
+    }
+    std::remove( "tests/catenary/td_srodek2_test.scm" );
+
     // 6c. wysięgniki rozstawione na konsoli 4890-02 słupa 1611-11: para "umbrella" z punktami "spread" po 0,594 m wzdłuż toru
     {
         catenary_scene_clear(); errors.clear(); logs.clear();
@@ -376,6 +402,46 @@ int main( int, char *argv[] ) {
         for( auto const &error : errors ) { std::printf( "    %s\n", error.c_str() ); }
         check( written.find( " messenger_from m2 h2 suspensions" ) != std::string::npos && mock_span_bodies.size() == 2 && ropes == 2 && wires == 2 && errors.empty(),
             "lina nosna z innego wysiegnika (messenger_from): oba przesla przy m2 z lina przez h2, przewodem przez m2" );
+    }
+
+    // 6d. lina i przewody zakotwione osobno: lina na 0405 (k1 na słupie 184 m), przewody na 0404 (k2 na słupie 190 m)
+    {
+        auto a { entry }, c { entry };
+        a.name = "s0001"; c.name = "s0002";
+        c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 160.0;
+        catenary::anchor rope, wires;
+        rope.name = "k1"; rope.device = "0405"; rope.network = "C120-2C"; rope.pole_type = "1611-11";
+        rope.pole[ 0 ] = -2.4; rope.pole[ 1 ] = 0.2; rope.pole[ 2 ] = 184.0;
+        std::copy( std::begin( c.at ), std::end( c.at ), rope.toward );
+        wires = rope;
+        wires.name = "k2"; wires.device = "0404"; wires.pole[ 2 ] = 190.0;
+        catenary::chain line;
+        line.name = "l1"; line.power = "pwr01"; line.type = "C120-2C"; line.anchor_end = "k1"; line.anchor_end_contact = "k2";
+        line.suspensions = { "s0001", "s0002" };
+        auto const written { catenary::write_chain( line ) };
+        std::string text { catenary::write_suspension( a ) + "\n" + catenary::write_suspension( c ) + "\n" + catenary::write_anchor( rope ) + "\n" + catenary::write_anchor( wires ) + "\n" + written + "\n" };
+        { std::ofstream out { "tests/catenary/td_kotwa2_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear(); mock_deleted_spans = 0;
+        cParser directive( "td_kotwa2_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        double wire[ 3 ] { 0.0, 0.0, 0.0 }, messenger[ 3 ] { 0.0, 0.0, 0.0 };
+        auto good { mock_span_bodies.size() == 2 && catenary_anchor_size() == 2 };
+        if( good ) {
+            std::istringstream body { mock_span_bodies.back() };
+            std::string skip;
+            std::getline( body, skip );
+            std::getline( body, skip );
+            body >> wire[ 0 ] >> wire[ 1 ] >> wire[ 2 ];
+            std::getline( body, skip );
+            std::getline( body, skip );
+            body >> messenger[ 0 ] >> messenger[ 1 ] >> messenger[ 2 ];
+        }
+        for( auto const &error : errors ) { std::printf( "    %s\n", error.c_str() ); }
+        std::printf( "  osobno: przewody do %.2f, lina do %.2f\n", wire[ 2 ], messenger[ 2 ] );
+        check( good && errors.empty() && written.find( " anchor_end_contact k2" ) != std::string::npos && wire[ 2 ] > 184.5 && wire[ 2 ] < 190.0 && messenger[ 2 ] < 184.0 && messenger[ 2 ] > 182.0,
+            "lina na 0405 i przewody na 0404 na innym slupie: ostatnie przeslo konczy line na jednym, przewody na drugim" );
+        std::remove( "tests/catenary/td_kotwa2_test.scm" );
     }
 
     // 6. kotwienie ciężarowe na końcu łańcucha: słup i urządzenie, ostatnie przęsło bez wieszaków do uchwytów krańcowych,

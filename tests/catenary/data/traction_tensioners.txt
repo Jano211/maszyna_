@@ -174,6 +174,9 @@ device 0461-2x2 table 0011-1 pulley 4460-01 lever 6403-01 lever2 6403-01 rod 640
   type 35 stack 6322-1w 28 lever hole_1 hole_2 axis second hole_1 hole_2 axis rod 6402-04
 enddevice
 
+// Sieci Y 36 (YC150-2CS150) i 37 (YC120-2CS150) - Kolprojekt 2010 s. 21-29: stale jak siec 20 (w 36 uchwyt liny 5120-8 zamiast
+// 5120-7, ten sam model), srodkowe z czesciami -17/-18 (bryly zastepcze); rozdzielone wg 33-0019-2/-3: Ø306 36: 18 / 14+14 zel.,
+// 37: 15 / 14+14 zel.; Ø400 36: 18 / 28, 37: 15 / 28 (18 x 27 kg x 4 = 1907 daN = naciag liny YC150, 15 -> 1589 daN YC120)
 // ---- kotwienia stale (kind fixed) ---------------------------------------------------------------------------------------
 // 63-0403 kotwienia stale sieci z izolacja (tom 1 s. 89): na konstrukcji dwa przegubowe uchwyty kotwienia 4430-1 - lina nosna na
 // jej wysokosci, przewody na swojej; kazdy w parze uchwytow poz. 1 (karta 43-0453: 5100-1/-2 x4 w wyk. 11/12, inne 4510/4520/4570).
@@ -231,6 +234,8 @@ device 0403-20 kind fixed
   contact 4730-01 0.17
   contact_each 4720-01 0.10 7150-01 0.8324
   type 20
+  type 36
+  type 37
 enddevice
 // sieci 32, 35 (dwie liny nosne): liny 4430-4710-4410 (jedna nad druga), za nim kazda 4720-7150-5120-7; przewody 4430-4730-4410,
 // za nim kazdy 4720-7150-5120-6
@@ -254,6 +259,107 @@ device 0403-32 kind fixed
   type 35
 enddevice
 
+// 63-0404 kotwienia stale przewodow jezdnych z izolacja (tom 1 s. 90, Kolprojekt 2010 s. 22): same przewody, lancuchy jak w 0403
+device 0404 kind fixed
+  only contact
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  contact 7150-01 0.8324 4720-01 0.10 4730-01 0.17
+  type 3
+  type 4
+  type 26
+  type 30
+enddevice
+device 0404-10 kind fixed
+  only contact
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  contact 7150-01 0.8324 4720-01 0.10
+  type 10
+enddevice
+device 0404-20 kind fixed
+  only contact
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  contact 4730-01 0.17
+  contact_each 4720-01 0.10 7150-01 0.8324
+  type 20
+  type 36
+  type 37
+enddevice
+device 0404-32 kind fixed
+  only contact
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  contact_clamp 5120-01 0.058
+  contact_clamp_old 5110-01 0.0632
+  equalizer 4410-01 0.1541 spread 0.08
+  contact 4730-01 0.17
+  contact_each 4720-01 0.10 7150-01 0.8324
+  type 32
+  type 35
+enddevice
+// 63-0405 kotwienia stale lin nosnych z izolacja (tom 1 s. 91, Kolprojekt 2010 s. 23): sama lina, lancuchy jak w 0403
+device 0405 kind fixed
+  only messenger
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  messenger 7150-01 0.8324
+  type 3
+  type 4
+  type 10
+  type 20
+  type 26
+  type 30
+  type 36
+  type 37
+enddevice
+device 0405-32 kind fixed
+  only messenger
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  messenger 4710-01 0.075
+  messenger_equalizer 4410-01 0.1541
+  messenger_each 4720-01 0.10 7150-01 0.8324
+  type 32
+  type 35
+enddevice
+
 // 63-0413 kotwienia stale sieci bez izolacji (tom 1 s. 95): sieci 3, 4, 20, 26, 30: lina 4430-4710-5120; przewody 4430-4730-4410-2x5120
 device 0413 kind fixed
   mount 4430-01 0.0747
@@ -273,6 +379,8 @@ device 0413 kind fixed
   type 20
   type 26
   type 30
+  type 36
+  type 37
 enddevice
 // siec 10: lina i przewod 4430-4710-5120 (bez 4730 i 4410)
 device 0413-10 kind fixed
@@ -361,6 +469,8 @@ device 0423-20 kind fixed
   contact 4740-01 0.45
   contact_each 4720-01@90 0.10 7150-01@90 0.8324
   type 20
+  type 36
+  type 37
 enddevice
 // sieci 32, 35: liny jak 0403-32 (4710-4410, kazda 4720-7150-5120-7); przewody 4430-4740-4410, kazdy 4720-7150-5120-6
 device 0423-32 kind fixed
@@ -457,6 +567,8 @@ device 0482 kind split rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 64
   type 30
   type 32
   type 35
+  type 36
+  type 37
 enddevice
 device 0482-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06
@@ -480,6 +592,8 @@ device 0482-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01
   frame 5090-02 0.44252 -0.0575 -1 owner
   type 20 stack 6323-1 15
   type 30 stack 6323-1 15
+  type 36 stack 6323-1 18
+  type 37 stack 6323-1 15
 enddevice
 device 0482-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06
@@ -553,6 +667,8 @@ device 0482-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01
   type 30 stack 6323-1 18
   type 32 stack 6321-1 5 6323-1 15
   type 35 stack 6323-1 18
+  type 36 stack 6321-1 14 6323-1 14
+  type 37 stack 6321-1 14 6323-1 14
 enddevice
 
 // 33-0486 (lina) + 23-0487 (przewody): to samo z ciezarami Ø400 (usytuowanie 23-0019-3, zamocowania 23-0458: ramy 5090-3,
@@ -563,6 +679,8 @@ device 0486 kind split rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 64
   type 30
   type 32
   type 35
+  type 36
+  type 37
 enddevice
 device 0486-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06
@@ -586,6 +704,8 @@ device 0486-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01
   frame 5090-03 0.54767 -0.0575 -1 owner
   type 20 stack 6322-1 15
   type 30 stack 6322-1 15
+  type 36 stack 6322-1 18
+  type 37 stack 6322-1 15
 enddevice
 device 0486-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01 rope_diameter 0.012 rope_eye 4490-02 0.205 rope_spacer 6411-01 0.016
   series 4460-02 0.336 0.703 holder 4440-06
@@ -659,6 +779,8 @@ device 0486-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6401-03 rope 4490-01
   type 30 stack 6322-1 18
   type 32 stack 6322-1 20
   type 35 stack 6322-1 18
+  type 36 stack 6322-1 28
+  type 37 stack 6322-1 28
 enddevice
 
 // ---- kotwienia srodkowe (lina kotwienia srodkowego 9831-5; wpis "middle <podwieszenie>" w lancuchu) ----------------------------
@@ -685,6 +807,8 @@ device 0406 kind fixed
   type 30
   type 32
   type 35
+  type 36
+  type 37
 enddevice
 device 0406-2 kind fixed
   only messenger
@@ -704,6 +828,8 @@ device 0406-2 kind fixed
   type 30
   type 32
   type 35
+  type 36
+  type 37
 enddevice
 device 0408 kind fixed
   only messenger
@@ -723,6 +849,8 @@ device 0408 kind fixed
   type 30
   type 32
   type 35
+  type 36
+  type 37
 enddevice
 device 0408-2 kind fixed
   only messenger
@@ -742,4 +870,54 @@ device 0408-2 kind fixed
   type 30
   type 32
   type 35
+  type 36
+  type 37
 enddevice
+
+// 73-0418 z jednostronna izolacja (Kolprojekt 2010 s. 28, tom 1 s. 97): z jednej strony 7150-5120, z drugiej sruba rzymska
+// 4420-5120 bez izolatora (tabela: 4420 1, 4430 2, 5120 2, 7150 1)
+device 0418 kind fixed
+  only messenger
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  messenger 7150-01 0.8324
+  type 3
+  type 4
+  type 10
+  type 20
+  type 26
+  type 30
+  type 32
+  type 35
+  type 36
+  type 37
+enddevice
+device 0418-2 kind fixed
+  only messenger
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  messenger 4420-01 0.93
+  type 3
+  type 4
+  type 10
+  type 20
+  type 26
+  type 30
+  type 32
+  type 35
+  type 36
+  type 37
+enddevice
+// 63-0416 do dzwigara bramki (Kolprojekt 2010 s. 27): liny od uchwytu 4590 na spodzie dzwigara nad lina nosna przez 4730-4720-
+// 7150-5120 do zaciskow na linie nosnej ok. 3,00 m z obu stron; sklada je sceneria (bryly zastepcze), urzadzen na slupach brak
+

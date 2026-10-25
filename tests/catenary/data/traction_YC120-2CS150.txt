@@ -5,6 +5,7 @@ symbol: YC120-2CS150
 // przewody jezdne (nazwa przewodu z pliku traction_tables.txt)
 contact_wire_num: 2
 contact_wire: Djp150
+contact_tension: 2966           // daN, lacznie oba przewody: 28 ciezarow x 27 kg x 1:4 (Kolprojekt 2010, 33-0019-2/-3)
 contact_wire_spacing: 0.08      // m; wartosc do potwierdzenia na karcie 5300
 
 // liny nosne; naciag laczny wszystkich lin w daN

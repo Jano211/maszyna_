@@ -662,8 +662,11 @@ bool solve_fixed( tensioner_device const &Device, tensioner_type const &Type, te
     std::vector<vec> ropes, contacts;
     auto messengerclamp { Device.messenger_clamp };
     if( false == Type.messenger_clamp.empty() ) { messengerclamp.name = Type.messenger_clamp; }
-    wires( "messenger", messengerheight, Input.messenger_target, Device.messenger, Device.messenger_equalizer, Input.messengers, Device.equalizer_spread,
-        Device.messenger_each, messengerclamp, true, ropes );
+    // kotwienie samych przewodów (only contact, 0404): bez łańcucha liny
+    if( Device.only != "contact" ) {
+        wires( "messenger", messengerheight, Input.messenger_target, Device.messenger, Device.messenger_equalizer, Input.messengers, Device.equalizer_spread,
+            Device.messenger_each, messengerclamp, true, ropes );
+    }
     auto const &clamp { Input.old_fittings && false == Device.contact_clamp_old.name.empty() ? Device.contact_clamp_old : Device.contact_clamp };
     // kotwienie środkowe: tylko lina kotwienia (only messenger)
     if( Device.only != "messenger" ) {

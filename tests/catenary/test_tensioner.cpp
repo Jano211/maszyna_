@@ -659,6 +659,60 @@ int main( int argc, char **argv ) {
         check( good, std::string( "kotwienie rozdzielone " ) + name + ": naciagi typow 32/35, dwie liny, dwa stosy, pierscienie na prowadnicach ramy 5090, -25..+40 °C bez uwag" );
     }
 
+    // sieci Y 36/37 (Kolprojekt 2010): kotwienie rozdzielone z naciagami typu sieci (lina 18 / 15 ciezarow, przewody 28)
+    for( auto const *name : { "0482", "0486" } ) {
+        auto const *split { catalog.device( name ) };
+        auto good { split != nullptr };
+        for( auto const *file : { "traction_YC150-2CS150.txt", "traction_YC120-2CS150.txt" } ) {
+            int code;
+            network net;
+            if( false == good || false == read_network( data + file, code, net ) ) { good = false; continue; }
+            catenary::tensioner_input input;
+            input.type = code;
+            input.messengers = 1;
+            input.distance = 750.0;
+            input.pole = "1611-11";
+            input.depth = []( double ) { return 0.12; };
+            catenary::tensioner_result result;
+            good = good && catenary::solve_tensioner( catalog, *split, input, result ) && result.warnings.empty();
+            good = good && std::abs( result.messenger_tension - net.messenger ) < 0.01 * net.messenger && std::abs( result.contact_tension - net.contact ) < 0.01 * net.contact;
+            for( auto const &w : result.warnings ) { std::printf( "    %s\n", w.c_str() ); }
+            std::printf( "    %s typ %d: lina %.0f daN, przewody %.0f daN\n", name, code, result.messenger_tension, result.contact_tension );
+        }
+        check( good, std::string( "kotwienie rozdzielone " ) + name + ": sieci Y 36/37 z naciagami typow (Kolprojekt 2010, 33-0019-2/-3)" );
+    }
+
+    // kotwienia stale samych przewodow (0404) i samej liny (0405): jeden uchwyt 4430, lancuch jak w 0403
+    {
+        struct expect { char const *device; int type, contacts, messengers; std::map<std::string, int> parts; };
+        std::vector<expect> const cases {
+            { "0404-20", 20, 2, 1, { { "4410-01", 1 }, { "4430-01", 1 }, { "4720-01", 2 }, { "4730-01", 1 }, { "5120-01", 2 }, { "7150-01", 2 } } },
+            { "0404", 3, 2, 1, { { "4410-01", 1 }, { "4430-01", 1 }, { "4720-01", 1 }, { "4730-01", 1 }, { "5120-01", 2 }, { "7150-01", 1 } } },
+            { "0405", 20, 2, 1, { { "4430-01", 1 }, { "5120-01", 1 }, { "7150-01", 1 } } },
+            { "0405-32", 32, 2, 2, { { "4410-01", 1 }, { "4430-01", 1 }, { "4710-01", 1 }, { "4720-01", 2 }, { "5120-01", 2 }, { "7150-01", 2 } } } };
+        for( auto const &item : cases ) {
+            auto const *fixed { catalog.device( item.device ) };
+            if( fixed == nullptr ) { check( false, std::string( "urzadzenie " ) + item.device ); continue; }
+            catenary::tensioner_input input;
+            input.type = item.type;
+            input.contacts = item.contacts;
+            input.messengers = item.messengers;
+            input.aimed = true;
+            double const rope[ 3 ] { 40.0, 0.3, 7.30 }, wire[ 3 ] { 40.0, 0.3, 5.60 };
+            std::copy( rope, rope + 3, input.messenger_target );
+            std::copy( wire, wire + 3, input.contact_target );
+            catenary::tensioner_result result;
+            auto const solved { catenary::solve_tensioner( catalog, *fixed, input, result ) };
+            std::map<std::string, int> counted;
+            for( auto const &part : result.parts ) { ++counted[ part.part ]; }
+            std::string list;
+            for( auto const &part : counted ) { list += " " + part.first + "x" + std::to_string( part.second ); }
+            for( auto const &w : result.warnings ) { std::printf( "      %s\n", w.c_str() ); }
+            std::printf( "    %s typ %d:%s\n", item.device, item.type, list.c_str() );
+            check( solved && result.fixed && result.warnings.empty() && counted == item.parts, ( std::string( "kotwienie stale " ) + item.device + ": czesci jak w tabeli karty" ).c_str() );
+        }
+    }
+
     // kotwienia stale 63-0403: liczby czesci jak w tabeli karty (bez uchwytow do slupa)
     {
         struct expect { char const *device; int type, contacts, messengers; std::map<std::string, int> parts; };
@@ -675,6 +729,10 @@ int main( int argc, char **argv ) {
             { "0423", 3, 2, 1, { { "4410-01", 1 }, { "4430-01", 2 }, { "4720-01", 1 }, { "4740-01", 1 }, { "5120-01", 3 }, { "7150-01", 2 } } },
             { "0423-10", 10, 1, 1, { { "4430-01", 2 }, { "4720-01", 2 }, { "4740-01", 1 }, { "5120-01", 2 }, { "7150-01", 2 } } },
             { "0423-20", 20, 2, 1, { { "4410-01", 1 }, { "4430-01", 2 }, { "4720-01", 2 }, { "4740-01", 1 }, { "5120-01", 3 }, { "7150-01", 3 } } },
+            // sieci Y 36/37 (Kolprojekt 2010 s. 21, 26, 29) jak siec 20
+            { "0403-20", 36, 2, 1, { { "4410-01", 1 }, { "4430-01", 2 }, { "4720-01", 2 }, { "4730-01", 1 }, { "5120-01", 3 }, { "7150-01", 3 } } },
+            { "0413", 37, 2, 1, { { "4410-01", 1 }, { "4430-01", 2 }, { "4710-01", 1 }, { "4730-01", 1 }, { "5120-01", 3 } } },
+            { "0423-20", 37, 2, 1, { { "4410-01", 1 }, { "4430-01", 2 }, { "4720-01", 2 }, { "4740-01", 1 }, { "5120-01", 3 }, { "7150-01", 3 } } },
             { "0423-32", 32, 2, 2, { { "4410-01", 2 }, { "4430-01", 2 }, { "4710-01", 1 }, { "4720-01", 4 }, { "4740-01", 1 }, { "5120-01", 4 }, { "7150-01", 4 } } } };
         for( auto const &item : cases ) {
             auto const *fixed { catalog.device( item.device ) };
