@@ -772,3 +772,51 @@ device 0408-2 kind fixed
   type 36
   type 37
 enddevice
+
+// 73-0418 z jednostronna izolacja (Kolprojekt 2010 s. 28, tom 1 s. 97): z jednej strony 7150-5120, z drugiej sruba rzymska
+// 4420-5120 bez izolatora (tabela: 4420 1, 4430 2, 5120 2, 7150 1)
+device 0418 kind fixed
+  only messenger
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  messenger 7150-01 0.8324
+  type 3
+  type 4
+  type 10
+  type 20
+  type 26
+  type 30
+  type 32
+  type 35
+  type 36
+  type 37
+enddevice
+device 0418-2 kind fixed
+  only messenger
+  mount 4430-01 0.0747
+  pivot 0.03436 0.02561       // 4430-01: mount_top / mount_bottom z modelu Jana (jak 4450-01)
+  brackets 1611-11 1611-12 1611-13 1613-11 1613-12 1613-13 1614-11 1614-12 1614-13 hole 0.04 0.04 bolt 0.217 top 5100-01 5100-05 bottom 5100-03 5100-06
+  brackets 1611-14 1611-15 1613-14 1613-15 1614-14 1614-15 hole 0.04 0.04 bolt 0.257 top 5100-02 5100-05 bottom 5100-04 5100-06
+  brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
+  brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4520-03 4520-08
+  messenger_clamp 5120-01 0.058
+  messenger 4420-01 0.93
+  type 3
+  type 4
+  type 10
+  type 20
+  type 26
+  type 30
+  type 32
+  type 35
+  type 36
+  type 37
+enddevice
+// 63-0416 do dzwigara bramki (Kolprojekt 2010 s. 27): liny od uchwytu 4590 na spodzie dzwigara nad lina nosna przez 4730-4720-
+// 7150-5120 do zaciskow na linie nosnej ok. 3,00 m z obu stron; sklada je sceneria (bryly zastepcze), urzadzen na slupach brak
+

@@ -1223,12 +1223,26 @@ assemble_middle( scene_chain &Chain ) {
     auto const vec = []( double const *P ) { return glm::dvec3 { P[ 0 ], P[ 1 ], P[ 2 ] }; };
     auto const middlerope { vec( ropes[ 1 ] ) };
     double const ropeheight { 0.0045 };  // promień liny 9831-5 - ZAŁOŻENIE (przekroju brak)
+    // 63-0416 do dźwigara bramki: podwieszenie środkowe na zwisie, liny od dźwigara (4590 na jego spodzie, nad liną nośną) do
+    // zacisków na linie nośnej ok. 3,00 m z obu stron; bez urządzeń na słupach sąsiednich
+    auto tobeam { data.middle_device == "0416" };
+    glm::dvec3 beam { middlerope };
+    if( tobeam ) {
+        auto const index { suspension_named( Chain.file, data.middle ) };
+        auto const *own { index < Suspensions.size() && Suspensions[ index ].data.has_pole ? catalog->pole( Suspensions[ index ].data.pole_type ) : nullptr };
+        if( own == nullptr || own->drop.empty() ) {
+            ErrorLog( label + "has a middle anchor to a gantry beam (0416) at \"" + data.middle + "\", which doesn't hang on a drop of a gantry; anchored to the poles next to it instead (0406)" );
+            tobeam = false;
+        }
+        else { beam.y = Suspensions[ index ].data.pole[ 1 ]; }  // spód dźwigara (zero zwisu)
+    }
     for( int side = 0; side < 2; ++side ) {
         auto const neighbour { side == 0 ? 0 : 2 };
         auto &solid { Chain.middle_solid[ side ] };
-        // zacisk na linie nośnej 1,00 m od środkowego podwieszenia w stronę sąsiedniego
+        // zacisk na linie nośnej 1,00 m od środkowego podwieszenia w stronę sąsiedniego (do dźwigara: ok. 3,00 m)
         auto const towards { vec( ropes[ neighbour ] ) - middlerope };
-        auto const clamp { middlerope + towards * ( 1.0 / std::max( 1.0, glm::length( glm::dvec2 { towards.x, towards.z } ) ) ) };
+        auto const clampdistance { tobeam ? 3.0 : 1.0 };
+        auto const clamp { middlerope + towards * ( clampdistance / std::max( clampdistance, glm::length( glm::dvec2 { towards.x, towards.z } ) ) ) };
         // połowa przęsła: przewód jezdny (prosto między końcami), lina nośna nad nim na wysokości najkrótszego wieszaka
         auto const wiremiddle { ( vec( wires[ 1 ] ) + vec( wires[ neighbour ] ) ) * 0.5 };
         auto const alongspan { glm::normalize( glm::dvec3 { wires[ neighbour ][ 0 ] - wires[ 1 ][ 0 ], 0.0, wires[ neighbour ][ 2 ] - wires[ 1 ][ 2 ] } ) };
@@ -1274,8 +1288,8 @@ assemble_middle( scene_chain &Chain ) {
         };
         // koniec liny na słupie sąsiedniego podwieszenia: urządzenie kotwienia stałego tylko z liną
         auto const index { suspension_named( Chain.file, data.suspensions[ position + ( side == 0 ? -1 : 1 ) ] ) };
-        glm::dvec3 ropeend { vec( ropes[ neighbour ] ) };
-        if( index < Suspensions.size() && Suspensions[ index ].data.has_pole ) {
+        glm::dvec3 ropeend { tobeam ? beam : vec( ropes[ neighbour ] ) };
+        if( false == tobeam && index < Suspensions.size() && Suspensions[ index ].data.has_pole ) {
             auto const &suspension { Suspensions[ index ].data };
             auto const *pole { catalog->pole( suspension.pole_type ) };
             auto const name { data.middle_device + ( side == 0 ? "" : "-2" ) };
@@ -1366,9 +1380,16 @@ assemble_middle( scene_chain &Chain ) {
         };
         auto const flat = []( glm::dvec3 const &A, glm::dvec3 const &B ) { return glm::length( glm::dvec2 { A.x - B.x, A.z - B.z } ); };
         auto rope { hanging( ropeend, clamp, 0.5 * flat( ropeend, clamp ) / 60.0, 24 ) };
+        if( tobeam ) {
+            // od dźwigara: uchwyt 4590 i izolator 7150 (bryły zastępcze - wymiary izolatora jak model 7150-01, uchwyt ZAŁOŻENIE)
+            auto const down { clamp - beam };
+            auto const along { glm::length( down ) > 1e-6 ? glm::normalize( down ) : glm::dvec3 { 0.0, -1.0, 0.0 } };
+            add_box( solid, beam, towards, 0.25, 0.08 );
+            add_box( solid, beam + along * ( 0.15 + 0.4162 ), along, 0.8324, 0.06 );
+        }
         // między zaciskami przy słupie środkowym lina zwisa swobodnie pod uchwytem liny nośnej (Jan 2026-10-25): do połowy
         // odległości (słup środkowy) 0,25 m poniżej liny nośnej
-        {
+        if( false == tobeam ) {
             auto const below { hanging( clamp, middlerope, 0.0, 6 ) };
             for( std::size_t k = 1; k < below.size(); ++k ) {
                 auto point { below[ k ] };

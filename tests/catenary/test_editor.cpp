@@ -327,6 +327,32 @@ int main( int, char *argv[] ) {
         Global.AirTemperature = 10.f;
     }
 
+    // 6a'. kotwienia środkowe 0418 (jednostronna izolacja) i 0416 (do dźwigara bramki: środkowe podwieszenie na zwisie)
+    for( auto const *card : { "0418", "0416" } ) {
+        auto a { entry }, b { entry }, c { entry };
+        a.name = "n1"; b.name = "n2"; c.name = "n3";
+        b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] = 160.247;
+        c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 220.247;
+        if( std::string( card ) == "0416" ) { b.pole_type = "4850-3"; b.pole[ 0 ] = 1.2; b.pole[ 1 ] = 8.6; }
+        catenary::chain line;
+        line.name = "ln"; line.power = "pwr01"; line.type = "C120-2C"; line.middle = "n2"; line.middle_device = card;
+        line.suspensions = { "n1", "n2", "n3" };
+        std::string text { catenary::write_suspension( a ) + "\n" + catenary::write_suspension( b ) + "\n" + catenary::write_suspension( c ) + "\n" + catenary::write_chain( line ) + "\n" };
+        { std::ofstream out { "tests/catenary/td_srodek2_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear();
+        cParser directive( "td_srodek2_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        std::size_t parts { 0 }, triangles { 0 };
+        auto const built { catenary_chain_middle( 0, parts, triangles ) };
+        auto middleerrors { 0 };
+        for( auto const &error : errors ) { if( error.find( "middle" ) != std::string::npos ) { ++middleerrors; std::printf( "    %s\n", error.c_str() ); } }
+        std::printf( "  kotwienie srodkowe %s: czesci %d, trojkaty %d\n", card, static_cast<int>( parts ), static_cast<int>( triangles ) );
+        check( built && middleerrors == 0 && triangles > 200 && ( std::string( card ) == "0416" ? parts == 0 : parts >= 2 * 5 ),
+            ( std::string( "kotwienie srodkowe " ) + card + ( std::string( card ) == "0416" ? ": liny od dzwigara, bez urzadzen na slupach" : ": urzadzenia na obu slupach (z izolatorem i ze sruba rzymska)" ) ).c_str() );
+    }
+    std::remove( "tests/catenary/td_srodek2_test.scm" );
+
     // 6c. wysięgniki rozstawione na konsoli 4890-02 słupa 1611-11: para "umbrella" z punktami "spread" po 0,594 m wzdłuż toru
     {
         catenary_scene_clear(); errors.clear(); logs.clear();

@@ -6215,3 +6215,12 @@ msgstr "Wysięgnik w osi słupa"
 
 msgid "A third cantilever to this track on the same pole, in its axis on the usual mounts (move them apart from the consoles by hand if they meet); the pole stays one"
 msgstr "Trzeci wysięgnik do tego toru na tym samym słupie, w jego osi na zwykłych mocowaniach (jeśli wejdą w konsole, rozsuń ręcznie); słup zostaje jeden"
+
+msgid "insulated on one side (card 0418)"
+msgstr "z jednostronną izolacją (karta 0418)"
+
+msgid "to the beam of a gantry (card 0416)"
+msgstr "do dźwigara bramki (karta 0416)"
+
+msgid "0416: the middle pole is a drop of a gantry; the anchor ropes go from the beam above the messenger to clamps on it about 3 m on both sides, the poles next to it carry nothing"
+msgstr "0416: podwieszenie środkowe jest na zwisie bramki; liny kotwienia idą od dźwigara nad liną nośną do zacisków na niej ok. 3 m z obu stron, słupy sąsiednie nic nie niosą"

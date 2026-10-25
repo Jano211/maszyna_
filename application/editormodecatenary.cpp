@@ -2548,18 +2548,24 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			ImGui::SetTooltip("%s", STR_C("The anchor rope is clamped on the messenger 1 m on each side of this pole and goes to the poles next to it; in the middle of both spans a V ties it to the contact wire. The weight anchors measure their distance from it"));
 		if (false == chain->middle.empty())
 		{
-			int insulated{chain->middle_device == "0408" ? 1 : 0};
-			std::string const kinds[] = {STR("with insulation (card 0406)"), STR("without insulation (card 0408)")};
-			char const *const items[] = {kinds[0].c_str(), kinds[1].c_str()};
-			if (ImGui::Combo(STR_C("Middle anchor kind"), &insulated, items, 2))
+			char const *const cards[] = {"0406", "0408", "0418", "0416"};
+			int insulated{0};
+			for (int k = 0; k < 4; ++k)
+				if (chain->middle_device == cards[k])
+					insulated = k;
+			std::string const kinds[] = {STR("with insulation (card 0406)"), STR("without insulation (card 0408)"), STR("insulated on one side (card 0418)"), STR("to the beam of a gantry (card 0416)")};
+			char const *const items[] = {kinds[0].c_str(), kinds[1].c_str(), kinds[2].c_str(), kinds[3].c_str()};
+			if (ImGui::Combo(STR_C("Middle anchor kind"), &insulated, items, 4))
 			{
-				changed.middle_device = insulated == 1 ? "0408" : "0406";
+				changed.middle_device = cards[std::clamp(insulated, 0, 3)];
 				edited = true;
 			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("0416: the middle pole is a drop of a gantry; the anchor ropes go from the beam above the messenger to clamps on it about 3 m on both sides, the poles next to it carry nothing"));
 			// heights of the anchor rope on the poles before and after (when the cantilever is in the way)
 			auto const where{std::find(chain->suspensions.begin(), chain->suspensions.end(), chain->middle) - chain->suspensions.begin()};
 			auto const members{catenary_chain_members(Chain)};
-			for (int side = 0; side < 2; ++side)
+			for (int side = 0; side < 2 && chain->middle_device != "0416"; ++side)
 			{
 				auto const k{static_cast<std::size_t>(where) + (side == 0 ? -1 : 1)};
 				auto const *neighbour{k < members.size() ? catenary_scene_get(members[k]) : nullptr};
