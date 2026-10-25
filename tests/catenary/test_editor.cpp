@@ -327,6 +327,25 @@ int main( int, char *argv[] ) {
         Global.AirTemperature = 10.f;
     }
 
+    // 6c. wysięgniki rozstawione na konsoli 4890-02 słupa 1611-11: para "umbrella" z punktami "spread" po 0,594 m wzdłuż toru
+    {
+        catenary_scene_clear(); errors.clear(); logs.clear();
+        auto a { entry }, b { entry };
+        a.name = "ra"; b.name = "rb"; a.umbrella = b.umbrella = "rz";
+        a.has_spread = b.has_spread = true;
+        a.at[ 2 ] = a.rope[ 2 ] = 100.247 + 0.594; b.at[ 2 ] = b.rope[ 2 ] = 100.247 - 0.594;
+        a.spread[ 0 ] = b.spread[ 0 ] = -2.313; a.spread[ 1 ] = b.spread[ 1 ] = 0.2;
+        a.spread[ 2 ] = 100.247 + 0.594; b.spread[ 2 ] = 100.247 - 0.594;
+        auto single { entry }; single.name = "rs"; single.pole[ 2 ] = single.at[ 2 ] = single.rope[ 2 ] = 300.0;
+        auto const alone { catenary_scene_add( "td_rozstaw.scm", single ) };
+        auto const first { catenary_scene_add( "td_rozstaw.scm", a ) };
+        auto const second { catenary_scene_add( "td_rozstaw.scm", b ) };
+        auto const na { catenary_scene_parts( alone ) }, n1 { catenary_scene_parts( first ) }, n2 { catenary_scene_parts( second ) };
+        std::printf( "  rozstawione: osobno %zu czesci, pierwszy %zu (slup, konsole), drugi %zu\n", na, n1, n2 );
+        for( auto const &error : errors ) { std::printf( "    %s\n", error.c_str() ); }
+        check( errors.empty() && na > 10 && n1 > n2 && n2 > 5 && n1 >= na, "wysiegniki rozstawione: para na konsoli 4890 sklada sie bez bledow (slup i konsole stawia pierwszy)" );
+    }
+
     // 6b. lina nośna z innego wysięgnika (rozstawione na konsoli): w punkcie m2 przewody przez m2, lina przez h2 1,2 m dalej
     {
         auto a { entry }, b { entry }, c { entry }, h { entry };
