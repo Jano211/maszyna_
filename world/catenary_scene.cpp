@@ -1033,7 +1033,10 @@ chain_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *
     auto const index { suspension_named( Chain.file, data.suspensions[ Point ] ) };
     if( index >= Suspensions.size() || false == Suspensions[ index ].data.has_at ) { return false; }
     std::copy( std::begin( Suspensions[ index ].data.at ), std::end( Suspensions[ index ].data.at ), Wire );
-    rope_of( Suspensions[ index ].data, Rope );
+    // lina nośna z innego wysięgnika (rozstawione, sama lina): gdy go nie ma, z tego samego
+    auto const &holder { catenary::messenger_holder( data, data.suspensions[ Point ] ) };
+    auto const other { holder == data.suspensions[ Point ] ? Suspensions.size() : suspension_named( Chain.file, holder ) };
+    rope_of( Suspensions[ other < Suspensions.size() && Suspensions[ other ].data.has_at ? other : index ].data, Rope );
     return true;
 }
 
@@ -1692,7 +1695,7 @@ follow_chains( std::size_t const Index ) {
         if( chain.removed || chain.file != suspension.file ) { continue; }
         auto const &names { chain.data.suspensions };
         for( std::size_t position = 0; position < names.size(); ++position ) {
-            if( names[ position ] != suspension.data.name ) { continue; }
+            if( names[ position ] != suspension.data.name && catenary::messenger_holder( chain.data, names[ position ] ) != suspension.data.name ) { continue; }
             // skrajne podwieszenie: kotwienie celuje w nie łańcuchami do drutów
             std::string const *end { position == 0 ? &chain.data.anchor_start : position + 1 == names.size() ? &chain.data.anchor_end : nullptr };
             if( end != nullptr && false == end->empty() ) {
@@ -1786,7 +1789,11 @@ catenary_scene_remove( std::size_t const Index ) {
             auto &names { chain.data.suspensions };
             auto const before { names.size() };
             names.erase( std::remove( names.begin(), names.end(), suspension.data.name ), names.end() );
-            if( names.size() == before ) { continue; }
+            // lina nośna trzymana przez nie albo w jego punkcie: wraca do wysięgnika z listy
+            auto &pairs { chain.data.messenger_from };
+            auto const pairsbefore { pairs.size() };
+            pairs.erase( std::remove_if( pairs.begin(), pairs.end(), [ & ]( auto const &Pair ) { return Pair.first == suspension.data.name || Pair.second == suspension.data.name; } ), pairs.end() );
+            if( names.size() == before && pairs.size() == pairsbefore ) { continue; }
             if( names.size() < 2 ) { chain.removed = true; }
             rebuild_chain( chain );
         }

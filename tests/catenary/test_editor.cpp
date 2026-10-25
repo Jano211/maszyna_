@@ -327,6 +327,36 @@ int main( int, char *argv[] ) {
         Global.AirTemperature = 10.f;
     }
 
+    // 6b. lina nośna z innego wysięgnika (rozstawione na konsoli): w punkcie m2 przewody przez m2, lina przez h2 1,2 m dalej
+    {
+        auto a { entry }, b { entry }, c { entry }, h { entry };
+        a.name = "m1"; b.name = "m2"; c.name = "m3"; h.name = "h2";
+        b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] = 160.247;
+        h.at[ 2 ] = h.rope[ 2 ] = h.pole[ 2 ] = 161.447;
+        c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 220.247;
+        catenary::chain line;
+        line.name = "lr"; line.power = "pwr01"; line.type = "C120-2C";
+        line.messenger_from = { { "m2", "h2" } };
+        line.suspensions = { "m1", "m2", "m3" };
+        auto const written { catenary::write_chain( line ) };
+        std::string text { catenary::write_suspension( a ) + "\n" + catenary::write_suspension( b ) + "\n" + catenary::write_suspension( c ) + "\n"
+            + catenary::write_suspension( h ) + "\n" + written + "\n" };
+        { std::ofstream out { "tests/catenary/td_lina_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear(); mock_deleted_spans = 0;
+        cParser directive( "td_lina_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        // przęsło 1 kończy przewód w m2 (160.247), linę w h2 (161.447); przęsło 2 odwrotnie
+        auto ropes { 0 }, wires { 0 };
+        for( auto const &body : mock_span_bodies ) {
+            if( body.find( "161.447" ) != std::string::npos ) { ++ropes; }
+            if( body.find( "160.247" ) != std::string::npos ) { ++wires; }
+        }
+        for( auto const &error : errors ) { std::printf( "    %s\n", error.c_str() ); }
+        check( written.find( " messenger_from m2 h2 suspensions" ) != std::string::npos && mock_span_bodies.size() == 2 && ropes == 2 && wires == 2 && errors.empty(),
+            "lina nosna z innego wysiegnika (messenger_from): oba przesla przy m2 z lina przez h2, przewodem przez m2" );
+    }
+
     // 6. kotwienie ciężarowe na końcu łańcucha: słup i urządzenie, ostatnie przęsło bez wieszaków do uchwytów krańcowych,
     // temperatura przestawia ciężary i przęsło
     {

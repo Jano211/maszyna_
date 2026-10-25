@@ -1935,7 +1935,8 @@ bool catenary_editor::catenary_delete_selected()
 	{
 		auto const *data{catenary_chain_get(chain)};
 		if (data != nullptr && false == current->name.empty() && catenary_chain_file(chain) == catenary_scene_file_of(index)
-		    && std::find(data->suspensions.begin(), data->suspensions.end(), current->name) != data->suspensions.end())
+		    && (std::find(data->suspensions.begin(), data->suspensions.end(), current->name) != data->suspensions.end()
+		        || std::any_of(data->messenger_from.begin(), data->messenger_from.end(), [&](auto const &Pair) { return Pair.first == current->name || Pair.second == current->name; })))
 			tool.undo.push_back({tool.group, true, chain, std::nullopt, *data, false});
 	}
 	// the other cantilever of its umbrella stays alone
@@ -3058,6 +3059,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 					catenary_copy(members);
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("%s", STR_C("The pole, its face from the track, execution, height of the wires and insulators; each pole keeps its stagger"));
+				render_catenary_messenger_from(static_cast<std::size_t>(chain));
 			}
 			if (ImGui::Button(STR_C("Remove the pole")))
 				catenary_delete_selected();
@@ -3066,6 +3068,58 @@ void catenary_editor::render_catenary_cantilever_ui()
 				tool.selected = -1;
 		}
 	}
+}
+
+// the messenger of the chain at the selected suspension held by another cantilever on the same pole or next to it (spread
+// cantilevers on the console 4890, a cantilever of the messenger only by a pull-off of the wires): chain entry messenger_from
+void catenary_editor::render_catenary_messenger_from(std::size_t const Chain)
+{
+	auto &tool{m_catenary};
+	auto const *chain{catenary_chain_get(Chain)};
+	auto const *data{tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr};
+	if (chain == nullptr || data == nullptr || data->name.empty())
+		return;
+	auto const file{catenary_chain_file(Chain)};
+	auto const holder{catenary::messenger_holder(*chain, data->name)};
+	// the cantilevers up to 3 m from this pole (in the plan), in the file of the chain
+	constexpr double kHolderRange{3.0};
+	std::vector<std::string> names{data->name};
+	for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+	{
+		auto const *other{catenary_scene_get(index)};
+		if (other == nullptr || static_cast<int>(index) == tool.selected || other->name.empty() || false == other->has_rope || catenary_scene_file_of(index) != file)
+			continue;
+		if (glm::length(plan_of(pole_of(*other)) - plan_of(pole_of(*data))) <= kHolderRange)
+			names.push_back(other->name);
+	}
+	if (names.size() < 2 && holder == data->name)
+		return;
+	ImGui::PushItemWidth(160.0f);
+	auto const label{holder == data->name ? format(STR_C("%s (this one)"), holder.c_str()) : holder};
+	if (ImGui::BeginCombo(STR_C("Messenger held by"), label.c_str()))
+	{
+		for (auto const &name : names)
+		{
+			auto const text{name == data->name ? format(STR_C("%s (this one)"), name.c_str()) : name};
+			if (ImGui::Selectable(text.c_str(), name == holder) && name != holder)
+			{
+				auto changed{*chain};
+				tool.undo.push_back({++tool.group, true, Chain, std::nullopt, *chain, false});
+				auto &pairs{changed.messenger_from};
+				pairs.erase(std::remove_if(pairs.begin(), pairs.end(), [&](auto const &Pair) { return Pair.first == data->name; }), pairs.end());
+				if (name != data->name)
+					pairs.emplace_back(data->name, name);
+				tool.status = name == data->name ? STR("The messenger goes through this cantilever again")
+				                                 : format(STR_C("The wires of the chain go through %s, its messenger through %s"), data->name.c_str(), name.c_str());
+				catenary_chain_update(Chain, changed);
+				break;
+			}
+		}
+		ImGui::EndCombo();
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("Another cantilever up to 3 m from this pole holds the messenger of this chain here, this one only its wires: spread cantilevers on a console, a cantilever of the messenger only, chains crossing over in a tension span"));
+	ImGui::PopItemWidth();
 }
 
 void catenary_editor::render_catenary_ui()
