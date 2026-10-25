@@ -323,6 +323,7 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
             if( keyword == "pivot" && words.size() >= 3 ) {
                 number_of( words[ 1 ], device->pivot_top );
                 number_of( words[ 2 ], device->pivot_bottom );
+                if( words.size() >= 5 && words[ 3 ] == "rise" ) { number_of( words[ 4 ], device->mount_rise ); }
                 continue;
             }
             if( keyword == "ring" && words.size() >= 3 ) {
@@ -902,8 +903,8 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     auto const bracketsfrom { Result.parts.size() };
     if( brackets != nullptr ) {
         // dwa uchwyty wokół 4450: górny za mount_top, dolny odwrócony za mount_bottom
-        vec const top { 0.0, 0.0, height + Device.pivot_top + brackets->hole_drop };
-        vec const bottom { 0.0, 0.0, height - Device.pivot_bottom - brackets->hole_drop };
+        vec const top { 0.0, 0.0, height - Device.mount_rise + Device.pivot_top + brackets->hole_drop };
+        vec const bottom { 0.0, 0.0, height - Device.mount_rise - Device.pivot_bottom - brackets->hole_drop };
         front( "bracket_top", brackets->top_front, top, false );
         back( "bracket_top.back", brackets->top_back, top, false );
         front( "bracket_bottom", brackets->top_front, bottom, true );
@@ -911,7 +912,8 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     }
     fix( bracketsfrom );
     // przegub 4450 w otworach uchwytów (przy konstrukcji), dalej urządzenie w stronę drutów
-    auto const fixedaxle { place_chain( Device.mount, "mount", onstructure( vec { pivotx, 0.0, height } ), out, Result ) };
+    // uchwyt z otworem rolki nad zerem (5040) zaczyna się niżej, rolka zostaje na wysokości z tablicy
+    auto const fixedaxle { place_chain( Device.mount, "mount", onstructure( vec { pivotx, 0.0, height - Device.mount_rise } ), out, Result ) + vec { 0.0, 0.0, Device.mount_rise } };
     // rolki szeregowe: b to oś dużej ruchomej (skrajnej), uchwyt dźwigni zaczyna się na małej ruchomej
     auto const *smallpulley { series ? Catalog.pulley( Device.small_pulley ) : nullptr };
     if( series && smallpulley == nullptr ) { return fail( "no pulley " + Device.small_pulley ); }
@@ -1041,7 +1043,18 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         }
     }
     Result.lever_tilt = std::atan2( -pull.z, pull.x );
-    place_chain( Device.holder, "holder", movingaxle, pull, Result );
+    {
+        auto const from { Result.parts.size() };
+        place_chain( Device.holder, "holder", movingaxle, pull, Result );
+        // rolki szeregowe: uchwyt 4440-5 odwrócony tyłem na przód względem uchwytu rolki stałej (Jan 2026-10-25) - obrót o 180
+        // stopni wokół jego długiej osi
+        if( series ) {
+            for( auto k { from }; k < Result.parts.size(); ++k ) {
+                auto &r { Result.parts[ k ].rotation };
+                for( auto const column : { 1, 2 } ) { for( int row = 0; row < 3; ++row ) { r[ row * 3 + column ] = -r[ row * 3 + column ]; } }
+            }
+        }
+    }
 
     // zabezpieczenie: ramiona z osi obu rolek do wspólnej dolnej śruby, para po obu stronach rolek
     // zabezpieczenie rolek szeregowych: ramiona z osi małych rolek pochylone tak, żeby ich końce dzielił drążek
@@ -1300,7 +1313,13 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         // na ramach 5090: ramy w otworach uchwytów (środek słupa), stawia je i ich uchwyty jedno z dwóch urządzeń (owner)
         if( onframe && Device.frame_owner ) {
             for( auto const z : { Result.guide_mount[ 2 ], Result.guide_end[ 2 ] } ) {
-                Result.parts.push_back( placed_along( z == Result.guide_mount[ 2 ] ? "frame_low" : "frame_high", Device.frame, vec { brackets->hole_out, 0.0, z }, out ) );
+                auto placement { placed_along( z == Result.guide_mount[ 2 ] ? "frame_low" : "frame_high", Device.frame, vec { brackets->hole_out, 0.0, z }, out ) };
+                // dolna rama odwrócona o 180 stopni wokół swojej długiej osi (Jan 2026-10-25), jak dolny uchwyt
+                if( z == Result.guide_mount[ 2 ] ) {
+                    auto &r { placement.rotation };
+                    for( auto const column : { 1, 2 } ) { for( int row = 0; row < 3; ++row ) { r[ row * 3 + column ] = -r[ row * 3 + column ]; } }
+                }
+                Result.parts.push_back( placement );
             }
         }
         if( onbrackets && ( false == onframe || Device.frame_owner ) ) {
