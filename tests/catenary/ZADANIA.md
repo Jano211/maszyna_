@@ -143,9 +143,9 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 
 - [ ] Kotwienie rozdzielone (0457 Ø306, 0458 Ø400): dwa urządzenia, lina na 7,00 m, przewody na 6,30 m; 4470-4, 5090-2/-3, 5040-2/-3, 5080-2
 - [ ] Rolki szeregowe (0011-5…-8, 4460-2 + 4460-3, 4440-4/-5/-6, cięgło 4490-2, 4600 wyk. 2: 4600-03/-04/-05) i przebieg liny przez 4 rolki; Kolprojekt 2010 dla sieci 36/37
-- [ ] Kotwienia stałe (0402, 0404, liny nośne)
+- [x] Kotwienia stałe (0403/0413/0423, 0404 przewodów, 0405 lin nośnych; sieci Y 36/37)
 - [ ] Kotwienie środkowe (0406: lina 9831-5, zaciski 1,00 m od słupa środkowego, połączenia V w połowie przęsła); kontrola 12° wysięgnika na skrajnych słupach
-- [ ] Kotwienie środkowe do dźwigara bramki (0463…)
+- [x] Kotwienie środkowe do dźwigara bramki (0416) i z jednostronną izolacją (0418)
 - [ ] Podniesienie drutu o 0,30 m na słupie, gdzie krzyżują się przęsła naprężenia
 - [ ] Izolatory sekcyjne (przęsło od przęsła) – Jan 24.10: na razie nie. Dwa typy: rolkowe (ESN-2025) i nowe na izolatorach żywicznych; przejezdne i nieprzejezdne (dwa izolatory jak na linie nośnej)
 

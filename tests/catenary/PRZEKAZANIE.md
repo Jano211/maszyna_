@@ -23,6 +23,10 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   idzie przez obejmę na wysokości liny nośnej (bryła zastępcza; ZAŁOŻENIE: obejma = 4160-1). Stara 23-0416 ma zaciski ~2,0 m
   (nowa 3,00 m – zostaje nowa). W tym zakresie są też 23-0419 (kotwienie przewodu wzmacniającego AFL – po środzie) i 33-0431…0435
   (sekcyjne przerwy izolacyjne).
+- 2026-10-25 20:03 ustalenia (PO ŚRODZIE): izolatory sekcyjne zawsze NA ŚRODKU przęsła (przęsło dzielone na pół, wstawka `*`);
+  modele Jana: żywiczny na jeden jezdny, żywiczny na dwa jezdne, ceramiczny (zawsze ten sam); zasilanie w edytorze (podstacje,
+  kabiny, sekcje, przęsło zasilane), punkty izolujące 0441–0443, izolacja w przęśle naprężenia 0447; iskry (izolator pod prądem,
+  losowo przy mrozie) – cząsteczki + dźwięk. Przepalenie ślizgu – NIE (Jan: „w movera nie wchodzimy”).
 - **Kolejka PO środzie (Jan, nie ruszać wcześniej):** przęsła samego przewodu jezdnego i podwieszenia mostowe/tunelowe (Jan ma
   papiery), LPN-y, przewody wzmacniające.
 - **Na niedzielę 25.10 (Jan 01:05, wyjątek od zakazu nowych tematów): parasole wstawiane z edytora – na zwisach bramek
