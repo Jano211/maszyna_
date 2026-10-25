@@ -56,6 +56,12 @@ struct scene_suspension {
     std::string file;                   // plik sieci, z którego pochodzi wpis (albo do którego trafi)
     std::vector<TAnimModel *> parts;    // części wysięgnika wstawione do scenerii
     bool removed { false };             // usunięty w edytorze
+    // siodło liny nośnej (4160) ostatniego złożenia: obejma liny kotwienia środkowego staje obok niego na teowniku
+    bool has_saddle { false };
+    std::string saddle_model;
+    catenary::cantilever_placement saddle;
+    double saddle_heading { 0.0 };
+    glm::dvec3 saddle_origin { 0.0 };
 };
 
 std::vector<scene_suspension> Suspensions;
@@ -401,7 +407,15 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     // każda część to zwykły egzemplarz modelu, taki sam jak z wpisu node model
     std::size_t count { 0 };
     auto const skin { Suspension.skin.empty() ? std::string( "none" ) : Suspension.skin };
+    Suspension.has_saddle = false;
     for( auto const &placement : result.parts ) {
+        if( false == Suspension.has_saddle && placement.role == "messenger_clamp" ) {
+            Suspension.has_saddle = true;
+            Suspension.saddle = placement;
+            Suspension.saddle_model = ( placement.model.empty() ? Catalog.models() + placement.part : placement.model );
+            Suspension.saddle_heading = heading;
+            Suspension.saddle_origin = glm::dvec3 { Wire.x, Wire.y, Wire.z };
+        }
         auto const part { catenary::cantilever_to_scene( placement, heading ) };
         auto entry {
             "node " + text_number( data.range_max, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 "
@@ -1282,11 +1296,35 @@ assemble_middle( scene_chain &Chain ) {
     // s. 156 poz. 1), bez zacisków 1,00 m od słupa (Jan 2026-10-23: zaciski rozstawione o 1 m tylko przy rurowych). ZAŁOŻENIE:
     // obejmą jest 4160-1 z karty, lina przechodzi przez nią na wysokości liny nośnej
     auto tee { false };
+    glm::dvec3 collar { middlerope };   // przez nią przechodzi lina kotwienia przy teowniku
     if( false == tobeam ) {
         auto const index { suspension_named( Chain.file, data.middle ) };
         if( index < Suspensions.size() ) {
-            auto const *scheme { catalog->scheme( Suspensions[ index ].data.card, Suspensions[ index ].data.execution ) };
+            auto const &own { Suspensions[ index ] };
+            auto const *scheme { catalog->scheme( own.data.card, own.data.execution ) };
             tee = scheme != nullptr && scheme->assembly.rfind( "tee_", 0 ) == 0;
+            // obejma 4160 na teowniku obok siodła liny nośnej, w stronę słupa (Jan 2026-10-26: lina kotwienia ma swoje mocowanie
+            // obok, nie w siodle liny); odstęp 0,15 m - ZAŁOŻENIE na oko
+            if( tee && own.has_saddle ) {
+                double const beside { 0.15 };
+                auto placement { own.saddle };
+                placement.position[ 1 ] += beside;
+                auto const scened { catenary::cantilever_to_scene( placement, own.saddle_heading ) };
+                auto const entry {
+                    "node " + text_number( data.range_max > 0.0 ? data.range_max : 1000.0, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 " + own.saddle_model + ".t3d none"
+                    + " angles " + text_number( scened.angles[ 0 ] ) + " " + text_number( scened.angles[ 1 ] ) + " " + text_number( scened.angles[ 2 ] ) + " endmodel" };
+                glm::dvec3 const at { own.saddle_origin.x + scened.offset[ 0 ], own.saddle_origin.y + scened.offset[ 1 ], own.saddle_origin.z + scened.offset[ 2 ] };
+                if( auto *model3d { simulation::State.create_model( entry, "none", at ) }; model3d != nullptr ) {
+                    catenary_part_detach( model3d );
+                    Chain.middle_parts.push_back( model3d );
+                }
+                // przesunięcie o tyle samo w stronę konstrukcji (oś Y wysięgnika w scenerii)
+                double const unit[ 3 ] { 0.0, 1.0, 0.0 };
+                catenary::cantilever_placement axis;
+                std::copy( unit, unit + 3, axis.position );
+                auto const toward { catenary::cantilever_to_scene( axis, own.saddle_heading ) };
+                collar = middlerope + glm::dvec3 { toward.offset[ 0 ], toward.offset[ 1 ], toward.offset[ 2 ] } * beside;
+            }
         }
     }
     for( int side = 0; side < 2; ++side ) {
@@ -1345,7 +1383,7 @@ assemble_middle( scene_chain &Chain ) {
         };
         // zacisk na linie nośnej tam, gdzie ją rysuje przęsło (lina przy podwieszeniu opada, prosta między podwieszeniami
         // mijała ją o kilka cm)
-        auto const clamp { solved && spanlength > clampdistance ? messengerat( clampdistance / spanlength ) : clampchord };
+        auto const clamp { tee ? collar : solved && spanlength > clampdistance ? messengerat( clampdistance / spanlength ) : clampchord };
         // koniec liny na słupie sąsiedniego podwieszenia: urządzenie kotwienia stałego tylko z liną
         auto const index { suspension_named( Chain.file, data.suspensions[ position + ( side == 0 ? -1 : 1 ) ] ) };
         glm::dvec3 ropeend { tobeam ? beam : vec( ropes[ neighbour ] ) };
@@ -1450,8 +1488,8 @@ assemble_middle( scene_chain &Chain ) {
         // między zaciskami przy słupie środkowym lina zwisa swobodnie pod uchwytem liny nośnej (Jan 2026-10-25): do połowy
         // odległości (słup środkowy) 0,25 m poniżej liny nośnej
         if( tee ) {
-            // obejma na wysięgniku teowym nad liną nośną (bryła zastępcza, raz)
-            if( side == 0 ) { add_box( solid, middlerope + glm::dvec3 { 0.0, 0.03, 0.0 }, towards, 0.12, 0.06 ); }
+            // obejma na wysięgniku teowym (model 4160 obok siodła; bez siodła w złożeniu - bryła zastępcza nad liną, raz)
+            if( side == 0 && glm::length( collar - middlerope ) < 1e-6 ) { add_box( solid, middlerope + glm::dvec3 { 0.0, 0.03, 0.0 }, towards, 0.12, 0.06 ); }
         }
         else if( false == tobeam ) {
             auto const below { hanging( clamp, middlerope, 0.0, 6 ) };
@@ -1695,6 +1733,21 @@ catenary_scene_resolve() {
     auto const *catalog { umbrellas.empty() ? nullptr : cantilevers() };
     if( catalog != nullptr ) {
         for( auto const &umbrella : umbrellas ) { assemble_umbrella( umbrella.first, umbrella.second, *catalog, assembled, parts ); }
+    }
+    // kotwienia środkowe przy teownikach od nowa: obejma liny kotwienia staje obok siodła liny nośnej, a wysięgniki złożyły
+    // się dopiero teraz (łańcuchy powstały przy wczytaniu)
+    auto const anymiddle { std::any_of( Chains.begin(), Chains.end(), []( scene_chain const &Chain ) { return false == Chain.removed && false == Chain.data.middle.empty(); } ) };
+    if( auto const *cantilevercatalog { anymiddle ? cantilevers() : nullptr }; cantilevercatalog != nullptr ) {
+        for( auto &chain : Chains ) {
+            if( chain.removed || chain.data.middle.empty() ) { continue; }
+            auto const index { suspension_named( chain.file, chain.data.middle ) };
+            if( index >= Suspensions.size() || false == Suspensions[ index ].has_saddle ) { continue; }
+            auto const *scheme { cantilevercatalog->scheme( Suspensions[ index ].data.card, Suspensions[ index ].data.execution ) };
+            if( scheme == nullptr || scheme->assembly.rfind( "tee_", 0 ) != 0 ) { continue; }
+            assemble_middle( chain );
+            if( chain.middle_span == static_cast<std::size_t>( -1 ) ) { continue; }
+            for( auto const span : { chain.middle_span, chain.middle_span + 1 } ) { rebuild_span( chain, span ); }
+        }
     }
     WriteLog( ( "Catenary: " + std::to_string( complete ) + " of " + std::to_string( Suspensions.size() - first ) + " suspension(s) linked to supports and traction pieces" ).c_str() );
     if( assembled > 0 ) {

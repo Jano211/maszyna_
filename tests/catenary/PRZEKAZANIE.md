@@ -20,7 +20,7 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   słupie), główne trzyma samą linę (edytor: „Przewody jezdne zakotwione osobno: na innym słupie”, lista rodzajów wg roli).
   Obejma przy teownikach (Jan 19:49: kolprojekt1.pdf s. 154–162, stare karty 0413–0435): na starej 33-0418 lina kotwienia
   przechodzi przez poz. 1 = 4160-1 na wysięgniku środkowym, bez zacisków 1 m → przy wysięgniku teowym (assembly tee_*) lina
-  idzie przez obejmę na wysokości liny nośnej (bryła zastępcza; ZAŁOŻENIE: obejma = 4160-1). Stara 23-0416 ma zaciski ~2,0 m
+  idzie przez obejmę na wysokości liny nośnej (bryła zastępcza; ZAŁOŻENIE: obejma = 4160-1). 2026-10-26 (Jan: „miała dostać to mocowanie obok”): obejma = drugi model 4160-01 jak siodło liny, przesunięty 0,15 m po teowniku w stronę słupa (ZAŁOŻENIE na oko), lina kotwienia przez nią; kotwienia środkowe na teownikach składane od nowa po złożeniu wysięgników (catenary_scene_resolve). Stara 23-0416 ma zaciski ~2,0 m
   (nowa 3,00 m – zostaje nowa). W tym zakresie są też 23-0419 (kotwienie przewodu wzmacniającego AFL – po środzie) i 33-0431…0435
   (sekcyjne przerwy izolacyjne).
 - 2026-10-25 20:03 ustalenia (PO ŚRODZIE): izolatory sekcyjne zawsze NA ŚRODKU przęsła (przęsło dzielone na pół, wstawka `*`);
