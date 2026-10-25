@@ -15,6 +15,15 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   papiery), LPN-y, przewody wzmacniające.
 - **Na niedzielę 25.10 (Jan 01:05, wyjątek od zakazu nowych tematów): parasole wstawiane z edytora – na zwisach bramek
   i wysięgniki rozstawione.**
+  - 2026-10-25 ZROBIONE: parasol z edytora (`umbrella_from`, `catenary_umbrella_spot/place/break` w editormodecatenary.cpp):
+    zaznaczony słup albo zwis → „Parasol: wysięgnik do drugiego toru” → LPM przy torze po drugiej stronie; drugi wysięgnik na
+    tym samym słupie (punkt i typ skopiowane, odległość z położenia słupa, reszta z panelu), oba wpisy `umbrella parasol_<nazwa>`;
+    tor po tej samej stronie odrzucany. „Rozdziel” zdejmuje `umbrella` z obu; usunięcie jednego zdejmuje z drugiego. Scena:
+    parasol z jednym wpisem (chwilowo w edytorze) składa się osobno bez komunikatu. NIESKOMPILOWANE w VS (-fsyntax-only).
+  - Wysięgniki rozstawione (0517–0519, konsola 4890): pytania do Jana 25.10 14:20 (układ na konsoli, tory, wysokości,
+    podział 4610-6/4620-6) – czekam na odpowiedź albo karty.
+  - Kotwienie środkowe 25.10: góra V na cięciwie liny nośnej (nie nad osią przewodu) i z naciągiem przęsła; ramiona V jako
+    sztywna linka (krzywa 3. stopnia, styczne do liny i przewodu, wektory 0,6 odległości – ZAŁOŻENIE z zdjęcia Jana).
 - **Przed środą: WSZYSTKO, co dotyczy kotwień (Jan 01:07, „chyba że wody braknie”):** kotwienie samej liny / samych przewodów
   (0405 / 0404, ciężarowe z połówek rozdzielonego) + w łańcuchu „lina kończy się na kotwieniu X, przewód idzie dalej” (koncepcja
   zaakceptowana 01:05, praktyka do sprawdzenia; przęsła samego przewodu dalej – po środzie); sieci Y 36/37 w kotwieniach (Kolprojekt 2010 s. 21–29: stałe 0403/0413/0423

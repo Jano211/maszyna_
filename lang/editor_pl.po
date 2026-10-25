@@ -6128,3 +6128,48 @@ msgstr "Wysokość zakotwienia liny kotwienia środkowego na tym słupie nad gł
 
 msgid "Anchor rope at the messenger"
 msgstr "Lina kotwienia przy linie nośnej"
+
+msgid "This track is on the same side of the pole as its cantilever: the second cantilever of an umbrella goes to a track on the other side"
+msgstr "Ten tor jest po tej samej stronie słupa co jego wysięgnik: drugi wysięgnik parasola idzie do toru po drugiej stronie"
+
+msgid "Umbrella %s: the second cantilever (card %d execution %d, A = %.2f m) on pole %s of %s; hang its wires with the button below or C"
+msgstr "Parasol %s: drugi wysięgnik (karta %d wykonanie %d, A = %.2f m) na słupie %s podwieszenia %s; druty rozwieś przyciskiem niżej albo C"
+
+msgid "Umbrella %s separated: two cantilevers on their own mounts"
+msgstr "Parasol %s rozdzielony: dwa wysięgniki na własnych mocowaniach"
+
+msgid "Umbrella: %s"
+msgstr "Parasol: %s"
+
+msgid "Click: the second cantilever of the umbrella, card %04d execution %d, A = %.2f m"
+msgstr "Kliknij: drugi wysięgnik parasola, karta %04d wykonanie %d, A = %.2f m"
+
+msgid "Umbrella: LMB by the track on the other side of the pole puts the second cantilever on it; Esc stops"
+msgstr "Parasol: LPM przy torze po drugiej stronie słupa stawia na nim drugi wysięgnik; Esc przerywa"
+
+msgid "Stop the umbrella"
+msgstr "Przerwij parasol"
+
+msgid "Umbrella: a cantilever to the other track"
+msgstr "Parasol: wysięgnik do drugiego toru"
+
+msgid "LMB by the track on the other side of the pole: the second cantilever goes on this pole, with the settings of the panel"
+msgstr "LPM przy torze po drugiej stronie słupa: drugi wysięgnik staje na tym słupie, z ustawieniami panelu"
+
+msgid "Two cantilevers on one pole or drop, to the tracks on both sides of it; on adjustable mounts (band round the pole) they share the double mounts 4640-4670 at one height"
+msgstr "Dwa wysięgniki na jednym słupie albo zwisie, do torów po obu jego stronach; przy mocowaniach regulowanych (opaska wokół słupa) mają wspólne mocowania dwustronne 4640–4670 na jednej wysokości"
+
+msgid "Umbrella %s with %s"
+msgstr "Parasol %s z %s"
+
+msgid "Separate"
+msgstr "Rozdziel"
+
+msgid "The two cantilevers stay where they are, each on its own single mounts"
+msgstr "Oba wysięgniki zostają na miejscu, każdy na własnych mocowaniach jednostronnych"
+
+msgid "LMB by the other track"
+msgstr "LPM przy drugim torze"
+
+msgid "the second cantilever of the umbrella on this pole"
+msgstr "drugi wysięgnik parasola na tym słupie"

@@ -1664,6 +1664,12 @@ reassemble( std::size_t const Index ) {
     std::size_t assembled { 0 }, parts { 0 };
     if( false == suspension.data.umbrella.empty() ) {
         auto const members { umbrella_members( suspension.data.umbrella ) };
+        // w edytorze parasol na chwilę ma jeden wysięgnik (drugi dopiero dochodzi albo właśnie odszedł): bez komunikatu
+        if( members.size() == 1 ) {
+            drop_parts( suspension );
+            assemble_alone( Index, *catalog );
+            return;
+        }
         for( auto const index : members ) { drop_parts( Suspensions[ index ] ); }
         assemble_umbrella( suspension.data.umbrella, members, *catalog, assembled, parts );
         return;
