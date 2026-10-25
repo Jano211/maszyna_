@@ -20,8 +20,15 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
     tym samym słupie (punkt i typ skopiowane, odległość z położenia słupa, reszta z panelu), oba wpisy `umbrella parasol_<nazwa>`;
     tor po tej samej stronie odrzucany. „Rozdziel” zdejmuje `umbrella` z obu; usunięcie jednego zdejmuje z drugiego. Scena:
     parasol z jednym wpisem (chwilowo w edytorze) składa się osobno bez komunikatu. NIESKOMPILOWANE w VS (-fsyntax-only).
-  - Wysięgniki rozstawione (0517–0519, konsola 4890): pytania do Jana 25.10 14:20 (układ na konsoli, tory, wysokości,
-    podział 4610-6/4620-6) – czekam na odpowiedź albo karty.
+  - Wysięgniki rozstawione (Jan 25.10 14:25–14:49): dwa wysięgniki na TEN SAM tor, 1,19 m od siebie (konsola 4890-01..04,
+    tył z nakrętkami 4890-05 do wyk. 2–4), każdy może trzymać dowolny łańcuch albo samą linę / same przewody; bywa też trzeci
+    wysięgnik w osi słupa (sama lina, 1002–1015, 1290–1297), do niego może być parasol. Same przewody: odciągi 0311–0326 +
+    mocowania 0361–0372 (jeszcze nie – pytania do Jana o koniec linki i modele). ZROBIONE: `messenger_from <z listy> <trzyma
+    linę>` w łańcuchu (edytor: „Linę nośną trzyma”), `spread x y z` w parze `umbrella` (punkt mocowania na konsoli),
+    solver: `cantilever_umbrella::spread/console_x/console_parts`, mocowania -06, konsola na rolę (ukośnik, odciąg, wysięg),
+    `spread_mounts` (średnie wysokości), `mount 4890-0N console x1 x2 y [back]`, pole `console <nazwa>` – BRAK przypisania
+    konsoli do słupów (pytanie do Jana: które wykonanie na jaki słup). Wysięg pomocniczy na razie 4630-06 na 4890; właściwie
+    4690 (karta 0519) – Jan zrobi modele.
   - Kotwienie środkowe 25.10: góra V na cięciwie liny nośnej (nie nad osią przewodu) i z naciągiem przęsła; ramiona V jako
     sztywna linka (krzywa 3. stopnia, styczne do liny i przewodu, wektory 0,6 odległości – ZAŁOŻENIE z zdjęcia Jana).
 - **Przed środą: WSZYSTKO, co dotyczy kotwień (Jan 01:07, „chyba że wody braknie”):** kotwienie samej liny / samych przewodów
