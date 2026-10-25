@@ -18,7 +18,11 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   liną nośną do zacisków ok. 3,00 m, 4590 i 7150 jako bryły zastępcze, bez urządzeń na słupach), kotwienia stałe 0404 (same
   przewody) i 0405 (sama lina), w łańcuchu `anchor_start_contact`/`anchor_end_contact` – przewody na osobnym kotwieniu (na innym
   słupie), główne trzyma samą linę (edytor: „Przewody jezdne zakotwione osobno: na innym słupie”, lista rodzajów wg roli).
-  NIE ZROBIONE: obejma dodatkowa przy wysięgnikach teowych w kotwieniu środkowym (pytanie do Jana: jaka część i gdzie).
+  Obejma przy teownikach (Jan 19:49: kolprojekt1.pdf s. 154–162, stare karty 0413–0435): na starej 33-0418 lina kotwienia
+  przechodzi przez poz. 1 = 4160-1 na wysięgniku środkowym, bez zacisków 1 m → przy wysięgniku teowym (assembly tee_*) lina
+  idzie przez obejmę na wysokości liny nośnej (bryła zastępcza; ZAŁOŻENIE: obejma = 4160-1). Stara 23-0416 ma zaciski ~2,0 m
+  (nowa 3,00 m – zostaje nowa). W tym zakresie są też 23-0419 (kotwienie przewodu wzmacniającego AFL – po środzie) i 33-0431…0435
+  (sekcyjne przerwy izolacyjne).
 - **Kolejka PO środzie (Jan, nie ruszać wcześniej):** przęsła samego przewodu jezdnego i podwieszenia mostowe/tunelowe (Jan ma
   papiery), LPN-y, przewody wzmacniające.
 - **Na niedzielę 25.10 (Jan 01:05, wyjątek od zakazu nowych tematów): parasole wstawiane z edytora – na zwisach bramek
