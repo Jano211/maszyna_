@@ -1153,6 +1153,8 @@ void catenary_editor::catenary_apply(catenary_spot const &Spot)
 	data.skin = current->skin;
 	data.overrides = current->overrides;
 	data.umbrella = current->umbrella;
+	data.has_spread = current->has_spread;
+	std::copy(std::begin(current->spread), std::end(current->spread), data.spread);
 	// dragging a slider changes it many times: all of that is taken back at once
 	auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
 	if (tool.undo.empty() || last.chain || last.index != index || last.removed || false == last.before.has_value())
@@ -1192,6 +1194,8 @@ void catenary_editor::catenary_copy(std::vector<std::size_t> const &Targets)
 			catenary_compose(spot, glm::dot(plan_of(pole_of(*current)) - plan_of(spot.axis), right) - 0.5 * own->depth(0.0), std::abs(offset), offset >= 0.0, current->pole_type);
 			std::copy(std::begin(current->pole), std::end(current->pole), spot.data.pole);
 		}
+		else if (false == drop && false == current->umbrella.empty())
+			catenary_keep_pole(spot, *current, std::abs(offset), offset >= 0.0);
 		else
 			catenary_compose(spot, tool.clearance, std::abs(offset), offset >= 0.0, drop ? current->pole_type : std::string{});
 		if (drop)
@@ -1208,6 +1212,8 @@ void catenary_editor::catenary_copy(std::vector<std::size_t> const &Targets)
 		data.skin = current->skin;
 		data.overrides = current->overrides;
 		data.umbrella = current->umbrella;
+		data.has_spread = current->has_spread;
+		std::copy(std::begin(current->spread), std::end(current->spread), data.spread);
 		tool.undo.push_back({tool.group, false, index, *current, std::nullopt, false});
 		catenary_scene_update(index, data);
 		tool.spots[index] = spot;
@@ -1515,6 +1521,109 @@ void catenary_editor::catenary_umbrella_place(catenary_spot const &Spot)
 		tool.status += STR(" - the cantilever didn't assemble, see the log");
 }
 
+void catenary_editor::catenary_keep_pole(catenary_spot &Spot, catenary::suspension const &Current, double const Stagger, bool const Toward) const
+{
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *own{catalog != nullptr ? catalog->pole(Current.pole_type) : nullptr};
+	if (own == nullptr)
+	{
+		Spot.card = 0;
+		Spot.problem = STR("No pole: the catalogue (data/traction_cantilevers.txt, data/traction_supports.txt) isn't loaded or has no poles");
+		return;
+	}
+	// the plane of the cantilever: through the pole, or through its mount on the console of spread cantilevers
+	auto const plane{Current.has_spread ? glm::dvec3{Current.spread[0], Current.pole[1], Current.spread[2]} : pole_of(Current)};
+	auto const right{right_of(Spot.forward) * static_cast<double>(Spot.side)};
+	catenary_compose(Spot, glm::dot(plan_of(plane) - plan_of(Spot.axis), right) - 0.5 * own->depth(0.0), Stagger, Toward, Current.pole_type);
+	std::copy(std::begin(Current.pole), std::end(Current.pole), Spot.data.pole);
+	Spot.data.has_spread = Current.has_spread;
+	std::copy(std::begin(Current.spread), std::end(Current.spread), Spot.data.spread);
+}
+
+void catenary_editor::catenary_spread_create(std::size_t const Index)
+{
+	auto &tool{m_catenary};
+	auto const *current{catenary_scene_get(Index)};
+	auto const *found{catenary_spot_of(Index)};
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *pole{current != nullptr && catalog != nullptr ? catalog->pole(current->pole_type) : nullptr};
+	auto const *console{pole != nullptr && false == pole->console.empty() ? catalog->mount(pole->console) : nullptr};
+	if (current == nullptr || found == nullptr || false == current->has_pole || false == current->umbrella.empty())
+		return;
+	if (console == nullptr || false == console->console)
+	{
+		tool.status = format(STR_C("Pole %s carries no console for spread cantilevers (\"console\" in its entry in traction_supports.txt)"), current->pole_type.c_str());
+		return;
+	}
+	auto const sourcedata{*current};
+	auto const spot{*found};
+	auto const foot{pole_of(sourcedata)};
+	// the axis of the console mounts (the X axis of the cantilevers): along the track, square to the way from the track to the pole
+	auto const out{right_of(spot.forward) * static_cast<double>(spot.side)};
+	glm::dvec3 const xaxis{-out.y, 0.0, out.x};
+	auto const right{right_of(spot.forward) * static_cast<double>(spot.side)};
+	auto const offset{glm::dot(plan_of(wire_of(sourcedata)) - plan_of(spot.axis), right)};
+	catenary_spot spots[2];
+	for (int k = 0; k < 2; ++k)
+	{
+		auto const point{foot + xaxis * console->console_x[k]};
+		{
+			without_gantry const plain{tool.gantry_selected};
+			if (false == catenary_spot_at(*spot.track, spot.path, point, foot, spot.side, spots[k]))
+				return;
+		}
+		spots[k].curve = spot.curve;
+		catenary::suspension planned{sourcedata};
+		planned.has_spread = true;
+		planned.spread[0] = point.x;
+		planned.spread[1] = foot.y;
+		planned.spread[2] = point.z;
+		catenary_keep_pole(spots[k], planned, std::abs(offset), offset >= 0.0);
+		if (spots[k].card == 0)
+		{
+			tool.status = spots[k].problem;
+			return;
+		}
+	}
+	++tool.group;
+	auto const file{catenary_scene_file_of(Index)};
+	tool.undo.push_back({tool.group, false, Index, sourcedata, std::nullopt, false});
+	auto first{spots[0].data};
+	first.name = sourcedata.name.empty() ? catenary_scene_new_name(file) : sourcedata.name;
+	first.range_max = sourcedata.range_max;
+	first.range_min = sourcedata.range_min;
+	first.skin = sourcedata.skin;
+	first.overrides = sourcedata.overrides;
+	std::string name;
+	for (int k = 1; name.empty(); ++k)
+	{
+		auto const candidate{"rozstaw_" + first.name + (k > 1 ? "_" + std::to_string(k) : std::string{})};
+		auto used{false};
+		for (std::size_t index = 0; index < catenary_scene_size() && false == used; ++index)
+			if (auto const *data{catenary_scene_get(index)}; data != nullptr && data->umbrella == candidate)
+				used = true;
+		if (false == used)
+			name = candidate;
+	}
+	first.umbrella = name;
+	catenary_scene_update(Index, first);
+	tool.spots[Index] = spots[0];
+	tool.spots[Index].data = first;
+	auto second{spots[1].data};
+	second.name = catenary_scene_new_name(file);
+	second.skin = sourcedata.skin;
+	second.umbrella = name;
+	auto const added{catenary_scene_add(file, second)};
+	tool.spots[added] = spots[1];
+	tool.spots[added].data = second;
+	tool.undo.push_back({tool.group, false, added, std::nullopt, std::nullopt, false});
+	catenary_select(static_cast<int>(added));
+	tool.status = format(STR_C("Spread cantilevers %s on console %s: %s and %s, %.2f m apart; give each its chain, \"Messenger held by\" splits the messenger and the wires between them"),
+	                     name.c_str(), console->name.c_str(), first.name.c_str(), second.name.c_str(), console->console_x[0] - console->console_x[1]);
+	if (catenary_scene_parts(added) == 0 || catenary_scene_parts(Index) == 0)
+		tool.status += STR(" - the cantilever didn't assemble, see the log");
+}
+
 void catenary_editor::catenary_umbrella_break(std::size_t const Index)
 {
 	auto &tool{m_catenary};
@@ -1531,6 +1640,7 @@ void catenary_editor::catenary_umbrella_break(std::size_t const Index)
 		auto changed{*data};
 		tool.undo.push_back({tool.group, false, index, changed, std::nullopt, false});
 		changed.umbrella.clear();
+		changed.has_spread = false; // a cantilever off its console pair stands by the pole as one of its own
 		catenary_scene_update(index, changed);
 		if (auto found{tool.spots.find(index)}; found != tool.spots.end())
 			found->second.data = changed;
@@ -1949,6 +2059,7 @@ bool catenary_editor::catenary_delete_selected()
 			auto changed{*data};
 			tool.undo.push_back({tool.group, false, other, changed, std::nullopt, false});
 			changed.umbrella.clear();
+			changed.has_spread = false;
 			catenary_scene_update(other, changed);
 			if (auto found{tool.spots.find(other)}; found != tool.spots.end())
 				found->second.data = changed;
@@ -2939,6 +3050,8 @@ void catenary_editor::render_catenary_cantilever_ui()
 				catenary_compose(spot, glm::dot(plan_of(pole_of(*current)) - plan_of(spot.axis), right) - 0.5 * own->depth(0.0), tool.stagger, tool.toward, current->pole_type);
 				std::copy(std::begin(current->pole), std::end(current->pole), spot.data.pole);
 			}
+			else if (false == drop && false == current->umbrella.empty())
+				catenary_keep_pole(spot, *current, tool.stagger, tool.toward); // an umbrella or spread cantilevers: the pole stays
 			else
 				catenary_compose(spot, tool.clearance, tool.stagger, tool.toward, drop ? current->pole_type : std::string{});
 			if (drop)
@@ -3011,6 +3124,19 @@ void catenary_editor::render_catenary_cantilever_ui()
 				}
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("%s", STR_C("Two cantilevers on one pole or drop, to the tracks on both sides of it; on adjustable mounts (band round the pole) they share the double mounts 4640-4670 at one height"));
+				if (auto const *own{catalog->pole(data->pole_type)}; own != nullptr && false == own->console.empty())
+				{
+					ImGui::SameLine();
+					if (ImGui::Button(STR_C("Spread cantilevers")))
+					{
+						catenary_spread_create(static_cast<std::size_t>(tool.selected));
+						data = tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr;
+						if (data == nullptr)
+							return;
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("Two cantilevers to this track on consoles 4890 (cards 0517/0518), 1.19 m apart along it: this one goes onto the first mount, the second onto the other; each can then hold any chain or only its messenger or its wires"));
+				}
 			}
 			else
 			{
@@ -3018,7 +3144,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 				for (std::size_t index = 0; index < catenary_scene_size(); ++index)
 					if (auto const *other{catenary_scene_get(index)}; other != nullptr && static_cast<int>(index) != tool.selected && other->umbrella == data->umbrella)
 						partner = other->name;
-				ImGui::TextUnformatted(format(STR_C("Umbrella %s with %s"), data->umbrella.c_str(), partner.empty() ? "-" : partner.c_str()).c_str());
+				ImGui::TextUnformatted(format(data->has_spread ? STR_C("Spread cantilevers %s with %s") : STR_C("Umbrella %s with %s"), data->umbrella.c_str(), partner.empty() ? "-" : partner.c_str()).c_str());
 				ImGui::SameLine();
 				if (ImGui::SmallButton(STR_C("Separate")))
 				{
@@ -3780,6 +3906,11 @@ void catenary_editor::catenary_drag_update()
 		auto const drop{own != nullptr && false == own->drop.empty()};
 		if (drop || (own != nullptr && own->gantry))
 			return; // a drop, or a cantilever on a mast, goes with its gantry
+		if (false == current->umbrella.empty())
+		{
+			tool.status = STR("Two cantilevers share this pole (umbrella or spread cantilevers): separate them to move it");
+			return;
+		}
 		spot.curve = tool.bend == 2 || (tool.bend == 0 && spot.radius > 0.0 && spot.radius < kCurveRadius);
 		catenary_compose(spot, tool.clearance, tool.stagger, tool.toward);
 		if (spot.card != 0)

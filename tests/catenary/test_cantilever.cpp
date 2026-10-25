@@ -242,6 +242,43 @@ int main( int argc, char *argv[] ) {
         failed = failed || !cross || !same;
     }
 
+    {
+        // wysięgniki rozstawione: słup z konsolą 4890-02, płaszczyzna wysięgnika na punkcie mount_1 (oś słupa w X = -0,594);
+        // pierwsza strona stawia słup, konsole (ukośnik i odciąg) z tyłami 4890-05, mocowania -06 w X = 0 bliżej toru o 0,077 m
+        auto const *base { catalog.pole( "1701" ) };
+        auto const *scheme { catalog.scheme( 1113, 1 ) };
+        auto good { base != nullptr && scheme != nullptr };
+        if( good ) {
+            auto pole { *base };
+            pole.console = "4890-02";
+            catenary::cantilever_umbrella first, second;
+            first.spread = second.spread = true;
+            first.console_x = -0.59374;
+            second.console_x = 0.59425;
+            second.pole = second.console_parts = false;
+            auto const input { catenary::cantilever_nominal_input( *scheme, 2.5 ) };
+            catenary::cantilever_result a, b, alone;
+            auto const solved { catenary::solve_cantilever_on_pole( catalog, *scheme, pole, 2.5 + 0.5 * pole.depth( 6.0 ), -5.6, input.messenger, {}, first, a )
+                && catenary::solve_cantilever_on_pole( catalog, *scheme, pole, 2.5 + 0.5 * pole.depth( 6.0 ), -5.6, input.messenger, {}, second, b )
+                && catenary::solve_cantilever_on_pole( catalog, *scheme, pole, 2.5 + 0.5 * pole.depth( 6.0 ), -5.6, input.messenger, {}, alone ) };
+            auto const count = []( catenary::cantilever_result const &R, std::string const &Part ) { return std::count_if( R.parts.begin(), R.parts.end(), [ & ]( auto const &P ) { return P.part == Part; } ); };
+            auto const *polepart { a.find( "pole" ) };
+            auto const *strutmount { a.find( "strut_mount" ) }, *strutalone { alone.find( "strut_mount" ) };
+            good = solved && count( a, "4890-02" ) == 2 && count( a, "4890-05" ) == 2 && count( b, "4890-02" ) == 0 && b.find( "pole" ) == nullptr
+                && polepart != nullptr && std::abs( polepart->position[ 0 ] + 0.59374 ) < 1e-9 && strutmount != nullptr && strutmount->part == "4610-06"
+                && std::abs( strutmount->position[ 0 ] ) < 1e-9 && strutalone != nullptr && std::abs( strutalone->position[ 1 ] - strutmount->position[ 1 ] - 0.07684 ) < 1e-9
+                && count( a, "4610-20" ) == 0;
+            catenary::cantilever_umbrella sa, sb;
+            a.values = { { "mount.stay", 7.30 }, { "mount.strut", 6.20 } };
+            b.values = { { "mount.stay", 7.20 }, { "mount.strut", 6.40 } };
+            catenary::spread_mounts( pole, a, b, sa, sb );
+            good = good && std::abs( sa.shared[ "strut" ] - 6.30 ) < 1e-9 && std::abs( sb.shared[ "stay" ] - 7.25 ) < 1e-9;
+            for( auto const &w : a.warnings ) { std::printf( "  %s\n", w.c_str() ); }
+        }
+        std::printf( "wysiegniki rozstawione na konsoli 4890: %s\n", good ? "OK" : "BLAD" );
+        failed = failed || !good;
+    }
+
     std::printf( failed ? "TEST NIE PRZESZEDL\n" : "wszystko OK\n" );
     return failed ? 1 : 0;
 }

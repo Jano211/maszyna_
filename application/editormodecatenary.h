@@ -186,6 +186,10 @@ struct catenary_editor
 	void catenary_umbrella_place(catenary_spot const &Spot);
 	// the two cantilevers of the umbrella of this suspension become separate ones
 	void catenary_umbrella_break(std::size_t Index);
+	// a cantilever of an umbrella or of spread cantilevers: composed with its pole (and its console mount) where they are
+	void catenary_keep_pole(catenary_spot &Spot, catenary::suspension const &Current, double Stagger, bool Toward) const;
+	// spread cantilevers on the console of the pole: this one onto the first mount, a second one onto the other, same track
+	void catenary_spread_create(std::size_t Index);
 	// the span of a chain the spot falls in (in the plan: the wire point near the line of the span, between its ends)
 	struct chain_insert
 	{
