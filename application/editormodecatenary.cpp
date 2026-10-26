@@ -100,6 +100,18 @@ glm::dvec3 wire_of(catenary::suspension const &Data)
 	return {Data.at[0], Data.at[1], Data.at[2]};
 }
 
+// a messenger holder higher on its pole (above_pole): the panel changes its card, but its messenger stays where it is
+void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data)
+{
+	if (false == Current.above_pole)
+		return;
+	Data.above_pole = true;
+	Data.has_rope = Current.has_rope;
+	std::copy(std::begin(Current.rope), std::end(Current.rope), Data.rope);
+	Data.at[0] = Current.at[0];
+	Data.at[2] = Current.at[2];
+}
+
 // the suspensions on the pole of this one (the same type at the same point, as the scenery pairs an umbrella): this one too
 std::vector<std::size_t> pole_sharers(std::size_t const Index)
 {
@@ -1190,6 +1202,7 @@ void catenary_editor::catenary_apply(catenary_spot const &Spot)
 	data.has_spread = current->has_spread;
 	data.shared_pole = current->shared_pole;
 	std::copy(std::begin(current->spread), std::end(current->spread), data.spread);
+	keep_lifted(*current, data);
 	// dragging a slider changes it many times: all of that is taken back at once
 	auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
 	if (tool.undo.empty() || last.chain || last.index != index || last.removed || false == last.before.has_value())
@@ -1250,6 +1263,7 @@ void catenary_editor::catenary_copy(std::vector<std::size_t> const &Targets)
 		data.has_spread = current->has_spread;
 		data.shared_pole = current->shared_pole;
 		std::copy(std::begin(current->spread), std::end(current->spread), data.spread);
+		keep_lifted(*current, data);
 		tool.undo.push_back({tool.group, false, index, *current, std::nullopt, false});
 		catenary_scene_update(index, data);
 		tool.spots[index] = spot;
@@ -1870,6 +1884,17 @@ void catenary_editor::catenary_pair_move(std::size_t const Selected, glm::dvec3 
 		result.overrides = data->overrides;
 		result.umbrella = data->umbrella;
 		result.shared_pole = data->shared_pole;
+		{
+			// a messenger holder higher: it keeps its messenger, moved with the pole
+			auto lifted{*data};
+			for (int k = 0; k < 3; ++k)
+			{
+				auto const shift{(k == 1 ? Foot.y : k == 0 ? Foot.x : Foot.z) - (k == 1 ? oldfoot.y : k == 0 ? oldfoot.x : oldfoot.z)};
+				lifted.at[k] += shift;
+				lifted.rope[k] += shift;
+			}
+			keep_lifted(lifted, result);
+		}
 		moved.emplace_back(index, spot);
 	}
 	// one undo group for the whole drag (of the pole, or of the slider of its distance)
