@@ -1,6 +1,6 @@
 # Sieć trakcyjna w exe – lista zadań
 
-Stan na 2026-10-24 15:30. Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
+Stan na 2026-10-26 10:00 (bieżący stan i kolejność prac: PRZEKAZANIE.md, sekcja START TUTAJ). Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
 (https://claude.ai/artifact/LboXDQjty15vbb7ieh8AUn) – Jan może odhaczać tam; przy zmianach przenosić tutaj.
 Zestawienie z notatek w `tests/catenary/*.md` (PRZEKAZANIE, KONCEPCJA, KONCEPCJA_EDYTOR, BRAMKI, KOTWIENIA, GLOWACKI,
 ROZSZERZANIE) i z pracy nad kotwieniami 23–24.10.
@@ -144,7 +144,9 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [x] Kotwienie rozdzielone (0457 Ø306, 0458 Ø400): dwa urządzenia, lina na 7,00 m, przewody na 6,30 m; 4470-4, 5090-2/-3, 5040-2/-3, 5080-2
 - [x] Rolki szeregowe (0011-5…-8, 4460-2 + 4460-3, 4440-4/-5/-6, cięgło 4490-2, 4600 wyk. 2: 4600-03/-04/-05) i przebieg liny przez 4 rolki; Kolprojekt 2010 dla sieci 36/37
 - [x] Kotwienia stałe (0403/0413/0423, 0404 przewodów, 0405 lin nośnych; sieci Y 36/37)
-- [ ] Kotwienie środkowe (0406: lina 9831-5, zaciski 1,00 m od słupa środkowego, połączenia V w połowie przęsła); kontrola 12° wysięgnika na skrajnych słupach
+- [x] Kotwienie środkowe 0406/0408 (lina 9831-5, zaciski 1,00 m, V w połowie przęsła na linie liczonej jak przęsło; teowniki: obejma 4160 obok siodła) – 25/26.10
+- [ ] Kontrola 12° wysięgnika na skrajnych słupach kotwienia środkowego
+- [x] Sieci bez danych w urządzeniach: `network <symbol> as <kod>` (YC95-2C, YC120-2C, SKB70-C, Yp) – 25.10, „na oko”
 - [x] Kotwienie środkowe do dźwigara bramki (0416) i z jednostronną izolacją (0418)
 - [ ] Podniesienie drutu o 0,30 m na słupie, gdzie krzyżują się przęsła naprężenia
 - [ ] Przęsła naprężenia: wykrywanie + łączniki międzysekcyjne 33-0640 + `parallel` – PO ŚRODZIE, koncepcja w PRZEKAZANIE (25.10 20:25)
@@ -175,7 +177,10 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 
 - [ ] 1711 w `traction_supports.txt` (dziś tylko w grupie `no_switch`)
 - [ ] 1617 (fundament wylewany) – pominięty
-- [ ] Kilka podwieszeń na jednym słupie po tej samej stronie: wysięgniki rozstawione (0517–0519, konsola 4890), złożenie z terenu z 5 punktami
+- [x] Kilka podwieszeń na jednym słupie po tej samej stronie: wysięgniki rozstawione (0517–0519, konsola 4890), wysięgi pomocnicze 0167 na 4690, trzeci w osi słupa, `messenger_from`, uchwyt liny wyżej (`above_pole`) – 25/26.10
+- [ ] 101x jako uchwyt liny wyżej – Jan sprawdza 27.10 (po poprawce keep_lifted)
+- [ ] 4690-04 dla masztów bramek 30xx/31xx (czeka na Jana)
+- [x] Odsuw ±0,5 m (rozjazdy) – 26.10
 - [ ] Skórka słupa (161x „white old” wymaga modelu z teksturą wymienną)
 - [ ] Panel „Konstrukcje wsporcze”: lista słupów i mocowań, podgląd, „sprawdź” (solver na wszystkich kartach), zapis do `traction_supports.txt`
 - [ ] Obrazki wysięgników w panelu (klucz `image` w rodzinie już czytany)
@@ -183,7 +188,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 
 **Bramki**
 
-- [ ] Półbramki: dopisać parametry (W, L, H, Hk, Beam_out, Drop_type) do 1901, ESN-540, new_1901/1905/1906/1907; wpis `mast` 1901 (Jan)
+- [ ] Półbramki PO ŚRODZIE: `t_gantry` (T, dźwigary na dwie strony) i `semi_gantry`; 1901 – wymiary w .inc, gotowe modele (Jan 25.10); reszta (ESN-540, new_1901/1905/1906/1907) – parametry do ustalenia
 - [ ] Dźwigary środkowe 3011–3014 i konsole regulacyjne, bramki > 34,9 m z klocków (tryb ekspert)
 - [ ] Zwisy 4840 i ESN-544
 - [ ] Przesuwanie zwisu po dźwigarze przeciąganiem
