@@ -407,6 +407,27 @@ int main( int, char *argv[] ) {
             "lina nosna z innego wysiegnika (messenger_from): oba przesla przy m2 z lina przez h2, przewodem przez m2" );
     }
 
+    // 6b''. uchwyt liny wyżej (above_pole): wysięgnik samej liny 129x 0,60 m nad liną, mocowania ponad najwyższym położeniem słupa
+    {
+        catenary_scene_clear(); errors.clear(); logs.clear();
+        catenary_scene_resolve();
+        auto high { entry };
+        high.name = "uh"; high.card = 1290; high.execution = 1; high.above_pole = true;
+        high.rope[ 1 ] += 0.60;
+        auto const text { catenary::write_suspension( high ) };
+        std::vector<std::string> tokens; std::istringstream words { text }; for( std::string w; words >> w; ) { tokens.push_back( w ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( tokens, "zapis", parsed, problems );
+        auto const added { catenary_scene_add( "td_wyzej_test.scm", high ) };
+        auto lowered { false };
+        for( auto const &line : logs ) { if( line.find( "lowered" ) != std::string::npos ) { lowered = true; } }
+        for( auto const &error : errors ) { std::printf( "    %s\n", error.c_str() ); }
+        check( problems.empty() && text.find( " above_pole" ) != std::string::npos && parsed.entries.size() == 1 && parsed.entries.front().above_pole
+            && catenary_scene_parts( added ) > 5 && false == lowered && errors.empty(),
+            "uchwyt liny wyzej: zapis above_pole, wysiegnik samej liny sklada sie bez sciecia mocowan do slupa" );
+        catenary_scene_clear();
+    }
+
     // 6b'. dwa wysięgi pomocnicze z wysięgnikiem samej liny między nimi (oba messenger_from tego samego): lina w ich punktach
     // to lina trzymającego przesunięta wzdłuż łańcucha - przęsło między nimi prosto przez siodło, linki trafiają w końce lin
     {
