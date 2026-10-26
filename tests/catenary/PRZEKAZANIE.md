@@ -1,8 +1,67 @@
-# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-10-17 21:55)
+# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-10-26 10:00)
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – stan na 2026-10-25 01:05 (kotwienia; wcześniej edytor sieci, bramki, łańcuchy)
+## START TUTAJ – stan na 2026-10-26 10:00 (nowy czat zaczyna od tej sekcji)
+
+**Jak pracujemy (stałe zasady)**
+- Repo Jano211/maszyna_, gałąź robocza `siec-trakcyjna`. Każdą zmianę: commit → push → merge do `wszystko` → push (Jan buduje
+  exe z `wszystko`). Na `siec-radio` NIC bez wyraźnej prośby Jana (25.10: „nie wypychaj takich pierdół na siec-radio”); tam
+  tylko „sam kod” (bez tests/, notatek, danych) jako jeden commit na prośbę – ostatni 619f048 (26.10 01:10), robiony przez
+  `git diff <ostatni zsynchronizowany stan siec-trakcyjna> siec-trakcyjna -- . ':!tests'` nałożony na origin/siec-radio.
+- Dane `tests/catenary/data/traction_*.txt` → `G:\Maszyna2510\data\` przez most do komputera Jana: CRLF, plik przygotowany
+  w NOWYM folderze `/mnt/user-data/outputs/<nazwa>/`, po zapisie sprawdzić rozmiar na G:. Stan na G: 26.10 01:45:
+  traction_cantilevers.txt 658707 B, traction_tensioners.txt 57356 B, traction_supports.txt 43016 B, YC120-2CS150 / YC150-2CS150
+  po 930 B.
+- Testy: `sh tests/catenary/build.sh` (tylko buduje), potem `./tests/catenary/{ts,tsc,tc,te,tk,tt} tests/catenary/data/`
+  (`sim` bez argumentów wisi). Składnia pojedynczych plików exe: `/tmp/claude-0/syn.sh <pliki>` (-fsyntax-only; skrypt trzeba
+  odtworzyć w nowym kontenerze: g++ -std=c++20 -fsyntax-only -w -Dnear= -Dfar= -Dsmall=char -Dinterface=struct
+  "-Dhyper=long long" -include stdafx.h z include'ami ref/*). Makra Windows `small/near/far/interface/hyper` – nie używać jako nazw.
+- Jan: pytać zamiast zakładać; bez wizualizacji / obrazków, chyba że poprosi; pisze krótko i dosadnie, testuje w exe i
+  przysyła zrzuty. Gdy mówi „pierdolnij coś na oko / byle działało” – wolno dać ZAŁOŻENIE, ale zapisać je tu.
+
+**Zakres czasowy:** do środy 28.10 (limit) przerwa. Ciąg dalszy w środę po północy.
+
+**Zrobione 25/26.10 (ten odcinek, szczegóły niżej w datowanych wpisach)**
+- Kotwienia: 5040 na mount_top/mount_bottom i do poziomu rolki (`pivot … rise`), dolna 5090 odwrócona, 4600 w rolkach
+  szeregowych rozstaw 7 cm, 4440-5 odwrócony, długości 4470-04 5,51 / 5070-02 4,485. Sieci bez danych w urządzeniach:
+  `network <symbol> as <kod>` w traction_tensioners.txt (YC95-2C→4, YC120-2C→3, SKB70-C→10, YpC120-2C/YpC95-2C→26), bez wpisu –
+  pierwsze dane urządzenia + log.
+- Kotwienie środkowe: V i zaciski na linie nośnej liczonej DOKŁADNIE jak rysowane przęsło (kierunek przęsła, linki Y tylko gdy
+  przęsło je dostaje – `span_y_at`, naciąg z `span_tension`); na teownikach lina przez osobną obejmę 4160-01 obok siodła,
+  0,15 m w stronę słupa (ZAŁOŻENIE na oko); kotwienia środkowe na teownikach składane od nowa po złożeniu wysięgników.
+- Solver przęsła się nie poddaje (`solve_span_points`): przy błędzie bez Y, potem bez wieszaków; lina pod przewodem
+  podciągnięta 2 cm nad niego (końce zostają). Stary wygląd tylko dla przęseł < 1 m.
+- Wysięgi pomocnicze rozstawione 0167 na belkach 4690 + wysięgnik samej liny między nimi: A i B w liście łańcucha (przewód
+  łamie się na obu, każdy z własnym odsuwem), `messenger_from A M`, `messenger_from B M`; gdy jeden wysięgnik trzyma linę w dwóch
+  sąsiednich punktach – lina w ich punktach = lina M przesunięta wzdłuż łańcucha (`held_rope`); linki 0167: obejma 4210 jedzie po
+  rurze pod linę (`across steady cord_clamp messenger 0` w assembly aux_steady, też w gen_cantilevers.py). Edytor: przycisk
+  „Sama lina: przewody prosto obok” (A, M, B → A, B + messenger_from). Jan 01:55: „można powiedzieć, że sukces”.
+- Uchwyt liny wyżej: `above_pole` w podwieszeniu (mocowania bez mount_max – tymczasowo, słupy za niskie); panel łańcucha:
+  suwak 0,20–2,50 m + „Uchwyt liny wyżej” (129x, potem 1002–1015 wg pasma A, `shared_pole`), łańcuch bierze linę przez niego;
+  `keep_lifted` – zmiana karty i przeciąganie słupa nie gubią above_pole i podniesionej liny.
+- Odsuw: pole „±0,5” przy suwaku – suwak ze znakiem −0,50…+0,50 (rozjazdy; na szlaku niedozwolony).
+
+**Czeka na Jana (test we wtorek 27.10)**
+- 101x jako uchwyt liny wyżej: przed poprawką keep_lifted „słup za krótki”; czy po przebudowie się składa, a jeśli nie – jak
+  go postawił (przyciskiem czy jako zwykły / trzeci w osi).
+- Dalej otwarte: zrzut spread 4890 „rury nie trafiają w mocowania”; gdzie idzie 4890-04; odciągi 0311–0326 (koniec liny, modele);
+  obejma = 4160-1?; punkty 4690 w Y = 0?; 4690-04 przypisać masztom bramek 30xx/31xx?; odstęp obejmy 0,15 m na teowniku.
+
+**Po środzie – kolejność (ustalone)**
+1. Półbramki: `t_gantry` (bramka w kształcie T, dźwigary na dwie strony) i `semi_gantry`; 1901 mają wymiary w .inc i gotowe
+   modele (Jan 25.10 23:28); kod pojedynczych elementów dźwigara (`gantry … mast … tip`) i dźwigary 1910 już są.
+2. Izolatory sekcyjne (zawsze w połowie przęsła, 3 modele: żywiczny 1 przewód, żywiczny 2 przewody, ceramiczny; iskry
+   cząsteczkami; Movera nie ruszamy) + zasilanie / sekcje w edytorze.
+3. Przęsła naprężenia: wykrywanie + łączniki międzysekcyjne 33-0640…0659 (Kolprojekt 2010 s. 55; modele placeholder, linki
+   proceduralne).
+4. Uszynienie grupowe – nowa zakładka „Uszynienie” (6120 karta 0805 na słupach, na górze słupa z marginesem 0,15; 6840 karta
+   0807 na bramkach, zero na górze dźwigara = zero + 0,90, 1–3 szt.; później 6130 karta 0806; LPN później w tej zakładce).
+5. Przęsła samego przewodu, podwieszenia mostowe / tunelowe, LPN, przewody wzmacniające.
+- Koncepcja „stanowiska” (`station <punkt> wires <A> <B>`, przewód prosto przez wysięgniki) – zaakceptowana przez Jana, ale
+  niepotrzebna przy łamaniu na A i B; do użycia, gdyby przewód kiedyś miał iść prosto.
+
+## Wcześniejszy start – stan na 2026-10-25 01:05 (kotwienia; wcześniej edytor sieci, bramki, łańcuchy)
 
 - **Ustalenie z Janem 2026-10-25: do środy (limit tygodniowy) ŻADNYCH NOWYCH TEMATÓW – tylko domykanie rozgrzebanego** (poprawki
   po jego oględzinach w exe, modele mocowań i malowanie słupów robi on). Jan przetestuje sieć „w jakiejś Częstochowie”.
