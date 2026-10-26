@@ -48,6 +48,10 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   161x C120–160 → 4690-01, C180/200 → -02, 1701 → -03, zwisy 4850 → -05; maszty -04 jeszcze nie; dwuteowniki – nie występuje, Jan).
   Wysięgnik bez ukośnika i odciągu w parze rozstawionej idzie na 4690 (rozstaw 1,57 m), reszta na 4890. Punkty 4690 Y = 0 jak w
   modelu (do potwierdzenia). Test w test_cantilever.cpp.
+- 2026-10-26 02:00 Jan: układ z wysięgami 0167 + uchwyt liny wyżej działa („sukces”). 101x jako uchwyt wyżej: „słup za krótki” -
+  prawdopodobnie zmiana karty w panelu gubiła above_pole i podniesioną linę (poprawione: keep_lifted). DO SPRAWDZENIA PRZEZ JANA
+  (wtorek): czy 101x się składa; jeśli nie - jak go postawił. Dalej po środzie: izolatory sekcyjne, zasilanie, przęsła naprężenia
+  i 0640, uszynienie, półbramki (t_gantry / semi_gantry z .inc 1901).
 - 2026-10-26 01:45 (Jan 01:28): przewód ŁAMIE SIĘ na A i B (każdy z własnym odsuwem) - zostaje układ A, B w liście + messenger_from
   (osobnego wpisu `station` nie trzeba; koncepcja „stanowiska” zaakceptowana, nazwa też - gdyby kiedyś przewody miały iść prosto).
   0167: obejma linki 4210 przesuwa się po rurze 6111 pod linę nośną (`across steady cord_clamp messenger 0`, za końcem rury uwaga).
