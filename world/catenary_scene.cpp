@@ -445,12 +445,17 @@ entry_points( catenary::suspension const &Data, glm::dvec3 &Wire, glm::dvec3 &Ro
     Attach = ( Data.has_pole ? glm::dvec3 { Data.pole[ 0 ], Data.pole[ 1 ], Data.pole[ 2 ] } : glm::dvec3 { Data.attach[ 0 ], Data.attach[ 1 ], Data.attach[ 2 ] } );
 }
 
+bool held_rope_at( std::size_t Index, glm::dvec3 &Rope );
+
 // składa wysięgnik wpisu z punktami, bez parasola; zwraca liczbę wstawionych części
 std::size_t
 assemble_alone( std::size_t const Index, catenary::cantilever_catalog const &Catalog ) {
     auto &suspension { Suspensions[ Index ] };
     glm::dvec3 wire, rope, attach;
     entry_points( suspension.data, wire, rope, attach );
+    // linę nośną łańcucha w tym miejscu trzyma inny wysięgnik: linki i zaczepy celują w nią
+    auto const held { held_rope_at( Index, rope ) };
+    auto const *ropepoint { held || suspension.data.has_rope ? &rope : nullptr };
     // słup stawia inny wpis (trzeci wysięgnik przy rozstawionych)
     catenary::cantilever_umbrella own;
     own.pole = false == suspension.data.shared_pole;
@@ -461,9 +466,9 @@ assemble_alone( std::size_t const Index, catenary::cantilever_catalog const &Cat
         auto const heading { std::atan2( plane.x - wire.x, plane.z - wire.z ) };
         own.spread = true;
         own.console_x = glm::dot( attach - plane, glm::dvec3 { -std::cos( heading ), 0.0, std::sin( heading ) } );
-        return assemble( suspension, Catalog, wire, ( suspension.data.has_rope ? &rope : nullptr ), plane, &own );
+        return assemble( suspension, Catalog, wire, ropepoint, plane, &own );
     }
-    return assemble( suspension, Catalog, wire, ( suspension.data.has_rope ? &rope : nullptr ), attach, ( suspension.data.shared_pole ? &own : nullptr ) );
+    return assemble( suspension, Catalog, wire, ropepoint, attach, ( suspension.data.shared_pole ? &own : nullptr ) );
 }
 
 // parasol: oba wysięgniki składane najpierw osobno, żeby poznać wysokości mocowań, potem razem na wspólnym słupie
@@ -499,12 +504,14 @@ assemble_umbrella( std::string const &Name, std::vector<std::size_t> const &List
         return;
     }
     glm::dvec3 wires[ 2 ], ropes[ 2 ], poles[ 2 ], attach[ 2 ];
+    bool held[ 2 ] { false, false };    // punkt liny podany (wprost albo z wysięgnika, który ją tu trzyma)
     catenary::cantilever_result probes[ 2 ];
     catenary::cantilever_umbrella sides[ 2 ];
     auto probed { true };
     for( int side = 0; side < 2; ++side ) {
         auto &suspension { Suspensions[ List[ side ] ] };
         entry_points( suspension.data, wires[ side ], ropes[ side ], poles[ side ] );
+        held[ side ] = held_rope_at( List[ side ], ropes[ side ] ) || suspension.data.has_rope;
         attach[ side ] = poles[ 0 ];
         if( spread ) {
             // płaszczyzna wysięgnika przez punkt mocowania na konsoli; oś słupa przesunięta od niej wzdłuż osi X wysięgnika
@@ -518,7 +525,7 @@ assemble_umbrella( std::string const &Name, std::vector<std::size_t> const &List
         auto probe { sides[ side ] };
         probe.console_parts = false;
         probe.pole = false;
-        probed = probed && assemble( suspension, Catalog, wires[ side ], ( suspension.data.has_rope ? &ropes[ side ] : nullptr ), attach[ side ], ( spread ? &probe : nullptr ), &probes[ side ] ) > 0;
+        probed = probed && assemble( suspension, Catalog, wires[ side ], ( held[ side ] ? &ropes[ side ] : nullptr ), attach[ side ], ( spread ? &probe : nullptr ), &probes[ side ] ) > 0;
     }
     if( false == probed ) { for( auto const index : List ) { alone( index ); } return; }
     if( spread ) { catenary::spread_mounts( *pole, probes[ 0 ], probes[ 1 ], sides[ 0 ], sides[ 1 ] ); }
@@ -528,7 +535,7 @@ assemble_umbrella( std::string const &Name, std::vector<std::size_t> const &List
     sides[ 1 ].console_parts = false;
     for( int side = 0; side < 2; ++side ) {
         auto &suspension { Suspensions[ List[ side ] ] };
-        auto const count { assemble( suspension, Catalog, wires[ side ], ( suspension.data.has_rope ? &ropes[ side ] : nullptr ), attach[ side ], &sides[ side ] ) };
+        auto const count { assemble( suspension, Catalog, wires[ side ], ( held[ side ] ? &ropes[ side ] : nullptr ), attach[ side ], &sides[ side ] ) };
         if( count > 0 ) { ++Assembled; Parts += count; }
     }
 }
@@ -1078,6 +1085,8 @@ chain_points( scene_chain const &Chain ) {
     return Chain.data.suspensions.size() + ( Chain.data.anchor_start.empty() ? 0 : 1 ) + ( Chain.data.anchor_end.empty() ? 0 : 1 );
 }
 
+bool held_rope( scene_chain const &Chain, std::size_t Position, double *Rope );
+
 bool
 chain_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *Rope, bool &Anchored ) {
     auto const &data { Chain.data };
@@ -1105,10 +1114,60 @@ chain_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *
     if( index >= Suspensions.size() || false == Suspensions[ index ].data.has_at ) { return false; }
     std::copy( std::begin( Suspensions[ index ].data.at ), std::end( Suspensions[ index ].data.at ), Wire );
     // lina nośna z innego wysięgnika (rozstawione, sama lina): gdy go nie ma, z tego samego
-    auto const &holder { catenary::messenger_holder( data, data.suspensions[ Point ] ) };
-    auto const other { holder == data.suspensions[ Point ] ? Suspensions.size() : suspension_named( Chain.file, holder ) };
-    rope_of( Suspensions[ other < Suspensions.size() && Suspensions[ other ].data.has_at ? other : index ].data, Rope );
+    if( false == held_rope( Chain, Point, Rope ) ) { rope_of( Suspensions[ index ].data, Rope ); }
     return true;
+}
+
+// lina nośna łańcucha w miejscu Position listy, gdy trzyma ją inny wysięgnik (messenger_from): punkt liny trzymającego,
+// przesunięty wzdłuż łańcucha do miejsca tego podwieszenia, na wysokości liny trzymającego (rozstawione wysięgi pomocnicze
+// 0167 i wysięgnik samej liny w osi słupa między nimi: lina idzie prosto przez siodło, linki obu wysięgów trafiają w nią).
+// false, gdy linę trzyma to samo podwieszenie
+bool
+held_rope( scene_chain const &Chain, std::size_t const Position, double *Rope ) {
+    auto const &names { Chain.data.suspensions };
+    if( Position >= names.size() ) { return false; }
+    auto const &holder { catenary::messenger_holder( Chain.data, names[ Position ] ) };
+    if( holder == names[ Position ] ) { return false; }
+    auto const own { suspension_named( Chain.file, names[ Position ] ) }, other { suspension_named( Chain.file, holder ) };
+    if( own >= Suspensions.size() || other >= Suspensions.size() || false == Suspensions[ other ].data.has_at ) { return false; }
+    auto const &listed { Suspensions[ own ].data }, &holding { Suspensions[ other ].data };
+    rope_of( holding, Rope );
+    // przesunięcie tylko, gdy ten sam wysięgnik trzyma linę także w sąsiednim punkcie listy (para wysięgów pomocniczych z
+    // wysięgnikiem samej liny między nimi); sam jeden (rozstawione na konsoli) - lina łamie się w punkcie trzymającego
+    auto const sameholder = [ & ]( std::size_t const K ) { return K < names.size() && K != Position && catenary::messenger_holder( Chain.data, names[ K ] ) == holder; };
+    if( false == sameholder( Position + 1 ) && ( Position == 0 || false == sameholder( Position - 1 ) ) ) { return true; }
+    // kierunek łańcucha w tym miejscu: od poprzedniego do następnego podwieszenia listy
+    auto const at = [ & ]( std::size_t const K ) {
+        auto const index { suspension_named( Chain.file, names[ K ] ) };
+        auto const &data { index < Suspensions.size() && Suspensions[ index ].data.has_at ? Suspensions[ index ].data : listed };
+        return glm::dvec2 { data.at[ 0 ], data.at[ 2 ] };
+    };
+    auto const way { at( Position + 1 < names.size() ? Position + 1 : Position ) - at( Position > 0 ? Position - 1 : Position ) };
+    if( glm::length( way ) < 0.1 ) { return true; }
+    auto const along { glm::normalize( way ) };
+    auto const shift { along * glm::dot( glm::dvec2 { listed.at[ 0 ] - holding.at[ 0 ], listed.at[ 2 ] - holding.at[ 2 ] }, along ) };
+    Rope[ 0 ] += shift.x;
+    Rope[ 2 ] += shift.y;
+    return true;
+}
+
+// to samo dla podwieszenia Index (pierwszy łańcuch jego pliku, w którym linę w jego miejscu trzyma inny wysięgnik)
+bool
+held_rope_at( std::size_t const Index, glm::dvec3 &Rope ) {
+    if( Index >= Suspensions.size() || Suspensions[ Index ].data.name.empty() ) { return false; }
+    auto const &name { Suspensions[ Index ].data.name };
+    for( auto const &chain : Chains ) {
+        if( chain.removed || chain.file != Suspensions[ Index ].file ) { continue; }
+        auto const &names { chain.data.suspensions };
+        auto const found { std::find( names.begin(), names.end(), name ) };
+        if( found == names.end() ) { continue; }
+        double point[ 3 ];
+        if( held_rope( chain, static_cast<std::size_t>( found - names.begin() ), point ) ) {
+            Rope = glm::dvec3 { point[ 0 ], point[ 1 ], point[ 2 ] };
+            return true;
+        }
+    }
+    return false;
 }
 
 // naciąg przęsła k łańcucha od kotwienia z niepełnym stosem ciężarów (daN): przęsła od tego kotwienia do kotwienia
@@ -1868,6 +1927,14 @@ follow_chains( std::size_t const Index ) {
         assemble_anchor( anchor );
         follow_anchor( anchor );
     }
+    // trzyma linę w miejscu innych podwieszeń: ich linki celują w nią
+    for( auto const &chain : Chains ) {
+        if( chain.removed || chain.file != suspension.file ) { continue; }
+        for( auto const &pair : chain.data.messenger_from ) {
+            if( pair.second != suspension.data.name || pair.first == pair.second ) { continue; }
+            if( auto const index { suspension_named( chain.file, pair.first ) }; index < Suspensions.size() && index != Index ) { reassemble( index ); }
+        }
+    }
     for( auto &chain : Chains ) {
         if( chain.removed || chain.file != suspension.file ) { continue; }
         auto const &names { chain.data.suspensions };
@@ -2139,8 +2206,16 @@ bool
 catenary_chain_update( std::size_t const Index, catenary::chain const &Data ) {
     if( Index >= Chains.size() ) { return false; }
     auto &chain { Chains[ Index ] };
+    // podwieszenia, których linę trzyma (trzymał) inny wysięgnik: ich linki celują w linę, więc składane od nowa
+    std::set<std::string> held;
+    for( auto const *pairs : { &static_cast<catenary::chain const &>( chain.data ).messenger_from, &Data.messenger_from } ) {
+        for( auto const &pair : *pairs ) { if( pair.first != pair.second ) { held.insert( pair.first ); } }
+    }
     chain.data = Data;
     chain.removed = Data.suspensions.size() < 2;
+    for( auto const &name : held ) {
+        if( auto const index { suspension_named( chain.file, name ) }; index < Suspensions.size() ) { reassemble( index ); }
+    }
     rebuild_chain( chain );
     mark_changed( chain.file );
     return true;

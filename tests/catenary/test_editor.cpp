@@ -407,6 +407,40 @@ int main( int, char *argv[] ) {
             "lina nosna z innego wysiegnika (messenger_from): oba przesla przy m2 z lina przez h2, przewodem przez m2" );
     }
 
+    // 6b'. dwa wysięgi pomocnicze z wysięgnikiem samej liny między nimi (oba messenger_from tego samego): lina w ich punktach
+    // to lina trzymającego przesunięta wzdłuż łańcucha - przęsło między nimi prosto przez siodło, linki trafiają w końce lin
+    {
+        auto a { entry }, p { entry }, q { entry }, c { entry }, h { entry };
+        a.name = "s1"; p.name = "sa"; q.name = "sb"; c.name = "s3"; h.name = "sh";
+        p.at[ 2 ] = p.rope[ 2 ] = p.pole[ 2 ] = 159.462;
+        q.at[ 2 ] = q.rope[ 2 ] = q.pole[ 2 ] = 161.032;
+        h.at[ 2 ] = h.rope[ 2 ] = h.pole[ 2 ] = 160.247;
+        h.rope[ 1 ] += 0.05;
+        c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 220.247;
+        catenary::chain line;
+        line.name = "lp"; line.power = "pwr01"; line.type = "C120-2C";
+        line.messenger_from = { { "sa", "sh" }, { "sb", "sh" } };
+        line.suspensions = { "s1", "sa", "sb", "s3" };
+        std::string text { catenary::write_suspension( a ) + "\n" + catenary::write_suspension( p ) + "\n" + catenary::write_suspension( q ) + "\n"
+            + catenary::write_suspension( c ) + "\n" + catenary::write_suspension( h ) + "\n" + catenary::write_chain( line ) + "\n" };
+        { std::ofstream out { "tests/catenary/td_lina2_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear(); mock_deleted_spans = 0;
+        cParser directive( "td_lina2_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        char ropey[ 32 ];
+        std::snprintf( ropey, sizeof( ropey ), "%.3f", h.rope[ 1 ] );
+        auto through { 0 }, holderz { 0 };
+        for( auto const &body : mock_span_bodies ) {
+            if( body.find( std::string( ropey ) + " 159.462" ) != std::string::npos || body.find( std::string( ropey ) + " 161.032" ) != std::string::npos ) { ++through; }
+            if( body.find( "160.247" ) != std::string::npos ) { ++holderz; }
+        }
+        for( auto const &error : errors ) { std::printf( "    %s\n", error.c_str() ); }
+        check( mock_span_bodies.size() == 3 && through == 3 && holderz == 0 && errors.empty(),
+            "wysiegi pomocnicze z wysiegnikiem samej liny miedzy nimi: lina w ich punktach na wysokosci siodla, przewody prosto" );
+        std::remove( "tests/catenary/td_lina2_test.scm" );
+    }
+
     // 6d. lina i przewody zakotwione osobno: lina na 0405 (k1 na słupie 184 m), przewody na 0404 (k2 na słupie 190 m)
     {
         auto a { entry }, c { entry };

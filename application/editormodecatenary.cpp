@@ -3539,6 +3539,42 @@ void catenary_editor::render_catenary_messenger_from(std::size_t const Chain)
 		return;
 	auto const file{catenary_chain_file(Chain)};
 	auto const holder{catenary::messenger_holder(*chain, data->name)};
+	// a cantilever of the messenger only in the chain between two others of its pole (spread steady arms 0167 with a messenger
+	// cantilever in the axis of the pole): it leaves the list, the wires go straight between the two, the messenger through it
+	{
+		auto const &list{chain->suspensions};
+		auto const found{std::find(list.begin(), list.end(), data->name)};
+		auto const position{static_cast<std::size_t>(found - list.begin())};
+		if (found != list.end() && position > 0 && position + 1 < list.size() && chain->middle != data->name)
+		{
+			auto const sharers{pole_sharers(static_cast<std::size_t>(tool.selected))};
+			auto const onpole = [&](std::string const &Name) {
+				return std::any_of(sharers.begin(), sharers.end(), [&](std::size_t const Index) {
+					auto const *other{catenary_scene_get(Index)};
+					return other != nullptr && other->name == Name;
+				});
+			};
+			if (onpole(list[position - 1]) && onpole(list[position + 1]))
+			{
+				if (ImGui::Button(STR_C("Messenger only: the wires straight past it")))
+				{
+					auto changed{*chain};
+					tool.undo.push_back({++tool.group, true, Chain, std::nullopt, *chain, false});
+					auto const before{list[position - 1]}, after{list[position + 1]};
+					auto &pairs{changed.messenger_from};
+					pairs.erase(std::remove_if(pairs.begin(), pairs.end(), [&](auto const &Pair) { return Pair.first == before || Pair.first == after || Pair.first == data->name; }), pairs.end());
+					pairs.emplace_back(before, data->name);
+					pairs.emplace_back(after, data->name);
+					changed.suspensions.erase(changed.suspensions.begin() + static_cast<std::ptrdiff_t>(position));
+					tool.status = format(STR_C("The wires of the chain go straight from %s to %s, the messenger through %s"), before.c_str(), after.c_str(), data->name.c_str());
+					catenary_chain_update(Chain, changed);
+					return;
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("This cantilever holds only the messenger: it leaves the chain, the contact wires go straight between the two cantilevers of the pole next to it in the chain, the messenger goes through this one and their cords hang from it"));
+			}
+		}
+	}
 	// the cantilevers up to 3 m from this pole (in the plan), in the file of the chain
 	constexpr double kHolderRange{3.0};
 	std::vector<std::string> names{data->name};

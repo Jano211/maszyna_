@@ -6242,3 +6242,12 @@ msgstr "przewody jezdne"
 
 msgid "messenger"
 msgstr "lina nośna"
+
+msgid "Messenger only: the wires straight past it"
+msgstr "Sama lina: przewody prosto obok"
+
+msgid "The wires of the chain go straight from %s to %s, the messenger through %s"
+msgstr "Przewody łańcucha idą prosto od %s do %s, lina nośna przez %s"
+
+msgid "This cantilever holds only the messenger: it leaves the chain, the contact wires go straight between the two cantilevers of the pole next to it in the chain, the messenger goes through this one and their cords hang from it"
+msgstr "Ten wysięgnik trzyma tylko linę nośną: wypada z listy łańcucha, przewody jezdne idą prosto między dwoma wysięgnikami tego słupa obok niego w łańcuchu, lina nośna przez niego, a ich linki wiszą na niej"

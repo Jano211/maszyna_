@@ -48,6 +48,13 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   161x C120–160 → 4690-01, C180/200 → -02, 1701 → -03, zwisy 4850 → -05; maszty -04 jeszcze nie; dwuteowniki – nie występuje, Jan).
   Wysięgnik bez ukośnika i odciągu w parze rozstawionej idzie na 4690 (rozstaw 1,57 m), reszta na 4890. Punkty 4690 Y = 0 jak w
   modelu (do potwierdzenia). Test w test_cantilever.cpp.
+- 2026-10-26 01:10 (Jan 00:59, zrzut): rozstawione wysięgi pomocnicze 0167 + wysięgnik samej liny w osi słupa między nimi - wysięgnik
+  samej liny NIE jest w liście łańcucha: przewody idą prosto A→B, w łańcuchu `messenger_from A M` i `messenger_from B M`. Gdy ten sam
+  wysięgnik trzyma linę w dwóch sąsiednich punktach listy, lina w ich punktach = lina M przesunięta wzdłuż łańcucha do ich miejsca
+  (na wysokości liny M) - przęsło A–B prosto przez siodło, linki 0167 celują w te punkty (`held_rope`, `held_rope_at`). Jeden
+  punkt trzymany (rozstawione na konsoli, test 6b) - po staremu, lina łamie się w M. Edytor: przy zaznaczonym M w łańcuchu między
+  dwoma wysięgnikami jego słupa przycisk „Sama lina: przewody prosto obok” (zamienia A, M, B na A, B + messenger_from). Zmiana
+  messenger_from / przesunięcie M składa od nowa wysięgniki A i B.
 - 2026-10-25 22:01 nowe modele Jana: 6840-01 (mocowanie liny uszynienia grupowego na bramce; sam model = kompletne złożenie
   karty 0807; punkt `line` Z 0,131 nad zerem, model X ±0,07, Y ±0,275, Z −0,041..0,173), 6120-01/02/04/07/08 (Jan przerabia –
   jedno złożenie z wahadełkiem przelotowym do liny), 4690-01 poprawiony (obejmy do Y +0,119). Uszynienie grupowe – nowy temat (po środzie). Jan 22:18: niezależne od sieci, idzie
