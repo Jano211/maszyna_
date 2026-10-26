@@ -48,6 +48,13 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   161x C120–160 → 4690-01, C180/200 → -02, 1701 → -03, zwisy 4850 → -05; maszty -04 jeszcze nie; dwuteowniki – nie występuje, Jan).
   Wysięgnik bez ukośnika i odciągu w parze rozstawionej idzie na 4690 (rozstaw 1,57 m), reszta na 4890. Punkty 4690 Y = 0 jak w
   modelu (do potwierdzenia). Test w test_cantilever.cpp.
+- 2026-10-26 01:45 (Jan 01:28): przewód ŁAMIE SIĘ na A i B (każdy z własnym odsuwem) - zostaje układ A, B w liście + messenger_from
+  (osobnego wpisu `station` nie trzeba; koncepcja „stanowiska” zaakceptowana, nazwa też - gdyby kiedyś przewody miały iść prosto).
+  0167: obejma linki 4210 przesuwa się po rurze 6111 pod linę nośną (`across steady cord_clamp messenger 0`, za końcem rury uwaga).
+  Uchwyt liny wyżej: `above_pole` w podwieszeniu (mocowania bez mount_max - tymczasowo, słupy za niskie); edytor w panelu łańcucha:
+  suwak + „Uchwyt liny wyżej” - wysięgnik samej liny (129x, potem 1002-1015, pasmo A) na tym słupie, lina o tyle wyżej, łańcuch
+  bierze linę przez niego w tym punkcie (i tam, gdzie zaznaczony trzymał ją dla innych). Odsuw: pole „±0,5” - suwak -0,50..+0,50
+  ze znakiem (rozjazdy; na szlaku niedozwolony).
 - 2026-10-26 01:10 (Jan 00:59, zrzut): rozstawione wysięgi pomocnicze 0167 + wysięgnik samej liny w osi słupa między nimi - wysięgnik
   samej liny NIE jest w liście łańcucha: przewody idą prosto A→B, w łańcuchu `messenger_from A M` i `messenger_from B M`. Gdy ten sam
   wysięgnik trzyma linę w dwóch sąsiednich punktach listy, lina w ich punktach = lina M przesunięta wzdłuż łańcucha do ich miejsca

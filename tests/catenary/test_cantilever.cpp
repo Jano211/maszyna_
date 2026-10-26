@@ -296,6 +296,14 @@ int main( int argc, char *argv[] ) {
             good = good && count( "4690-01" ) == 1 && count( "4630-06" ) == 1 && count( "4610-06" ) == 0 && count( "4620-06" ) == 0 && count( "4890-03" ) == 0
                 && beam != nullptr && std::abs( beam->position[ 0 ] + 0.785 ) < 1e-9;
             for( auto const &w : result.warnings ) { std::printf( "  %s\n", w.c_str() ); }
+            // linka pionowo pod linę nośną odsuniętą od przewodu o 0,20 m w stronę słupa (obejma 4210 przesuwa się po rurze)
+            auto rope { input.messenger };
+            rope.y += 0.20;
+            catenary::cantilever_result moved;
+            auto const solvedmoved { catenary::solve_cantilever_on_pole( catalog, *scheme, *pole, 2.0 + 0.5 * pole->depth( 6.0 ), -5.6, rope, {}, side, moved ) };
+            auto const *cord { moved.find( "cord" ) };
+            if( cord != nullptr ) { std::printf( "  linka 0167: y %.4f, lina %.4f\n", cord->position[ 1 ], rope.y ); }
+            good = good && solvedmoved && cord != nullptr && std::abs( cord->position[ 1 ] - rope.y ) < 1e-6;
         }
         std::printf( "rozstawione wysiegi pomocnicze 0167 na belce 4690: %s\n", good ? "OK" : "BLAD" );
         failed = failed || !good;

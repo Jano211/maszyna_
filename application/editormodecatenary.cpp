@@ -1709,6 +1709,113 @@ void catenary_editor::catenary_third_create(std::size_t const Index)
 		tool.status += STR(" - the cantilever didn't assemble, see the log");
 }
 
+void catenary_editor::catenary_rope_lift_create(std::size_t const Index, std::size_t const Chain)
+{
+	auto &tool{m_catenary};
+	auto const *current{catenary_scene_get(Index)};
+	auto const *found{catenary_spot_of(Index)};
+	auto const *chain{catenary_chain_get(Chain)};
+	auto const *catalog{catenary_scene_catalog()};
+	if (current == nullptr || found == nullptr || found->track == nullptr || chain == nullptr || catalog == nullptr || false == current->has_pole || current->name.empty())
+		return;
+	auto const sourcedata{*current};
+	auto const source{*found};
+	auto const chaindata{*chain};
+	// the messenger of the chain here (from its holder) and where the new one holds it: that high higher, in the axis of the pole
+	glm::dvec3 rope{wire_of(sourcedata)};
+	{
+		auto const holdername{catenary::messenger_holder(chaindata, sourcedata.name)};
+		catenary::suspension const *holding{&sourcedata};
+		for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+			if (auto const *other{catenary_scene_get(index)}; other != nullptr && other->name == holdername && catenary_scene_file_of(index) == catenary_scene_file_of(Index))
+				holding = other;
+		if (holding->has_rope)
+			rope = glm::dvec3{holding->rope[0], holding->rope[1], holding->rope[2]};
+		else
+			rope.y += 1.70;
+	}
+	auto const foot{pole_of(sourcedata)};
+	catenary_spot spot;
+	{
+		without_gantry const plain{tool.gantry_selected};
+		if (false == catenary_spot_at(*source.track, source.path, foot, foot, source.side, spot))
+			return;
+	}
+	spot.curve = source.curve;
+	catenary::suspension planned{sourcedata};
+	planned.has_spread = false;
+	planned.umbrella.clear();
+	planned.shared_pole = true;
+	catenary_keep_pole(spot, planned, 0.0, true);
+	if (spot.card == 0)
+	{
+		tool.status = spot.problem;
+		return;
+	}
+	auto data{spot.data};
+	// a messenger only card (129x, then 1002-1015) with band A over the reach here, otherwise the nearest
+	{
+		catenary::cantilever_scheme const *best{nullptr};
+		auto bestscore{1e30};
+		for (auto const &item : catalog->schemes())
+		{
+			auto const &scheme{item.second};
+			auto const ropeonly{scheme.assembly == "messenger_only"};
+			if (false == ropeonly && (scheme.card < 1002 || scheme.card > 1015))
+				continue;
+			auto const outside{std::max(0.0, std::max(scheme.reach_min - spot.reach, spot.reach - scheme.reach_max))};
+			auto const score{outside + (ropeonly ? 0.0 : 0.001)};
+			if (score < bestscore)
+			{
+				bestscore = score;
+				best = &scheme;
+			}
+		}
+		if (best == nullptr)
+		{
+			tool.status = STR("No messenger only cantilever (129x, 1002-1015) in the catalogue");
+			return;
+		}
+		data.card = best->card;
+		data.execution = best->execution;
+	}
+	// in the plane through the messenger, the messenger that high higher; mounts may go above the top of the pole
+	data.at[0] = rope.x;
+	data.at[2] = rope.z;
+	data.has_rope = true;
+	data.rope[0] = rope.x;
+	data.rope[1] = rope.y + tool.rope_lift;
+	data.rope[2] = rope.z;
+	data.above_pole = true;
+	auto const file{catenary_scene_file_of(Index)};
+	data.name = catenary_scene_new_name(file);
+	data.skin = sourcedata.skin;
+	data.shared_pole = true;
+	++tool.group;
+	auto const added{catenary_scene_add(file, data)};
+	tool.spots[added] = spot;
+	tool.spots[added].data = data;
+	tool.undo.push_back({tool.group, false, added, std::nullopt, std::nullopt, false});
+	// the chain: its messenger here (and wherever the selected one held it) through the new one
+	auto changed{chaindata};
+	tool.undo.push_back({tool.group, true, Chain, std::nullopt, chaindata, false});
+	std::vector<std::string> moved{sourcedata.name};
+	for (auto const &pair : changed.messenger_from)
+		if (pair.second == sourcedata.name && pair.first != sourcedata.name)
+			moved.push_back(pair.first);
+	auto &pairs{changed.messenger_from};
+	pairs.erase(std::remove_if(pairs.begin(), pairs.end(), [&](auto const &Pair) { return std::find(moved.begin(), moved.end(), Pair.first) != moved.end(); }), pairs.end());
+	for (auto const &name : moved)
+		if (std::find(changed.suspensions.begin(), changed.suspensions.end(), name) != changed.suspensions.end())
+			pairs.emplace_back(name, data.name);
+	catenary_chain_update(Chain, changed);
+	catenary_select(static_cast<int>(added));
+	tool.status = format(STR_C("Messenger holder %s (card %d execution %d) %.2f m higher on pole %s: the messenger of the chain goes through it; the mounts may stand above the top of the pole"),
+	                     data.name.c_str(), data.card, data.execution, static_cast<double>(tool.rope_lift), data.pole_type.c_str());
+	if (catenary_scene_parts(added) == 0)
+		tool.status += STR(" - the cantilever didn't assemble, see the log");
+}
+
 void catenary_editor::catenary_pair_move(std::size_t const Selected, glm::dvec3 const &Foot, bool const Panel)
 {
 	auto &tool{m_catenary};
@@ -3270,7 +3377,25 @@ void catenary_editor::render_catenary_cantilever_ui()
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("Structure gauge 2.20 or 2.50 m by the catalogue (card 0007); drag it and the cantilever follows, the card changes with band A. Ctrl+click types a value"));
 	}
-	changed |= ImGui::SliderFloat(STR_C("Stagger of the wires (m)"), &tool.stagger, 0.0f, 0.45f, "%.2f");
+	if (tool.wide_stagger)
+	{
+		// signed: + towards the pole, - away from it
+		auto signedstagger{tool.toward ? tool.stagger : -tool.stagger};
+		if (ImGui::SliderFloat(STR_C("Stagger of the wires (m)"), &signedstagger, -0.50f, 0.50f, "%+.2f"))
+		{
+			tool.stagger = std::abs(signedstagger);
+			tool.toward = signedstagger >= 0.0f;
+			changed = true;
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("From the track axis: + towards the pole, - away from it. Ctrl+click types a value"));
+	}
+	else
+		changed |= ImGui::SliderFloat(STR_C("Stagger of the wires (m)"), &tool.stagger, 0.0f, 0.45f, "%.2f");
+	ImGui::SameLine();
+	ImGui::Checkbox(STR_C("+-0.5"), &tool.wide_stagger);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("Stagger from -0.50 to +0.50 m across the track axis, for tuning at turnouts; not allowed on a line"));
 	if (ImGui::Checkbox(STR_C("Wires towards the pole"), &tool.toward))
 		changed = true;
 	if (ImGui::IsItemHovered())
@@ -3574,6 +3699,21 @@ void catenary_editor::render_catenary_messenger_from(std::size_t const Chain)
 					ImGui::SetTooltip("%s", STR_C("This cantilever holds only the messenger: it leaves the chain, the contact wires go straight between the two cantilevers of the pole next to it in the chain, the messenger goes through this one and their cords hang from it"));
 			}
 		}
+	}
+	// a messenger holder higher on this pole: the messenger of the chain goes over another cantilever here
+	if (data->has_pole)
+	{
+		ImGui::PushItemWidth(100.0f);
+		ImGui::SliderFloat("##ropelift", &tool.rope_lift, 0.20f, 2.50f, "%.2f m");
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		if (ImGui::Button(STR_C("Messenger holder higher")))
+		{
+			catenary_rope_lift_create(static_cast<std::size_t>(tool.selected), Chain);
+			return;
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("A messenger only cantilever (129x, 1002-1015) on this pole, that much higher than the messenger here: the messenger of this chain goes through it (also where this one held it for others), this one can hold another chain. The poles are too short for it: its mounts may stand above the top of the pole"));
 	}
 	// the cantilevers up to 3 m from this pole (in the plan), in the file of the chain
 	constexpr double kHolderRange{3.0};

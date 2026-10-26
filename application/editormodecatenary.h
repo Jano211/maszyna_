@@ -81,6 +81,8 @@ struct catenary_editor
 		bool swinging{true};
 		bool toward{true};
 		bool alternate{true}; // on a straight the next one goes the other way
+		float rope_lift{0.60f}; // how much higher a new messenger holder is than the messenger here (m)
+		bool wide_stagger{false}; // stagger -0.50..+0.50 m from the track axis (tuning at turnouts; not allowed on a line)
 		int bend{0}; // 0: from the track, 1: straight, 2: curve
 		float stagger{0.30f};
 		float clearance{2.50f}; // from the axis of the track to the face of the pole
@@ -196,6 +198,8 @@ struct catenary_editor
 	void catenary_pair_move(std::size_t Selected, glm::dvec3 const &Foot, bool Panel);
 	// a third cantilever on the pole of spread cantilevers, in the axis of the pole, to the same track (shared_pole)
 	void catenary_third_create(std::size_t Index);
+	// a messenger only cantilever higher on the same pole, holding the messenger of the chain at Index (and where it held it)
+	void catenary_rope_lift_create(std::size_t Index, std::size_t Chain);
 	// the span of a chain the spot falls in (in the plan: the wire point near the line of the span, between its ends)
 	struct chain_insert
 	{

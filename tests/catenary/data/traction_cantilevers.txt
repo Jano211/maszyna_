@@ -2307,7 +2307,10 @@ assembly aux_steady
   line steady_insulator steady_mount toward registration
   point steady_start steady_insulator@steady_insulator.length
   line steady steady_start along steady_insulator
-  project steady cord_clamp registration steady.length rules.cord_clamp_inset
+  // obejma linki tam, gdzie nad wysiegiem biegnie lina nosna (Jan 2026-10-26: linki nie trafialy w line w poziomie); za koncem
+  // rury - uwaga w logu
+  across steady cord_clamp messenger 0
+  limit steady cord_clamp steady.length rules.cord_clamp_inset
   point cord_clamp_at steady@steady.cord_clamp
   shift cord_anchor cord_clamp_at 0 cord_clamp.eye
   shift cord_top cord_anchor 0 messenger.z-cord_anchor.z

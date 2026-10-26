@@ -6251,3 +6251,24 @@ msgstr "Przewody łańcucha idą prosto od %s do %s, lina nośna przez %s"
 
 msgid "This cantilever holds only the messenger: it leaves the chain, the contact wires go straight between the two cantilevers of the pole next to it in the chain, the messenger goes through this one and their cords hang from it"
 msgstr "Ten wysięgnik trzyma tylko linę nośną: wypada z listy łańcucha, przewody jezdne idą prosto między dwoma wysięgnikami tego słupa obok niego w łańcuchu, lina nośna przez niego, a ich linki wiszą na niej"
+
+msgid "From the track axis: + towards the pole, - away from it. Ctrl+click types a value"
+msgstr "Od osi toru: + do słupa, - od słupa. Ctrl+klik i wpisz"
+
+msgid "+-0.5"
+msgstr "±0,5"
+
+msgid "Stagger from -0.50 to +0.50 m across the track axis, for tuning at turnouts; not allowed on a line"
+msgstr "Odsuw od -0,50 do +0,50 m w poprzek osi toru, do strojenia na rozjazdach; na szlaku niedozwolony"
+
+msgid "No messenger only cantilever (129x, 1002-1015) in the catalogue"
+msgstr "W katalogu nie ma wysięgnika samej liny (129x, 1002-1015)"
+
+msgid "Messenger holder %s (card %d execution %d) %.2f m higher on pole %s: the messenger of the chain goes through it; the mounts may stand above the top of the pole"
+msgstr "Uchwyt liny %s (karta %d wykonanie %d) %.2f m wyżej na słupie %s: lina nośna łańcucha idzie przez niego; mocowania mogą wystawać ponad słup"
+
+msgid "Messenger holder higher"
+msgstr "Uchwyt liny wyżej"
+
+msgid "A messenger only cantilever (129x, 1002-1015) on this pole, that much higher than the messenger here: the messenger of this chain goes through it (also where this one held it for others), this one can hold another chain. The poles are too short for it: its mounts may stand above the top of the pole"
+msgstr "Wysięgnik samej liny (129x, 1002-1015) na tym słupie, o tyle wyżej niż lina tutaj: lina nośna tego łańcucha idzie przez niego (także tam, gdzie ten trzymał ją dla innych), a ten może trzymać inny łańcuch. Słupy są na to za niskie: jego mocowania mogą wystawać ponad słup"
