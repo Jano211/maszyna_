@@ -1,8 +1,34 @@
-# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-10-26 10:00)
+# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-10-29 23:00)
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – stan na 2026-10-26 10:00 (nowy czat zaczyna od tej sekcji)
+## START TUTAJ – 2026-10-29 23:00 (najpierw to, potem sekcja 26.10 niżej)
+
+**Zmiany kolegi (renderer GL 4.6) na kodzie z siec-radio** – gałąź `feat/gl46-migration` w MaSzyna-EU07/maszyna: zmergował
+siec-radio (619f048) 26.10 16:36 i dopisał 5 commitów sieci. Przeniesione do `siec-trakcyjna` cherry-pickiem (`-x`, hash
+oryginału w opisie): 23211800 zygzak wg Iet-107 (prędkość ≤/> 160, odsuwy prosta/łuk, raport łańcucha, krok przęsła
+„przy kursorze / zalecane / własne”, zamiana krótki↔długi klawiszem X, przesuwanie kotwień, wysięgnik na słupie kotwowym);
+5f93c7c2 zapis sieci wg aktywnej warstwy; d794b1e7 części sieci poza edycją węzłów, przeciąganie słupów kotwowych;
+e19c788f sieć jako zwykłe wpisy `node … suspension|chain|gantry|anchor … end<typ>` wprost w plikach scenerii (obok dyrektywy
+`catenary`, która dalej działa); 82d38424 wczytywanie takich wpisów z includów.
+- Konflikty rozwiązane: panel odsuwu – jego układ (zygzak / zaznaczony słup + przycisk zamiany) z naszym suwakiem ±0,5
+  (`catenary_stagger_slider`; ostrzeżenie Iet-107 nie przy ±0,5); `editor_mode::save` – jego gałąź ma funkcje edytora,
+  których u nas nie ma (ortofotomapa, składy, noses, switch_store) – zostało nasze + jego `layerstatements` / `catenaryblocks`.
+  `editor_mode::fly_to` przeniesiony z jego gałęzi (raport łańcucha leci kamerą do słupa).
+- Testy: atrapa `tests/catenary/mock/scene/scenelayers.h` (catenary_scene.cpp pyta o `scene::Layers.handle()`); wszystkie OK.
+- UWAGA przy następnym wypychaniu na `siec-radio`: jego gałąź ma już te 5 commitów i `fly_to` – „sam kod” liczyć względem
+  tego, co jest u niego (pliki sieci z `feat/gl46-migration`), nie względem 619f048, bo inaczej dostanie zdublowane zmiany.
+- Renderer: na jego gałęzi GL 3.3 przeniesiony do `rendering/opengl46` (klasy przemianowane); w master i u nas bez zmian.
+
+**Uwagi Jana zebrane 26.10 (do zrobienia po środzie, jeszcze nie zaczęte)**
+- przycisk przekładania zwisu bramki bez parasola na drugą stronę toru (ta sama odległość od osi; karta może przejść z
+  krótkiego na długi wysięg),
+- wysięgniki na zwisach przy skosie bramki do toru do ok. 2°: zwis skośnie względem dźwigara; powyżej 2° zwis równo z
+  dźwigarem i obrót wysięgnika (razem z wysięgnikami obrotowymi),
+- dla rurowych włączany suwak ±0,5 m wysokości górnego mocowania (dobór krótszej / dłuższej rury lub pręta),
+- tryb ekspert w edytorze chowający zaawansowane opcje – podział wstępny, do poprawki po opiniach ludzi.
+
+## Poprzedni start – stan na 2026-10-26 10:00
 
 **Jak pracujemy (stałe zasady)**
 - Repo Jano211/maszyna_, gałąź robocza `siec-trakcyjna`. Każdą zmianę: commit → push → merge do `wszystko` → push (Jan buduje

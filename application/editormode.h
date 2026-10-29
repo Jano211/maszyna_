@@ -1148,6 +1148,8 @@ class editor_mode : public application_mode, private editor_track::observer
 	void render_track_context();
 	void split_track_at(TTrack &Track, glm::dvec3 const &Point);
 	void focus_track(TTrack &Track, int const Path, glm::dvec3 const &Point);
+	// the camera flies over Duration seconds to the place Distance back from the target along Look, looking along it
+	void fly_to(glm::dvec3 const &Target, glm::dvec3 const &Look, double const Distance, double const Duration = 0.6);
 	// paths found by their names
 	struct track_search
 	{
