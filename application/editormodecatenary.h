@@ -56,6 +56,7 @@ struct catenary_editor
 		std::string family; // the family of the card in the described catalogue; empty without it
 		bool execution_changed{false}; // the execution chosen in the panel has no card for this A, another one was taken
 		bool switch_error{false}; // a pole of a group that doesn't stand by switches (concrete), standing by one
+		bool by_switch{false}; // the pole stands by a switch (its face goes 4.00 m from the track axis there)
 		catenary::suspension data;
 	};
 	struct catenary_change
@@ -233,6 +234,10 @@ struct catenary_editor
 	// the drop of the selected cantilever on a gantry (without an umbrella) to the other side of the track: at the same distance
 	// from the track axis, the wires stay where they are, so the card may go from a short cantilever to a long one or back
 	bool catenary_drop_flip(std::size_t const Index);
+	// the beam the drop of the suspension hangs on; false: not a drop on the beam of a gantry
+	bool catenary_drop_beam(std::size_t const Index, glm::dvec3 &From, glm::dvec3 &To) const;
+	// the suspension on its drop moved to Along of the beam (0 its start, 1 its end), the wires staying by the track; false: no card
+	bool catenary_drop_spot(std::size_t const Index, double const Along, catenary_spot &Spot);
 	// the poles of the chain from position From on get the zigzag of Iet-107: the first of them keeps its side (or goes the other
 	// way with Flip), the next ones in turn on a straight, outwards on a curve
 	void catenary_zigzag_chain(std::size_t const Chain, std::size_t const From, bool const Flip);
@@ -265,6 +270,8 @@ struct catenary_editor
 		std::string pole;
 		bool error{false};
 	};
+	// the place stands by a switch: on one, or within kSwitchRange of a path of one
+	bool catenary_by_switch(glm::dvec3 const &Foot, TTrack const *Track) const;
 	mutable std::vector<std::pair<TTrack const *, int>> m_switch_paths; // the paths of switches, gathered again when the number of tracks changes
 	mutable std::size_t m_switch_tracks{static_cast<std::size_t>(-1)};
 	mutable std::map<std::size_t, switch_check> m_switch_checks;

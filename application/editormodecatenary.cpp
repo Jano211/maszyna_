@@ -48,6 +48,7 @@ double const kCurveRadius{4000.0}; // m, a track bent less is a straight for the
 float const kPolePick{12.0f};
 double const kInsertWidth{1.5}; // m in the plan from the line of a span: a pole placed there goes into the span
 double const kInsertEnds{2.0}; // m from the ends of the span where it doesn't
+float const kSwitchFace{4.00f}; // m from the axis of the track to the face of a pole by a switch (2.50 on a line, 2.20 in a station)
 double const kSwitchRange{8.0}; // m from a pole to a switch path: the pole stands by the switch (also on the neighbouring track)
 // Iet-107 (PKP PLK, wytyczne projektowania sieci trakcyjnej): the largest stagger on a straight up to 160 km/h and above it
 // (3.4.4.3, 7.4.2.1 a), on a curve (7.4.2.1 b), the normal span above 160 km/h (62 m +-4, 4.6.1.2, 7.4.3.1), neighbouring spans
@@ -1208,6 +1209,11 @@ bool catenary_editor::catenary_switch_error(std::string const &Pole, glm::dvec3 
 	auto const *group{catenary_scene_structures().polegroup_of(Pole)};
 	if (group == nullptr || false == group->no_switch)
 		return false;
+	return catenary_by_switch(Foot, Track);
+}
+
+bool catenary_editor::catenary_by_switch(glm::dvec3 const &Foot, TTrack const *Track) const
+{
 	if (Track != nullptr && Track->eType == tt_Switch)
 		return true;
 	auto const &tracks{simulation::Paths.sequence()};
@@ -1339,6 +1345,7 @@ void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearan
 	data.pole[1] = polepoint.y;
 	data.pole[2] = polepoint.z;
 	Spot.switch_error = catenary_switch_error(pole->name, polepoint, Spot.track);
+	Spot.by_switch = catenary_by_switch(polepoint, Spot.track);
 	if (tool.insulators25)
 		data.insulators = "25";
 	if (scheme == nullptr)
@@ -1425,6 +1432,9 @@ std::string catenary_editor::catenary_intent_label(catenary_spot const &Spot) co
 		label += "\n" + format(STR_C("execution %d has no card for this A, execution %d taken"), m_catenary.execution, Spot.data.execution);
 	if (Spot.switch_error)
 		label += "\n" + format(STR_C("ERROR: pole %s doesn't stand by a switch, take a steel one"), Spot.data.pole_type.c_str());
+	// the face of a pole by a switch: 4.00 m from the track axis (on a line 2.50, in a station 2.20)
+	if (Spot.by_switch && m_catenary.page == 0 && m_catenary.gantry_selected < 0 && m_catenary.clearance < kSwitchFace - 0.005f)
+		label += "\n" + format(STR_C("by a switch: the face of the pole %.2f m from the track axis (%.2f m here)"), kSwitchFace, m_catenary.clearance);
 	if (m_catenary.zigzag)
 	{
 		label += "\n" + format(STR_C("stagger %.2f m"), zigzag_stagger(Spot.curve));
@@ -1795,15 +1805,89 @@ void catenary_editor::catenary_flip()
 	tool.status = tool.toward ? STR("The next pole: the wires towards the pole (short cantilever)") : STR("The next pole: the wires away from the pole (long cantilever)");
 }
 
-bool catenary_editor::catenary_drop_flip(std::size_t const Index)
+// the gantry whose beam the drop of the suspension hangs on, and its beam; false: not a drop on a beam
+bool catenary_editor::catenary_drop_beam(std::size_t const Index, glm::dvec3 &From, glm::dvec3 &To) const
+{
+	double bottom{0.0};
+	for (std::size_t index = 0; index < catenary_gantry_size(); ++index)
+	{
+		std::vector<std::pair<std::size_t, catenary::suspension>> hangers;
+		catenary_gantry_hangers(index, hangers);
+		if (std::any_of(hangers.begin(), hangers.end(), [Index](auto const &Hanger) { return Hanger.first == Index; }))
+			return catenary_gantry_beam(index, From, To, bottom);
+	}
+	return false;
+}
+
+// the suspension on its drop at another place on the beam (Along: 0 at the start of the beam, 1 at its end): the wires stay where
+// they are by the track, the cantilever is composed anew (the card from its A, short or long by the side of the wires), the drop
+// the shortest of its kind the mounts fit on
+bool catenary_editor::catenary_drop_spot(std::size_t const Index, double const Along, catenary_spot &Spot)
 {
 	auto &tool{m_catenary};
 	auto const *current{catenary_scene_get(Index)};
 	auto const *catalog{catenary_scene_catalog()};
 	auto const *own{current != nullptr && catalog != nullptr && current->has_pole ? catalog->pole(current->pole_type) : nullptr};
 	auto const *found{own != nullptr ? catenary_spot_of(Index) : nullptr};
-	double offset{0.0};
-	if (own == nullptr || own->drop.empty() || found == nullptr || false == stagger_of(Index, offset))
+	glm::dvec3 from, to;
+	if (own == nullptr || own->drop.empty() || found == nullptr || false == catenary_drop_beam(Index, from, to))
+		return false;
+	Spot = *found;
+	auto const t{std::clamp(Along, 0.0, 1.0)};
+	auto const pole{plan_of(from) + (plan_of(to) - plan_of(from)) * t};
+	auto const wire{wire_of(*current)};
+	auto const f{Spot.forward};
+	// the wires across the track axis (+ on the right of its direction), as they are now
+	auto const lateral{glm::dot(plan_of(wire) - plan_of(Spot.axis), right_of(f))};
+	// the place of the track square to the drop
+	auto const s{glm::dot(pole - plan_of(Spot.axis), f)};
+	Spot.axis.x += f.x * s;
+	Spot.axis.z += f.y * s;
+	auto distance{glm::dot(pole - plan_of(Spot.axis), right_of(f))};
+	Spot.side = distance >= 0.0 ? 1 : -1;
+	distance = std::abs(distance);
+	auto const toward{lateral * Spot.side >= 0.0};
+	auto const magnitude{std::abs(lateral)};
+	auto const beambottom{from.y + (to.y - from.y) * t};
+	auto const saved{panel_save()};
+	catenary_take_settings(Index);
+	std::vector<std::pair<double, std::string>> drops;
+	for (auto const &entry : catalog->poles())
+		if (entry.second.drop == own->drop)
+			drops.emplace_back(entry.second.length, entry.first);
+	std::sort(drops.begin(), drops.end());
+	auto const take = [&](std::string const &Name) {
+		catenary_compose(Spot, distance - 0.5 * catalog->pole(Name)->depth(0.0), magnitude, toward, Name);
+		Spot.data.pole[1] = beambottom;
+	};
+	auto chosen{false};
+	for (auto const &drop : drops)
+	{
+		take(drop.second);
+		if (Spot.card == 0)
+			break;
+		catenary::cantilever_result probe;
+		catenary_scene_probe(Spot.data, probe);
+		if (std::none_of(probe.warnings.begin(), probe.warnings.end(), [](std::string const &Warning) { return Warning.find("below the lowest mount") != std::string::npos; }))
+		{
+			chosen = true;
+			break;
+		}
+	}
+	if (false == chosen && Spot.card != 0 && false == drops.empty())
+		take(drops.back().second);
+	panel_restore(saved);
+	(void)tool;
+	return Spot.card != 0;
+}
+
+bool catenary_editor::catenary_drop_flip(std::size_t const Index)
+{
+	auto &tool{m_catenary};
+	auto const *current{catenary_scene_get(Index)};
+	auto const *found{current != nullptr ? catenary_spot_of(Index) : nullptr};
+	glm::dvec3 from, to;
+	if (found == nullptr || false == catenary_drop_beam(Index, from, to))
 	{
 		tool.status = STR("Not a drop on a gantry by a track: nothing to move over");
 		return false;
@@ -1813,29 +1897,11 @@ bool catenary_editor::catenary_drop_flip(std::size_t const Index)
 		tool.status = STR("An umbrella hangs on this drop: break it up first");
 		return false;
 	}
-	// the beam it hangs on
-	glm::dvec3 from, to;
-	double bottom{0.0};
-	auto gantry{std::numeric_limits<std::size_t>::max()};
-	for (std::size_t index = 0; index < catenary_gantry_size() && gantry == std::numeric_limits<std::size_t>::max(); ++index)
-	{
-		std::vector<std::pair<std::size_t, catenary::suspension>> hangers;
-		catenary_gantry_hangers(index, hangers);
-		if (std::any_of(hangers.begin(), hangers.end(), [Index](auto const &Hanger) { return Hanger.first == Index; }))
-			gantry = index;
-	}
-	if (gantry == std::numeric_limits<std::size_t>::max() || false == catenary_gantry_beam(gantry, from, to, bottom))
-	{
-		tool.status = STR("The drop isn't on the beam of any gantry");
-		return false;
-	}
-	auto spot{*found};
-	auto const right{right_of(spot.forward) * static_cast<double>(spot.side)};
-	auto const pole{pole_of(*current)};
-	auto const distance{glm::dot(plan_of(pole) - plan_of(spot.axis), right)};
 	// the mirror image of the drop across the track axis, then along the track onto the line of the beam
-	auto const mirrored{plan_of(pole) - right * (2.0 * distance)};
-	auto const f{spot.forward};
+	auto const right{right_of(found->forward)};
+	auto const pole{plan_of(pole_of(*current))};
+	auto const mirrored{pole - right * (2.0 * glm::dot(pole - plan_of(found->axis), right))};
+	auto const f{found->forward};
 	auto const origin{plan_of(from)};
 	auto const u{plan_of(to) - origin};
 	auto const denominator{f.x * u.y - f.y * u.x};
@@ -1844,51 +1910,14 @@ bool catenary_editor::catenary_drop_flip(std::size_t const Index)
 		tool.status = STR("The track runs along the beam of the gantry");
 		return false;
 	}
-	auto const s{((origin.x - mirrored.x) * u.y - (origin.y - mirrored.y) * u.x) / denominator};
 	auto const t{((origin.x - mirrored.x) * f.y - (origin.y - mirrored.y) * f.x) / denominator};
 	if (t < 0.0 || t > 1.0)
 	{
 		tool.status = STR("On the other side of the track the drop would be off the beam of the gantry");
 		return false;
 	}
-	auto const wire{wire_of(*current)};
-	spot.axis.x += f.x * s;
-	spot.axis.z += f.y * s;
-	spot.side = -spot.side;
-	// the same wires: towards the old drop is away from the new one
-	auto const magnitude{std::abs(offset)};
-	auto const toward{offset < 0.0};
-	auto const saved{panel_save()};
-	catenary_take_settings(Index);
-	// the shortest drop of its kind which reaches down to the lowest mount (the card changes, so may its mounts)
-	std::vector<std::pair<double, std::string>> drops;
-	for (auto const &entry : catalog->poles())
-		if (entry.second.drop == own->drop)
-			drops.emplace_back(entry.second.length, entry.first);
-	std::sort(drops.begin(), drops.end());
-	auto const beambottom{from.y + (to.y - from.y) * t};
-	auto const take = [&](std::string const &Name) {
-		catenary_compose(spot, distance - 0.5 * catalog->pole(Name)->depth(0.0), magnitude, toward, Name);
-		spot.data.pole[1] = beambottom;
-	};
-	auto chosen{false};
-	for (auto const &drop : drops)
-	{
-		take(drop.second);
-		if (spot.card == 0)
-			break;
-		catenary::cantilever_result probe;
-		catenary_scene_probe(spot.data, probe);
-		if (std::none_of(probe.warnings.begin(), probe.warnings.end(), [](std::string const &Warning) { return Warning.find("below the lowest mount") != std::string::npos; }))
-		{
-			chosen = true;
-			break;
-		}
-	}
-	if (false == chosen && spot.card != 0 && false == drops.empty())
-		take(drops.back().second);
-	panel_restore(saved);
-	if (spot.card == 0)
+	catenary_spot spot;
+	if (false == catenary_drop_spot(Index, t, spot))
 	{
 		tool.status = format(STR_C("No card for the cantilever on the other side (A = %.2f m): the drop stays"), spot.reach);
 		return false;
@@ -1909,8 +1938,7 @@ bool catenary_editor::catenary_drop_flip(std::size_t const Index)
 	tool.spots[Index].data = data;
 	tool.probed = false;
 	catenary_take_settings(Index);
-	tool.status = format(STR_C("Drop moved to the other side of the track: card %04d, %s, A = %.2f m"), spot.card, toward ? STR_C("short cantilever") : STR_C("long cantilever"), spot.reach);
-	(void)wire;
+	tool.status = format(STR_C("Drop moved to the other side of the track: card %04d, %s, A = %.2f m"), spot.card, spot.toward ? STR_C("short cantilever") : STR_C("long cantilever"), spot.reach);
 	return true;
 }
 
@@ -4608,6 +4636,27 @@ void catenary_editor::render_catenary_cantilever_ui()
 		changed |= ImGui::SliderFloat(STR_C("Face of the pole from the track axis (m)"), &tool.clearance, 1.60f, 4.50f, "%.2f");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("Structure gauge 2.20 or 2.50 m by the catalogue (card 0007); drag it and the cantilever follows, the card changes with band A. Ctrl+click types a value"));
+		// the usual faces: a line, a station, by a switch
+		struct face_choice
+		{
+			char const *label;
+			float face;
+		};
+		face_choice const faces[]{{STR_C("line 2.50"), 2.50f}, {STR_C("station 2.20"), 2.20f}, {STR_C("switch 4.00"), kSwitchFace}};
+		for (std::size_t index = 0; index < std::size(faces); ++index)
+		{
+			if (index > 0)
+				ImGui::SameLine();
+			ImGui::PushID(static_cast<int>(index));
+			if (ImGui::SmallButton(faces[index].label))
+			{
+				tool.clearance = faces[index].face;
+				changed = true;
+			}
+			ImGui::PopID();
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("The face of the pole from the track axis: 2.50 m on a line, 2.20 m in a station, 4.00 m by a switch"));
 	}
 	if (tool.selected >= 0)
 	{
@@ -5380,7 +5429,10 @@ void catenary_editor::render_catenary_ui()
 				// both together, and each by itself no more than 0.20 m from the other
 				auto const heighten = [&](catenary::gantry const &Changed) {
 					auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
-					if (tool.undo.empty() || false == last.gantry || last.index != static_cast<std::size_t>(tool.gantry_selected) || false == last.gantry_before.has_value())
+					auto const lastgroup{last.group};
+					auto const ongoing{false == tool.undo.empty() && std::any_of(tool.undo.rbegin(), tool.undo.rend(), [&](catenary_change const &Change) {
+						return Change.group == lastgroup && Change.gantry && Change.index == static_cast<std::size_t>(tool.gantry_selected) && Change.gantry_before.has_value(); })};
+					if (tool.undo.empty() || false == last.gantry || false == ongoing)
 					{
 						catenary_change change;
 						change.group = ++tool.group;
@@ -5389,7 +5441,36 @@ void catenary_editor::render_catenary_ui()
 						change.gantry_before = *gantry;
 						tool.undo.push_back(change);
 					}
+					auto const group{tool.undo.back().group};
 					catenary_gantry_update(static_cast<std::size_t>(tool.gantry_selected), Changed);
+					// a mast shared with the next span (a gantry of many spans) has one height: the other span takes it too
+					for (auto const other : gantry_group(static_cast<std::size_t>(tool.gantry_selected)))
+					{
+						auto const *span{catenary_gantry_get(other)};
+						if (span == nullptr || other == static_cast<std::size_t>(tool.gantry_selected))
+							continue;
+						auto follower{*span};
+						auto moved{false};
+						for (int k = 0; k < 2; ++k)
+							for (int m = 0; m < 2; ++m)
+								if (false == follower.masts[k].empty() && false == Changed.masts[m].empty() && same_mast(follower.points[k], Changed.points[m]) && std::abs(follower.points[k][1] - Changed.points[m][1]) > 1e-6)
+								{
+									follower.points[k][1] = Changed.points[m][1];
+									moved = true;
+								}
+						if (false == moved)
+							continue;
+						if (std::none_of(tool.undo.rbegin(), tool.undo.rend(), [&](catenary_change const &Change) { return Change.group == group && Change.gantry && Change.index == other; }))
+						{
+							catenary_change change;
+							change.group = group;
+							change.gantry = true;
+							change.index = other;
+							change.gantry_before = *span;
+							tool.undo.push_back(change);
+						}
+						catenary_gantry_update(other, follower);
+					}
 				};
 				{
 					auto both{static_cast<float>(gantry->points[0][1])};
@@ -5838,8 +5919,24 @@ void catenary_editor::catenary_drag_update()
 		auto const *catalog{catenary_scene_catalog()};
 		auto const *own{catalog != nullptr ? catalog->pole(current->pole_type) : nullptr};
 		auto const drop{own != nullptr && false == own->drop.empty()};
+		if (drop && pole_sharers(static_cast<std::size_t>(tool.selected)).size() == 1)
+		{
+			// a drop along the beam of its gantry, to where the cursor is over it; the wires stay by the track
+			glm::dvec3 from, to;
+			if (false == catenary_drop_beam(static_cast<std::size_t>(tool.selected), from, to))
+				return;
+			auto const cursor{plan_of(e.cursor_level(from.y))};
+			auto const u{plan_of(to) - plan_of(from)};
+			auto const along{glm::dot(cursor - plan_of(from), u) / std::max(glm::dot(u, u), 1e-9)};
+			catenary_spot moved;
+			if (catenary_drop_spot(static_cast<std::size_t>(tool.selected), along, moved))
+				catenary_apply(moved);
+			else
+				tool.status = format(STR_C("No card for A = %.2f m here: the drop stays where it was"), moved.reach);
+			return;
+		}
 		if (drop || (own != nullptr && own->gantry))
-			return; // a drop, or a cantilever on a mast, goes with its gantry
+			return; // an umbrella on a drop, or a cantilever on a mast, goes with its gantry
 		spot.curve = tool.bend == 2 || (tool.bend == 0 && spot.radius > 0.0 && spot.radius < kCurveRadius);
 		catenary_compose(spot, tool.clearance, tool.stagger, tool.toward);
 		if (pole_sharers(static_cast<std::size_t>(tool.selected)).size() > 1)
