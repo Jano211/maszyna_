@@ -322,6 +322,12 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             }
             pole = &onmast;
         }
+        if( data.above_pole ) {
+            // uchwyt liny wyżej (tymczasowo, słupy za niskie): mocowania bez górnej granicy
+            if( pole != &onmast ) { onmast = *pole; }
+            onmast.mount_max = 0.0;
+            pole = &onmast;
+        }
     }
     // Drop: obniżenie dolnego zaczepu ukośnika (dobór przy innym zestawie izolatorów, niżej)
     auto const solve = [ & ]( std::map<std::string, std::string> const &Overrides, double const Drop, catenary::cantilever_result &Result ) {

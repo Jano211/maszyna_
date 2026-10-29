@@ -1,0 +1,23 @@
+{
+traction_code: 2
+symbol: YpC95-2C
+// stary katalog Kolprojektu (kolprojekt1.pdf): karta 13-0002 (tablica podstawowych parametrow sieci jezdnych, wyd. 1978)
+// siec 2 (znowelizowana skompensowana); wieszaki karta 13-0010-11 (siec skompensowana dwudrutowa), dlugosci 13-0014-2
+// przewody jezdne (nazwa przewodu z pliku traction_tables.txt)
+contact_wire_num: 2
+contact_wire: Djp100
+contact_tension: 1962           // daN, lacznie wszystkie przewody jezdne (karta 13-0002)
+contact_wire_spacing: 0.08      // m; wartosc do potwierdzenia na karcie 5300
+// liny nosne; naciag laczny wszystkich lin w daN
+catenary_wire_num: 1
+catenary_wire: L95
+catenary_tension: 1216
+// podwieszenie Y; naciag w daN
+y_wire: L25
+y_tension: 196
+y_length: 36 14                 // pary: od rozpietosci [m], dlugosc Y [m]; krotsze przesla bez Y (karta 13-0014: Ly = 14,0 m od 36 m)
+// wieszaki
+hanger_table: 11                // tablica rozstawu z pliku traction_tables.txt
+hanger_mass: 0.1                // kg, z uchwytami
+height: 1.70                    // m, wysokosc konstrukcyjna (karta 13-0002); w scenerii decyduja punkty przesla
+}

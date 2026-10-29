@@ -1,0 +1,254 @@
+// Katalog konstrukcji sieci trakcyjnej dla edytora: karty wysiegnikow (traction_cantilevers.txt) i slupy (traction_supports.txt)
+// pogrupowane i opisane, zeby wstawiajacy wiedzial, co wstawia. TEN PLIK MOZNA EDYTOWAC RECZNIE (generator go nie rusza).
+// Exe czyta go z katalogu data\ razem z pozostalymi; bez niego edytor dobiera karty po staremu (tylko 11xx/12xx).
+//
+// Skladnia (jedna linia = jeden wpis, tytul po " : ", komentarz od "//"):
+//   category <id> : <tytul>
+//   group <id> <kategoria> [execution user|reach] : <tytul>
+//       execution user  - wykonanie wybiera uzytkownik (rurowe tomu 3: liczba przewodow, ramiona, hk)
+//       execution reach - wykonanie wynika z odleglosci A (teowniki: wyk. 1 1,30-1,75 ... wyk. 5 3,70-4,50)
+//   exec <n> : <opis wykonania n ostatniej grupy>
+//   family <id> <grupa> cards <karty> [curve yes|no] [toward yes|no|card] [image <sciezka>] : <tytul>
+//       cards  - karty po kolei, np. 1110-1119 albo 0111 0113; dobor bierze pierwsza karte, ktorej pasmo A obejmuje odleglosc
+//       curve  - rodzina tylko na luk (yes) albo tylko na prosta (no); brak = obojetne
+//       toward - odsuw przewodu do slupa (yes), od slupa (no), z numeru karty (card: nieparzysta do slupa, parzysta od slupa)
+//       image  - obrazek wysiegnika (na pozniej)
+//   polegroup <id> [foundation piles|cast] [site line|station|platform] poles <nazwy slupow> : <tytul>
+//   text <opis>   - dopisuje opis do ostatniego wpisu (mozna kilka linii)
+// Tytuly i opisy ze znakiem zapytania (?) to odczytanie z danych, a nie z katalogu - DO SPRAWDZENIA przez uzytkownika.
+
+// ===================================================================================================================
+category through : Podwieszenia przelotowe
+text Zwykłe podwieszenie na szlaku i stacji: wysięgnik trzyma linę nośną i przewody jezdne jednej sieci.
+category tension : Przęsła naprężenia, przerwy izolacyjne, dwie sieci
+text W miejscu, gdzie kończy się jeden odcinek naprężenia sieci, a zaczyna drugi: na jednym słupie dwie sieci albo przewód wyprowadzany do kotwy.
+category messenger : Podwieszenia samej liny nośnej
+text Wysięgnik trzyma tylko linę nośną (np. lina przechodząca do kotwy, przęsło naprężenia), bez przewodów jezdnych.
+category turnout : Podwieszenia zwrotnicowe i skrzyżowania sieci
+text Nad rozjazdami: ramiona do dwóch przewodów albo dwie sieci na jednym wysięgniku.
+category special : Specjalne
+text Peronowe, inna wysokość konstrukcyjna, wysięgniki pomocnicze i nietypowe.
+
+// ---- przelotowe ---------------------------------------------------------------------------------------------------
+group t_tube_swing through execution user : Rurowe przechylne (11xx, nowy katalog, tom 3)
+text Podstawowy wysięgnik rurowy przechylny: ukośnik z dolnego mocowania, odciąg z góry, wysięg z ramionami. Ostatnia cyfra karty = pasmo A.
+exec 1 : wyk. 1 - dwa przewody jezdne, ramiona lekkie, hk 1,70
+exec 2 : wyk. 2 - dwa przewody jezdne, ramiona ciężkie, hk 1,70
+exec 3 : wyk. 3 - jeden przewód jezdny, ramiona ciężkie, hk 1,70
+exec 4 : wyk. 4 - jeden przewód jezdny, ramiona ciężkie, hk 1,30
+exec 5 : wyk. 5 - jeden przewód jezdny, ramiona lekkie, hk 1,70
+family 111x t_tube_swing cards 1110-1119 curve no toward yes : 111x - prosta, odsuw do słupa
+family 112x t_tube_swing cards 1120-1129 curve no toward no : 112x - prosta, odsuw od słupa
+family 113x t_tube_swing cards 1130-1139 curve yes toward yes : 113x - łuk, odsuw do słupa
+family 114x t_tube_swing cards 1140-1149 curve yes toward no : 114x - łuk, odsuw od słupa
+
+group t_tube_fixed through execution user : Rurowe nieprzechylne (12xx, nowy katalog, tom 3)
+text Wysięgnik rurowy nieprzechylny (sztywny względem słupa). Ostatnia cyfra karty = pasmo A.
+exec 1 : wyk. 1 - dwa przewody jezdne, ramiona lekkie, hk 1,70
+exec 2 : wyk. 2 - dwa przewody jezdne, ramiona ciężkie, hk 1,70
+exec 3 : wyk. 3 - jeden przewód jezdny, ramiona ciężkie, hk 1,70
+exec 4 : wyk. 4 - jeden przewód jezdny, ramiona ciężkie, hk 1,30
+exec 5 : wyk. 5 - jeden przewód jezdny, ramiona lekkie, hk 1,70
+family 121x t_tube_fixed cards 1210-1219 curve no toward yes : 121x - prosta, odsuw do słupa
+family 122x t_tube_fixed cards 1220-1229 curve no toward no : 122x - prosta, odsuw od słupa
+family 123x t_tube_fixed cards 1230-1239 curve yes toward yes : 123x - łuk, odsuw do słupa
+family 124x t_tube_fixed cards 1240-1249 curve yes toward no : 124x - łuk, odsuw od słupa
+
+group t_tee12_swing through execution reach : Teowniki przechylne - sieć 1, 2 (YpC120-2C, YpC95-2C), stary katalog 011x
+text Stary katalog Kolprojekt: ukośnik teowy, lina leży w siodle na pręcie górnym. Wykonanie z pasma A: 2 - 1,75-2,20, 3 - 2,20-2,65, 4 - 2,65-3,10.
+family 0111 t_tee12_swing cards 0111 curve no toward yes : 0111 - prosta, odsuw do słupa
+family 0112 t_tee12_swing cards 0112 curve no toward no : 0112 - prosta, odsuw od słupa
+family 0113 t_tee12_swing cards 0113 curve yes toward yes : 0113 - łuk, odsuw do słupa
+family 0114 t_tee12_swing cards 0114 curve yes toward no : 0114 - łuk, odsuw od słupa
+
+group t_tee12_fixed through execution reach : Teowniki nieprzechylne - sieć 1, 2 (YpC120-2C, YpC95-2C), stary katalog 012x
+text Wyk. 1 (A 1,30-1,75) - wsporniki bramek, wysięg na osobnym izolatorze; wyk. 5 (A 3,70-4,50) - skrajnia 4,00 m.
+family 0121 t_tee12_fixed cards 0121 curve no toward yes : 0121 - prosta, odsuw do słupa
+family 0122 t_tee12_fixed cards 0122 curve no toward no : 0122 - prosta, odsuw od słupa
+family 0123 t_tee12_fixed cards 0123 curve yes toward yes : 0123 - łuk, odsuw do słupa (?)
+family 0124 t_tee12_fixed cards 0124 curve yes toward no : 0124 - łuk, odsuw od słupa (?)
+
+group t_tee34_swing through execution reach : Teowniki przechylne - sieć 3, 4 (C120-2C, C95-2C), stary katalog 013x
+family 0131 t_tee34_swing cards 0131 curve no toward yes : 0131 - prosta, odsuw do słupa (?)
+family 0132 t_tee34_swing cards 0132 curve no toward no : 0132 - prosta, odsuw od słupa (?)
+family 0133 t_tee34_swing cards 0133 curve yes toward yes : 0133 - łuk, odsuw do słupa (?)
+family 0134 t_tee34_swing cards 0134 curve yes toward no : 0134 - łuk, odsuw od słupa (?)
+
+group t_tee34_fixed through execution reach : Teowniki nieprzechylne - sieć 3, 4 (C120-2C, C95-2C), stary katalog 014x
+family 0141 t_tee34_fixed cards 0141 curve no toward yes : 0141 - prosta, odsuw do słupa (?)
+family 0142 t_tee34_fixed cards 0142 curve no toward no : 0142 - prosta, odsuw od słupa (?)
+family 0143 t_tee34_fixed cards 0143 curve yes toward yes : 0143 - łuk, odsuw do słupa (?)
+family 0144 t_tee34_fixed cards 0144 curve yes toward no : 0144 - łuk, odsuw od słupa (?)
+
+group t_tee5_swing through execution reach : Teowniki przechylne - sieć 5 (KB70, SKB70-C), stary katalog 015x, hk 1,30
+family 0151 t_tee5_swing cards 0151 curve no toward yes : 0151 - prosta, odsuw do słupa (?)
+family 0152 t_tee5_swing cards 0152 curve no toward no : 0152 - prosta, odsuw od słupa (?)
+family 0153 t_tee5_swing cards 0153 curve yes toward yes : 0153 - łuk, odsuw do słupa (?)
+family 0154 t_tee5_swing cards 0154 curve yes toward no : 0154 - łuk, odsuw od słupa (?)
+
+group t_tee5_fixed through execution reach : Teowniki nieprzechylne - sieć 5 (KB70, SKB70-C), stary katalog 016x, hk 1,30
+family 0161 t_tee5_fixed cards 0161 curve no toward yes : 0161 - prosta, odsuw do słupa (?)
+family 0162 t_tee5_fixed cards 0162 curve no toward no : 0162 - prosta, odsuw od słupa (?)
+family 0163 t_tee5_fixed cards 0163 curve yes toward yes : 0163 - łuk, odsuw do słupa (?)
+family 0164 t_tee5_fixed cards 0164 curve yes toward no : 0164 - łuk, odsuw od słupa (?)
+
+// ---- przesla naprezenia, przerwy izolacyjne, dwie sieci -----------------------------------------------------------
+group n_tube_zero tension execution user : Rurowe nieprzechylne z przewodami wprost na wysięgu (120x) - "zerowe" (?)
+text Bez ramion: przewody na uchwytach 4120-3 wprost na wysięgu (wyk. 1, 2 dwa przewody 0,04 m od A, wyk. 3, 4 jeden w A).
+exec 1 : wyk. 1 - dwa przewody, hk 1,70
+exec 2 : wyk. 2 - dwa przewody, hk 1,70
+exec 3 : wyk. 3 - jeden przewód, hk 1,70
+exec 4 : wyk. 4 - jeden przewód, hk 1,30
+family 120x n_tube_zero cards 1201-1206 : 120x
+
+group n_tube_second tension execution user : Rurowe przechylne z drugim (podniesionym) przewodem (117x, 118x)
+text Drugi przewód (wyprowadzany do kotwy) na uchwycie 4120-3 wprost na wysięgu, 0,08 m od przewodu ramion.
+exec 1 : wyk. 1 - hk 1,70
+family 117x n_tube_second cards 1172-1176 toward yes : 117x - ramiona do słupa, drugi przewód dalej od słupa
+family 118x n_tube_second cards 1181-1186 toward no : 118x - ramiona od słupa, drugi przewód bliżej słupa
+
+group n_tube_double tension execution user : Rurowe - dwie sieci w przęśle naprężenia (102x)
+text Dwie liny nośne (dwie sieci) na jednym wysięgniku: dwa uchwyty liny na ukosniku i dwa przewody na wysięgu.
+exec 1 : wyk. 1 - hk 1,30
+exec 2 : wyk. 2 - hk 1,50
+family 102x n_tube_double cards 1022-1026 : 102x
+
+group n_tube_rope tension execution user : Rurowe - łuk albo skrócone przęsło naprężenia, wysięg z liny (105x, 125x, 127x)
+text Sieć zewnętrzna: zamiast rury wysięgu lina od uchwytu przy nasadzie ukośnika, ramiona wiszące na linie.
+exec 2 : wyk. 2
+exec 3 : wyk. 3
+exec 4 : wyk. 4
+family 105x n_tube_rope cards 1052-1056 : 105x - przechylne (?)
+family 125x n_tube_rope cards 1250-1257 : 125x - nieprzechylne (?)
+family 127x n_tube_rope cards 1270-1277 : 127x - nieprzechylne, para ramion (?)
+
+group n_tee12 tension execution reach : Teowniki - sieć 1, 2: przerwy izolacyjne i przęsła naprężenia (0115, 0116, 0120, 0137-0140)
+family 0115 n_tee12 cards 0115 toward yes : 0115 - sekcyjna przerwa izolacyjna, do słupa
+family 0116 n_tee12 cards 0116 toward no : 0116 - sekcyjna przerwa izolacyjna, od słupa
+family 0120 n_tee12 cards 0120 : 0120 - przęsło naprężenia (bez ramion, dwa przewody)
+family 0137 n_tee12 cards 0137 0138 0139 0140 curve yes toward card : 0137-0140 - przęsło naprężenia na łuku
+
+group n_tee34 tension execution reach : Teowniki - sieć 3, 4: przerwy izolacyjne (0135, 0136)
+family 0135 n_tee34 cards 0135 toward yes : 0135 - sekcyjna przerwa izolacyjna, do słupa
+family 0136 n_tee34 cards 0136 toward no : 0136 - sekcyjna przerwa izolacyjna, od słupa
+
+group n_tee5 tension execution reach : Teowniki - sieć 5: przerwy izolacyjne i przęsła naprężenia (0155-0160, 0172-0174)
+family 0155 n_tee5 cards 0155 toward yes : 0155 - sekcyjna przerwa izolacyjna, do słupa
+family 0156 n_tee5 cards 0156 toward no : 0156 - sekcyjna przerwa izolacyjna, od słupa
+family 0158 n_tee5 cards 0158 0159 toward card : 0158, 0159 - skrócone przęsło naprężenia
+family 0160 n_tee5 cards 0160 : 0160 - przęsło naprężenia
+family 0172 n_tee5 cards 0172 0173 0174 curve yes : 0172-0174 - przęsło naprężenia na łuku
+
+// ---- sama lina nosna ------------------------------------------------------------------------------------------------
+group m_tube messenger execution user : Rurowe - sama lina nośną (129x, 100x, 101x)
+exec 1 : wyk. 1
+family 129x m_tube cards 1290-1297 : 129x - nieprzechylne
+family 100x m_tube cards 1002-1005 : 100x - przęsło naprężenia, rozpora z dołu
+family 101x m_tube cards 1012-1015 : 101x - przęsło naprężenia, odciąg z góry
+
+group m_tee messenger execution reach : Teowniki - sama lina nośną (0108, 0109)
+family 0108 m_tee cards 0108 : 0108 - przechylne
+family 0109 m_tee cards 0109 : 0109 - nieprzechylne
+
+// ---- zwrotnicowe ----------------------------------------------------------------------------------------------------
+group w_tube turnout execution user : Rurowe - rozjazdowe (109x, 126x, 128x)
+text Ramiona do dwóch przewodów nad rozjazdem (6202+6212, 6206, 6209).
+exec 2 : wyk. 2 - para ramion
+exec 3 : wyk. 3
+exec 4 : wyk. 4
+family 109x w_tube cards 1091-1099 : 109x - jednej sieci, dwa uchwyty ramion
+family 126x w_tube cards 1260-1269 : 126x - nieprzechylne (?)
+family 128x w_tube cards 1280-1289 : 128x - nieprzechylne (?)
+
+group w_tee turnout execution reach : Teowniki - rozjazdowe i skrzyżowania sieci (0177-0197)
+family 0177 w_tee cards 0177 0178 0179 0180 toward card : 0177-0180 - rozjazdowe jednej sieci
+family 0181 w_tee cards 0181 0182 0184 : 0181, 0182, 0184 - dwie sieci, skrzyżowanie pojedyncze
+family 0192 w_tee cards 0192 0193 0194 : 0192-0194 - dwie sieci, skrzyżowanie podwójne
+family 0196 w_tee cards 0196 0197 : 0196, 0197 - nad rozjazdem krzyżowym podwójnym
+
+// ---- specjalne ------------------------------------------------------------------------------------------------------
+group s_platform special execution user : Peronowe przelotowe (103x, 104x)
+text Słup na peronie: uziemiony ukośnik 6010, A stałe 4,70 / 5,00 / 5,30 m.
+exec 1 : wyk. 1
+exec 2 : wyk. 2
+family 103x s_platform cards 1031-1037 : 103x (?)
+family 104x s_platform cards 1041-1047 : 104x (?)
+
+group s_tube_push special execution user : Rurowe - wysięg rozpierany od ukośnika, odsuw od słupa (106x, 108x)
+text Wysięg poziomo od ukośnika (4070 + 4400), wychodzi za drut, ramiona wracają do słupa; linka od uchwytu liny do końca wysięgu.
+exec 1 : wyk. 1
+exec 2 : wyk. 2
+exec 3 : wyk. 3
+exec 4 : wyk. 4
+family 106x s_tube_push cards 1061-1066 : 106x - sieć wewnętrzna, z linką pionową
+family 108x s_tube_push cards 1081-1086 : 108x - sieć zewnętrzna
+
+group s_tee_aux special execution reach : Teowniki - wysięgniki pomocnicze (0167, 0169)
+family 0167 s_tee_aux cards 0167 : 0167 - rozstawione wysięgniki pomocnicze (jeden z pary)
+family 0169 s_tee_aux cards 0169 : 0169 - ramiona odciągowe specjalne na linie
+
+group s_tee34_low special execution reach : Teowniki - inna wysokość konstrukcyjna, sieć 3, 4 (093x, 094x)
+family 0931 s_tee34_low cards 0931-0934 toward card : 0931-0934 - hk 0,25-0,45
+family 0935 s_tee34_low cards 0935-0938 toward card : 0935-0938 - hk 0,45-1,30
+family 0940 s_tee34_low cards 0940 : 0940 - przęsło naprężenia, hk 0,45-1,30
+family 0941 s_tee34_low cards 0941-0944 toward card : 0941-0944 - hk 1,70-2,10
+family 0945 s_tee34_low cards 0945-0948 toward card : 0945-0948 - hk od 2,10
+
+group s_tee5_low special execution reach : Teowniki - inna wysokość konstrukcyjna, sieć 5 (096x-098x)
+family 0961 s_tee5_low cards 0961-0964 toward card : 0961-0964 - hk 0,25-0,45
+family 0965 s_tee5_low cards 0965-0968 toward card : 0965-0968 - hk 0,45-1,30
+family 0970 s_tee5_low cards 0970 : 0970 - przęsło naprężenia, hk 1,70
+family 0971 s_tee5_low cards 0971-0978 toward card : 0971-0978 - hk 1,70
+family 0981 s_tee5_low cards 0981-0984 toward card : 0981-0984 - hk 1,70-2,10
+family 0985 s_tee5_low cards 0985-0988 toward card : 0985-0988 - hk od 2,10
+
+group s_tube_vol2 special execution user : Rurowe, tom 2 (07xx) - niestandardowe wysokości konstrukcyjne (niskie i wysokie hk)
+text Podwieszenia dla sieci o hk innej niż normalna: są niskie i wysokie. Opisy rodzin do uzupełnienia przez użytkownika.
+exec 1 : wyk. 1
+exec 2 : wyk. 2
+exec 3 : wyk. 3
+family 070x s_tube_vol2 cards 0700-0705 : 070x - hk 0,55 (?)
+family 071x s_tube_vol2 cards 0710-0715 toward yes : 071x - poziome, hk 0,35 (?)
+family 072x s_tube_vol2 cards 0720-0725 toward no : 072x - poziome, hk 0,35 (?)
+family 073x s_tube_vol2 cards 0730-0738 toward yes : 073x - hk 0,60 (?)
+family 074x s_tube_vol2 cards 0740-0748 toward no : 074x - hk 0,60 (?)
+family 075x s_tube_vol2 cards 0751-0755 : 075x - przechylne, hk 1,50 (?)
+family 076x s_tube_vol2 cards 0761-0765 : 076x - przechylne, hk 1,50 (?)
+family 077x s_tube_vol2 cards 0770-0775 : 077x - przechylne, hk 1,90 (?)
+family 078x s_tube_vol2 cards 0780-0785 : 078x - przechylne, hk 1,90 (?)
+family 079x s_tube_vol2 cards 0790-0795 : 079x - poziome, hk 1,00 (?)
+
+// ===================================================================================================================
+// Slupy.
+// Wysokosc slupa 8,2 / 7,8 / 7,4 m = szlak / rownia stacyjna / peron (uzytkownik 2026-10-22: prawdopodobnie). Betonowe tej zaleznosci nie maja.
+// no_switch = slupy grupy nie stoja przy rozjazdach (1701/1711 - Jan 2026-10-23): edytor rysuje je na czerwono i zglasza blad.
+// Przy rozjezdzie = tor slupa jest rozjazdem albo sciezka rozjazdu biegnie blizej niz 8 m od stopy slupa.
+polegroup p_concrete no_switch poles 1701 1711 : Betonowe (1701, 1711)
+text Słupy betonowe: wysokość nie zależy od miejsca.
+polegroup p_ibeam_line foundation piles site line poles 1665 : Dwuteowe 200x200 na palach, 8,2 m (szlak?)
+polegroup p_ibeam_station foundation piles site station poles 1666 : Dwuteowe 200x200 na palach, 7,8 m (równia stacyjna?)
+polegroup p_ibeam_platform foundation piles site platform poles 1667 : Dwuteowe 200x200 na palach, 7,4 m (peron?)
+polegroup p_lattice_line foundation piles site line poles 1611-11 1611-11-1 1611-12 1611-13 1611-14 1611-15 : Kratowe 1611 na palach, 8,2 m (szlak?)
+text Dopisek -11 ... -15 = nośność C120 ... C200E (większa = grubsza kratownica i większy pal).
+polegroup p_lattice_station foundation piles site station poles 1613-11 1613-11-1 1613-12 1613-13 1613-14 1613-15 : Kratowe 1613 na palach, 7,8 m (równia stacyjna?)
+text Dopisek -11 ... -15 = nośność C120 ... C200E (większa = grubsza kratownica i większy pal).
+polegroup p_lattice_platform foundation piles site platform poles 1614-11 1614-11-1 1614-12 1614-13 : Kratowe 1614 na palach, 7,4 m (peron?)
+text Dopisek -11 ... -13 = nośność C120 ... C160E (większa = grubsza kratownica i większy pal).
+
+// Slupy bramek. 31xx - miejsce z komentarzy w .inc. 303x - dopisek -1...-4 = wykonanie fundamentu (glowica 25 / 54 / 110 / 170 cm);
+// przypisanie do miejsca (-1 szlak, -2 rownia stacyjna, -3 i -4 perony wg wysokosci peronu) PRAWDOPODOBNE - do sprawdzenia w starym Kolprojekcie.
+polegroup g_3113 foundation piles site line poles 3113 : Słup bramki przelotowo-końcowy 3113 (jeden fundament palowy, prześwit 7,65/8,05)
+polegroup g_3123 foundation piles site line poles 3123 : Słup bramki przelotowo-końcowy 3123 (dwa fundamenty palowe, prześwit 7,65/8,05)
+polegroup g_3112 foundation piles site station poles 3112 : Słup bramki przelotowo-końcowy 3112 (jeden fundament palowy, prześwit 7,65/8,05)
+polegroup g_3122 foundation piles site station poles 3122 : Słup bramki przelotowo-końcowy 3122 (dwa fundamenty palowe, prześwit 7,65/8,05)
+polegroup g_3111 foundation piles site platform poles 3111 : Słup bramki przelotowo-końcowy 3111 (jeden fundament palowy, prześwit 7,65/8,05)
+polegroup g_3121 foundation piles site platform poles 3121 : Słup bramki przelotowo-końcowy 3121 (dwa fundamenty palowe, prześwit 7,65/8,05)
+polegroup g_3031 poles 3031-1 3031-2 3031-3 3031-4 : 3031 przelotowo-końcowy, prześwit 7,35/7,75 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3032 poles 3032-1 3032-2 3032-3 3032-4 : 3032 końcowy, prześwit 7,35/7,75 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3033 poles 3033-1 3033-2 3033-3 3033-4 : 3033 przelotowo-końcowy, prześwit 8,15/8,55 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3034 poles 3034-1 3034-2 3034-3 3034-4 : 3034 końcowy, prześwit 8,15/8,55 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3035 poles 3035-1 3035-2 3035-3 3035-4 : 3035 przelotowo-końcowy, prześwit 5,35/5,75 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3036 poles 3036-1 3036-2 3036-3 3036-4 : 3036 końcowy, prześwit 5,35/5,75 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3037 poles 3037-1 3037-2 3037-3 3037-4 : 3037 przelotowo-końcowy, prześwit 7,55/7,95 (-1 szlak?, -2 równia?, -3/-4 peron?)
+polegroup g_3038 poles 3038-1 3038-2 3038-3 3038-4 : 3038 końcowy, prześwit 7,55/7,95 (-1 szlak?, -2 równia?, -3/-4 peron?)
+text Dopisek -1...-4: wykonanie fundamentu, głowica 25 / 54 / 110 / 170 cm.

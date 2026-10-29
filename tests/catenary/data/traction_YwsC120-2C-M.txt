@@ -1,0 +1,26 @@
+{
+traction_code: 30
+symbol: YwsC120-2C-M
+
+// przewody jezdne (nazwa przewodu z pliku traction_tables.txt)
+contact_wire_num: 2
+contact_wire: Djp100
+contact_tension: 1906           // daN, lacznie wszystkie przewody jezdne (karta 0002)
+contact_wire_spacing: 0.08      // m; wartosc do potwierdzenia na karcie 5300
+
+// liny nosne; naciag laczny wszystkich lin w daN
+catenary_wire_num: 1
+catenary_wire: L120
+catenary_tension: 1588
+
+// podwieszenie Y; naciag w daN
+y_wire: L25
+y_tension: 200
+y_length: 42 16                 // pary: od rozpietosci [m], dlugosc Y [m]; krotsze przesla bez Y
+
+// wieszaki
+hanger_table: 11                // tablica rozstawu z pliku traction_tables.txt
+hanger_mass: 0.1                // kg, z uchwytami (dopasowana do tablic dlugosci wieszakow)
+
+height: 1.70                    // m, wysokosc konstrukcyjna; w scenerii decyduja punkty przesla
+}

@@ -1,0 +1,57 @@
+ETAP ZEROWY – UWAGI DO DANYCH (stan na 2026-10-11)
+
+Zakres: 16 projektów Blendera (0700–0790, 1000, 1000-2, 1110–1140), 300 złożeń, w tym 3 z izolatorami 25 kV.
+Pliki z dopiskiem "-1" (zespawane, z LOD) nie były czytane.
+Zmiana względem poprzedniej wersji: doszło 12 złożeń z poprawionego 0700.blend, a położenia części są teraz liczone
+od punktu drutu jezdnego (w 0700, 0710, 0720 i jednym złożeniu 0765 złożenia stoją w pliku obok siebie co 1 m w osi X;
+to przesunięcie jest odjęte i zapisane w zlozenia_przeglad.csv).
+
+0. Plik 0700.blend
+   Wszystkie 12 złożeń (0700–0705, wyk. 2 i 3) ma tylko 7 części: 4120-03, 4140-1, 4210-02, 4500-02, 7010-1, 2x 7100-1.
+   Na karcie 23-0700 są jeszcze m.in. 4050-1, 4400-1 oraz rury 6003, 6002, 6111 – tych w złożeniach nie ma.
+   Wyjaśnione: w tym pliku rury są zespawane z izolatorami w jeden obiekt, więc osobnych rur nie ma.
+
+1. To samo złożenie w kilku plikach (100 przypadków)
+   W 97 przypadkach części są identyczne – wzięta wersja z nowszego pliku.
+   W 3 przypadkach części się różnią – wzięta wersja pełniejsza:
+   - 0765-02: w 0750.blend są dodatkowo 6205-01, 6205-02 i 4x 4110-01, w 0760.blend ich nie ma
+   - 0765-03: w 0750.blend są dodatkowo 6203-01 i 2x 4110-01, w 0760.blend ich nie ma
+   - 1115-1:  w 1000.blend brakuje rur (6001-07, 6007-06-2, 6011-06), w 1110.blend są
+
+2. Koniec izolatora a pasmo A z karty
+   Złożenia nie zawierają mocowania do słupa, a wymiar A z karty jest liczony do czoła słupa razem z mocowaniem.
+   Skrypt mierzy więc koniec izolatora, nie czoło słupa (kolumna koniec_izolatora_m w zlozenia_przeglad.csv).
+   Koniec izolatora względem dolnej granicy pasma A:
+   - większość złożeń: dokładnie na dolnej granicy
+   - grupy 0730 i 0740: +1,9 cm
+   - 0710-02/-03, 0720-02/-03, 0702: +5 cm
+   - 0704, 0705: -5 cm | 0738: -8,1 cm | 0765-02/-03 (0750.blend): -9,7 cm
+   Po doliczeniu mocowania (ok. 20 cm, do potwierdzenia dla każdego typu mocowania) wszystkie mieszczą się w paśmie.
+   To nie są błędy. Wcześniejsza wersja tych uwag nazywała je odstępstwami – niesłusznie.
+   0738: górny izolator 0,43 m nad środkowym (w 0730–0735 ok. 1,1 m). Z rur z karty nie da się złożyć inaczej;
+   prawdopodobnie błąd w katalogu (wymiar ok. 1,20 m nie został zmniejszony). Złożenie zostaje.
+
+3. Nazwy punktów zaczepienia nie są jednolite
+   - 11xx: Drut_jezdny, Lina_nosna
+   - 0700: Drut_jezdny i Lina_Nośna
+   - 0710–0780: tylko Lina_Nośna (drut przyjęty pod liną, na wysokości zero)
+   - 0790: Przewod_jezdny i Lina_Nośna
+   Skrypt rozpoznaje wszystkie trzy warianty.
+
+4. Wysokość konstrukcyjna odczytana z punktu liny nośnej
+   0700: 0,55 m | 0710/0720: 0,35 m | 0730/0740: 0,60 m | 0750/0760: 1,50 m (dwa złożenia 1,48) | 0770/0780: 1,90 m | 0790: 1,00 m
+   11xx: 1,70 m, wykonanie 4: 1,30 m
+
+5. Części ze skalą inną niż 1
+   Tylko 4490-0 (linka, 310 sztuk) i 9811-1 (lina, 38 sztuk). Odbić lustrzanych nie ma.
+
+6. Kopie tej samej części różnią się liczbą trójkątów
+   Np. 4110-01 ma od 366 do 760, 4140-1 od 1307 do 1757. W zestawieniu podana największa wartość.
+
+PLIKI
+zlozenia.json          – pełne dane: dla każdego złożenia punkty zaczepienia i lista części (położenie, macierz obrotu 3x3, skala)
+zlozenia_czesci.csv    – to samo w jednej tabeli, wiersz na część
+zlozenia_przeglad.csv  – wiersz na złożenie: liczba części, trójkąty, hk, koniec izolatora
+zestawienie_czesci.csv – ile razy występuje każda z 92 części i jaki ma udział w trójkątach
+
+Układ współrzędnych jak w Blenderze: zero w drucie jezdnym, Y w stronę słupa, Z w górę, X wzdłuż toru. Jednostki: metry.

@@ -1,0 +1,26 @@
+{
+traction_code: 37
+symbol: YC120-2CS150
+
+// przewody jezdne (nazwa przewodu z pliku traction_tables.txt)
+contact_wire_num: 2
+contact_wire: Djp150
+contact_tension: 2966           // daN, lacznie oba przewody: 28 ciezarow x 27 kg x 1:4 (Kolprojekt 2010, 33-0019-2/-3)
+contact_wire_spacing: 0.08      // m; wartosc do potwierdzenia na karcie 5300
+
+// liny nosne; naciag laczny wszystkich lin w daN
+catenary_wire_num: 1
+catenary_wire: L120
+catenary_tension: 1589
+
+// podwieszenie Y; naciag w daN
+y_wire: L35
+y_tension: 250
+y_length: 42 17                 // pary: od rozpietosci [m], dlugosc Y [m]; krotsze przesla bez Y
+
+// wieszaki
+hanger_table: 36                // tablica rozstawu z pliku traction_tables.txt
+hanger_mass: 0.5                // kg, z uchwytami (dopasowana do tablic dlugosci wieszakow)
+
+height: 1.70                    // m, wysokosc konstrukcyjna; w scenerii decyduja punkty przesla
+}

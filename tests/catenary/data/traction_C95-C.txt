@@ -1,0 +1,20 @@
+{
+traction_code: 10
+symbol: C95-C
+
+// przewody jezdne (nazwa przewodu z pliku traction_tables.txt)
+contact_wire_num: 1
+contact_wire: Djp100
+contact_tension: 956            // daN, lacznie wszystkie przewody jezdne (karta 0002)
+
+// liny nosne; naciag laczny wszystkich lin w daN
+catenary_wire_num: 1
+catenary_wire: L95
+catenary_tension: 1167
+
+// wieszaki
+hanger_table: 5                 // tablica rozstawu z pliku traction_tables.txt
+hanger_mass: 0.3                // kg, z uchwytami (dopasowana do tablic dlugosci wieszakow)
+
+height: 1.30                    // m, wysokosc konstrukcyjna; w scenerii decyduja punkty przesla
+}

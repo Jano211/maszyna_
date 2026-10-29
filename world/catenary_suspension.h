@@ -42,6 +42,7 @@ struct suspension {
     // płaszczyzny wysięgnika przy słupie (oś słupa przesunięta wzdłuż toru do punktu mocowania na konsoli), "spread x y z"
     // słup stawia inny wpis w tym samym miejscu (trzeci wysięgnik przy rozstawionych, w osi słupa): ten tylko z niego korzysta
     bool   shared_pole { false };
+    bool   above_pole { false };         // mocowania mogą wyjść ponad najwyższe położenie na słupie (uchwyt liny wyżej; słupy za niskie - tymczasowo)
     bool   has_spread { false };
     double spread[ 3 ] { 0.0, 0.0, 0.0 };
 };
