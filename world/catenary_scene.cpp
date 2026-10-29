@@ -21,6 +21,7 @@ http://mozilla.org/MPL/2.0/.
 #include <set>
 #include "simulation/simulation.h"
 #include "utilities/Globals.h"
+#include "scene/scenelayers.h"
 
 #include <algorithm>
 #include <limits>
@@ -29,6 +30,7 @@ http://mozilla.org/MPL/2.0/.
 
 #include <cmath>
 #include <fstream>
+#include <iterator>
 #include <locale>
 #include <set>
 #include <sstream>
@@ -75,6 +77,10 @@ struct scene_file {
     bool changed { false };             // są zmiany do zapisania
 };
 std::vector<scene_file> Files;
+// warstwa scenerii (plik), która dołącza plik sieci dyrektywą "catenary"; dla plików z edytora ta, do której trafi dyrektywa
+std::map<std::string, std::size_t> FileLayers;
+// "pliki" sieci, których wpisy są zwykłymi wpisami node w pliku scenerii (warstwie): zapisuje je zapis scenerii, nie catenary_scene_save()
+std::set<std::string> InlineFiles;
 
 // łańcuch sieci z pliku: przęsła od podwieszenia do podwieszenia
 struct scene_chain {
@@ -172,6 +178,9 @@ file_named( std::string const &Name ) {
 std::size_t Resolved { 0 };
 // czy sceneria przeszła już inicjalizację (FirstInit); plik podwieszeń dołączony później jest wiązany od razu
 bool Initialized { false };
+// wpisy node sieci z plików scenerii przed FirstInit, po plikach w kolejności wczytania: dodawane razem tuż przed InitTraction,
+// jak plik z dyrektywy - wtedy kolejność wpisów w pliku nie ma znaczenia (łańcuch przed swoimi bramkami i kotwieniami)
+std::vector<std::pair<std::string, catenary::suspension_file>> Pending;
 // uwagi solvera już wypisane do logu; ta sama uwaga dla tej samej karty idzie tylko raz, żeby nie zalać logu
 std::set<std::string> Notes;
 
@@ -1652,6 +1661,143 @@ umbrella_members( std::string const &Name ) {
 
 } // namespace
 
+namespace {
+
+// wpisy rozebranego pliku (albo jednego wpisu node ze scenerii) do sceny: podwieszenia czekają na catenary_scene_resolve(),
+// bramki, kotwienia i łańcuchy są od razu
+void
+add_content( catenary::suspension_file const &File, std::string const &Filename ) {
+    // ten sam wpis drugi raz (plik dołączony dwa razy, dyrektywą i jako warstwa): pomijany. Inaczej w scenie są dwie kopie
+    // o tej samej nazwie, edytor zmienia jedną, a druga zostaje na starym miejscu
+    auto const twice = [ & ]( char const *Kind, std::string const &Name, bool const Taken ) {
+        if( Name.empty() || false == Taken ) { return false; }
+        ErrorLog( "Bad scenario: " + std::string( Kind ) + " \"" + Name + "\" from \"" + Filename + "\" is defined more than once (the file is included twice?); the copy is skipped" );
+        return true;
+    };
+    for( auto const &entry : File.entries ) {
+        if( twice( "suspension", entry.name, suspension_named( Filename, entry.name ) < Suspensions.size() ) ) { continue; }
+        scene_suspension suspension;
+        suspension.data = entry;
+        suspension.skin = ( entry.skin.empty() ? File.skin : entry.skin );
+        suspension.file = Filename;
+        Suspensions.emplace_back( suspension );
+    }
+    for( auto const &line : File.gantries ) {
+        if( twice( "gantry", line.name, std::any_of( Gantries.begin(), Gantries.end(), [ & ]( scene_gantry const &Gantry ) { return false == Gantry.removed && Gantry.file == Filename && Gantry.data.name == line.name; } ) ) ) { continue; }
+        scene_gantry gantry;
+        gantry.data = line;
+        gantry.file = Filename;
+        Gantries.emplace_back( gantry );
+        assemble_gantry( Gantries.back() );
+    }
+    // kotwienia przed łańcuchami: ostatnie przęsło łańcucha kończy się na ich urządzeniu (łańcuch wpisany wcześniej idzie za nim)
+    for( auto const &line : File.anchors ) {
+        if( twice( "anchor", line.name, anchor_named( Filename, line.name ) != nullptr ) ) { continue; }
+        scene_anchor anchor;
+        anchor.data = line;
+        anchor.file = Filename;
+        Anchors.emplace_back( anchor );
+        assemble_anchor( Anchors.back() );
+        follow_anchor( Anchors.back() );
+    }
+    // przęsła łańcuchów powstają od razu: przed inicjalizacją scenerii łączy je InitTraction razem z resztą sieci
+    for( auto const &line : File.chains ) {
+        if( twice( "chain", line.name, std::any_of( Chains.begin(), Chains.end(), [ & ]( scene_chain const &Chain ) { return false == Chain.removed && Chain.file == Filename && Chain.data.name == line.name; } ) ) ) { continue; }
+        scene_chain chain;
+        chain.data = line;
+        chain.file = Filename;
+        Chains.emplace_back( chain );
+        rebuild_chain( Chains.back() );
+    }
+}
+
+} // namespace
+
+void
+catenary_scene_node( cParser &Input, std::string const &Type, double const RangeMax, double const RangeMin, std::string const &Name, std::string const &File ) {
+
+    // treść wpisu do jego końca, z wielkością liter (symbole typów sieci, ścieżki tekstur)
+    auto const closing { "end" + Type };
+    std::vector<std::string> tokens { "node", std::to_string( RangeMax ), std::to_string( RangeMin ), ( Name.empty() ? std::string( "none" ) : Name ), Type };
+    auto const line { Input.Line() };
+    while( true ) {
+        auto token { Input.getToken<std::string>( false ) };
+        if( token.empty() ) {
+            ErrorLog( "Bad scenario: " + Type + " \"" + Name + "\" without \"" + closing + "\" in file \"" + Input.Name() + "\" (line " + std::to_string( line ) + ")" );
+            return;
+        }
+        auto lower { token };
+        std::transform( lower.begin(), lower.end(), lower.begin(), []( unsigned char const C ) { return static_cast<char>( std::tolower( C ) ); } );
+        tokens.emplace_back( token );
+        if( lower == closing ) { tokens.back() = closing; break; }
+    }
+    if( false == Global.bLoadTraction ) { return; }
+    catenary::suspension_file file;
+    std::vector<std::string> errors;
+    catenary::parse_suspensions( tokens, File, file, errors );
+    for( auto const &error : errors ) {
+        ErrorLog( error );
+    }
+    InlineFiles.emplace( File );
+    if( file_named( File ) == nullptr ) {
+        scene_file known;
+        known.name = File;
+        Files.emplace_back( known );
+    }
+    FileLayers.emplace( File, static_cast<std::size_t>( scene::Layers.handle() ) );
+    if( Initialized ) {
+        // wpis po FirstInit: tory, przęsła i modele już są
+        add_content( file, File );
+        catenary_scene_resolve();
+        return;
+    }
+    auto pending { std::find_if( Pending.begin(), Pending.end(), [ & ]( auto const &Entry ) { return Entry.first == File; } ) };
+    if( pending == Pending.end() ) {
+        Pending.emplace_back( File, catenary::suspension_file() );
+        pending = std::prev( Pending.end() );
+    }
+    auto &target { pending->second };
+    target.entries.insert( target.entries.end(), file.entries.begin(), file.entries.end() );
+    target.chains.insert( target.chains.end(), file.chains.begin(), file.chains.end() );
+    target.gantries.insert( target.gantries.end(), file.gantries.begin(), file.gantries.end() );
+    target.anchors.insert( target.anchors.end(), file.anchors.begin(), file.anchors.end() );
+}
+
+void
+catenary_scene_skin( cParser &Input, std::string const &File ) {
+
+    auto const skin { Input.getToken<std::string>( false ) };
+    if( skin.empty() ) {
+        ErrorLog( "Bad scenario: \"skin\" without a texture name in file \"" + Input.Name() + "\" (line " + std::to_string( Input.Line() ) + ")" );
+        return;
+    }
+    if( false == Global.bLoadTraction ) { return; }
+    InlineFiles.emplace( File );
+    if( file_named( File ) == nullptr ) {
+        scene_file known;
+        known.name = File;
+        Files.emplace_back( known );
+    }
+    file_named( File )->skin = skin;
+    if( Initialized ) { return; }
+    auto pending { std::find_if( Pending.begin(), Pending.end(), [ & ]( auto const &Entry ) { return Entry.first == File; } ) };
+    if( pending == Pending.end() ) {
+        Pending.emplace_back( File, catenary::suspension_file() );
+        pending = std::prev( Pending.end() );
+    }
+    pending->second.skin = skin;
+}
+
+void
+catenary_scene_loaded() {
+
+    auto pending { std::move( Pending ) };
+    Pending.clear();
+    for( auto const &file : pending ) {
+        add_content( file.second, file.first );
+    }
+}
+
 // obsługa dyrektywy "catenary" ze scenerii: wczytuje wskazany plik podwieszeń
 void
 catenary_scene_load( cParser &Input ) {
@@ -1689,36 +1835,9 @@ catenary_scene_load( cParser &Input ) {
     for( auto const &error : errors ) {
         ErrorLog( error );
     }
-    for( auto const &entry : file.entries ) {
-        scene_suspension suspension;
-        suspension.data = entry;
-        suspension.skin = ( entry.skin.empty() ? file.skin : entry.skin );
-        suspension.file = filename;
-        Suspensions.emplace_back( suspension );
-    }
-    for( auto const &line : file.gantries ) {
-        scene_gantry gantry;
-        gantry.data = line;
-        gantry.file = filename;
-        Gantries.emplace_back( gantry );
-        assemble_gantry( Gantries.back() );
-    }
-    // kotwienia przed łańcuchami: ostatnie przęsło łańcucha kończy się na ich urządzeniu
-    for( auto const &line : file.anchors ) {
-        scene_anchor anchor;
-        anchor.data = line;
-        anchor.file = filename;
-        Anchors.emplace_back( anchor );
-        assemble_anchor( Anchors.back() );
-    }
-    // przęsła łańcuchów powstają od razu: przed inicjalizacją scenerii łączy je InitTraction razem z resztą sieci
-    for( auto const &line : file.chains ) {
-        scene_chain chain;
-        chain.data = line;
-        chain.file = filename;
-        Chains.emplace_back( chain );
-        rebuild_chain( Chains.back() );
-    }
+    add_content( file, filename );
+    // wczytywany z pliku tej warstwy (tylko przy otwarciu scenerii do edycji, inaczej warstw nie ma)
+    FileLayers.emplace( filename, static_cast<std::size_t>( scene::Layers.handle() ) );
     if( file_named( filename ) == nullptr ) {
         // komentarze z początku pliku, żeby zapis z edytora ich nie zgubił
         scene_file known;
@@ -1746,6 +1865,8 @@ catenary_scene_load( cParser &Input ) {
 void
 catenary_scene_resolve() {
 
+    // wpisy ze scenerii bez wywołania catenary_scene_loaded() przed InitTraction
+    if( false == Initialized && false == Pending.empty() ) { catenary_scene_loaded(); }
     Initialized = true;
     if( Resolved >= Suspensions.size() ) { return; }
 
@@ -1837,6 +1958,9 @@ catenary_scene_clear() {
     Gantries.clear();
     Anchors.clear();
     Files.clear();
+    FileLayers.clear();
+    InlineFiles.clear();
+    Pending.clear();
     Notes.clear();
     Resolved = 0;
     Initialized = false;
@@ -2090,8 +2214,57 @@ catenary_scene_changed() {
 std::vector<std::string>
 catenary_scene_new_files() {
     std::vector<std::string> names;
-    for( auto const &file : Files ) { if( file.created ) { names.push_back( file.name ); } }
+    for( auto const &file : Files ) { if( file.created && InlineFiles.count( file.name ) == 0 ) { names.push_back( file.name ); } }
     return names;
+}
+
+bool
+catenary_scene_file_inline( std::string const &File ) {
+    return InlineFiles.count( File ) != 0;
+}
+
+void
+catenary_scene_file_inline( std::string const &File, bool const Inline ) {
+    if( Inline ) { InlineFiles.emplace( File ); }
+    else { InlineFiles.erase( File ); }
+}
+
+bool
+catenary_scene_file_changed( std::string const &File ) {
+    auto const *file { file_named( File ) };
+    return file != nullptr && file->changed;
+}
+
+void
+catenary_scene_file_saved( std::string const &File ) {
+    if( auto *file { file_named( File ) }; file != nullptr ) {
+        file->changed = false;
+        file->created = false;
+    }
+}
+
+std::vector<std::string>
+catenary_scene_entries( std::string const &File ) {
+    // w kolejności wczytywania wpisów node: podwieszenia, bramki, kotwienia, łańcuchy
+    std::vector<std::string> lines;
+    auto const *file { file_named( File ) };
+    auto const skin { file != nullptr ? file->skin : std::string() };
+    for( auto const &suspension : Suspensions ) {
+        if( suspension.removed || suspension.file != File ) { continue; }
+        auto data { suspension.data };
+        if( data.skin.empty() ) { data.skin = skin; }
+        lines.emplace_back( catenary::write_suspension( data ) );
+    }
+    for( auto const &gantry : Gantries ) {
+        if( false == gantry.removed && gantry.file == File ) { lines.emplace_back( catenary::write_gantry( gantry.data ) ); }
+    }
+    for( auto const &anchor : Anchors ) {
+        if( false == anchor.removed && anchor.file == File ) { lines.emplace_back( catenary::write_anchor( anchor.data ) ); }
+    }
+    for( auto const &chain : Chains ) {
+        if( false == chain.removed && chain.file == File ) { lines.emplace_back( catenary::write_chain( chain.data ) ); }
+    }
+    return lines;
 }
 
 void
@@ -2099,12 +2272,47 @@ catenary_scene_file_included( std::string const &File ) {
     if( auto *file { file_named( File ) }; file != nullptr ) { file->created = false; }
 }
 
+int
+catenary_scene_part_owner( void const *Part, std::size_t &Index ) {
+    if( Part == nullptr ) { return 0; }
+    auto const has = [ Part ]( std::vector<TAnimModel *> const &Parts ) {
+        return std::any_of( Parts.begin(), Parts.end(), [ Part ]( TAnimModel const *Model ) { return static_cast<void const *>( Model ) == Part; } );
+    };
+    for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
+        if( false == Suspensions[ index ].removed && has( Suspensions[ index ].parts ) ) { Index = index; return 1; }
+    }
+    for( std::size_t index = 0; index < Gantries.size(); ++index ) {
+        if( false == Gantries[ index ].removed && has( Gantries[ index ].parts ) ) { Index = index; return 2; }
+    }
+    for( std::size_t index = 0; index < Anchors.size(); ++index ) {
+        if( false == Anchors[ index ].removed && has( Anchors[ index ].parts ) ) { Index = index; return 3; }
+    }
+    for( std::size_t index = 0; index < Chains.size(); ++index ) {
+        if( false == Chains[ index ].removed && has( Chains[ index ].middle_parts ) ) { Index = index; return 4; }
+    }
+    return 0;
+}
+
+std::size_t
+catenary_scene_file_layer( std::string const &File ) {
+    auto const found { FileLayers.find( File ) };
+    return ( found != FileLayers.end() ? found->second : 0 );
+}
+
+void
+catenary_scene_file_layer( std::string const &File, std::size_t const Layer ) {
+    // plik już dołączony przez scenerię zostaje przy swojej warstwie
+    if( auto const *file { file_named( File ) }; file != nullptr && false == file->created ) { return; }
+    FileLayers[ File ] = Layer;
+}
+
 bool
 catenary_scene_save( std::string &Message ) {
 
     std::vector<std::string> written;
     for( auto &file : Files ) {
-        if( false == file.changed ) { continue; }
+        // wpisy w pliku scenerii zapisuje zapis scenerii
+        if( false == file.changed || InlineFiles.count( file.name ) != 0 ) { continue; }
         // wpisy w kolejności listy; usunięte pomijane. CRLF jak w pozostałych plikach scenerii
         std::string text;
         std::istringstream header { file.header };
@@ -2166,6 +2374,8 @@ catenary_scene_new_chain_name( std::string const &File ) {
     auto stem { File };
     if( auto const slash { stem.find_last_of( "/\\" ) }; slash != std::string::npos ) { stem.erase( 0, slash + 1 ); }
     if( auto const dot { stem.rfind( '.' ) }; dot != std::string::npos ) { stem.erase( dot ); }
+    // małymi literami: nazwy wpisów node w scenerii parser czyta małymi literami
+    std::transform( stem.begin(), stem.end(), stem.begin(), []( unsigned char const C ) { return static_cast<char>( std::tolower( C ) ); } );
     for( int number = 1; ; ++number ) {
         auto const name { stem + "_l" + std::to_string( number ) };
         auto const taken { std::any_of( Chains.begin(), Chains.end(), [ & ]( scene_chain const &Chain ) { return Chain.data.name == name; } ) };
@@ -2355,6 +2565,8 @@ catenary_scene_new_gantry_name( std::string const &File ) {
     auto stem { File };
     if( auto const slash { stem.find_last_of( "/\\" ) }; slash != std::string::npos ) { stem.erase( 0, slash + 1 ); }
     if( auto const dot { stem.rfind( '.' ) }; dot != std::string::npos ) { stem.erase( dot ); }
+    // małymi literami: nazwy wpisów node w scenerii parser czyta małymi literami
+    std::transform( stem.begin(), stem.end(), stem.begin(), []( unsigned char const C ) { return static_cast<char>( std::tolower( C ) ); } );
     for( int number = 1; ; ++number ) {
         auto const name { stem + "_b" + std::to_string( number ) };
         if( std::none_of( Gantries.begin(), Gantries.end(), [ & ]( scene_gantry const &Gantry ) { return Gantry.data.name == name; } ) ) { return name; }

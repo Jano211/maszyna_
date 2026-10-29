@@ -18,6 +18,13 @@ class cParser;
 
 // obsługa dyrektywy "catenary" ze scenerii: wczytuje wskazany plik podwieszeń
 void catenary_scene_load( cParser &Input );
+// wpis "node <max> <min> <nazwa> suspension|chain|gantry|anchor ... end<typ>" wprost w pliku scenerii; Input stoi za typem.
+// File: plik scenerii (warstwa), do którego wpis należy - jego wpisy sieci zapisuje zapis scenerii
+void catenary_scene_node( cParser &Input, std::string const &Type, double RangeMax, double RangeMin, std::string const &Name, std::string const &File );
+// "skin <tekstura>" w pliku scenerii: domyślna tekstura podwieszeń tego pliku (jak w osobnym pliku sieci)
+void catenary_scene_skin( cParser &Input, std::string const &File );
+// po wczytaniu wpisów scenerii, przed InitTraction: dodaje zebrane wpisy sieci z plików scenerii
+void catenary_scene_loaded();
 // po wczytaniu scenerii: wiąże podwieszenia z konstrukcjami wsporczymi i przęsłami po nazwach, zgłasza braki
 void catenary_scene_resolve();
 // przed wczytaniem nowej scenerii: usuwa podwieszenia poprzedniej
@@ -43,6 +50,9 @@ catenary::cantilever_catalog const *catenary_scene_catalog();
 catenary::layout_tables const &catenary_scene_layout();
 // opisany katalog konstrukcji dla edytora (traction_catalog.txt): kategorie, grupy, rodziny kart, grupy słupów; pusty gdy brak pliku
 catenary::structure_catalog const &catenary_scene_structures();
+// do czego należy model wstawiony przez sieć (część wysięgnika, słupa, bramki, kotwienia): 1 podwieszenie, 2 bramka, 3 kotwienie,
+// 4 łańcuch (kotwienie środkowe); Index - jego numer. 0 gdy to nie część sieci
+int catenary_scene_part_owner( void const *Part, std::size_t &Index );
 // liczba miejsc na liście podwieszeń (z usuniętymi)
 std::size_t catenary_scene_size();
 // podwieszenie o podanym numerze; nullptr gdy usunięte albo numer spoza listy
@@ -70,6 +80,18 @@ bool catenary_scene_changed();
 std::vector<std::string> catenary_scene_new_files();
 // sceneria dołącza już plik (edytor dopisał dyrektywę "catenary")
 void catenary_scene_file_included( std::string const &File );
+// wpisy pliku są zwykłymi wpisami node w pliku scenerii o tej nazwie (warstwie): zapisuje je zapis scenerii, bez dyrektywy "catenary"
+bool catenary_scene_file_inline( std::string const &File );
+void catenary_scene_file_inline( std::string const &File, bool Inline );
+bool catenary_scene_file_changed( std::string const &File );
+// zapis scenerii zapisał wpisy pliku
+void catenary_scene_file_saved( std::string const &File );
+// wpisy pliku jako linie tekstu (wpisy node), w kolejności, w jakiej sceneria ma je wczytać
+std::vector<std::string> catenary_scene_entries( std::string const &File );
+// warstwa scenerii (uchwyt scene::Layers), której plik dołącza plik sieci, a dla pliku założonego w edytorze ta, do której ma
+// trafić jego dyrektywa; 0 gdy nieznana (wtedy plik scenariusza)
+std::size_t catenary_scene_file_layer( std::string const &File );
+void catenary_scene_file_layer( std::string const &File, std::size_t Layer );
 // zapisuje zmienione pliki sieci do katalogu scenerii. Message: co zapisano albo co poszło źle
 bool catenary_scene_save( std::string &Message );
 

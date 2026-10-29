@@ -1,6 +1,6 @@
 # Sieć trakcyjna w exe – lista zadań
 
-Stan na 2026-10-26 10:00 (bieżący stan i kolejność prac: PRZEKAZANIE.md, sekcja START TUTAJ). Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
+Stan na 2026-10-29 23:00 (bieżący stan i kolejność prac: PRZEKAZANIE.md, sekcja START TUTAJ). Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
 (https://claude.ai/artifact/LboXDQjty15vbb7ieh8AUn) – Jan może odhaczać tam; przy zmianach przenosić tutaj.
 Zestawienie z notatek w `tests/catenary/*.md` (PRZEKAZANIE, KONCEPCJA, KONCEPCJA_EDYTOR, BRAMKI, KOTWIENIA, GLOWACKI,
 ROZSZERZANIE) i z pracy nad kotwieniami 23–24.10.

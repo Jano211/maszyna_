@@ -688,6 +688,17 @@ void editor_mode::start_focus(scene::basic_node *node, double duration)
     m_focus_duration = duration;
 }
 
+void editor_mode::fly_to(glm::dvec3 const &Target, glm::dvec3 const &Look, double const Distance, double const Duration)
+{
+    m_focus_start_pos = Camera.Pos;
+    m_focus_start_angle = Camera.Angle;
+    m_focus_target_pos = Target - Look * Distance;
+    m_focus_target_angle = glm::vec3(static_cast<float>(std::asin(std::clamp(Look.y, -1.0, 1.0))), static_cast<float>(std::atan2(-Look.x, -Look.z)), 0.0f);
+    m_focus_active = true;
+    m_focus_time = 0.0;
+    m_focus_duration = Duration;
+}
+
 void editor_mode::snap_to_ground(scene::basic_node *node, bool const Alone, bool const Joined)
 {
     if (!node || !simulation::Region)
@@ -2905,11 +2916,45 @@ bool editor_mode::save()
             rootstatements.emplace_back("heightmap_terrain " + m_streamer.name() + " endheightmap_terrain");
     }
 
+    auto const terrainadded{false == rootstatements.empty()};
     if (m_profile.changed)
         profile_store();
     infra_store();
-    // the catenary (cantilevers on the poles) lives in files of its own; a file made in the editor needs the directive
+    // the catenary (cantilevers on the poles) lives in files of its own; a file made in the editor needs the directive, in the file
+    // of the layer it was made on (the scenario file when that layer can't take it)
     std::vector<std::string> catenarynew;
+    std::map<scene::layer_handle, std::vector<std::string>> layerstatements;
+    auto const same_file = [](std::string const &A, std::string const &B) {
+        auto a{std::filesystem::path(A).lexically_normal().generic_string()}, b{std::filesystem::path(B).lexically_normal().generic_string()};
+        std::transform(a.begin(), a.end(), a.begin(), [](unsigned char const C) { return static_cast<char>(std::tolower(C)); });
+        std::transform(b.begin(), b.end(), b.begin(), [](unsigned char const C) { return static_cast<char>(std::tolower(C)); });
+        return a == b;
+    };
+    // the catenary straight in the scenery files: the node entries of the changed ones go into the files of their layers anew
+    scene::node_blocks catenaryblocks;
+    catenaryblocks.kinds = {"suspension", "chain", "gantry", "anchor"};
+    std::vector<std::string> catenaryinline;
+    for (auto const &file : catenary_scene_files())
+    {
+        if (false == catenary_scene_file_inline(file) || false == catenary_scene_file_changed(file))
+            continue;
+        scene::layer_handle target{null_handle};
+        for (std::size_t layer = 1; layer <= scene::Layers.size() && target == null_handle; ++layer)
+            if (scene::Layers.listed(static_cast<scene::layer_handle>(layer)) && same_file(scene::Layers.layer(static_cast<scene::layer_handle>(layer)).name, file))
+                target = static_cast<scene::layer_handle>(layer);
+        std::string reason;
+        if (target == null_handle)
+            reason = STR("it isn't in a scenery file the editor can rewrite (an include template)");
+        else
+            scene::Layers.accepts(target, &reason);
+        if (target == null_handle || false == scene::Layers.accepts(target))
+        {
+            ui()->set_status(format(STR_C("The catenary in \"%s\" couldn't be saved: %s"), file.c_str(), reason.c_str()), true);
+            return false;
+        }
+        catenaryblocks.lines[target] = catenary_scene_entries(file);
+        catenaryinline.push_back(file);
+    }
     if (catenary_scene_changed())
     {
         std::string message;
@@ -2922,7 +2967,11 @@ bool editor_mode::save()
     }
     for (auto const &file : catenary_scene_new_files())
     {
-        rootstatements.emplace_back("catenary " + file + " endcatenary");
+        auto const layer{static_cast<scene::layer_handle>(catenary_scene_file_layer(file))};
+        if (layer > 1 && scene::Layers.accepts(layer))
+            layerstatements[scene::Layers.resolve(layer)].emplace_back("catenary " + file + " endcatenary");
+        else
+            rootstatements.emplace_back("catenary " + file + " endcatenary");
         catenarynew.push_back(file);
     }
     if (false == m_saved_camera.has_value() || glm::distance(m_saved_camera->first, glm::dvec3{Camera.Pos}) > 0.5 || glm::distance(m_saved_camera->second, glm::vec3{Camera.Angle}) > 0.01f)
@@ -2930,11 +2979,13 @@ bool editor_mode::save()
         m_saved_camera = std::make_pair(glm::dvec3{Camera.Pos}, glm::vec3{Camera.Angle});
         scene::Layers.mark(scene::layer_handle{1}, "//$c", {format("%.3f %.3f %.3f %.5f %.5f", Camera.Pos.x, Camera.Pos.y, Camera.Pos.z, Camera.Angle.x, Camera.Angle.y)});
     }
-    auto const terrainadded{false == rootstatements.empty()};
     auto const controls{turntable_controls(rootstatements)};
     std::vector<std::string> trailing;
     starter_trainset(trailing);
-    auto const result = scene::Layers.save(rootstatements, trailing);
+    auto const result = scene::Layers.save(rootstatements, trailing, layerstatements, &catenaryblocks);
+    if (result.success)
+        for (auto const &file : catenaryinline)
+            catenary_scene_file_saved(file);
     if (result.success && controls)
         m_turntable_included = true;
     if (result.success && trailing.size() == 3)
@@ -5635,6 +5686,14 @@ void editor_mode::on_mouse_button(int const Button, int const Action, int const 
                     // in a scenery opened for editing selection has its limits. nodes of locked layers are off limits.
                     // nodes defined by a scenery template can't be rewritten one by one on save, so a click on one
                     // selects the include of the template as a whole
+                    // a part of the catenary: the catenary tool takes what it belongs to (moved or deleted as a node it would part
+                    // from the catenary which keeps it)
+                    if (node && node->m_catenary && mode == nodebank_panel::MODIFY)
+                    {
+                        if (false == catenary_pick_part(node))
+                            ui()->set_status(STR("A part of the catenary: it's changed with the Catenary tool (F6)"), true);
+                        return;
+                    }
                     if (node && mode == nodebank_panel::MODIFY)
                     {
                         std::string reason;
