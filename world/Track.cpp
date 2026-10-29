@@ -1633,19 +1633,45 @@ void TTrack::create_geometry( gfx::geometrybank_handle const &Bank ) {
                 gfx::vertex_array vertices;
                 auto const open { eType == tt_Normal && ( trPrev == nullptr || trNext == nullptr ) };
                 if( Bank != 0 && true == Geometry1.empty() ) {
+                    // jointed track gets its rails cut at the joints, with fishplates holding the ends together
+                    auto const jointcount { eType == tt_Normal && Global.RailJoints ? joint_count() : 0 };
+                    constexpr double railgap { 0.010 }; // width of the gap between rail ends, metres
+                    std::vector<double> gaps;
+                    if( jointcount > 0 ) {
+                        auto const spacing { Segment->GetLength() / jointcount };
+                        for( int jointindex = 0; jointindex < jointcount; ++jointindex ) {
+                            gaps.emplace_back( ( jointindex + 0.5 ) * spacing );
+                        }
+                    }
+                    // the joint parts and rail end faces share the material with the rails
+                    gfx::vertex_array jointvertices;
+                    gfx::index_array jointindices;
                     track_blend::weighing const weighing { &railsblend };
                     for( auto const side : { 1, -1 } ) {
                         auto const &profile { side > 0 ? rpts1 : rpts2 };
                         if( eType == tt_Normal && iTrapezoid == 0 && lay_rail( 0, profile, side, texturelength, track_rails::blade_runon( *this, side ), trPrev == nullptr, trNext == nullptr, Geometry1, GeometryCut1 ) ) {
+                            // a rail cut where other rails cross it: no joints on it
                             continue;
                         }
                         vertices.clear(); // reuse the scratchpad
-                        Segment->RenderLoft( vertices, m_origin, profile, iTrapezoid > 0, texturelength );
+                        if( gaps.empty()
+                         || false == Segment->RenderLoftGapped( vertices, jointvertices, jointindices, m_origin, profile, iTrapezoid > 0, texturelength, gaps, railgap ) ) {
+                            // continuous rail
+                            vertices.clear();
+                            Segment->RenderLoft( vertices, m_origin, profile, iTrapezoid > 0, texturelength );
+                        }
                         if( open ) {
                             cut_faces( vertices, nnumPts, trPrev == nullptr, trNext == nullptr, GeometryCut1 );
                         }
                         Geometry1.emplace_back(track_rails::insert_chunk(vertices, empty_userdata, Bank, GL_TRIANGLE_STRIP));
                     }
+                    if( jointcount > 0 ) {
+                        create_rail_joints( jointvertices, jointindices );
+                        if( false == jointindices.empty() ) {
+                            Geometry1.emplace_back( GfxRenderer->Insert( jointindices, jointvertices, empty_userdata, Bank, GL_TRIANGLES ) );
+                        }
+                    }
+                    vertices.clear();
                 }
                 if( Bank == 0 && false == Geometry1.empty() ) {
                     // special variant, replace existing data for a turntable track
@@ -3143,6 +3169,233 @@ TTrack::profile_rolls( float &Roll1, float &Roll2 ) const {
     }
     if( Segment ) {
         Segment->GetRolls( Roll1, Roll2 );
+    }
+}
+
+int
+TTrack::joint_count() const {
+
+    if( fSoundDistance <= 0.f ) { return 0; } // continuous welded rail
+    if( ( iCategoryFlag & 15 ) != 1 ) { return 0; } // not a railway
+    if( Segment == nullptr ) { return 0; }
+
+    auto const length { Segment->GetLength() };
+    if( length < 0.75 * fSoundDistance ) {
+        // piece too short to hold a joint of its own; giving it one anyway would put the joints noticeably too close to each other
+        return 0;
+    }
+    return std::max( 1, static_cast<int>( std::lround( length / fSoundDistance ) ) );
+}
+
+double
+TTrack::frog_distance() const {
+
+    if( m_frogdistance > -1.5 ) { return m_frogdistance; }
+
+    m_frogdistance = -1.0;
+    if( eType != tt_Switch ) { return m_frogdistance; }
+    if( SwitchExtension == nullptr ) { return m_frogdistance; }
+    auto const &route1 { SwitchExtension->Segments[ 0 ] };
+    auto const &route2 { SwitchExtension->Segments[ 1 ] };
+    if( route1 == nullptr || route2 == nullptr ) { return m_frogdistance; }
+
+    // both routes start together at the blades and drift apart;
+    // inner rails cross where the routes are a track gauge away from each other
+    auto const gauge { std::abs( fTrackWidth ) };
+    auto const length { std::min( route1->GetLength(), route2->GetLength() ) };
+    glm::dvec3 point1, point2;
+    glm::vec3 angles;
+    route1->RaPositionGet( 1.0, point1, angles );
+    route2->RaPositionGet( 1.0, point2, angles );
+    if( gauge <= 0.0 || glm::length( point1 - point2 ) > 0.5 * gauge ) {
+        // the routes don't start at the same end, can't tell
+        return m_frogdistance;
+    }
+    for( auto distance { 1.0 }; distance < length; distance += 0.25 ) {
+        route1->RaPositionGet( distance, point1, angles );
+        route2->RaPositionGet( distance, point2, angles );
+        if( glm::length( point1 - point2 ) >= gauge ) {
+            m_frogdistance = distance;
+            break;
+        }
+    }
+    return m_frogdistance;
+}
+
+double
+TTrack::joint_spacing() const {
+
+    auto const count { joint_count() };
+    return (
+        count > 0 ?
+            Segment->GetLength() / count :
+            0.0 );
+}
+
+// generates geometry of rail joints for a plain track: a pair of fishplates with bolts on each rail.
+// everything is sized from the rail profile and placed on the same frame the rails are lofted with
+void
+TTrack::create_rail_joints( gfx::vertex_array &Vertices, gfx::index_array &Indices ) {
+
+    auto const jointcount { joint_count() };
+    if( jointcount == 0 ) { return; }
+    if( m_material1 == null_handle ) { return; }
+
+    auto const &railprofile { track_rail_profile( m_profile1.second ) };
+    auto const pointcount { static_cast<int>( railprofile.size() / 2 ) }; // second half holds the switch blade
+    if( pointcount < 4 ) { return; }
+
+    // rail dimensions. profile space: x - outwards from the gauge face, y - up, with rail top at 0
+    auto const railheight { std::abs( railprofile.front().position.y ) };
+    if( railheight < 0.05f ) { return; }
+    auto headmin { std::numeric_limits<float>::max() };
+    auto headmax { std::numeric_limits<float>::lowest() };
+    for( int i = 0; i < pointcount; ++i ) {
+        auto const &point { railprofile[ i ].position };
+        if( point.y >= -0.08f * railheight ) {
+            headmin = std::min( headmin, point.x );
+            headmax = std::max( headmax, point.x );
+        }
+    }
+    if( headmax - headmin < 0.02f ) { return; }
+    auto const headcentre { 0.5f * ( headmin + headmax ) };
+    auto const headhalfwidth { 0.5f * ( headmax - headmin ) };
+    // texture coordinate of the rail web on each side of the rail, so the joint parts pick matching (rusty) part of the texture
+    auto const webheight { -0.55f * railheight };
+    float webtexture[ 2 ] { 0.2f, 0.8f }; // outer side, inner side
+    for( int i = 0; i + 1 < pointcount; ++i ) {
+        auto const &point1 { railprofile[ i ] };
+        auto const &point2 { railprofile[ i + 1 ] };
+        if( ( point1.position.y - webheight ) * ( point2.position.y - webheight ) > 0.f ) { continue; }
+        if( point1.position.y == point2.position.y ) { continue; }
+        auto const blend { ( webheight - point1.position.y ) / ( point2.position.y - point1.position.y ) };
+        auto const x { glm::mix( point1.position.x, point2.position.x, blend ) };
+        webtexture[ x > headcentre ? 0 : 1 ] = glm::mix( point1.texture.s, point2.texture.s, blend );
+    }
+
+    // part dimensions, metres
+    auto const webhalfwidth { std::min( 0.008f, 0.4f * headhalfwidth ) };
+    auto const platehalflength { 0.30f };
+    auto const platebottom { -0.80f * railheight };
+    auto const platetop { -0.30f * railheight };
+    auto const platereach { 0.92f * headhalfwidth }; // from the rail centre to the outer face of the plate
+    auto const boltsize { 0.018f }; // half size of the bolt head
+    auto const boltreach { platereach + 0.020f };
+    auto const boltheight { 0.5f * ( platebottom + platetop ) };
+    float const boltlocations[] { -0.21f, -0.075f, 0.075f, 0.21f };
+
+    auto const texturelength { texture_length( m_material1 ) };
+    auto const spacing { Segment->GetLength() / jointcount };
+
+    float roll1 { 0.f }, roll2 { 0.f };
+    Segment->GetRolls( roll1, roll2 );
+    auto const halfwidth1 { 0.5f * std::abs( fTrackWidth ) };
+    auto const halfwidth2 { (
+        ( iTrapezoid & 2 ) != 0 && trNext != nullptr ?
+            0.5f * std::abs( trNext->fTrackWidth ) :
+            halfwidth1 ) };
+
+    for( int jointindex = 0; jointindex < jointcount; ++jointindex ) {
+
+        auto const distance { ( jointindex + 0.5 ) * spacing };
+        glm::dvec3 position;
+        glm::vec3 parallel, direction;
+        float progress;
+        if( false == Segment->LoftFrameGet( distance, position, parallel, direction, progress ) ) { continue; }
+
+        auto const origin { glm::vec3{ position - m_origin } };
+        auto const roll { iTrapezoid != 0 ? glm::mix( roll1, roll2, progress ) : roll1 };
+        auto const halfwidth { iTrapezoid != 0 ? glm::mix( halfwidth1, halfwidth2, progress ) : halfwidth1 };
+        auto const sinroll { std::sin( roll ) };
+        auto const cosroll { std::cos( roll ) };
+        // texture coordinate along the rail, matches mapping of the rail itself
+        auto const texturebase { 1.f - static_cast<float>( distance / texturelength ) };
+
+        // converts point given in rail profile space to model space, the same way the rails get there.
+        // Side: 1 for right rail, -1 for the left one. X: profile x, Y: profile y, Z: distance along the track from the joint
+        auto const place = [ & ]( float const Side, float const X, float const Y, float const Z ) {
+            auto const across { Side * ( halfwidth + X ) };
+            auto point { origin + parallel * ( across * cosroll + Y * sinroll ) + direction * Z };
+            point.y += -across * sinroll + Y * cosroll;
+            return point; };
+
+        // adds a box spanning given ranges in profile space. the box has no face on the rail web side, and optionally none underneath.
+        // Smooth: corners are shared between the faces; cheaper, good enough for small parts
+        auto const add_box = [ & ]( float const Side, float const Xinner, float const Xouter, float const Ybottom, float const Ytop, float const Zback, float const Zfront, float const Texture, bool const Smooth, bool const Underside ) {
+            // corner index: bit 0 - outer, bit 1 - top, bit 2 - front
+            glm::vec3 corners[ 8 ];
+            glm::vec2 coordinates[ 8 ];
+            glm::vec3 centre { 0.f };
+            for( int i = 0; i < 8; ++i ) {
+                auto const outer { ( i & 1 ) != 0 };
+                auto const top { ( i & 2 ) != 0 };
+                auto const front { ( i & 4 ) != 0 };
+                corners[ i ] = place( Side, outer ? Xouter : Xinner, top ? Ytop : Ybottom, front ? Zfront : Zback );
+                coordinates[ i ] = {
+                    Texture + ( top ? 0.04f : -0.04f ) + ( outer ? 0.01f : 0.f ),
+                    texturebase - ( front ? Zfront : Zback ) / texturelength + ( outer ? 0.01f : 0.f ) };
+                centre += corners[ i ] * 0.125f;
+            }
+            auto const add_face = [ & ]( int const A, int const B, int const C, int const D ) {
+                // ensure the face is wound counter-clockwise when seen from outside of the box
+                auto normal { glm::cross( corners[ B ] - corners[ A ], corners[ C ] - corners[ A ] ) };
+                if( glm::length2( normal ) == 0.f ) { return; }
+                normal = glm::normalize( normal );
+                auto const facecentre { 0.25f * ( corners[ A ] + corners[ B ] + corners[ C ] + corners[ D ] ) };
+                auto const flip { glm::dot( normal, facecentre - centre ) < 0.f };
+                if( flip ) { normal = -normal; }
+                int const order[ 4 ] { A, ( flip ? D : B ), C, ( flip ? B : D ) };
+                gfx::basic_index base;
+                if( Smooth ) {
+                    // shared corners were added up front, in corner index order
+                    base = static_cast<gfx::basic_index>( Vertices.size() - 8 );
+                    Indices.insert( Indices.end(), {
+                        base + order[ 0 ], base + order[ 1 ], base + order[ 2 ],
+                        base + order[ 0 ], base + order[ 2 ], base + order[ 3 ] } );
+                }
+                else {
+                    base = static_cast<gfx::basic_index>( Vertices.size() );
+                    for( auto const corner : order ) {
+                        Vertices.emplace_back( corners[ corner ], normal, coordinates[ corner ] );
+                    }
+                    Indices.insert( Indices.end(), { base, base + 1, base + 2, base, base + 2, base + 3 } );
+                }
+            };
+            if( Smooth ) {
+                for( int i = 0; i < 8; ++i ) {
+                    Vertices.emplace_back( corners[ i ], glm::normalize( corners[ i ] - centre ), coordinates[ i ] );
+                }
+            }
+            add_face( 1, 3, 7, 5 ); // outer
+            add_face( 2, 3, 7, 6 ); // top
+            add_face( 0, 1, 3, 2 ); // back
+            add_face( 4, 5, 7, 6 ); // front
+            if( Underside ) {
+                add_face( 0, 1, 5, 4 );
+            }
+        };
+
+        for( auto const side : { 1.f, -1.f } ) {
+            // fishplates with bolts, on both sides of the rail web
+            for( int face = 0; face < 2; ++face ) {
+                auto const facing { face == 0 ? 1.f : -1.f }; // away from the gauge face, or towards it
+                auto const texture { webtexture[ face ] };
+                add_box(
+                    side,
+                    headcentre + facing * webhalfwidth, headcentre + facing * platereach,
+                    platebottom, platetop,
+                    -platehalflength, platehalflength,
+                    texture, false, false );
+                for( auto const boltlocation : boltlocations ) {
+                    add_box(
+                        side,
+                        headcentre + facing * platereach, headcentre + facing * boltreach,
+                        boltheight - boltsize, boltheight + boltsize,
+                        boltlocation - boltsize, boltlocation + boltsize,
+                        texture, true, true );
+                }
+            }
+        }
     }
 }
 
