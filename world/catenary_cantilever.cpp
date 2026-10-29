@@ -349,6 +349,10 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 else if( ismast && key == "stay" ) { text( mast.stay ); }
                 else if( ismast && key == "steady" ) { text( mast.steady ); }
                 else if( ismast && key == "below_beam" ) { number( mast.below_beam, good ); }
+                else if( ismast && key == "semi" ) { number( mast.semi, good ); }
+                else if( ismast && key == "sides" ) { double sides { 1.0 }; number( sides, good ); mast.sides = ( sides > 1.5 ? 2 : 1 ); }
+                else if( ismast && key == "turn" ) { number( mast.turn, good ); }
+                else if( ismast && key == "drop" ) { text( mast.drop ); }
                 else if( false == ismast && key == "span" ) { number( beam.span, good ); }
                 else if( false == ismast && key == "drop" ) { text( beam.drop ); }
                 else if( false == ismast && key == "single" ) { beam.single = true; }
@@ -362,6 +366,16 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
             if( ismast ) {
                 if( mast.model.empty() || mast.mount_low <= 0.0 ) { report( entry, "needs \"model\" and \"mount\"" ); continue; }
                 if( false == m_masts.emplace( name, mast ).second ) { report( entry, "defined more than once, the first definition stays" ); continue; }
+                if( mast.semi > 0.0 ) {
+                    // półbramka: dźwigar w modelu słupa - w katalogu pojedynczy element bez modelu, pod nazwą słupa
+                    gantry_beam integrated;
+                    integrated.name = name;
+                    integrated.span = mast.semi;
+                    integrated.drop = mast.drop;
+                    integrated.single = true;
+                    integrated.semi = true;
+                    if( false == m_beams.emplace( name, integrated ).second ) { report( entry, "is a semi-gantry with the name of a beam; its beam isn't registered" ); }
+                }
                 // słup bramki z mocowaniami wysięgnika to też słup dla wysięgników (pod tą samą nazwą): bez modelu - stawia go
                 // bramka; głębokość w stronę toru to wymiar wzdłuż dźwigara, mocowania najwyżej pod dźwigarem dolnego poziomu
                 if( false == mast.strut.empty() && false == mast.stay.empty() ) {

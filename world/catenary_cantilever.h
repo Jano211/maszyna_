@@ -186,6 +186,14 @@ struct gantry_mast {
     std::string stay;
     std::string steady;
     double below_beam { 0.15 };
+    // półbramka (1901): słup z dźwigarem w jednym modelu ("semi <długość dźwigara>"); bramka typu T: dźwigary na dwie strony
+    // ("sides 2"). Prześwit (mount) to wysokość konstrukcyjna Hk, na której wiszą zwisy rodziny "drop". Dźwigar w modelu wzdłuż +X
+    // (jak dźwigary); "turn" obraca model wokół pionu, gdyby szedł inaczej. Dla półbramki katalog zakłada dźwigar o jej nazwie
+    // (pojedynczy element bez modelu), więc w pliku sieci to zwykły wpis "gantry beam <nazwa> mast <nazwa> x y z tip x y z"
+    double semi { 0.0 };
+    int    sides { 1 };
+    double turn { 0.0 };
+    std::string drop;
 };
 // dźwigar bramki: model z zerem w osi pierwszego słupa na spodzie dźwigara, X modelu wzdłuż dźwigara
 struct gantry_beam {
@@ -195,6 +203,7 @@ struct gantry_beam {
     std::string drop;                   // rodzina pasujących zwisów
     bool single { false };              // pojedynczy element na jednym słupie przelotowym (3017-3025, 1910): z jednej strony
                                         // mocowanie do słupa, z drugiej do konsoli
+    bool semi { false };                // dźwigar półbramki: część modelu słupa (bez własnego modelu)
 };
 
 // rozstaw osi słupów bramki: między ścianami słupów o 0,20 m mniej niż numer dźwigara (E101: 9,9 m), do osi dochodzą offsety słupów

@@ -1109,6 +1109,19 @@ bool catenary_editor::catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3
 	// the beam runs between the faces of the masts: their axes are farther apart by the offsets of both
 	auto const *a{catalog->mast(tool.masts.empty() ? std::string{} : tool.masts[std::clamp(tool.mast_first, 0, static_cast<int>(tool.masts.size()) - 1)])};
 	auto const *b{catalog->mast(tool.masts.empty() ? std::string{} : tool.masts[std::clamp(tool.mast_second, 0, static_cast<int>(tool.masts.size()) - 1)])};
+	// a semi-gantry (1901): its beam is in its model, the second click only says which way it goes
+	if (a != nullptr && a->semi > 0.0)
+	{
+		auto direction{delta / distance};
+		if (tool.gantry_square && tool.gantry_track.has_value())
+		{
+			auto const across{right_of(*tool.gantry_track)};
+			direction = glm::dot(across, delta) >= 0.0 ? across : -across;
+		}
+		Beam = a->name;
+		Second = {first.x + direction.x * a->semi, first.y, first.z + direction.y * a->semi};
+		return catalog->beam(Beam) != nullptr;
+	}
 	// a single element: from the face of its one mast for its length; otherwise between the faces of the masts 0.20 m less than the beam
 	auto const offsets{tool.gantry_single ? (a != nullptr ? a->offset : 0.0) : (a != nullptr ? a->offset : 0.0) + (b != nullptr ? b->offset : 0.0) - 0.20};
 	auto best{std::numeric_limits<double>::max()};
@@ -3144,7 +3157,9 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		gantry.side = 1;
 		gantry.skin = tool.gantry_skin;
 		gantry.masts[0] = tool.masts[std::clamp(tool.mast_first, 0, static_cast<int>(tool.masts.size()) - 1)];
-		gantry.masts[1] = tool.gantry_single ? std::string{} : tool.masts[std::clamp(tool.mast_second, 0, static_cast<int>(tool.masts.size()) - 1)];
+		auto const *firstmast{catenary_scene_catalog() != nullptr ? catenary_scene_catalog()->mast(gantry.masts[0]) : nullptr};
+		auto const semi{firstmast != nullptr && firstmast->semi > 0.0};
+		gantry.masts[1] = tool.gantry_single || semi ? std::string{} : tool.masts[std::clamp(tool.mast_second, 0, static_cast<int>(tool.masts.size()) - 1)];
 		auto const first{*tool.gantry_first};
 		gantry.points[0][0] = first.x;
 		gantry.points[0][1] = first.y;
@@ -5157,7 +5172,7 @@ void catenary_editor::render_catenary_ui()
 				{
 					grouped_items(tool.masts, Chosen, [&](std::string const &Name) {
 						auto const *mast{catalog->mast(Name)};
-						return mast == nullptr ? std::string{} : mast->through ? STR(" (through)") : STR(" (end)");
+						return mast == nullptr ? std::string{} : mast->semi > 0.0 ? (mast->sides > 1 ? STR(" (T gantry)") : STR(" (semi-gantry)")) : mast->through ? STR(" (through)") : STR(" (end)");
 					});
 					ImGui::EndCombo();
 				}

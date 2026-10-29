@@ -257,6 +257,36 @@ int main( int, char *argv[] ) {
             }
             check( good, "wysiegnik na slupie bramki 3031-1: bez modelu slupa, mocowania z wyk. 04 pod dzwigarem" );
         }
+        {
+            // półbramka 1901 (słup z dźwigarem w jednym modelu): jeden model, dźwigar od osi słupa na Hk, zwisy 4840; przy dźwigarze
+            // skośnym do toru o 5° zwis równo z dźwigarem (pole.turn)
+            auto const angle { 5.0 * 3.14159265358979323846 / 180.0 };
+            catenary::gantry semi;
+            semi.name = "pb1"; semi.beam = "polbramka_1901_10m"; semi.masts[ 0 ] = "polbramka_1901_10m";
+            semi.points[ 0 ][ 0 ] = 0.0; semi.points[ 0 ][ 1 ] = 0.2; semi.points[ 0 ][ 2 ] = 80.0;
+            semi.points[ 1 ][ 0 ] = 10.0 * std::cos( angle ); semi.points[ 1 ][ 1 ] = 0.2; semi.points[ 1 ][ 2 ] = 80.0 + 10.0 * std::sin( angle );
+            errors.clear();
+            auto const before { simulation::State.created.size() };
+            auto const index { catenary_gantry_add( "td_bramka_test.scm", semi ) };
+            auto good { catenary_gantry_parts( index ) == 1 && simulation::State.created.size() == before + 1 && errors.empty()
+                && simulation::State.created[ before ].entry.find( "polbramki/polbramka_1901_10m.t3d" ) != std::string::npos };
+            for( auto const &e : errors ) { std::printf( "  blad: %s\n", e.c_str() ); }
+            catenary::suspension drop;
+            drop.card = 1112; drop.execution = 1; drop.range_max = 1000;
+            glm::dvec3 const pole { 6.0 * std::cos( angle ), 0.2 + 7.835, 80.0 + 6.0 * std::sin( angle ) };
+            drop.has_at = true; drop.at[ 0 ] = pole.x + 2.0; drop.at[ 1 ] = 0.2 + 5.6; drop.at[ 2 ] = pole.z;
+            drop.has_rope = true; drop.rope[ 0 ] = pole.x + 2.0; drop.rope[ 1 ] = 0.2 + 5.6 + 1.7; drop.rope[ 2 ] = pole.z;
+            drop.has_pole = true; drop.pole_type = "4840-3"; drop.pole[ 0 ] = pole.x; drop.pole[ 1 ] = pole.y; drop.pole[ 2 ] = pole.z;
+            catenary::cantilever_result probe;
+            auto const assembled { catenary_scene_probe( drop, probe ) };
+            for( auto const &warning : probe.warnings ) { std::printf( "  uwaga (zwis 4840): %s\n", warning.c_str() ); }
+            auto const turn { probe.values.count( "pole.turn" ) ? probe.values.at( "pole.turn" ) : 0.0 };
+            std::printf( "  polbramka: zwis 4840-3 obrocony o %.2f st.\n", turn );
+            good = good && assembled && std::abs( std::abs( turn ) - 5.0 ) < 0.01;
+            // ten sam zwis na dźwigarze prostopadłym (skos 1°): bez obrotu
+            catenary_gantry_remove( index );
+            check( good, "polbramka 1901: jeden model, zwis 4840 na Hk, przy skosie 5 st. zwis rowno z dzwigarem" );
+        }
         // bramka wieloprzęsłowa: dwa przęsła na wspólnym słupie przelotowym - słup stawia tylko pierwsze; po usunięciu
         // pierwszego przęsła stawia go drugie
         {

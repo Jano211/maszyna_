@@ -599,6 +599,15 @@ gantry_beam_ends( catenary::gantry const &Data, catenary::gantry_mast const &Fir
     auto const plan { glm::dvec3 { b.x - a.x, 0.0, b.z - a.z } };
     auto const length { std::max( glm::length( plan ), 1e-6 ) };
     auto const inward { plan * ( 1.0 / length ) };
+    if( First.semi > 0.0 ) {
+        // półbramka: dźwigar od osi słupa na swoją długość (ZAŁOŻENIE: Beam_out od osi), bramka T na obie strony; zwisy na Hk
+        auto const hk { glm::dvec3 { 0.0, First.mount_low, 0.0 } };
+        auto const from { a + hk - ( First.sides > 1 ? inward * First.semi : glm::dvec3 { 0.0 } ) };
+        auto const to { a + hk + inward * First.semi };
+        From[ 0 ] = from.x; From[ 1 ] = from.y; From[ 2 ] = from.z;
+        To[ 0 ] = to.x; To[ 1 ] = to.y; To[ 2 ] = to.z;
+        return;
+    }
     auto const from { a + inward * First.offset + glm::dvec3 { 0.0, Data.high ? First.mount_high : First.mount_low, 0.0 } };
     // pojedynczy element (bez drugiego słupa): poziomo od ściany słupa na swoją długość
     auto const to { Second != nullptr ? b - inward * Second->offset + glm::dvec3 { 0.0, Data.high ? Second->mount_high : Second->mount_low, 0.0 } : from + inward * Span };
@@ -669,7 +678,7 @@ assemble_gantry( scene_gantry &Gantry ) {
         ErrorLog( label + ( single ? "has one mast, but beam \"" + beam->name + "\" isn't a single element" : "has two masts, but beam \"" + beam->name + "\" is a single element" ) );
         return 0;
     }
-    if( single && false == first->through ) {
+    if( single && false == first->through && first->semi <= 0.0 ) {
         ErrorLog( label + "has a single beam element on mast \"" + first->name + "\", which is an end mast; it goes on a through mast" );
     }
     glm::dvec3 const a { data.points[ 0 ][ 0 ], data.points[ 0 ][ 1 ], data.points[ 0 ][ 2 ] };
@@ -691,8 +700,11 @@ assemble_gantry( scene_gantry &Gantry ) {
         placement.position[ 0 ] = X;
         placement.position[ 1 ] = Y;
         placement.position[ 2 ] = Z;
-        // słup: X modelu (szerokość) wzdłuż dźwigara, jak dźwigar
-        double const turned[ 9 ] { 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+        // słup: X modelu (szerokość) wzdłuż dźwigara, jak dźwigar; półbramka obrócona dodatkowo o swój "turn"
+        auto const extra { ( Model == first->model && first->semi > 0.0 ? first->turn : 0.0 ) * 3.14159265358979323846 / 180.0 };
+        auto const c { std::cos( extra ) }, s { std::sin( extra ) };
+        // Rz(extra) * {0,-1,0; 1,0,0; 0,0,1}
+        double const turned[ 9 ] { -s, -c, 0.0, c, -s, 0.0, 0.0, 0.0, 1.0 };
         std::copy( std::begin( turned ), std::end( turned ), placement.rotation );
         placements.push_back( placement );
     };
@@ -727,14 +739,14 @@ assemble_gantry( scene_gantry &Gantry ) {
     std::size_t count { 0 };
     std::vector<std::pair<catenary::cantilever_placement, double>> all;
     for( auto const &placement : placements ) { all.emplace_back( placement, heading ); }
-    all.emplace_back( beamplacement, beamheading );
+    if( false == beam->model.empty() ) { all.emplace_back( beamplacement, beamheading ); }   // dźwigar półbramki jest w modelu słupa
     for( auto const &item : all ) {
         auto const &placement { item.first };
         auto const part { catenary::cantilever_to_scene( placement, item.second ) };
         auto const entry {
             "node " + text_number( data.range_max, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 " + placement.model + ".t3d " + skin
             + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) + " endmodel" };
-        auto const &origin { &placement == &all.back().first ? ends[ 0 ] : a };
+        auto const &origin { ( false == beam->model.empty() && &placement == &all.back().first ) ? ends[ 0 ] : a };
         glm::dvec3 const position { origin.x + part.offset[ 0 ], origin.y + part.offset[ 1 ], origin.z + part.offset[ 2 ] };
         if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
             catenary_part_detach( model );
