@@ -1307,7 +1307,19 @@ span_body( scene_chain const &Chain, std::size_t const Span ) {
     double wirea[ 3 ], wireb[ 3 ], ropea[ 3 ], ropeb[ 3 ];
     bool anchoreda, anchoredb;
     if( false == chain_point( Chain, Span, wirea, ropea, anchoreda ) || false == chain_point( Chain, Span + 1, wireb, ropeb, anchoredb ) ) { return {}; }
-    std::string body { data.power + " " + text_number( data.voltage, 1 ) + " " + text_number( data.current, 1 ) + " " + text_number( data.resistivity, 4 ) + " "
+    // izolatory sekcyjne: przęsła za przęsłem z izolatorem zasila jego zasilacz (przęsło z izolatorem jeszcze ten sprzed niego -
+    // ZAŁOŻENIE: przęsło nie jest dzielone, granica elektryczna na jego końcu)
+    auto power { data.power };
+    {
+        auto const offset { data.anchor_start.empty() ? 0u : 1u };
+        for( auto const &insulator : data.insulators ) {
+            auto const found { std::find( data.suspensions.begin(), data.suspensions.end(), insulator.after ) };
+            if( found == data.suspensions.end() || insulator.power.empty() ) { continue; }
+            auto const span { static_cast<std::size_t>( found - data.suspensions.begin() ) + offset };
+            if( span < Span ) { power = insulator.power; }
+        }
+    }
+    std::string body { power + " " + text_number( data.voltage, 1 ) + " " + text_number( data.current, 1 ) + " " + text_number( data.resistivity, 4 ) + " "
         + data.material + " " + text_number( data.thickness, 2 ) + " " + std::to_string( data.state ) + "\n" };
     body += point_text( wirea ) + "\n" + point_text( wireb ) + "\n" + point_text( ropea ) + "\n" + point_text( ropeb ) + "\n";
     auto const spacing { anchoreda || anchoredb ? 0.0 : data.hangers[ 1 ] };
@@ -1779,6 +1791,31 @@ overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector
     add_box( Solid, wire, alongspan, 0.08, 0.035 );         // zacisk 6601 na przewodzie
 }
 
+// izolator sekcyjny w połowie przęsła (Jan 2026-10-25): na przewodzie jezdnym element izolujący z prowadnicami (ok. 2 m), nad nim
+// izolator w linie nośnej. Do czasu modeli (żywiczny na jeden / dwa przewody, ceramiczny) bryły zastępcze; przewód w połowie przęsła
+// liczony prosto między końcami (ZAŁOŻENIE: przewód jezdny bez strzałki), lina nośna o strzałkę niżej (ok. 1/10 wysokości konstrukcyjnej)
+void
+section_insulator( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
+    auto const &data { Chain.data };
+    auto const offset { data.anchor_start.empty() ? 0u : 1u };
+    for( auto const &insulator : data.insulators ) {
+        auto const found { std::find( data.suspensions.begin(), data.suspensions.end(), insulator.after ) };
+        if( found == data.suspensions.end() || static_cast<std::size_t>( found - data.suspensions.begin() ) + offset != Span ) { continue; }
+        double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ];
+        bool anchoreda, anchoredb;
+        if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) ) { return; }
+        glm::dvec3 const a { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, b { wb[ 0 ], wb[ 1 ], wb[ 2 ] };
+        auto const wire { ( a + b ) * 0.5 };
+        auto const height { 0.5 * ( ( ra[ 1 ] - wa[ 1 ] ) + ( rb[ 1 ] - wb[ 1 ] ) ) };
+        auto const rope { glm::dvec3 { 0.5 * ( ra[ 0 ] + rb[ 0 ] ), 0.5 * ( ra[ 1 ] + rb[ 1 ] ) - 0.1 * height, 0.5 * ( ra[ 2 ] + rb[ 2 ] ) } };
+        auto const along { b - a };
+        auto const ceramic { insulator.kind == "ceramic" };
+        add_box( Solid, wire + glm::dvec3 { 0.0, 0.06, 0.0 }, along, ceramic ? 1.6 : 2.0, ceramic ? 0.12 : 0.08 );   // element izolujący z prowadnicami
+        add_box( Solid, rope, along, 0.6, 0.07 );                                                               // izolator w linie nośnej
+        return;
+    }
+}
+
 // robi od nowa przęsło k łańcucha (przy podwieszeniu przesuniętym w edytorze tylko dwa przęsła przy nim)
 void
 rebuild_span( scene_chain &Chain, std::size_t const Span ) {
@@ -1808,6 +1845,8 @@ rebuild_span( scene_chain &Chain, std::size_t const Span ) {
         }
         // przęsło naprężenia zwarte: łącznik 33-0640 za słupem krzyżowym
         overlap_connector( Chain, Span, rope );
+        // izolator sekcyjny w połowie przęsła (bryła zastępcza do czasu modeli)
+        section_insulator( Chain, Span, rope );
         if( false == rope.empty() ) { catenary_span_attach( *span, rope ); }
     }
 }

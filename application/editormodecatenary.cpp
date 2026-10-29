@@ -20,6 +20,7 @@ http://mozilla.org/MPL/2.0/.
 #include "editor/editorGeometry.hpp"
 
 #include "simulation/simulation.h"
+#include "world/TractionPower.h"
 #include "utilities/Globals.h"
 #include "world/Track.h"
 #include "world/catenary_scene.h"
@@ -3477,6 +3478,36 @@ bool catenary_editor::catenary_undo()
 	return true;
 }
 
+// a power source of the scenery (node ... tractionpowersource) picked from a list, or typed in; true when it changed
+static bool catenary_power_combo(char const *Label, char *Buffer, std::size_t const Size)
+{
+	auto changed{false};
+	ImGui::InputText(Label, Buffer, Size);
+	changed = ImGui::IsItemDeactivatedAfterEdit();
+	ImGui::SameLine();
+	ImGui::PushID(Label);
+	if (ImGui::BeginCombo("##sources", "", ImGuiComboFlags_NoPreview))
+	{
+		for (auto const *source : simulation::Powergrid.sequence())
+		{
+			if (source == nullptr || source->name().empty())
+				continue;
+			if (ImGui::Selectable(source->name().c_str(), source->name() == Buffer))
+			{
+				std::snprintf(Buffer, Size, "%s", source->name().c_str());
+				changed = true;
+			}
+		}
+		if (simulation::Powergrid.sequence().empty())
+			ImGui::TextDisabled("%s", STR_C("No power sources in the scenery (node ... tractionpowersource)"));
+		ImGui::EndCombo();
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("The power sources (substations, section cabins) of the scenery"));
+	ImGui::PopID();
+	return changed;
+}
+
 void catenary_editor::render_catenary_chain_ui()
 {
 	auto &tool{m_catenary};
@@ -3508,8 +3539,7 @@ void catenary_editor::render_catenary_chain_ui()
 	char const *const states[] = {statenames[0].c_str(), statenames[1].c_str(), statenames[2].c_str()};
 	if (ImGui::Combo(STR_C("Wires"), &tool.state, states, 3))
 		changed = true;
-	ImGui::InputText(STR_C("Power source"), tool.power, sizeof(tool.power));
-	if (ImGui::IsItemDeactivatedAfterEdit())
+	if (catenary_power_combo(STR_C("Power source"), tool.power, sizeof(tool.power)))
 		changed = true;
 	if (ImGui::InputFloat(STR_C("Voltage (V)"), &tool.voltage, 0.0f, 0.0f, "%.0f"))
 		changed = true;
@@ -5071,6 +5101,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 							ImGui::TextWrapped("- %s", issue.text.c_str());
 				}
 				render_catenary_messenger_from(static_cast<std::size_t>(chain));
+				render_catenary_insulator(static_cast<std::size_t>(chain));
 			}
 			if (ImGui::Button(STR_C("Remove the pole")))
 				catenary_delete_selected();
@@ -5083,6 +5114,65 @@ void catenary_editor::render_catenary_cantilever_ui()
 
 // the messenger of the chain at the selected suspension held by another cantilever on the same pole or next to it (spread
 // cantilevers on the console 4890, a cantilever of the messenger only by a pull-off of the wires): chain entry messenger_from
+// a section insulator in the middle of the span after the selected pole (towards the end of the chain): its kind, and the power source
+// of the spans after it (another section). Ceramic up to 45 km/h, resin faster (Glowacki); the spark and the models come later
+void catenary_editor::render_catenary_insulator(std::size_t const Chain)
+{
+	auto &tool{m_catenary};
+	auto const *chain{catenary_chain_get(Chain)};
+	auto const *data{tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr};
+	if (chain == nullptr || data == nullptr || data->name.empty())
+		return;
+	auto const &list{chain->suspensions};
+	auto const found{std::find(list.begin(), list.end(), data->name)};
+	if (found == list.end() || found + 1 == list.end())
+		return; // the last pole: no span after it in the chain
+	auto const existing{std::find_if(chain->insulators.begin(), chain->insulators.end(), [&](auto const &Insulator) { return Insulator.after == data->name; })};
+	auto has{existing != chain->insulators.end()};
+	auto changed{*chain};
+	auto update{false};
+	ImGui::PushID("insulator");
+	if (ImGui::Checkbox(format(STR_C("Section insulator in the span to %s"), (found + 1)->c_str()).c_str(), &has))
+	{
+		if (has)
+			changed.insulators.push_back({data->name, "resin", {}});
+		else
+			changed.insulators.erase(std::remove_if(changed.insulators.begin(), changed.insulators.end(), [&](auto const &Insulator) { return Insulator.after == data->name; }), changed.insulators.end());
+		update = true;
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("A section insulator in the middle of the span after this pole: the spans after it can take another power source (another section). Placeholder shapes until the models are made"));
+	if (has && existing != chain->insulators.end())
+	{
+		auto &own{*std::find_if(changed.insulators.begin(), changed.insulators.end(), [&](auto const &Insulator) { return Insulator.after == data->name; })};
+		auto ceramic{own.kind == "ceramic" ? 1 : 0};
+		ImGui::SameLine();
+		auto picked{ImGui::RadioButton(STR_C("resin"), &ceramic, 0)};
+		ImGui::SameLine();
+		picked |= ImGui::RadioButton(STR_C("ceramic"), &ceramic, 1);
+		if (picked)
+		{
+			own.kind = ceramic == 1 ? "ceramic" : "resin";
+			update = true;
+		}
+		char power[64]{};
+		std::snprintf(power, sizeof(power), "%s", own.power.c_str());
+		ImGui::PushItemWidth(140.0f);
+		if (catenary_power_combo(STR_C("Power source after it"), power, sizeof(power)))
+		{
+			own.power = power;
+			update = true;
+		}
+		ImGui::PopItemWidth();
+	}
+	ImGui::PopID();
+	if (update)
+	{
+		tool.undo.push_back({++tool.group, true, Chain, std::nullopt, *chain, false});
+		catenary_chain_update(Chain, changed);
+	}
+}
+
 void catenary_editor::render_catenary_messenger_from(std::size_t const Chain)
 {
 	auto &tool{m_catenary};

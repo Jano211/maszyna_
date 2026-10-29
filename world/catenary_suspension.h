@@ -80,6 +80,15 @@ struct chain {
     // odciągu przewodów): w punkcie łańcucha <podwieszenie z listy> przewody idą przez jego "at", lina przez "rope" podwieszenia
     // <trzymające linę>. Wpis "messenger_from <z listy> <trzymające linę>", przed "suspensions"
     std::vector<std::pair<std::string, std::string>> messenger_from;
+    // izolatory sekcyjne (Jan 2026-10-25: zawsze w połowie przęsła): w przęśle za podwieszeniem "after", rodzaj "resin" (żywiczny; na
+    // jeden albo dwa przewody wg typu sieci) albo "ceramic"; przęsła za nim zasila "power" (puste - zasilacz łańcucha). Wpis
+    // "insulator <podwieszenie> <rodzaj> <zasilacz|->" przed "suspensions"
+    struct section_insulator {
+        std::string after;
+        std::string kind { "resin" };
+        std::string power;
+    };
+    std::vector<section_insulator> insulators;
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
 };
 

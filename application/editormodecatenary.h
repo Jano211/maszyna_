@@ -261,6 +261,7 @@ struct catenary_editor
 	chain_report const &catenary_chain_report(std::size_t const Chain) const;
 	void render_catenary_zigzag_ui();
 	void render_catenary_overlaps(std::size_t const Chain);
+	void render_catenary_insulator(std::size_t const Chain);
 	void render_catenary_chain_report(std::size_t const Chain);
 	// a pole of this type can't stand there: its group doesn't stand by switches and a switch is by it
 	bool catenary_switch_error(std::string const &Pole, glm::dvec3 const &Foot, TTrack const *Track) const;
