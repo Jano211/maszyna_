@@ -3739,16 +3739,20 @@ bool TDynamicObject::Update(double dt, double dt1)
                             axle.jointtrack = nullptr;
                             passedjoint = wrapped;
                         }
-                        // ...and bangs on the frog of a switch
+                        // ...and bangs on the gaps of the rails: the frog of a switch, a crossing with another track
                         auto passedfrog { false };
-                        auto const frogdistance { probe.track != nullptr ? probe.track->frog_distance() : -1.0 };
-                        if( frogdistance > 0.0 ) {
-                            auto const frogbehind { probe.position >= frogdistance };
+                        if( probe.track != nullptr ) {
+                            auto gapspassed { 0 };
+                            for( auto const &gap : probe.track->rail_gaps() ) {
+                                if( gap.loud && probe.position >= gap.at ) {
+                                    ++gapspassed;
+                                }
+                            }
                             if( probe.track == axle.frogtrack ) {
-                                passedfrog = ( frogbehind != axle.frogbehind );
+                                passedfrog = ( gapspassed != axle.gapspassed );
                             }
                             axle.frogtrack = probe.track;
-                            axle.frogbehind = frogbehind;
+                            axle.gapspassed = gapspassed;
                         }
                         else {
                             axle.frogtrack = nullptr;
@@ -8310,15 +8314,15 @@ TDynamicObject::update_shake_physical( double const Timedelta, glm::dvec3 const 
                     ( isswitch ? 0.004 : 0.0025 ) * wear * jointfactor,
                     ( isswitch ? 0.002 : 0.0003 ) * jointfactor );
         }
-        if( probe.track->eType == tt_Switch ) {
-            auto const frogdistance { probe.track->frog_distance() };
-            if( frogdistance > 0.0 ) {
-                auto const position { probe.position - probe.direction * Back };
-                auto const key { static_cast<std::uint32_t>( reinterpret_cast<std::uintptr_t>( probe.track ) >> 4 ) * 131U };
-                // the wheel drops into the gap of the frog and gets shoved sideways by the guard rail
-                sample += sway::joint_dip( position - frogdistance, key + 1U, 0.007 * wear * frogfactor, 0.004 * frogfactor );
-                // tips of the blades give a sideways nudge
-                sample += sway::joint_dip( position - 1.0, key + 2U, 0.0003 * frogfactor, 0.0006 * frogfactor );
+        // the gaps of the rails: the wheel drops into the flangeway on the side of the gap and gets shoved by the check rail
+        if( auto const &gaps { probe.track->rail_gaps() }; false == gaps.empty() ) {
+            auto const position { probe.position - probe.direction * Back };
+            auto const trackkey { static_cast<std::uint32_t>( reinterpret_cast<std::uintptr_t>( probe.track ) >> 4 ) * 131U };
+            for( std::size_t index = 0; index < gaps.size(); ++index ) {
+                auto const &gap { gaps[ index ] };
+                // the side of the gap as seen from the vehicle: the path the other way round swaps them
+                auto const side { gap.side * ( probe.direction >= 0.0 ? 1 : -1 ) };
+                sample += sway::gap_dip( position - gap.at, trackkey + 1U + static_cast<std::uint32_t>( index ), gap.depth * wear * frogfactor, gap.sidekick * frogfactor, side );
             }
         }
         return sample; };

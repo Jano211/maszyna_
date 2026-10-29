@@ -3184,7 +3184,94 @@ TTrack::joint_count() const {
         // piece too short to hold a joint of its own; giving it one anyway would put the joints noticeably too close to each other
         return 0;
     }
+    if( eType == tt_Normal && track_rails::cut_rails( *this ) ) {
+        // rails broken where other rails cross them are laid as a crossing, without the joints of plain track (as they're drawn);
+        // the gaps of the crossing are its bangs. kept until the rails around change
+        if( m_jointstamp != track_rails::memo_stamp() ) {
+            m_jointstamp = track_rails::memo_stamp();
+            m_jointcount = 1;
+            for( auto const &crossing : const_cast<TTrack *>( this )->rail_crossings( false ) ) {
+                if( crossing.track != this && crossing.at >= 0.0 && crossing.at <= length ) {
+                    m_jointcount = 0;
+                    break;
+                }
+            }
+        }
+        if( m_jointcount == 0 ) {
+            return 0;
+        }
+    }
     return std::max( 1, static_cast<int>( std::lround( length / fSoundDistance ) ) );
+}
+
+std::vector<TTrack::rail_gap> const &
+TTrack::rail_gaps() const {
+
+    auto const path { ( eType == tt_Switch && SwitchExtension ) ? std::clamp( SwitchExtension->CurrentIndex, 0, 1 ) : 0 };
+    if( m_railgapsstamp == track_rails::memo_stamp() ) {
+        return m_railgaps[ path ];
+    }
+    m_railgapsstamp = track_rails::memo_stamp();
+    for( auto &gaps : m_railgaps ) {
+        gaps.clear();
+    }
+    if( ( iCategoryFlag & 15 ) != 1 ) {
+        return m_railgaps[ path ];
+    }
+    auto *self { const_cast<TTrack *>( this ) };
+    auto const pathlength = [ & ]( int const Path ) {
+        return (
+            eType == tt_Switch ?
+                ( SwitchExtension && SwitchExtension->Segments[ Path ] ? SwitchExtension->Segments[ Path ]->GetLength() : 0.0 ) :
+                ( Segment ? Segment->GetLength() : 0.0 ) ); };
+    if( false == track_rails::cut_rails( *this ) ) {
+        // the rails aren't laid by their crossings here: the frog of a switch as it comes out of the geometry of its paths
+        auto const frog { frog_distance() };
+        if( frog > 0.0 ) {
+            for( auto &gaps : m_railgaps ) {
+                gaps.push_back( { frog, 0, 0.007, 0.004, true } );
+                gaps.push_back( { 1.0, 0, 0.0003, 0.0006, false } );
+            }
+        }
+        return m_railgaps[ path ];
+    }
+    if( eType == tt_Switch && SwitchExtension ) {
+        auto const frog { self->frog() };
+        for( int p = 0; p < 2; ++p ) {
+            // the wheel drops into the flangeway of the frog and the check rail shoves it sideways; a movable nose closes the gap
+            if( frog.valid && false == SwitchExtension->m_movablenose && frog.at[ p ] > 0.0 && frog.at[ p ] < pathlength( p ) ) {
+                m_railgaps[ p ].push_back( { frog.at[ p ], frog.side[ p ], 0.007, 0.004, true } );
+            }
+            // the tip of the blade the wheels run on gives a sideways nudge
+            auto const &blade { self->blade( p ) };
+            if( blade.valid ) {
+                m_railgaps[ p ].push_back( { blade.tip, 0, 0.0003, 0.0006, false } );
+            }
+        }
+    }
+    // the rails of the other tracks crossing: a diamond crossing, a frog lying past the end of a switch, a crossing inside a slip
+    for( auto const &crossing : self->rail_crossings( false ) ) {
+        if( crossing.track == nullptr || crossing.track == this || crossing.path < 0 || crossing.path > 1 ) {
+            continue;
+        }
+        if( crossing.at < 0.0 || crossing.at > pathlength( crossing.path ) ) {
+            continue;
+        }
+        // ZAŁOŻENIE: the flatter the rails cross, the longer the wheel runs unsupported over the flangeway and the deeper it drops (an acute
+        // frog as deep as the frog of a switch); across at a wide angle the gap is short, a sharp knock with little drop. an obtuse
+        // frog has no nose for the wheel to land on, a little deeper than an acute one at the same angle
+        auto const steep { std::clamp( std::abs( std::sin( crossing.angle ) ), 0.0, 1.0 ) };
+        auto depth { 0.007 - 0.004 * steep };
+        if( crossing.facing >= 0.0 ) {
+            depth += 0.001;
+        }
+        auto const sidekick { 0.004 * ( 1.0 - steep ) };
+        m_railgaps[ crossing.path ].push_back( { crossing.at, crossing.side, depth, sidekick, true } );
+    }
+    for( auto &gaps : m_railgaps ) {
+        std::sort( gaps.begin(), gaps.end(), []( rail_gap const &Left, rail_gap const &Right ) { return Left.at < Right.at; } );
+    }
+    return m_railgaps[ path ];
 }
 
 double

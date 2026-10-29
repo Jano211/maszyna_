@@ -320,6 +320,17 @@ public:
     double joint_spacing() const;
     // distance from the start of a switch to its frog, the place where rails of both routes cross. negative if there's none
     double frog_distance() const;
+    // a gap in the rails the wheels of a path run over: the frog of a switch, the tips of its blades, a crossing with the rails of another
+    // track. found from the rails as they're laid (track_rails), so the bangs and the sway come where the rails are actually broken
+    struct rail_gap {
+        double at { 0.0 }; // distance along the path
+        int side { 0 }; // the rail with the gap, 1 right, -1 left, 0 both (looking along the path)
+        double depth { 0.0 }; // how far the wheel drops into it, metres
+        double sidekick { 0.0 }; // how far the guard rail or the blade shoves the wheelset sideways, metres
+        bool loud { false }; // a frog or a crossing: the wheel bangs on it, the tip of a blade only nudges
+    };
+    // the gaps of the path the vehicles take now (the set path of a switch); kept until the rails around change
+    std::vector<rail_gap> const &rail_gaps() const;
     inline TTrack *CurrentNext() const {
         return trNext; };
     inline TTrack *CurrentPrev() const {
@@ -467,6 +478,10 @@ private:
     material_handle shared_tread( int const Path, TTrack const &Other, int const Otherpath ) const;
     void loft_blade( int const Path, gfx::vertex_array const &Rail, gfx::vertex_array const &Blade, float const Texturelength, gfx::vertex_array &Vertices ) const;
     mutable double m_frogdistance { -2.0 }; // cached result of frog_distance(); -2: not calculated yet
+    mutable std::vector<rail_gap> m_railgaps[ 2 ]; // cached results of rail_gaps(), for each path
+    mutable unsigned int m_railgapsstamp { 0 }; // track_rails::memo_stamp() they were found at; 0: not yet
+    mutable int m_jointcount { -1 }; // cached result of joint_count(); -1: not calculated yet
+    mutable unsigned int m_jointstamp { 0 };
     // generates fishplates, bolts and rail gap marks for the joints of a plain track
     void create_rail_joints( gfx::vertex_array &Vertices, gfx::index_array &Indices );
 // members

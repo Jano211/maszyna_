@@ -133,6 +133,30 @@ joint_dip( double const Offset, std::uint32_t const Key, double const Depth, dou
     return sample;
 }
 
+// dip of the track surface at a gap in one rail: a frog, a crossing with another track. Offset: distance from the gap, metres
+// Side: the rail with the gap as seen from the vehicle, 1 right, -1 left, 0 both; Depth: how far the wheel drops into it, metres
+// Sidekick: how far the check rail or the blade shoves the wheelset sideways, metres
+inline
+rail_sample
+gap_dip( double const Offset, std::uint32_t const Key, double const Depth, double const Sidekick, int const Side ) {
+
+    constexpr double reach { 0.25 }; // length scale of the dip, metres: the gap is short, the wheel lands on the other side of it
+    auto const distance { std::abs( Offset ) };
+    if( distance > 12.0 * reach ) { return {}; }
+
+    auto const shape { std::exp( -distance / reach ) };
+    auto const depth { Depth * ( 0.7 + 0.6 * hash01( Key * 2U + 4U ) ) * shape };
+    auto const right { Side >= 0 ? depth : 0.0 };
+    auto const left { Side <= 0 ? depth : 0.0 };
+
+    rail_sample sample;
+    sample.vertical = -0.5 * ( left + right );
+    sample.crosslevel = ( right - left ) / gauge;
+    // the check rail pushes the wheelset away from the rail with the gap
+    sample.lateral = Sidekick * ( Side != 0 ? static_cast<double>( Side ) : ( hash01( Key * 2U + 3U ) < 0.5 ? -1.0 : 1.0 ) ) * shape;
+    return sample;
+}
+
 // damped oscillator following a moving base
 struct oscillator {
     double value { 0.0 };
