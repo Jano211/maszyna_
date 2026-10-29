@@ -80,6 +80,15 @@ struct chain {
     // odciągu przewodów): w punkcie łańcucha <podwieszenie z listy> przewody idą przez jego "at", lina przez "rope" podwieszenia
     // <trzymające linę>. Wpis "messenger_from <z listy> <trzymające linę>", przed "suspensions"
     std::vector<std::pair<std::string, std::string>> messenger_from;
+    // izolatory sekcyjne (Jan 2026-10-25: zawsze w połowie przęsła): w przęśle za podwieszeniem "after", rodzaj "resin" (żywiczny; na
+    // jeden albo dwa przewody wg typu sieci) albo "ceramic"; przęsła za nim zasila "power" (puste - zasilacz łańcucha). Wpis
+    // "insulator <podwieszenie> <rodzaj> <zasilacz|->" przed "suspensions"
+    struct section_insulator {
+        std::string after;
+        std::string kind { "resin" };
+        std::string power;
+    };
+    std::vector<section_insulator> insulators;
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
 };
 
@@ -136,6 +145,17 @@ struct gantry {
     std::string skin;
 };
 
+// uszynienie grupowe (karta 0805, Jan 2026-10-25): lina uszynienia po konstrukcjach wsporczych, niezależna od sieci. Wpis
+// "node <max> <min> <nazwa> earthing poles <podwieszenia> endearthing": na słupach tych podwieszeń (po kolei) uchwyty 6120 na górze
+// słupa (wykonanie z danych słupa - "earthing" w traction_supports.txt), lina przez ich punkty "wire"
+struct earthing {
+    std::string name;
+    double      range_max { 1000.0 };
+    double      range_min { 0.0 };
+    std::vector<std::string> poles;
+    std::string skin;
+};
+
 // zawartość pliku podwieszeń
 struct suspension_file {
     std::string skin;                       // domyślna wymienna tekstura dla wpisów bez własnej
@@ -143,6 +163,7 @@ struct suspension_file {
     std::vector<chain> chains;
     std::vector<gantry> gantries;
     std::vector<anchor> anchors;
+    std::vector<earthing> earthings;
 };
 
 // rozbiera plik podwieszeń podany jako kolejne słowa (już bez komentarzy). Source: nazwa pliku do komunikatów.
@@ -158,6 +179,8 @@ std::string write_chain( chain const &Entry );
 std::string write_gantry( gantry const &Entry );
 // wpis kotwienia w postaci tekstu do pliku (jedna linia)
 std::string write_anchor( anchor const &Entry );
+// wpis uszynienia w postaci tekstu do pliku (jedna linia)
+std::string write_earthing( earthing const &Entry );
 
 // dane konstrukcji wsporczej z rejestru
 struct support_data {

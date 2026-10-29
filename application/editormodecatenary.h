@@ -56,6 +56,7 @@ struct catenary_editor
 		std::string family; // the family of the card in the described catalogue; empty without it
 		bool execution_changed{false}; // the execution chosen in the panel has no card for this A, another one was taken
 		bool switch_error{false}; // a pole of a group that doesn't stand by switches (concrete), standing by one
+		bool by_switch{false}; // the pole stands by a switch (its face goes 4.00 m from the track axis there)
 		catenary::suspension data;
 	};
 	struct catenary_change
@@ -86,7 +87,11 @@ struct catenary_editor
 		// expert mode: the advanced settings shown (+-0.5 stagger, own hk, the top mount, spread cantilevers, messenger held by
 		// another cantilever, single beam elements, turning a gantry); off: only what a usual line needs. What's set stays shown
 		bool expert{false};
-		bool stay_shift_open{false}; // the slider of the top mount of the selected cantilever is shown
+		bool stay_shift_open{false};
+		// group earthing: the poles clicked one after another become the next earthing line (page 3)
+		bool earthing_building{false};
+		std::vector<std::string> earthing_poles;
+		std::string earthing_file; // the slider of the top mount of the selected cantilever is shown
 		bool wide_stagger{false}; // stagger -0.50..+0.50 m from the track axis (tuning at turnouts; not allowed on a line)
 		int bend{0}; // 0: from the track, 1: straight, 2: curve
 		float stagger{0.30f};
@@ -233,6 +238,10 @@ struct catenary_editor
 	// the drop of the selected cantilever on a gantry (without an umbrella) to the other side of the track: at the same distance
 	// from the track axis, the wires stay where they are, so the card may go from a short cantilever to a long one or back
 	bool catenary_drop_flip(std::size_t const Index);
+	// the beam the drop of the suspension hangs on; false: not a drop on the beam of a gantry
+	bool catenary_drop_beam(std::size_t const Index, glm::dvec3 &From, glm::dvec3 &To) const;
+	// the suspension on its drop moved to Along of the beam (0 its start, 1 its end), the wires staying by the track; false: no card
+	bool catenary_drop_spot(std::size_t const Index, double const Along, catenary_spot &Spot);
 	// the poles of the chain from position From on get the zigzag of Iet-107: the first of them keeps its side (or goes the other
 	// way with Flip), the next ones in turn on a straight, outwards on a curve
 	void catenary_zigzag_chain(std::size_t const Chain, std::size_t const From, bool const Flip);
@@ -255,6 +264,11 @@ struct catenary_editor
 	mutable std::map<std::size_t, chain_report> m_chain_reports;
 	chain_report const &catenary_chain_report(std::size_t const Chain) const;
 	void render_catenary_zigzag_ui();
+	void render_catenary_overlaps(std::size_t const Chain);
+	void render_catenary_insulator(std::size_t const Chain);
+	void render_catenary_earthing_ui();
+	// the earthing being built is finished: from two poles on it goes into the file
+	void catenary_earthing_finish();
 	void render_catenary_chain_report(std::size_t const Chain);
 	// a pole of this type can't stand there: its group doesn't stand by switches and a switch is by it
 	bool catenary_switch_error(std::string const &Pole, glm::dvec3 const &Foot, TTrack const *Track) const;
@@ -265,6 +279,8 @@ struct catenary_editor
 		std::string pole;
 		bool error{false};
 	};
+	// the place stands by a switch: on one, or within kSwitchRange of a path of one
+	bool catenary_by_switch(glm::dvec3 const &Foot, TTrack const *Track) const;
 	mutable std::vector<std::pair<TTrack const *, int>> m_switch_paths; // the paths of switches, gathered again when the number of tracks changes
 	mutable std::size_t m_switch_tracks{static_cast<std::size_t>(-1)};
 	mutable std::map<std::size_t, switch_check> m_switch_checks;

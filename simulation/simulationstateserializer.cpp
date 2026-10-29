@@ -598,7 +598,7 @@ state_serializer::deserialize_node( cParser &Input, scene::scratch_data &Scratch
         road->create_lanes();
         scene::Layers.track( road, { sourcebegin, Input.TokenEnd() } );
     }
-    else if( nodedata.type == "suspension" || nodedata.type == "chain" || nodedata.type == "gantry" || nodedata.type == "anchor" ) {
+    else if( nodedata.type == "suspension" || nodedata.type == "chain" || nodedata.type == "gantry" || nodedata.type == "anchor" || nodedata.type == "earthing" ) {
         // the names are referred to by the other entries as they're written, the parser gives them in lower case
         auto name { nodedata.name };
         if( false == header.empty() ) {

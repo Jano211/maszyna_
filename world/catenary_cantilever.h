@@ -125,6 +125,10 @@ struct cantilever_pole {
     std::string steady;                 // mocowanie izolatora wysięgu pomocniczego (schematy z trzema zaczepami)
     std::string console;                // konsola wysięgników rozstawionych (wpis "mount ... console"); pusta = słup ich nie nosi
     std::string steady_console;         // belka 4690 rozstawionych wysięgów pomocniczych (karta 33-0519, wysięgi 0167); mocowanie wysięgu na niej
+    // uszynienie grupowe (karta 0805): uchwyt liny 6120 na górze słupa (w marginesie 0,15 m nad mount_max) i jego tył (dwuteowniki: 6120-08);
+    // puste - słup go nie nosi (betony 1701/1711)
+    std::string earthing;
+    std::string earthing_back;
     // słup bramki z wysięgnikiem (zrobiony z wpisu "mast" z mocowaniami): model stawia bramka, nie wysięgnik; mount_max pod
     // dźwigarem bramki liczy sceneria wg jej poziomu (mast_low/mast_high minus below_beam), tu - pod dolnym mocowaniem
     bool   gantry { false };
@@ -186,6 +190,14 @@ struct gantry_mast {
     std::string stay;
     std::string steady;
     double below_beam { 0.15 };
+    // półbramka (1901): słup z dźwigarem w jednym modelu ("semi <długość dźwigara>"); bramka typu T: dźwigary na dwie strony
+    // ("sides 2"). Prześwit (mount) to wysokość konstrukcyjna Hk, na której wiszą zwisy rodziny "drop". Dźwigar w modelu wzdłuż +X
+    // (jak dźwigary); "turn" obraca model wokół pionu, gdyby szedł inaczej. Dla półbramki katalog zakłada dźwigar o jej nazwie
+    // (pojedynczy element bez modelu), więc w pliku sieci to zwykły wpis "gantry beam <nazwa> mast <nazwa> x y z tip x y z"
+    double semi { 0.0 };
+    int    sides { 1 };
+    double turn { 0.0 };
+    std::string drop;
 };
 // dźwigar bramki: model z zerem w osi pierwszego słupa na spodzie dźwigara, X modelu wzdłuż dźwigara
 struct gantry_beam {
@@ -195,6 +207,7 @@ struct gantry_beam {
     std::string drop;                   // rodzina pasujących zwisów
     bool single { false };              // pojedynczy element na jednym słupie przelotowym (3017-3025, 1910): z jednej strony
                                         // mocowanie do słupa, z drugiej do konsoli
+    bool semi { false };                // dźwigar półbramki: część modelu słupa (bez własnego modelu)
 };
 
 // rozstaw osi słupów bramki: między ścianami słupów o 0,20 m mniej niż numer dźwigara (E101: 9,9 m), do osi dochodzą offsety słupów

@@ -209,6 +209,7 @@ void editor_mode::work_area_tools(std::vector<tool_button> &Buttons)
 		Buttons.push_back({icon::catenary, STR_C("Poles"), nullptr, STR_C("Poles with cantilevers: LMB by a track places one, LMB on a pole selects it"), page == 0, [this]() { catenary_choose_page(0); }});
 		Buttons.push_back({icon::gantry, STR_C("Gantries"), nullptr, STR_C("Gantries: masts and beams, the cantilevers on their drops and masts"), page == 1, [this]() { catenary_choose_page(1); }});
 		Buttons.push_back({icon::wires, STR_C("Wires"), nullptr, STR_C("The chains: the type of the network, the wires, the spans between the poles"), page == 2, [this]() { catenary_choose_page(2); }});
+		Buttons.push_back({icon::wires, STR_C("Earthing"), nullptr, STR_C("Group earthing: the earthing rope over the tops of the poles (holders 6120, card 0805)"), page == 3, [this]() { catenary_choose_page(3); }});
 		break;
 	}
 	case work_area::roads:

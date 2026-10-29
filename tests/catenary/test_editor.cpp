@@ -257,6 +257,36 @@ int main( int, char *argv[] ) {
             }
             check( good, "wysiegnik na slupie bramki 3031-1: bez modelu slupa, mocowania z wyk. 04 pod dzwigarem" );
         }
+        {
+            // półbramka 1901 (słup z dźwigarem w jednym modelu): jeden model, dźwigar od osi słupa na Hk, zwisy 4840; przy dźwigarze
+            // skośnym do toru o 5° zwis równo z dźwigarem (pole.turn)
+            auto const angle { 5.0 * 3.14159265358979323846 / 180.0 };
+            catenary::gantry semi;
+            semi.name = "pb1"; semi.beam = "polbramka_1901_10m"; semi.masts[ 0 ] = "polbramka_1901_10m";
+            semi.points[ 0 ][ 0 ] = 0.0; semi.points[ 0 ][ 1 ] = 0.2; semi.points[ 0 ][ 2 ] = 80.0;
+            semi.points[ 1 ][ 0 ] = 10.0 * std::cos( angle ); semi.points[ 1 ][ 1 ] = 0.2; semi.points[ 1 ][ 2 ] = 80.0 + 10.0 * std::sin( angle );
+            errors.clear();
+            auto const before { simulation::State.created.size() };
+            auto const index { catenary_gantry_add( "td_bramka_test.scm", semi ) };
+            auto good { catenary_gantry_parts( index ) == 1 && simulation::State.created.size() == before + 1 && errors.empty()
+                && simulation::State.created[ before ].entry.find( "polbramki/polbramka_1901_10m.t3d" ) != std::string::npos };
+            for( auto const &e : errors ) { std::printf( "  blad: %s\n", e.c_str() ); }
+            catenary::suspension drop;
+            drop.card = 1112; drop.execution = 1; drop.range_max = 1000;
+            glm::dvec3 const pole { 6.0 * std::cos( angle ), 0.2 + 7.835, 80.0 + 6.0 * std::sin( angle ) };
+            drop.has_at = true; drop.at[ 0 ] = pole.x + 2.0; drop.at[ 1 ] = 0.2 + 5.6; drop.at[ 2 ] = pole.z;
+            drop.has_rope = true; drop.rope[ 0 ] = pole.x + 2.0; drop.rope[ 1 ] = 0.2 + 5.6 + 1.7; drop.rope[ 2 ] = pole.z;
+            drop.has_pole = true; drop.pole_type = "4840-3"; drop.pole[ 0 ] = pole.x; drop.pole[ 1 ] = pole.y; drop.pole[ 2 ] = pole.z;
+            catenary::cantilever_result probe;
+            auto const assembled { catenary_scene_probe( drop, probe ) };
+            for( auto const &warning : probe.warnings ) { std::printf( "  uwaga (zwis 4840): %s\n", warning.c_str() ); }
+            auto const turn { probe.values.count( "pole.turn" ) ? probe.values.at( "pole.turn" ) : 0.0 };
+            std::printf( "  polbramka: zwis 4840-3 obrocony o %.2f st.\n", turn );
+            good = good && assembled && std::abs( std::abs( turn ) - 5.0 ) < 0.01;
+            // ten sam zwis na dźwigarze prostopadłym (skos 1°): bez obrotu
+            catenary_gantry_remove( index );
+            check( good, "polbramka 1901: jeden model, zwis 4840 na Hk, przy skosie 5 st. zwis rowno z dzwigarem" );
+        }
         // bramka wieloprzęsłowa: dwa przęsła na wspólnym słupie przelotowym - słup stawia tylko pierwsze; po usunięciu
         // pierwszego przęsła stawia go drugie
         {
@@ -346,6 +376,123 @@ int main( int, char *argv[] ) {
         if( cold != nullptr ) { std::printf( "  przy -20 °C: b %.3f, uwagi %d\n", cold->b, static_cast<int>( cold->warnings.size() ) ); for( auto const &w : cold->warnings ) { std::printf( "    %s\n", w.c_str() ); } }
         check( cold != nullptr && cold->b > 1.75 && cold->b < 1.75 + 84.0 * 17e-6 * 30.0 + 0.01, "kotwienie ciezarowe liczy odleglosc od kotwienia srodkowego (84 m, nie 700)" );
         Global.AirTemperature = 10.f;
+    }
+
+    // 6a''. przęsło naprężenia: dwa łańcuchy z jednym wspólnym przęsłem (słupy na z = 60 i 120, przewody 0,3 m obok siebie):
+    // wczytane - bieżnia wspólna łączona raz po wczytaniu; zasilacze różne - izolowane; w edytorze nowe przęsło dostaje "parallel"
+    {
+        auto a { entry }, b { entry }, c { entry }, d { entry }, e { entry }, f { entry };
+        a.name = "o1"; b.name = "o2"; c.name = "o3"; d.name = "o4"; e.name = "o5"; f.name = "o6";
+        auto const place = [ & ]( catenary::suspension &S, double const Z, double const Shift ) {
+            S.at[ 2 ] = S.rope[ 2 ] = S.pole[ 2 ] = Z;
+            S.at[ 0 ] += Shift; S.rope[ 0 ] += Shift;
+        };
+        place( a, 0.0, 0.0 ); place( b, 60.0, 0.0 ); place( c, 120.0, 0.0 );
+        place( d, 60.0, 0.3 ); place( e, 120.0, 0.3 ); place( f, 180.0, 0.3 );
+        catenary::chain one, two;
+        one.name = "na"; one.power = "pwr01"; one.type = "C120-2C"; one.suspensions = { "o1", "o2", "o3" };
+        two.name = "nb"; two.power = "pwr02"; two.type = "C120-2C"; two.suspensions = { "o4", "o5", "o6" };
+        std::string text;
+        for( auto const *item : { &a, &b, &c, &d, &e, &f } ) { text += catenary::write_suspension( *item ) + "\n"; }
+        text += catenary::write_chain( one ) + "\n" + catenary::write_chain( two ) + "\n";
+        { std::ofstream out { "tests/catenary/td_naprezenie_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear();
+        cParser directive( "td_naprezenie_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        auto const overlaps { catenary_chain_overlaps( 0 ) };
+        // po wczytaniu (przed InitTraction) łączy catenary_scene_loaded() - wpis w logu; gdy sceneria już była zainicjowana, przęsło
+        // drugiego łańcucha ma "parallel" od razu w treści
+        auto const inbody { std::any_of( mock_span_bodies.begin(), mock_span_bodies.end(), []( std::string const &B ) { return B.find( " parallel na_2" ) != std::string::npos; } ) };
+        auto const linked { inbody || std::any_of( logs.begin(), logs.end(), []( std::string const &L ) { return L.find( "tension overlaps" ) != std::string::npos; } ) };
+        std::printf( "  naprezenie: nakladek %zu, log %d, bledy %zu\n", overlaps.size(), linked ? 1 : 0, errors.size() );
+        for( auto const &o : overlaps ) { std::printf( "    z %zu: przesel %zu (pierwsze %zu), krzyzowe %zu, zwarte %d\n", o.other, o.spans.size(), o.spans.empty() ? 99 : o.spans.front(), o.crossing.size(), o.connected ? 1 : 0 ); }
+        for( auto const &e : errors ) { std::printf( "    blad: %s\n", e.c_str() ); }
+        auto good { overlaps.size() == 1 && overlaps.front().other == 1 && overlaps.front().spans == std::vector<std::size_t>{ 1 } && overlaps.front().other_spans == std::vector<std::size_t>{ 0 }
+            && overlaps.front().crossing.empty() && false == overlaps.front().connected && linked && errors.empty() };
+        // edytor: łańcuch nb od nowa - jego wspólne przęsło dostaje "parallel na_2"
+        mock_span_bodies.clear(); mock_span_names.clear();
+        auto changed { *catenary_chain_get( 1 ) };
+        changed.power = "pwr01";
+        catenary_chain_update( 1, changed );
+        auto const index { std::find( mock_span_names.begin(), mock_span_names.end(), std::string( "nb_1" ) ) };
+        good = good && index != mock_span_names.end() && mock_span_bodies[ static_cast<std::size_t>( index - mock_span_names.begin() ) ].find( " parallel na_2" ) != std::string::npos
+            && catenary_chain_overlaps( 1 ).size() == 1 && catenary_chain_overlaps( 1 ).front().connected;
+        // dwa wspólne przęsła (słup krzyżowy na z = 120): łańcuch nb przedłużony wstecz, zwarte - łącznik 0640 bez błędów
+        auto g { entry }; g.name = "o7"; place( g, 0.0, 0.3 );
+        catenary_scene_add( "td_naprezenie_test.scm", g );
+        auto longer { *catenary_chain_get( 1 ) };
+        longer.suspensions = { "o7", "o4", "o5", "o6" };
+        catenary_chain_update( 1, longer );
+        auto const twospans { catenary_chain_overlaps( 1 ) };
+        if( false == twospans.empty() ) { std::printf( "  dwa wspolne: przesel %zu, krzyzowe %zu, zwarte %d\n", twospans.front().spans.size(), twospans.front().crossing.size(), twospans.front().connected ? 1 : 0 ); }
+        good = good && twospans.size() == 1 && twospans.front().spans.size() == 2 && twospans.front().crossing.size() == 1 && twospans.front().connected && errors.empty();
+        std::remove( "tests/catenary/td_naprezenie_test.scm" );
+        check( good, "przeslo naprezenia: wspolne przeslo wykryte, biezna wspolna po wczytaniu i w edytorze, izolowane / zwarte wg zasilacza, slup krzyzowy" );
+    }
+
+    // 6a4. uszynienie grupowe: uchwyty 6120-01 na górze słupów 1611-11 (wykonanie z danych słupa), zapis i odczyt
+    {
+        auto a { entry }, b { entry }, c { entry };
+        a.name = "e1"; b.name = "e2"; c.name = "e3";
+        b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] = 60.0; c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 120.0;
+        catenary::chain line;
+        line.name = "ne"; line.power = "pwr01"; line.type = "C120-2C"; line.suspensions = { "e1", "e2", "e3" };
+        catenary::earthing earth;
+        earth.name = "u1"; earth.poles = { "e1", "e2", "e3" };
+        auto const written { catenary::write_earthing( earth ) };
+        std::string text;
+        for( auto const *item : { &a, &b, &c } ) { text += catenary::write_suspension( *item ) + "\n"; }
+        text += catenary::write_chain( line ) + "\n" + written + "\n";
+        std::vector<std::string> tokens; std::istringstream words { text };
+        for( std::string word; words >> word; ) { tokens.push_back( word ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( tokens, "uszynienie", parsed, problems );
+        auto good { problems.empty() && parsed.earthings.size() == 1 && catenary::write_earthing( parsed.earthings.front() ) == written };
+        { std::ofstream out { "tests/catenary/td_uszynienie_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear();
+        auto const before { simulation::State.created.size() };
+        cParser directive( "td_uszynienie_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        auto holders { 0 };
+        for( auto i { before }; i < simulation::State.created.size(); ++i ) { if( simulation::State.created[ i ].entry.find( "components/6120-01.t3d" ) != std::string::npos ) { ++holders; } }
+        std::printf( "  uszynienie: uchwytow %d, czesci %zu\n", holders, catenary_earthing_parts( 0 ) );
+        for( auto const &l : logs ) { if( l.find( "earthing" ) != std::string::npos ) { std::printf( "    %s\n", l.c_str() ); } }
+        good = good && holders == 3 && catenary_earthing_parts( 0 ) == 3 && errors.empty();
+        // edycja: uszynienie przez dwa słupy - uchwyty od nowa
+        auto shorter { *catenary_earthing_get( 0 ) };
+        shorter.poles = { "e1", "e2" };
+        good = good && catenary_earthing_update( 0, shorter ) && catenary_earthing_parts( 0 ) == 2;
+        std::remove( "tests/catenary/td_uszynienie_test.scm" );
+        check( good, "uszynienie grupowe: zapis i odczyt, uchwyty 6120-01 na slupach 1611-11, edycja" );
+    }
+
+    // 6a3. izolator sekcyjny w połowie przęsła za i2: zapis i odczyt, przęsła za nim z jego zasilacza
+    {
+        auto a { entry }, b { entry }, c { entry }, d { entry };
+        a.name = "i1"; b.name = "i2"; c.name = "i3"; d.name = "i4";
+        b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] = 60.0; c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 120.0; d.at[ 2 ] = d.rope[ 2 ] = d.pole[ 2 ] = 180.0;
+        catenary::chain line;
+        line.name = "ni"; line.power = "pwr01"; line.type = "C120-2C"; line.suspensions = { "i1", "i2", "i3", "i4" };
+        line.insulators.push_back( { "i2", "ceramic", "pwr09" } );
+        auto const written { catenary::write_chain( line ) };
+        std::string text;
+        for( auto const *item : { &a, &b, &c, &d } ) { text += catenary::write_suspension( *item ) + "\n"; }
+        text += written + "\n";
+        std::vector<std::string> tokens; std::istringstream words { text };
+        for( std::string word; words >> word; ) { tokens.push_back( word ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( tokens, "izolator", parsed, problems );
+        auto good { problems.empty() && parsed.chains.size() == 1 && catenary::write_chain( parsed.chains.front() ) == written && written.find( " insulator i2 ceramic pwr09" ) != std::string::npos };
+        { std::ofstream out { "tests/catenary/td_izolator_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); mock_span_bodies.clear(); mock_span_names.clear();
+        cParser directive( "td_izolator_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        good = good && mock_span_bodies.size() == 3 && mock_span_bodies[ 0 ].find( "pwr01" ) == 0 && mock_span_bodies[ 1 ].find( "pwr01" ) == 0 && mock_span_bodies[ 2 ].find( "pwr09" ) == 0 && errors.empty();
+        std::remove( "tests/catenary/td_izolator_test.scm" );
+        check( good, "izolator sekcyjny: zapis i odczyt, przesla za nim zasila jego zasilacz" );
     }
 
     // 6a'. kotwienia środkowe 0418 (jednostronna izolacja) i 0416 (do dźwigara bramki: środkowe podwieszenie na zwisie)

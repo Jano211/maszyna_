@@ -29,6 +29,7 @@ http://mozilla.org/MPL/2.0/.
 #include "utilities/parser.h"
 
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <locale>
@@ -122,6 +123,15 @@ struct scene_anchor {
     double shape[ 4 ][ 3 ] { { 0.0, 0.0, 0.0 }, { 0.0, 0.0, 0.0 }, { 0.0, 0.0, 0.0 }, { 0.0, 0.0, 0.0 } };
 };
 std::vector<scene_anchor> Anchors;
+
+// uszynienie grupowe z pliku: uchwyty 6120 na słupach podwieszeń; linę rysują przęsła łańcuchów między tymi słupami
+struct scene_earthing {
+    catenary::earthing data;
+    std::string file;
+    std::vector<TAnimModel *> parts;
+    bool removed { false };
+};
+std::vector<scene_earthing> Earthings;
 
 // bramka wieloprzęsłowa: przęsła (wpisy gantry) stykają się na wspólnych słupach - ten sam punkt (w planie do 0,05 m).
 // Model wspólnego słupa stawia przęsło o najniższym numerze; true, gdy słup K przęsła Index stawia inne przęsło
@@ -599,6 +609,15 @@ gantry_beam_ends( catenary::gantry const &Data, catenary::gantry_mast const &Fir
     auto const plan { glm::dvec3 { b.x - a.x, 0.0, b.z - a.z } };
     auto const length { std::max( glm::length( plan ), 1e-6 ) };
     auto const inward { plan * ( 1.0 / length ) };
+    if( First.semi > 0.0 ) {
+        // półbramka: dźwigar od osi słupa na swoją długość (ZAŁOŻENIE: Beam_out od osi), bramka T na obie strony; zwisy na Hk
+        auto const hk { glm::dvec3 { 0.0, First.mount_low, 0.0 } };
+        auto const from { a + hk - ( First.sides > 1 ? inward * First.semi : glm::dvec3 { 0.0 } ) };
+        auto const to { a + hk + inward * First.semi };
+        From[ 0 ] = from.x; From[ 1 ] = from.y; From[ 2 ] = from.z;
+        To[ 0 ] = to.x; To[ 1 ] = to.y; To[ 2 ] = to.z;
+        return;
+    }
     auto const from { a + inward * First.offset + glm::dvec3 { 0.0, Data.high ? First.mount_high : First.mount_low, 0.0 } };
     // pojedynczy element (bez drugiego słupa): poziomo od ściany słupa na swoją długość
     auto const to { Second != nullptr ? b - inward * Second->offset + glm::dvec3 { 0.0, Data.high ? Second->mount_high : Second->mount_low, 0.0 } : from + inward * Span };
@@ -669,7 +688,7 @@ assemble_gantry( scene_gantry &Gantry ) {
         ErrorLog( label + ( single ? "has one mast, but beam \"" + beam->name + "\" isn't a single element" : "has two masts, but beam \"" + beam->name + "\" is a single element" ) );
         return 0;
     }
-    if( single && false == first->through ) {
+    if( single && false == first->through && first->semi <= 0.0 ) {
         ErrorLog( label + "has a single beam element on mast \"" + first->name + "\", which is an end mast; it goes on a through mast" );
     }
     glm::dvec3 const a { data.points[ 0 ][ 0 ], data.points[ 0 ][ 1 ], data.points[ 0 ][ 2 ] };
@@ -691,8 +710,11 @@ assemble_gantry( scene_gantry &Gantry ) {
         placement.position[ 0 ] = X;
         placement.position[ 1 ] = Y;
         placement.position[ 2 ] = Z;
-        // słup: X modelu (szerokość) wzdłuż dźwigara, jak dźwigar
-        double const turned[ 9 ] { 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+        // słup: X modelu (szerokość) wzdłuż dźwigara, jak dźwigar; półbramka obrócona dodatkowo o swój "turn"
+        auto const extra { ( Model == first->model && first->semi > 0.0 ? first->turn : 0.0 ) * 3.14159265358979323846 / 180.0 };
+        auto const c { std::cos( extra ) }, s { std::sin( extra ) };
+        // Rz(extra) * {0,-1,0; 1,0,0; 0,0,1}
+        double const turned[ 9 ] { -s, -c, 0.0, c, -s, 0.0, 0.0, 0.0, 1.0 };
         std::copy( std::begin( turned ), std::end( turned ), placement.rotation );
         placements.push_back( placement );
     };
@@ -727,14 +749,14 @@ assemble_gantry( scene_gantry &Gantry ) {
     std::size_t count { 0 };
     std::vector<std::pair<catenary::cantilever_placement, double>> all;
     for( auto const &placement : placements ) { all.emplace_back( placement, heading ); }
-    all.emplace_back( beamplacement, beamheading );
+    if( false == beam->model.empty() ) { all.emplace_back( beamplacement, beamheading ); }   // dźwigar półbramki jest w modelu słupa
     for( auto const &item : all ) {
         auto const &placement { item.first };
         auto const part { catenary::cantilever_to_scene( placement, item.second ) };
         auto const entry {
             "node " + text_number( data.range_max, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 " + placement.model + ".t3d " + skin
             + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) + " endmodel" };
-        auto const &origin { &placement == &all.back().first ? ends[ 0 ] : a };
+        auto const &origin { ( false == beam->model.empty() && &placement == &all.back().first ) ? ends[ 0 ] : a };
         glm::dvec3 const position { origin.x + part.offset[ 0 ], origin.y + part.offset[ 1 ], origin.z + part.offset[ 2 ] };
         if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
             catenary_part_detach( model );
@@ -1286,6 +1308,7 @@ span_tension( scene_chain const &Chain, std::size_t const Span, double &Messenge
     return true;
 }
 
+std::string span_parallel( scene_chain const &Chain, double const *WireA, double const *WireB );
 // treść wpisu node traction dla przęsła k łańcucha; pusta, gdy brakuje podwieszenia. Przęsło do kotwienia bez wieszaków
 std::string
 span_body( scene_chain const &Chain, std::size_t const Span ) {
@@ -1294,7 +1317,19 @@ span_body( scene_chain const &Chain, std::size_t const Span ) {
     double wirea[ 3 ], wireb[ 3 ], ropea[ 3 ], ropeb[ 3 ];
     bool anchoreda, anchoredb;
     if( false == chain_point( Chain, Span, wirea, ropea, anchoreda ) || false == chain_point( Chain, Span + 1, wireb, ropeb, anchoredb ) ) { return {}; }
-    std::string body { data.power + " " + text_number( data.voltage, 1 ) + " " + text_number( data.current, 1 ) + " " + text_number( data.resistivity, 4 ) + " "
+    // izolatory sekcyjne: przęsła za przęsłem z izolatorem zasila jego zasilacz (przęsło z izolatorem jeszcze ten sprzed niego -
+    // ZAŁOŻENIE: przęsło nie jest dzielone, granica elektryczna na jego końcu)
+    auto power { data.power };
+    {
+        auto const offset { data.anchor_start.empty() ? 0u : 1u };
+        for( auto const &insulator : data.insulators ) {
+            auto const found { std::find( data.suspensions.begin(), data.suspensions.end(), insulator.after ) };
+            if( found == data.suspensions.end() || insulator.power.empty() ) { continue; }
+            auto const span { static_cast<std::size_t>( found - data.suspensions.begin() ) + offset };
+            if( span < Span ) { power = insulator.power; }
+        }
+    }
+    std::string body { power + " " + text_number( data.voltage, 1 ) + " " + text_number( data.current, 1 ) + " " + text_number( data.resistivity, 4 ) + " "
         + data.material + " " + text_number( data.thickness, 2 ) + " " + std::to_string( data.state ) + "\n" };
     body += point_text( wirea ) + "\n" + point_text( wireb ) + "\n" + point_text( ropea ) + "\n" + point_text( ropeb ) + "\n";
     auto const spacing { anchoreda || anchoredb ? 0.0 : data.hangers[ 1 ] };
@@ -1305,7 +1340,8 @@ span_body( scene_chain const &Chain, std::size_t const Span ) {
         double messenger, contact;
         if( span_tension( Chain, Span, messenger, contact ) ) { body += " tension " + text_number( messenger, 0 ) + " " + text_number( contact, 0 ); }
     }
-    if( false == data.parallel.empty() ) { body += " parallel " + data.parallel; }
+    // przęsło naprężenia: z przęsłem drugiego łańcucha bieżnia wspólna, bez przęseł do kotwienia
+    if( auto const parallel { anchoreda || anchoredb ? data.parallel : span_parallel( Chain, wirea, wireb ) }; false == parallel.empty() ) { body += " parallel " + parallel; }
     // kotwienie z dwiema liniami: dolna lina przęsła kończy się na swoim uchwycie krańcowym
     for( auto const end : { 0, 1 } ) {
         if( ( end == 0 ? anchoreda : anchoredb ) == false ) { continue; }
@@ -1319,6 +1355,39 @@ span_body( scene_chain const &Chain, std::size_t const Span ) {
 std::string
 span_name( scene_chain const &Chain, std::size_t const Span ) {
     return ( Chain.data.name.empty() ? std::string( "none" ) : Chain.data.name + "_" + std::to_string( Span + 1 ) );
+}
+
+// przęsła naprężenia: przęsło innego łańcucha biegnące przy tym (oba końce przewodów do kOverlapReach od siebie, w dowolnej
+// kolejności) to część wspólna - bieżnia wspólna ("parallel"). Szukane wśród gotowych przęseł (TTraction) łańcuchów
+double constexpr kOverlapReach { 0.8 };
+
+bool
+overlap_ends( glm::dvec3 const &A1, glm::dvec3 const &A2, glm::dvec3 const &B1, glm::dvec3 const &B2 ) {
+    auto const nearby = []( glm::dvec3 const &P, glm::dvec3 const &Q ) { return std::hypot( P.x - Q.x, P.z - Q.z ) < kOverlapReach && std::abs( P.y - Q.y ) < 1.0; };
+    return ( nearby( A1, B1 ) && nearby( A2, B2 ) ) || ( nearby( A1, B2 ) && nearby( A2, B1 ) );
+}
+
+// przęsło innego łańcucha biegnące przy przewodzie od A do B; nullptr gdy żadne. Except: łańcuch, którego się nie bierze
+TTraction *
+overlap_span( glm::dvec3 const &A, glm::dvec3 const &B, std::size_t const Except ) {
+    for( std::size_t chain = 0; chain < Chains.size(); ++chain ) {
+        if( chain == Except || Chains[ chain ].removed ) { continue; }
+        for( auto *span : Chains[ chain ].spans ) {
+            if( span != nullptr && overlap_ends( A, B, span->pPoint1, span->pPoint2 ) ) { return span; }
+        }
+    }
+    return nullptr;
+}
+
+// przęsło bieżni wspólnej dla przęsła k łańcucha: podane w łańcuchu albo wykryte w przęśle naprężenia; puste gdy brak.
+// Przy wczytywaniu scenerii (przed inicjalizacją) przęsła łańcuchów łączy raz catenary_scene_loaded()
+std::string
+span_parallel( scene_chain const &Chain, double const *WireA, double const *WireB ) {
+    if( false == Chain.data.parallel.empty() ) { return Chain.data.parallel; }
+    if( false == Initialized ) { return {}; }
+    auto const index { static_cast<std::size_t>( &Chain - Chains.data() ) };
+    auto const *other { overlap_span( { WireA[ 0 ], WireA[ 1 ], WireA[ 2 ] }, { WireB[ 0 ], WireB[ 1 ], WireB[ 2 ] }, index ) };
+    return ( other != nullptr ? other->name() : std::string() );
 }
 
 // prostopadłościan (bryła zastępcza osprzętu bez modelu): środek, oś wzdłuż Along, długość i przekrój
@@ -1670,6 +1739,202 @@ assemble_middle( scene_chain &Chain ) {
     }
 }
 
+// łącznik międzysekcyjny 33-0640 (Kolprojekt 2010 s. 55) w przęśle naprężenia zwartym (ten sam zasilacz obu łańcuchów), przy każdym
+// słupie krzyżowym: linka 9815-9 łukiem między linami nośnymi obu łańcuchów (zaciski 6605) i wydłużone "S" z liny w dół do przewodu
+// jezdnego (zaciski 6601). Linki proceduralne, zaciski bryłami zastępczymi. Rysuje go łańcuch o wyższym numerze, w przęśle za słupem
+// krzyżowym (w kierunku łańcucha). ZAŁOŻENIA (do potwierdzenia): 1,5 m od słupa krzyżowego, "S" do przewodu łańcucha, który rysuje
+double constexpr kConnectorFromPole { 1.5 };
+double constexpr kConnectorRadius { 0.0063 };   // linka 9815-9, ok. 95 mm²
+
+void
+overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
+    auto const index { static_cast<std::size_t>( &Chain - Chains.data() ) };
+    auto const lerp = []( glm::dvec3 const &A, glm::dvec3 const &B, double const T ) { return A + ( B - A ) * T; };
+    auto const points { chain_points( Chain ) };
+    if( index >= Chains.size() || Span == 0 || Span + 1 >= points ) { return; }
+    double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ], wp[ 3 ], rp[ 3 ];
+    bool anchoreda, anchoredb, anchoredp;
+    if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) || false == chain_point( Chain, Span - 1, wp, rp, anchoredp ) ) { return; }
+    if( anchoreda || anchoredb || anchoredp ) { return; }
+    glm::dvec3 const a { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, b { wb[ 0 ], wb[ 1 ], wb[ 2 ] }, p { wp[ 0 ], wp[ 1 ], wp[ 2 ] };
+    // przęsło i to przed nim wspólne z tym samym łańcuchem: początek przęsła to słup krzyżowy
+    auto const *other { overlap_span( a, b, index ) };
+    auto const *before { overlap_span( p, a, index ) };
+    if( other == nullptr || before == nullptr ) { return; }
+    std::size_t otherchain { Chains.size() };
+    for( std::size_t c = 0; c < Chains.size() && otherchain == Chains.size(); ++c ) {
+        if( std::find( Chains[ c ].spans.begin(), Chains[ c ].spans.end(), other ) != Chains[ c ].spans.end() ) { otherchain = c; }
+    }
+    if( otherchain >= Chains.size() || otherchain > index ) { return; }   // rysuje łańcuch o wyższym numerze (przy wczytaniu ten drugi już jest)
+    if( std::find( Chains[ otherchain ].spans.begin(), Chains[ otherchain ].spans.end(), before ) == Chains[ otherchain ].spans.end() ) { return; }
+    auto const &power { Chain.data.power };
+    if( power.empty() || power == "none" || power != Chains[ otherchain ].data.power ) { return; }   // przęsło izolowane: bez łączników
+    auto const length { glm::length( b - a ) };
+    if( length < 2.0 * kConnectorFromPole ) { return; }
+    auto const t { kConnectorFromPole / length };
+    glm::dvec3 const rope { lerp( glm::dvec3 { ra[ 0 ], ra[ 1 ], ra[ 2 ] }, glm::dvec3 { rb[ 0 ], rb[ 1 ], rb[ 2 ] }, t ) };
+    glm::dvec3 const wire { lerp( a, b, t ) };
+    // lina nośna drugiego łańcucha w tym miejscu: rzut na jego linę (końce pPoint3, pPoint4)
+    auto const along { other->pPoint4 - other->pPoint3 };
+    auto const u { std::clamp( glm::dot( rope - other->pPoint3, along ) / std::max( glm::dot( along, along ), 1e-9 ), 0.0, 1.0 ) };
+    auto const otherrope { other->pPoint3 + along * u };
+    // linka łukiem w dół między linami (luz), potem "S" z liny tego łańcucha w dół do jego przewodu
+    std::vector<glm::dvec3> arc;
+    auto const sag { 0.25 };
+    for( int step = 0; step <= 12; ++step ) {
+        auto const s { step / 12.0 };
+        arc.push_back( lerp( rope, otherrope, s ) - glm::dvec3 { 0.0, sag * 4.0 * s * ( 1.0 - s ), 0.0 } );
+    }
+    add_tube( Solid, arc, kConnectorRadius );
+    auto const across { glm::length( glm::dvec3 { otherrope.x - rope.x, 0.0, otherrope.z - rope.z } ) > 1e-3 ? glm::normalize( glm::dvec3 { otherrope.x - rope.x, 0.0, otherrope.z - rope.z } ) : glm::dvec3 { 1.0, 0.0, 0.0 } };
+    std::vector<glm::dvec3> drop;
+    for( int step = 0; step <= 16; ++step ) {
+        auto const s { step / 16.0 };
+        // wydłużone S: wychylenie w bok o 0,15 m w jedną i drugą stronę
+        auto const swing { 0.15 * std::sin( s * 2.0 * 3.14159265358979323846 ) };
+        drop.push_back( lerp( rope, wire, s ) + across * swing );
+    }
+    add_tube( Solid, drop, kConnectorRadius );
+    auto const alongspan { b - a };
+    add_box( Solid, rope, alongspan, 0.08, 0.04 );          // zaciski 6605 na linach
+    add_box( Solid, otherrope, alongspan, 0.08, 0.04 );
+    add_box( Solid, wire, alongspan, 0.08, 0.035 );         // zacisk 6601 na przewodzie
+}
+
+// uszynienie grupowe: uchwyt 6120 (karta 0805) na górze słupa podwieszenia, przodem do toru (X wzdłuż toru, słup w +Y, zero na
+// płaszczyźnie przylegania jak w mocowaniach), w połowie marginesu 0,15 m nad najwyższym mocowaniem (ZAŁOŻENIE: 0,075 m nad mount_max,
+// bez wychodzenia nad słup); lina przez punkt "wire" uchwytu (Jan 2026-10-25: X 0,0099, Y -0,0497, Z 0,1042)
+double constexpr kEarthingMargin { 0.075 };
+double const kEarthingWire[ 3 ] { 0.0099, -0.0497, 0.1042 };
+double constexpr kEarthingRadius { 0.0045 };
+
+struct earthing_place {
+    std::string part, back;
+    catenary::cantilever_placement front, rear;   // w układzie wysięgnika słupa, zero w osi słupa na główce szyny
+    double heading { 0.0 };
+    glm::dvec3 origin { 0.0 };
+    glm::dvec3 wire { 0.0 };                      // punkt liny we współrzędnych scenerii
+};
+
+bool
+earthing_place_of( std::size_t const Suspension, earthing_place &Place ) {
+    auto const *catalog { cantilevers() };
+    if( catalog == nullptr || Suspension >= Suspensions.size() || Suspensions[ Suspension ].removed ) { return false; }
+    auto const &data { Suspensions[ Suspension ].data };
+    auto const *pole { data.has_pole && data.has_at ? catalog->pole( data.pole_type ) : nullptr };
+    if( pole == nullptr || pole->earthing.empty() ) { return false; }
+    auto const towardx { data.pole[ 0 ] - data.at[ 0 ] }, towardz { data.pole[ 2 ] - data.at[ 2 ] };
+    if( towardx * towardx + towardz * towardz < 0.01 ) { return false; }
+    Place.heading = std::atan2( towardx, towardz );
+    Place.origin = { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
+    auto height { pole->mount_max > 0.0 ? pole->mount_max + kEarthingMargin : pole->top - 0.10 };
+    if( pole->top > 0.0 ) { height = std::min( height, pole->top - 0.02 ); }
+    auto const face { -0.5 * pole->depth( height ) };
+    Place.part = pole->earthing;
+    Place.back = pole->earthing_back;
+    Place.front = catenary::cantilever_placement();
+    Place.front.role = "earthing";
+    Place.front.part = pole->earthing;
+    Place.front.position[ 1 ] = face;
+    Place.front.position[ 2 ] = height;
+    Place.rear = Place.front;
+    Place.rear.part = pole->earthing_back;
+    Place.rear.position[ 1 ] = face + pole->depth( height );
+    catenary::cantilever_placement wire { Place.front };
+    wire.position[ 0 ] += kEarthingWire[ 0 ];
+    wire.position[ 1 ] += kEarthingWire[ 1 ];
+    wire.position[ 2 ] += kEarthingWire[ 2 ];
+    auto const part { catenary::cantilever_to_scene( wire, Place.heading ) };
+    Place.wire = Place.origin + glm::dvec3 { part.offset[ 0 ], part.offset[ 1 ], part.offset[ 2 ] };
+    return true;
+}
+
+// wstawia uchwyty uszynienia na słupach (albo usuwa, gdy uszynienie usunięte). zwraca liczbę wstawionych modeli
+std::size_t
+assemble_earthing( scene_earthing &Earthing ) {
+    for( auto *part : Earthing.parts ) { catenary_part_delete( part ); }
+    Earthing.parts.clear();
+    if( Earthing.removed ) { return 0; }
+    auto const *catalog { cantilevers() };
+    if( catalog == nullptr ) { return 0; }
+    auto const skin { Earthing.data.skin.empty() ? std::string( "none" ) : Earthing.data.skin };
+    std::size_t count { 0 };
+    for( auto const &name : Earthing.data.poles ) {
+        auto const index { suspension_named( Earthing.file, name ) };
+        earthing_place place;
+        if( false == earthing_place_of( index, place ) ) {
+            WriteLog( ( "Catenary: earthing \"" + Earthing.data.name + "\" goes over \"" + name + "\", whose pole carries no earthing holder (6120)" ).c_str() );
+            continue;
+        }
+        for( auto const *placement : { &place.front, &place.rear } ) {
+            if( placement->part.empty() ) { continue; }
+            auto const part { catenary::cantilever_to_scene( *placement, place.heading ) };
+            auto const entry {
+                "node " + text_number( Earthing.data.range_max, 1 ) + " " + text_number( Earthing.data.range_min, 1 ) + " none model 0 0 0 0 "
+                + catalog->models() + placement->part + ".t3d " + skin
+                + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) + " endmodel" };
+            glm::dvec3 const position { place.origin.x + part.offset[ 0 ], place.origin.y + part.offset[ 1 ], place.origin.z + part.offset[ 2 ] };
+            if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
+                catenary_part_detach( model );
+                Earthing.parts.push_back( model );
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+// lina uszynienia w przęśle łańcucha: gdy słupy obu końców przęsła są kolejnymi słupami uszynienia. Lina zwisa w przęśle
+// (ZAŁOŻENIE: strzałka 1 % rozpiętości)
+void
+earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
+    if( Earthings.empty() ) { return; }
+    auto const offset { Chain.data.anchor_start.empty() ? 0u : 1u };
+    if( Span < offset || Span + 1 - offset >= Chain.data.suspensions.size() ) { return; }
+    auto const &a { Chain.data.suspensions[ Span - offset ] }, &b { Chain.data.suspensions[ Span + 1 - offset ] };
+    for( auto const &earthing : Earthings ) {
+        if( earthing.removed || earthing.file != Chain.file ) { continue; }
+        auto const &poles { earthing.data.poles };
+        for( std::size_t k = 0; k + 1 < poles.size(); ++k ) {
+            if( false == ( ( poles[ k ] == a && poles[ k + 1 ] == b ) || ( poles[ k ] == b && poles[ k + 1 ] == a ) ) ) { continue; }
+            earthing_place first, second;
+            if( false == earthing_place_of( suspension_named( Chain.file, poles[ k ] ), first ) || false == earthing_place_of( suspension_named( Chain.file, poles[ k + 1 ] ), second ) ) { continue; }
+            auto const length { glm::length( second.wire - first.wire ) };
+            std::vector<glm::dvec3> points;
+            for( int step = 0; step <= 24; ++step ) {
+                auto const t { step / 24.0 };
+                points.push_back( first.wire + ( second.wire - first.wire ) * t - glm::dvec3 { 0.0, 0.01 * length * 4.0 * t * ( 1.0 - t ), 0.0 } );
+            }
+            add_tube( Solid, points, kEarthingRadius );
+        }
+    }
+}
+
+// izolator sekcyjny w połowie przęsła (Jan 2026-10-25): na przewodzie jezdnym element izolujący z prowadnicami (ok. 2 m), nad nim
+// izolator w linie nośnej. Do czasu modeli (żywiczny na jeden / dwa przewody, ceramiczny) bryły zastępcze; przewód w połowie przęsła
+// liczony prosto między końcami (ZAŁOŻENIE: przewód jezdny bez strzałki), lina nośna o strzałkę niżej (ok. 1/10 wysokości konstrukcyjnej)
+void
+section_insulator( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
+    auto const &data { Chain.data };
+    auto const offset { data.anchor_start.empty() ? 0u : 1u };
+    for( auto const &insulator : data.insulators ) {
+        auto const found { std::find( data.suspensions.begin(), data.suspensions.end(), insulator.after ) };
+        if( found == data.suspensions.end() || static_cast<std::size_t>( found - data.suspensions.begin() ) + offset != Span ) { continue; }
+        double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ];
+        bool anchoreda, anchoredb;
+        if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) ) { return; }
+        glm::dvec3 const a { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, b { wb[ 0 ], wb[ 1 ], wb[ 2 ] };
+        auto const wire { ( a + b ) * 0.5 };
+        auto const height { 0.5 * ( ( ra[ 1 ] - wa[ 1 ] ) + ( rb[ 1 ] - wb[ 1 ] ) ) };
+        auto const rope { glm::dvec3 { 0.5 * ( ra[ 0 ] + rb[ 0 ] ), 0.5 * ( ra[ 1 ] + rb[ 1 ] ) - 0.1 * height, 0.5 * ( ra[ 2 ] + rb[ 2 ] ) } };
+        auto const along { b - a };
+        auto const ceramic { insulator.kind == "ceramic" };
+        add_box( Solid, wire + glm::dvec3 { 0.0, 0.06, 0.0 }, along, ceramic ? 1.6 : 2.0, ceramic ? 0.12 : 0.08 );   // element izolujący z prowadnicami
+        add_box( Solid, rope, along, 0.6, 0.07 );                                                               // izolator w linie nośnej
+        return;
+    }
+}
+
 // robi od nowa przęsło k łańcucha (przy podwieszeniu przesuniętym w edytorze tylko dwa przęsła przy nim)
 void
 rebuild_span( scene_chain &Chain, std::size_t const Span ) {
@@ -1697,6 +1962,12 @@ rebuild_span( scene_chain &Chain, std::size_t const Span ) {
             auto const &solid { Chain.middle_solid[ Span == Chain.middle_span ? 0 : 1 ] };
             rope.insert( rope.end(), solid.begin(), solid.end() );
         }
+        // przęsło naprężenia zwarte: łącznik 33-0640 za słupem krzyżowym
+        overlap_connector( Chain, Span, rope );
+        // izolator sekcyjny w połowie przęsła (bryła zastępcza do czasu modeli)
+        section_insulator( Chain, Span, rope );
+        // lina uszynienia grupowego między słupami przęsła
+        earthing_rope( Chain, Span, rope );
         if( false == rope.empty() ) { catenary_span_attach( *span, rope ); }
     }
 }
@@ -1712,6 +1983,30 @@ rebuild_chain( scene_chain &Chain ) {
     for( auto *span : Chain.spans ) { if( span != nullptr ) { catenary_span_delete( span ); } }
     Chain.spans.assign( Chain.removed || Chain.data.suspensions.size() < 2 ? 0 : chain_points( Chain ) - 1, nullptr );
     for( std::size_t span = 0; span < Chain.spans.size(); ++span ) { rebuild_span( Chain, span ); }
+}
+
+// uszynienia, które idą przez słup podwieszenia: uchwyty od nowa (słup przesunięty w edytorze)
+void
+follow_earthings( std::size_t const Index ) {
+    if( Index >= Suspensions.size() || Suspensions[ Index ].data.name.empty() ) { return; }
+    for( auto &earthing : Earthings ) {
+        if( earthing.removed || earthing.file != Suspensions[ Index ].file ) { continue; }
+        if( std::find( earthing.data.poles.begin(), earthing.data.poles.end(), Suspensions[ Index ].data.name ) != earthing.data.poles.end() ) { assemble_earthing( earthing ); }
+    }
+}
+
+// przęsła łańcuchów, które leżą między słupami uszynienia: od nowa (lina)
+void
+earthing_spans( scene_earthing const &Earthing ) {
+    for( auto &chain : Chains ) {
+        if( chain.removed || chain.file != Earthing.file ) { continue; }
+        auto const offset { chain.data.anchor_start.empty() ? 0u : 1u };
+        for( std::size_t k = 0; k + 1 < chain.data.suspensions.size(); ++k ) {
+            auto const &poles { Earthing.data.poles };
+            auto const has = [ & ]( std::string const &Name ) { return std::find( poles.begin(), poles.end(), Name ) != poles.end(); };
+            if( has( chain.data.suspensions[ k ] ) && has( chain.data.suspensions[ k + 1 ] ) ) { rebuild_span( chain, k + offset ); }
+        }
+    }
 }
 
 // numery podwieszeń parasola o podanej nazwie (bez usuniętych)
@@ -1764,6 +2059,15 @@ add_content( catenary::suspension_file const &File, std::string const &Filename 
         Anchors.emplace_back( anchor );
         assemble_anchor( Anchors.back() );
         follow_anchor( Anchors.back() );
+    }
+    // uszynienie przed łańcuchami: linę między słupami rysują przęsła
+    for( auto const &line : File.earthings ) {
+        if( twice( "earthing", line.name, std::any_of( Earthings.begin(), Earthings.end(), [ & ]( scene_earthing const &E ) { return false == E.removed && E.file == Filename && E.data.name == line.name; } ) ) ) { continue; }
+        scene_earthing earthing;
+        earthing.data = line;
+        earthing.file = Filename;
+        Earthings.emplace_back( earthing );
+        assemble_earthing( Earthings.back() );
     }
     // przęsła łańcuchów powstają od razu: przed inicjalizacją scenerii łączy je InitTraction razem z resztą sieci
     for( auto const &line : File.chains ) {
@@ -1856,11 +2160,60 @@ catenary_scene_skin( cParser &Input, std::string const &File ) {
 void
 catenary_scene_loaded() {
 
+    void link_overlaps();
     auto pending { std::move( Pending ) };
     Pending.clear();
     for( auto const &file : pending ) {
         add_content( file.second, file.first );
     }
+    link_overlaps();
+}
+
+// przęsła naprężenia po wczytaniu scenerii: przęsła części wspólnej dwóch łańcuchów dostają bieżnię wspólną. Końce przęseł
+// w komórkach 2 m, żeby nie porównywać każdego z każdym
+void
+link_overlaps() {
+    std::map<std::pair<long long, long long>, std::vector<std::pair<std::size_t, TTraction *>>> grid;
+    auto const cell = []( double const X ) { return static_cast<long long>( std::floor( X / 2.0 ) ); };
+    for( std::size_t chain = 0; chain < Chains.size(); ++chain ) {
+        if( Chains[ chain ].removed ) { continue; }
+        for( auto *span : Chains[ chain ].spans ) {
+            if( span != nullptr ) { grid[ { cell( span->pPoint1.x ), cell( span->pPoint1.z ) } ].emplace_back( chain, span ); }
+        }
+    }
+    std::size_t linked { 0 };
+    for( std::size_t chain = 0; chain < Chains.size(); ++chain ) {
+        if( Chains[ chain ].removed || false == Chains[ chain ].data.parallel.empty() ) { continue; }
+        auto const points { chain_points( Chains[ chain ] ) };
+        for( std::size_t index = 0; index < Chains[ chain ].spans.size(); ++index ) {
+            auto *span { Chains[ chain ].spans[ index ] };
+            if( span == nullptr || false == span->asParallel.empty() ) { continue; }
+            if( index == 0 && false == Chains[ chain ].data.anchor_start.empty() ) { continue; }          // przęsło do kotwienia
+            if( index + 2 == points && false == Chains[ chain ].data.anchor_end.empty() ) { continue; }
+            TTraction *found { nullptr };
+            for( auto const &end : { span->pPoint1, span->pPoint2 } ) {
+                for( long long dx = -1; dx <= 1 && found == nullptr; ++dx ) {
+                    for( long long dz = -1; dz <= 1 && found == nullptr; ++dz ) {
+                        auto const bucket { grid.find( { cell( end.x ) + dx, cell( end.z ) + dz } ) };
+                        if( bucket == grid.end() ) { continue; }
+                        for( auto const &[ otherchain, other ] : bucket->second ) {
+                            if( otherchain != chain && overlap_ends( span->pPoint1, span->pPoint2, other->pPoint1, other->pPoint2 ) ) { found = other; break; }
+                        }
+                    }
+                }
+            }
+            if( found != nullptr ) {
+                span->asParallel = found->name();
+                // w kółko z tamtym od razu (InitTraction, gdy jeszcze będzie, pomija przęsła już połączone)
+                if( span->hvParallel == nullptr ) {
+                    span->hvParallel = ( found->hvParallel != nullptr ? found->hvParallel : found );
+                    found->hvParallel = span;
+                }
+                ++linked;
+            }
+        }
+    }
+    if( linked > 0 ) { WriteLog( ( "Catenary: " + std::to_string( linked ) + " spans of tension overlaps share the running line with the other chain (parallel)" ).c_str() ); }
 }
 
 // obsługa dyrektywy "catenary" ze scenerii: wczytuje wskazany plik podwieszeń
@@ -1932,6 +2285,7 @@ catenary_scene_resolve() {
 
     // wpisy ze scenerii bez wywołania catenary_scene_loaded() przed InitTraction
     if( false == Initialized && false == Pending.empty() ) { catenary_scene_loaded(); }
+    else if( false == Initialized ) { link_overlaps(); }
     Initialized = true;
     if( Resolved >= Suspensions.size() ) { return; }
 
@@ -2022,6 +2376,8 @@ catenary_scene_clear() {
     Chains.clear();
     Gantries.clear();
     Anchors.clear();
+    for( auto &earthing : Earthings ) { for( auto *part : earthing.parts ) { catenary_part_delete( part ); } }
+    Earthings.clear();
     Files.clear();
     FileLayers.clear();
     InlineFiles.clear();
@@ -2211,6 +2567,7 @@ catenary_scene_update( std::size_t const Index, catenary::suspension const &Data
     }
     reassemble( Index );
     follow_chains( Index );
+    follow_earthings( Index );
     return true;
 }
 
@@ -2254,6 +2611,7 @@ catenary_scene_restore( std::size_t const Index, catenary::suspension const &Dat
     mark_changed( suspension.file );
     reassemble( Index );
     follow_chains( Index );
+    follow_earthings( Index );
     return true;
 }
 
@@ -2325,6 +2683,9 @@ catenary_scene_entries( std::string const &File ) {
     }
     for( auto const &anchor : Anchors ) {
         if( false == anchor.removed && anchor.file == File ) { lines.emplace_back( catenary::write_anchor( anchor.data ) ); }
+    }
+    for( auto const &earthing : Earthings ) {
+        if( false == earthing.removed && earthing.file == File ) { lines.emplace_back( catenary::write_earthing( earthing.data ) ); }
     }
     for( auto const &chain : Chains ) {
         if( false == chain.removed && chain.file == File ) { lines.emplace_back( catenary::write_chain( chain.data ) ); }
@@ -2400,6 +2761,10 @@ catenary_scene_save( std::string &Message ) {
         for( auto const &anchor : Anchors ) {
             if( anchor.removed || anchor.file != file.name ) { continue; }
             text += catenary::write_anchor( anchor.data ) + "\r\n";
+        }
+        for( auto const &earthing : Earthings ) {
+            if( earthing.removed || earthing.file != file.name ) { continue; }
+            text += catenary::write_earthing( earthing.data ) + "\r\n";
         }
         auto const path { Global.asCurrentSceneryPath + file.name };
         std::ofstream output { path, std::ios::binary | std::ios::trunc };
@@ -2534,6 +2899,111 @@ catenary_chain_of( std::size_t const Suspension, std::size_t &Position ) {
         }
     }
     return -1;
+}
+
+std::vector<catenary_overlap>
+catenary_chain_overlaps( std::size_t const Index ) {
+    std::vector<catenary_overlap> result;
+    if( Index >= Chains.size() || Chains[ Index ].removed ) { return result; }
+    auto const &chain { Chains[ Index ] };
+    // miejsce k łańcucha -> numer podwieszenia (kotwienie początkowe przesuwa numerację)
+    auto const offset { chain.data.anchor_start.empty() ? 0u : 1u };
+    auto const member = [ & ]( std::size_t const Point ) -> std::size_t {
+        if( Point < offset || Point - offset >= chain.data.suspensions.size() ) { return static_cast<std::size_t>( -1 ); }
+        return suspension_named( chain.file, chain.data.suspensions[ Point - offset ] );
+    };
+    for( std::size_t span = 0; span < chain.spans.size(); ++span ) {
+        auto const *own { chain.spans[ span ] };
+        if( own == nullptr ) { continue; }
+        auto const *other { overlap_span( own->pPoint1, own->pPoint2, Index ) };
+        if( other == nullptr ) { continue; }
+        std::size_t otherchain { Chains.size() }, otherspan { 0 };
+        for( std::size_t c = 0; c < Chains.size() && otherchain == Chains.size(); ++c ) {
+            auto const found { std::find( Chains[ c ].spans.begin(), Chains[ c ].spans.end(), other ) };
+            if( found != Chains[ c ].spans.end() ) { otherchain = c; otherspan = static_cast<std::size_t>( found - Chains[ c ].spans.begin() ); }
+        }
+        if( otherchain == Chains.size() ) { continue; }
+        auto entry { std::find_if( result.begin(), result.end(), [ & ]( catenary_overlap const &O ) { return O.other == otherchain; } ) };
+        if( entry == result.end() ) {
+            result.emplace_back();
+            entry = std::prev( result.end() );
+            entry->other = otherchain;
+            entry->connected = false == chain.data.power.empty() && chain.data.power != "none" && chain.data.power == Chains[ otherchain ].data.power;
+        }
+        entry->spans.push_back( span );
+        entry->other_spans.push_back( otherspan );
+    }
+    for( auto &overlap : result ) {
+        // słupy części wspólnej: od początku pierwszego wspólnego przęsła do końca ostatniego; krzyżowe - wewnętrzne
+        auto const first { overlap.spans.front() }, last { overlap.spans.back() };
+        overlap.outer[ 0 ] = member( first );
+        overlap.outer[ 1 ] = member( last + 1 );
+        for( auto point { first + 1 }; point <= last; ++point ) {
+            if( auto const index { member( point ) }; index < Suspensions.size() ) { overlap.crossing.push_back( index ); }
+        }
+    }
+    return result;
+}
+
+// ---- uszynienie grupowe ---------------------------------------------------------------------------------------------------
+
+std::size_t catenary_earthing_size() { return Earthings.size(); }
+
+catenary::earthing const *
+catenary_earthing_get( std::size_t const Index ) {
+    return ( Index < Earthings.size() && false == Earthings[ Index ].removed ? &Earthings[ Index ].data : nullptr );
+}
+
+std::string catenary_earthing_file( std::size_t const Index ) { return ( Index < Earthings.size() ? Earthings[ Index ].file : std::string() ); }
+
+std::size_t catenary_earthing_parts( std::size_t const Index ) { return ( Index < Earthings.size() ? Earthings[ Index ].parts.size() : 0 ); }
+
+std::size_t
+catenary_earthing_add( std::string const &File, catenary::earthing const &Data ) {
+    scene_earthing earthing;
+    earthing.data = Data;
+    earthing.file = File;
+    Earthings.emplace_back( earthing );
+    mark_changed( File );
+    assemble_earthing( Earthings.back() );
+    earthing_spans( Earthings.back() );
+    return Earthings.size() - 1;
+}
+
+bool
+catenary_earthing_update( std::size_t const Index, catenary::earthing const &Data ) {
+    if( Index >= Earthings.size() ) { return false; }
+    auto &earthing { Earthings[ Index ] };
+    auto const before { earthing.data };
+    earthing.removed = false;
+    earthing.data = Data;
+    mark_changed( earthing.file );
+    assemble_earthing( earthing );
+    // lina znika z przęseł, przez które już nie idzie, i pojawia się w nowych
+    scene_earthing old { earthing };
+    old.data = before;
+    earthing_spans( old );
+    earthing_spans( earthing );
+    return true;
+}
+
+void
+catenary_earthing_remove( std::size_t const Index ) {
+    if( Index >= Earthings.size() || Earthings[ Index ].removed ) { return; }
+    auto &earthing { Earthings[ Index ] };
+    earthing.removed = true;
+    mark_changed( earthing.file );
+    assemble_earthing( earthing );
+    earthing_spans( earthing );
+}
+
+std::string
+catenary_scene_new_earthing_name( std::string const &File ) {
+    auto stem { std::filesystem::path( File ).stem().string() };
+    for( int number = 1; ; ++number ) {
+        auto const name { stem + "_u" + std::to_string( number ) };
+        if( std::none_of( Earthings.begin(), Earthings.end(), [ & ]( scene_earthing const &E ) { return E.file == File && E.data.name == name; } ) ) { return name; }
+    }
 }
 
 // ---- bramki -------------------------------------------------------------------------------------------------------------
