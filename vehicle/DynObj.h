@@ -405,8 +405,8 @@ private:
         sound_source clatter; // clatter emitter
         TTrack const *jointtrack { nullptr }; // track the axle was on during last joint check
         int jointindex { 0 }; // number of joints of that track the axle had behind it
-        TTrack const *frogtrack { nullptr }; // switch the axle was on during last frog check
-        bool frogbehind { false }; // whether the axle was already past the frog of that switch
+        TTrack const *frogtrack { nullptr }; // track the axle was on during last check of the gaps in its rails
+        int gapspassed { 0 }; // how many gaps of the rails of that track (frogs, crossings) lay behind the axle then
     };
 
     struct powertrain_sounds {
