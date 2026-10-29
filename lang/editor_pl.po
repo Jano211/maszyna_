@@ -11788,3 +11788,167 @@ msgstr "Uchwyt liny wyżej"
 
 msgid "A messenger only cantilever (129x, 1002-1015) on this pole, that much higher than the messenger here: the messenger of this chain goes through it (also where this one held it for others), this one can hold another chain. The poles are too short for it: its mounts may stand above the top of the pole"
 msgstr "Wysięgnik samej liny (129x, 1002-1015) na tym słupie, o tyle wyżej niż lina tutaj: lina nośna tego łańcucha idzie przez niego (także tam, gdzie ten trzymał ją dla innych), a ten może trzymać inny łańcuch. Słupy są na to za niskie: jego mocowania mogą wystawać ponad słup"
+
+# scenery editor: catenary - remarks of 26.10, semi-gantries, tension overlaps, section insulators, group earthing
+
+msgid "by a switch: the face of the pole %.2f m from the track axis (%.2f m here)"
+msgstr "przy rozjeździe: lico słupa %.2f m od osi toru (tu %.2f m)"
+
+msgid "Not a drop on a gantry by a track: nothing to move over"
+msgstr "To nie zwis na bramce przy torze: nie ma czego przekładać"
+
+msgid "An umbrella hangs on this drop: break it up first"
+msgstr "Na tym zwisie wisi parasol: najpierw go rozdziel"
+
+msgid "On the other side of the track the drop would be off the beam of the gantry"
+msgstr "Po drugiej stronie toru zwis wypadłby poza dźwigar bramki"
+
+msgid "No card for the cantilever on the other side (A = %.2f m): the drop stays"
+msgstr "Brak karty dla wysięgnika po drugiej stronie (A = %.2f m): zwis zostaje"
+
+msgid "Drop moved to the other side of the track: card %04d, %s, A = %.2f m"
+msgstr "Zwis przełożony na drugą stronę toru: karta %04d, %s, A = %.2f m"
+
+msgid "short cantilever"
+msgstr "krótki wysięg"
+
+msgid "long cantilever"
+msgstr "długi wysięg"
+
+msgid "Pole %s carries no earthing holder (6120): concrete poles have none"
+msgstr "Słup %s nie ma uchwytu uszynienia (6120): betonowe go nie mają"
+
+msgid "The earthing goes over the poles of one catenary file"
+msgstr "Uszynienie idzie po słupach jednego pliku sieci"
+
+msgid "%s is on the earthing already"
+msgstr "%s już jest w uszynieniu"
+
+msgid "Earthing: %zu poles (LMB the next pole, Esc or the button finishes)"
+msgstr "Uszynienie: %zu słupów (LPM kolejny słup, Esc albo przycisk kończy)"
+
+msgid "Earthing %s over %zu poles"
+msgstr "Uszynienie %s po %zu słupach"
+
+msgid "An earthing needs at least two poles: nothing made"
+msgstr "Uszynienie potrzebuje co najmniej dwóch słupów: nic nie powstało"
+
+msgid "Group earthing: the rope over the tops of the poles, on holders 6120. The poles one after another; the rope is drawn by the spans of the chains between them"
+msgstr "Uszynienie grupowe: lina po szczytach słupów, na uchwytach 6120. Słupy po kolei; linę rysują przęsła łańcuchów między nimi"
+
+msgid "Finish the earthing (Esc)"
+msgstr "Zakończ uszynienie (Esc)"
+
+msgid "New earthing: click the poles"
+msgstr "Nowe uszynienie: klikaj słupy"
+
+msgid "LMB the poles of the earthing one after another; Esc finishes"
+msgstr "LPM kolejne słupy uszynienia; Esc kończy"
+
+msgid "Along chain %s"
+msgstr "Wzdłuż łańcucha %s"
+
+msgid "The chain has fewer than two poles with earthing holders"
+msgstr "Łańcuch ma mniej niż dwa słupy z uchwytami uszynienia"
+
+msgid "%s: %zu poles, %zu holders (%s)"
+msgstr "%s: %zu słupów, %zu uchwytów (%s)"
+
+msgid "No power sources in the scenery (node ... tractionpowersource)"
+msgstr "W scenerii nie ma zasilaczy (node ... tractionpowersource)"
+
+msgid "The power sources (substations, section cabins) of the scenery"
+msgstr "Zasilacze scenerii (podstacje, kabiny sekcyjne)"
+
+msgid "Tension overlap with %s: %zu shared spans, connected (the same power source)"
+msgstr "Przęsło naprężenia z %s: %zu wspólnych przęseł, zwarte (ten sam zasilacz)"
+
+msgid "Tension overlap with %s: %zu shared spans, insulated (other power sources)"
+msgstr "Przęsło naprężenia z %s: %zu wspólnych przęseł, izolowane (różne zasilacze)"
+
+msgid "crossing poles: %s"
+msgstr "słupy krzyżowe: %s"
+
+msgid "The shared spans take the running line of both chains (parallel). A connected overlap gets connectors 33-0640 at its crossing poles (procedural cords, placeholder clamps)"
+msgstr "Wspólne przęsła dostają bieżnię wspólną obu łańcuchów (parallel). Przęsło zwarte ma łączniki 33-0640 przy słupach krzyżowych (linki proceduralne, zaciski bryłami zastępczymi)"
+
+msgid "Lift the wire leaving to the anchor at %s by %.2f m"
+msgstr "Podnieś przewód odchodzący do kotwienia przy %s o %.2f m"
+
+msgid "The wire of %s at %s %.2f m higher (Ctrl+Z takes it back)"
+msgstr "Przewód %s przy %s o %.2f m wyżej (Ctrl+Z cofa)"
+
+msgid "ASSUMPTION: at the last pole of the overlap the wire going off to its anchor is lifted 0.30 m over the working height (with its messenger), so the pantograph leaves it; the cantilever is composed for it"
+msgstr "ZAŁOŻENIE: na ostatnim słupie przęsła naprężenia przewód odchodzący do kotwienia jest poderwany o 0,30 m nad wysokość roboczą (razem z liną nośną), żeby pantograf z niego zszedł; wysięgnik składa się pod to"
+
+msgid "m##span"
+msgstr "m##span"
+
+msgid "line 2.50"
+msgstr "szlak 2,50"
+
+msgid "station 2.20"
+msgstr "stacja 2,20"
+
+msgid "switch 4.00"
+msgstr "rozjazd 4,00"
+
+msgid "The face of the pole from the track axis: 2.50 m on a line, 2.20 m in a station, 4.00 m by a switch"
+msgstr "Lico słupa od osi toru: 2,50 m na szlaku, 2,20 m na stacji, 4,00 m przy rozjeździe"
+
+msgid "Drop to the other side of the track"
+msgstr "Zwis na drugą stronę toru"
+
+msgid "The drop goes over to the other side of the track axis at the same distance from it, along the beam; the wires stay where they are, so the cantilever goes from short to long or back and the card is chosen anew"
+msgstr "Zwis przechodzi po dźwigarze na drugą stronę osi toru w tej samej odległości od niej; druty zostają na miejscu, więc wysięgnik zmienia się z krótkiego na długi albo odwrotnie i karta jest dobierana od nowa"
+
+msgid "Top mount moved"
+msgstr "Górne mocowanie przesunięte"
+
+msgid "The top (stay) mount up or down from the card by up to 0.50 m, e.g. where something is in the way on the pole; the stay tube or rod is taken shorter or longer to fit"
+msgstr "Górne mocowanie (odciągu) wyżej albo niżej niż w karcie, do 0,50 m, np. gdy coś na słupie przeszkadza; rura albo pręt odciągu dobierane krótsze lub dłuższe"
+
+msgid "m##stayshift"
+msgstr "m##stayshift"
+
+msgid "Section insulator in the span to %s"
+msgstr "Izolator sekcyjny w przęśle do %s"
+
+msgid "A section insulator in the middle of the span after this pole: the spans after it can take another power source (another section). Placeholder shapes until the models are made"
+msgstr "Izolator sekcyjny w połowie przęsła za tym słupem: przęsła za nim mogą mieć inny zasilacz (inna sekcja). Bryły zastępcze do czasu modeli"
+
+msgid "resin"
+msgstr "żywiczny"
+
+msgid "ceramic"
+msgstr "ceramiczny"
+
+msgid "Power source after it"
+msgstr "Zasilacz za nim"
+
+msgid "Expert mode"
+msgstr "Tryb ekspert"
+
+msgid "Shows the advanced settings: stagger +-0.5 m, own system height, the top mount moved, spread cantilevers, the messenger held by another cantilever, single beam elements and turning a gantry. What a pole already has set is shown anyway"
+msgstr "Pokazuje ustawienia zaawansowane: odsuw ±0,5 m, własną wysokość konstrukcyjną, przesunięte górne mocowanie, wysięgniki rozstawione, linę trzymaną przez inny wysięgnik, pojedyncze elementy dźwigara i obrót bramki. To, co słup już ma ustawione, jest widoczne i tak"
+
+msgid " (T gantry)"
+msgstr " (bramka T)"
+
+msgid " (semi-gantry)"
+msgstr " (półbramka)"
+
+msgid " (through)"
+msgstr " (przelotowy)"
+
+msgid "No card for A = %.2f m here: the drop stays where it was"
+msgstr "Brak karty dla A = %.2f m w tym miejscu: zwis zostaje, gdzie był"
+
+msgid "Click: the earthing goes over this pole"
+msgstr "Kliknij: uszynienie przez ten słup"
+
+msgid "Earthing"
+msgstr "Uszynienie"
+
+msgid "Group earthing: the earthing rope over the tops of the poles (holders 6120, card 0805)"
+msgstr "Uszynienie grupowe: lina uszynienia po szczytach słupów (uchwyty 6120, karta 0805)"

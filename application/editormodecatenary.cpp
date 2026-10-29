@@ -3711,7 +3711,7 @@ void catenary_editor::render_catenary_overlaps(std::size_t const Chain)
 		if (false == crossing.empty())
 			ImGui::TextUnformatted(format(STR_C("crossing poles: %s"), crossing.c_str()).c_str());
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("The shared spans take the running line of both chains (parallel). Connectors 33-0640 at the crossing poles of a connected overlap come later"));
+			ImGui::SetTooltip("%s", STR_C("The shared spans take the running line of both chains (parallel). A connected overlap gets connectors 33-0640 at its crossing poles (procedural cords, placeholder clamps)"));
 		// the wire of this chain leaving the overlap to its anchor goes up at the last shared pole
 		auto const tail{overlap.spans.front() + overlap.spans.size() + 1 >= chain->suspensions.size() + (chain->anchor_start.empty() ? 0u : 1u)};
 		auto const lifted{tail ? overlap.outer[1] : overlap.outer[0]};
