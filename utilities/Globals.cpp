@@ -1234,6 +1234,32 @@ bool global_settings::ConfigParseDebug(cParser& Parser, const std::string& token
         return true;
     }
 
+    if (token == "physicalshake")
+    {
+        ParseOne(Parser, PhysicalShake);
+        return true;
+    }
+
+    if (token == "bodysway")
+    {
+        ParseOne(Parser, BodySway);
+        return true;
+    }
+
+    if (token == "shaketrack")
+    {
+        // strength of the jolts on rail joints, strength of the continuous track unevenness
+        ParseOneClamped(Parser, ShakeJointFactor, 0.f, 10.f);
+        ParseOneClamped(Parser, ShakeRoughnessFactor, 0.f, 10.f);
+        return true;
+    }
+
+    if (token == "railjoints")
+    {
+        ParseOne(Parser, RailJoints);
+        return true;
+    }
+
     if (token == "logs.filter")
     {
         ParseOne(Parser, DisabledLogTypes);

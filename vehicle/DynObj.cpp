@@ -14,6 +14,7 @@ http://mozilla.org/MPL/2.0/.
 
 #include "stdafx.h"
 #include "vehicle/DynObj.h"
+#include "vehicle/bodysway.h"
 
 #include "simulation/simulation.h"
 #include "rendering/lightarray.h"
@@ -1485,13 +1486,32 @@ void TDynamicObject::ABuBogies()
         // modelRot.z=ABuAcos(Axle0.pPosition-Axle1.pPosition); //kąt obrotu pojazdu
         // [rad]
         // bogieRot[0].z=ABuAcos(Axle0.pPosition-Axle3.pPosition);
+        // the bogies are parts of the vehicle model, so they get moved along with the body.
+        // push them back by the same amount to keep them on the track
+        // NOTE: assumes bogie submodels use the usual model space: x - sideways (mirrored), y - along the vehicle, z - up
+        glm::vec3 bogieshift[ 2 ] {};
+        glm::vec3 bogietilt[ 2 ] {};
+        if( BodySwayApplied && BodySway != nullptr ) {
+            auto const &rigid { BodySway->rigid() };
+            for( int i = 0; i < 2; ++i ) {
+                auto const pivot { glm::dvec4{ 0.0, 0.6, ( i == 0 ? 0.5 : -0.5 ) * fAxleDist, 1.0 } };
+                auto const moved { glm::dvec3{ mBodySway * pivot } - glm::dvec3{ pivot } };
+                bogieshift[ i ] = glm::vec3{ moved.x, -moved.z, -moved.y };
+                bogietilt[ i ] = glm::degrees( glm::vec3{
+                    rigid.pitch * Global.ShakingMultiplierUD,
+                    rigid.roll * Global.ShakingMultiplierRL,
+                    rigid.yaw * Global.ShakingMultiplierRL } );
+            }
+        }
+        smBogie[0]->SetTranslate( bogieshift[ 0 ] );
+        smBogie[1]->SetTranslate( bogieshift[ 1 ] );
         bogieRot[0].z = Axle0.vAngles.z;
 		bogieRot[0] = glm::degrees(modelRot - bogieRot[0]); // mnożenie wektora przez stałą
-        smBogie[0]->SetRotateXYZ(bogieRot[0]);
+        smBogie[0]->SetRotateXYZ(bogieRot[0] + bogietilt[ 0 ]);
         // bogieRot[1].z=ABuAcos(Axle2.pPosition-Axle1.pPosition);
         bogieRot[1].z = Axle1.vAngles.z;
 		bogieRot[1] = glm::degrees(modelRot - bogieRot[1]);
-        smBogie[1]->SetRotateXYZ(bogieRot[1]);
+        smBogie[1]->SetRotateXYZ(bogieRot[1] + bogietilt[ 1 ]);
     }
 };
 // ABu 06.05.04 koniec wyliczania obrotow wozkow ************************
@@ -2683,7 +2703,20 @@ void TDynamicObject::Move(double fDistance)
             // vUp=CrossProduct(vFront,vLeft); //wektor w górę
         }
 		mMatrix = BasisChange(vLeft, vUp, vFront); // to też można by od razu policzyć, ale potrzebne jest do wyświetlania // przesuwanie jest jednak rzadziej niż renderowanie
-        mMatrix = glm::inverse(mMatrix); // wyliczenie macierzy dla pojazdu (potrzebna tylko do wyświetlania?)
+        mMatrix = glm::inverse(mMatrix);
+        mMatrixBase = mMatrix;
+        mMatrixBaseValid = true;
+        if( BodySwayApplied ) {
+            if( std::abs( ShakeTravel ) > 5.0 ) {
+                // nobody has been updating the body movement for a while, don't leave the body frozen mid-swing
+                mBodySway = glm::dmat4( 1.0 );
+                BodySwayApplied = false;
+            }
+            else {
+                mMatrix = mMatrixBase * mBodySway;
+            }
+        }
+        // wyliczenie macierzy dla pojazdu (potrzebna tylko do wyświetlania?)
         // if (MoverParameters->CategoryFlag&2)
         { // przesunięcia są używane po wyrzuceniu pociągu z toru
             vPosition.x += MoverParameters->OffsetTrackH * vLeft.x; // dodanie przesunięcia w bok
@@ -3624,6 +3657,7 @@ bool TDynamicObject::Update(double dt, double dt1)
     }
     glm::dvec3 old_pos = vPosition;
     Move(dDOMoveLen);
+    ShakeTravel += dDOMoveLen;
 
 	m_future_movement = (vPosition - old_pos) / dt1 * Timer::GetDeltaRenderTime();
 
@@ -3676,15 +3710,60 @@ bool TDynamicObject::Update(double dt, double dt1)
                             ctOwner->Vehicle()->DirectionGet() == DirectionGet() ? 1 : -1 ) };
                     for( auto &axle : m_axlesounds ) {
                         axle.distance += dDOMoveLen * directioninconsist;
-                        if( axle.distance < 0
-                         || axle.distance > dRailLength ) {
+                        auto const wrapped { (
+                            axle.distance < 0
+                         || axle.distance > dRailLength ) };
+                        if( wrapped ) {
                             axle.distance = clamp_circular( axle.distance, dRailLength );
+                        }
+                        // the axle clatters when it passes an actual joint of the track it's on...
+                        auto passedjoint { false };
+                        auto const probe { axle_joint_probe( axle.offset ) };
+                        if( probe.count > 0 ) {
+                            auto const jointindex {
+                                std::clamp(
+                                    static_cast<int>( std::floor( probe.position / probe.spacing + 0.5 ) ),
+                                    0, probe.count ) };
+                            if( probe.track == axle.jointtrack ) {
+                                passedjoint = ( jointindex != axle.jointindex );
+                            }
+                            axle.jointtrack = probe.track;
+                            axle.jointindex = jointindex;
+                            if( passedjoint ) {
+                                // keep the fallback counter in step
+                                axle.distance = 0.0;
+                            }
+                        }
+                        else {
+                            // ...with the distance counter as a fallback, for track pieces too short to hold a joint of their own
+                            axle.jointtrack = nullptr;
+                            passedjoint = wrapped;
+                        }
+                        // ...and bangs on the frog of a switch
+                        auto passedfrog { false };
+                        auto const frogdistance { probe.track != nullptr ? probe.track->frog_distance() : -1.0 };
+                        if( frogdistance > 0.0 ) {
+                            auto const frogbehind { probe.position >= frogdistance };
+                            if( probe.track == axle.frogtrack ) {
+                                passedfrog = ( frogbehind != axle.frogbehind );
+                            }
+                            axle.frogtrack = probe.track;
+                            axle.frogbehind = frogbehind;
+                        }
+                        else {
+                            axle.frogtrack = nullptr;
+                        }
+                        if( passedfrog ) {
+                            passedjoint = true;
+                        }
+                        auto const hitvolume { passedfrog ? volume * 1.5 : volume };
+                        if( passedjoint ) {
                             if( MoverParameters->Vel > 0.1 ) {
                                 // NOTE: for combined clatter sound we supply 1/100th of actual value, as the sound module converts does the opposite, converting received (typically) 0-1 values to 0-100 range
                                 auto const frequency = true == axle.clatter.is_combined() ? MoverParameters->Vel * 0.01 : 1.0;
                                 axle.clatter
                                     .pitch( frequency )
-                                    .gain( volume )
+                                    .gain( hitvolume )
                                     .play();
 								// crude bump simulation, drop down on even axles, move back up on
 								// the odd ones
@@ -4309,6 +4388,7 @@ bool TDynamicObject::FastUpdate(double dt)
     // Move(dDOMoveLen);
     // ResetdMoveLen();
     FastMove(dDOMoveLen);
+    ShakeTravel += dDOMoveLen;
 
     if( MoverParameters->LoadStatus ) {
         LoadUpdate(); // zmiana modelu ładunku
@@ -7987,8 +8067,318 @@ void TDynamicObject::OverheadTrack(float o)
     }
 };
 
+// locates specified axle on its track, in terms useful for rail joint checks
+TDynamicObject::joint_probe
+TDynamicObject::axle_joint_probe( double const Offset ) const {
+    // the vehicle is tied to the track at two points, use the one closer to the axle
+    auto const &follower { Offset >= 0.0 ? Axle0 : Axle1 };
+    auto const followeroffset { ( Offset >= 0.0 ? 0.5 : -0.5 ) * fAxleDist };
+
+    joint_probe probe;
+    probe.track = follower.GetTrack();
+    if( probe.track == nullptr ) { return probe; }
+
+    probe.direction = follower.GetDirection();
+    probe.position = follower.GetTranslation() + probe.direction * ( Offset - followeroffset );
+    probe.count = probe.track->joint_count();
+    probe.spacing = probe.track->joint_spacing();
+
+    return probe;
+}
+
+// converts current movement of the body into a transformation of the displayed vehicle
 void
-TDynamicObject::update_shake( double const Timedelta ) {
+TDynamicObject::update_body_sway_matrix() {
+
+    if( false == Global.BodySway || BodySway == nullptr ) {
+        if( BodySwayApplied ) {
+            mBodySway = glm::dmat4( 1.0 );
+            BodySwayApplied = false;
+            if( mMatrixBaseValid ) { mMatrix = mMatrixBase; }
+        }
+        return;
+    }
+
+    auto const &rigid { BodySway->rigid() };
+    auto const height { BodySway->config.roll_centre_height };
+    // vehicle space: x - left, y - up, z - forward
+    auto sway { glm::translate( glm::dmat4( 1.0 ), glm::dvec3{ rigid.x * Global.ShakingMultiplierRL, height + rigid.y * Global.ShakingMultiplierUD, 0.0 } ) };
+    sway = glm::rotate( sway, rigid.roll * Global.ShakingMultiplierRL, glm::dvec3{ 0.0, 0.0, 1.0 } ); // left side up
+    sway = glm::rotate( sway, -rigid.pitch * Global.ShakingMultiplierUD, glm::dvec3{ 1.0, 0.0, 0.0 } ); // front up
+    sway = glm::rotate( sway, rigid.yaw * Global.ShakingMultiplierRL, glm::dvec3{ 0.0, 1.0, 0.0 } ); // front to the left
+    sway = glm::translate( sway, glm::dvec3{ 0.0, -height, 0.0 } );
+
+    mBodySway = sway;
+    BodySwayApplied = true;
+    if( mMatrixBaseValid ) {
+        mMatrix = mMatrixBase * mBodySway;
+    }
+}
+
+// vehicle body moving on its suspension over uneven track
+void
+TDynamicObject::update_shake_physical( double const Timedelta, glm::dvec3 const &Viewpoint ) {
+
+    if( BodySway == nullptr ) {
+        BodySway = std::make_shared<sway::body>();
+    }
+    auto &body { *BodySway };
+
+    // distance covered since previous update
+    auto travel { ShakeTravel };
+    ShakeTravel = 0.0;
+    if( std::abs( travel ) > 5.0 ) {
+        // leftover from the time the vehicle wasn't being watched, or a teleport
+        travel = 0.0;
+        body.reset();
+        ShakeRoughnessValid = false;
+    }
+    ShakeOdometer += travel;
+
+    if( Global.iSlowMotion != 0 ) {
+        // same as the legacy model, calm down when the simulation struggles
+        body.relax( Timedelta );
+        ShakeVibration = glm::dvec3{};
+        update_body_sway_matrix();
+        return;
+    }
+
+    auto const &mover { *MoverParameters };
+
+    // suspension layout and character.
+    // no two vehicles ride alike, even of the same type; the differences are fixed for each vehicle
+    auto const seed { static_cast<std::uint32_t>( std::hash<std::string>{}( asName ) ) };
+    auto const vary = [ & ]( std::uint32_t const Salt, double const Spread ) {
+        return 1.0 + Spread * ( 2.0 * sway::hash01( seed + Salt * 7919U ) - 1.0 ); };
+    auto &config { body.config };
+    auto const bogied { mover.BDist > 0.0 };
+    if( bogied ) {
+        config.bogie_distance = mover.BDist;
+        config.axles_per_bogie = std::clamp( mover.NAxles > 0 ? mover.NAxles / 2 : 2, 1, 3 );
+        // NOTE: axle distance is taken as the distance between neighbouring axles,
+        // unless that would make the bogie implausibly long, in which case it's taken as the distance between the outer ones
+        auto axledistance { std::max( mover.ADist, 0.0 ) };
+        if( config.axles_per_bogie > 2
+         && axledistance * ( config.axles_per_bogie - 1 ) > 0.6 * mover.BDist ) {
+            axledistance /= ( config.axles_per_bogie - 1 );
+        }
+        config.axle_distance = std::min( axledistance, 0.8 * mover.BDist / std::max( 1, config.axles_per_bogie - 1 ) );
+        if( config.axle_distance <= 0.0 ) { config.axles_per_bogie = 1; }
+    }
+    else {
+        // two-axle vehicle, each axle is a support of its own
+        config.bogie_distance = fAxleDist;
+        config.axle_distance = 0.0;
+        config.axles_per_bogie = 1;
+    }
+    {
+        // natural frequencies (Hz) and damping ratios: heave, pitch, roll, sway, yaw
+        struct character { double frequency[ 5 ]; double damping[ 5 ]; double primaryfrequency; double primarydamping; };
+        constexpr character twoaxle     { { 2.10, 2.40, 1.25, 1.50, 1.60 }, { 0.16, 0.18, 0.12, 0.18, 0.22 }, 9.0, 0.30 }; // single stage of leaf springs, lively and poorly damped
+        constexpr character locomotive  { { 1.55, 1.80, 1.00, 1.10, 1.25 }, { 0.40, 0.42, 0.32, 0.34, 0.36 }, 5.5, 0.35 };
+        constexpr character heavyloco   { { 1.40, 1.60, 0.90, 1.00, 1.15 }, { 0.42, 0.44, 0.34, 0.36, 0.38 }, 5.0, 0.38 }; // three-axle bogies
+        constexpr character carriage    { { 1.15, 1.35, 0.68, 0.85, 1.00 }, { 0.32, 0.34, 0.22, 0.28, 0.30 }, 5.5, 0.32 }; // unpowered vehicle on bogies
+        auto const &base { (
+            false == bogied ? twoaxle :
+            mover.Power <= 1.0 ? carriage :
+            config.axles_per_bogie > 2 ? heavyloco :
+            locomotive ) };
+        // loaded vehicle sits lower on its springs and moves slower
+        auto const loadfactor {
+            std::pow(
+                std::clamp( mover.TotalMass / std::max( mover.Mass, 1.0 ), 1.0, 3.0 ),
+                -0.25 ) };
+        config.heave_frequency = base.frequency[ 0 ] * loadfactor * vary( 1, 0.12 );
+        config.pitch_frequency = base.frequency[ 1 ] * loadfactor * vary( 2, 0.12 );
+        config.roll_frequency  = base.frequency[ 2 ] * loadfactor * vary( 3, 0.15 );
+        config.sway_frequency  = base.frequency[ 3 ] * loadfactor * vary( 4, 0.12 );
+        config.yaw_frequency   = base.frequency[ 4 ] * loadfactor * vary( 5, 0.12 );
+        config.heave_damping = base.damping[ 0 ] * vary( 6, 0.20 );
+        config.pitch_damping = base.damping[ 1 ] * vary( 7, 0.20 );
+        config.roll_damping  = base.damping[ 2 ] * vary( 8, 0.25 );
+        config.sway_damping  = base.damping[ 3 ] * vary( 9, 0.20 );
+        config.yaw_damping   = base.damping[ 4 ] * vary( 10, 0.20 );
+        config.primary_frequency = base.primaryfrequency * vary( 11, 0.10 );
+        config.primary_damping = base.primarydamping * vary( 12, 0.15 );
+    }
+
+    // wheelsets and their hunting
+    config.wheel_radius = 0.5 * std::clamp( static_cast<double>( mover.Power > 1.0 ? mover.WheelDiameter : mover.WheelDiameterL ), 0.6, 1.6 );
+    // wheel taper isn't part of vehicle data; taken as moderately worn, some vehicles more than others
+    config.conicity =
+        std::clamp(
+            0.12 * vary( 14, 0.4 ) * HuntingShake.frequency * HuntingShake.frequency, // frequency of hunting grows with square root of the taper
+            0.03, 0.5 );
+    config.flange_clearance = 0.006 * vary( 15, 0.25 );
+    // vehicle data marks the speed at which hunting sets in, for vehicles known for it.
+    // others are taken as designed to be stable well past their top speed, with yaw dampers holding the bogies steady
+    auto const pronetohunting { HuntingShake.fadein_begin > 0.f };
+    config.critical_speed = (
+        false == mover.TruckHunting ? 1000.0 :
+        pronetohunting ? HuntingShake.fadein_begin / 3.6 :
+        1.5 * std::max( mover.Vmax, 40.0 ) / 3.6 );
+    config.hunting_damping = ( pronetohunting ? 0.15 : 0.35 );
+    if( false == body.reported ) {
+        body.reported = true;
+        WriteLog(
+            "Body sway: " + asName
+            + ", bogies: " + ( bogied ? std::to_string( config.axles_per_bogie ) + " axles each, " + to_string( config.bogie_distance, 2 ) + " m apart" : std::string{ "none" } )
+            + ", hunting data: scale " + to_string( HuntingShake.scale, 2 )
+            + ", frequency " + to_string( HuntingShake.frequency, 2 )
+            + ", fade in " + to_string( HuntingShake.fadein_begin, 1 ) + "-" + to_string( HuntingShake.fadein_end, 1 ) + " km/h"
+            + ", hunting: wavelength " + to_string( body.hunting_wavelength(), 1 ) + " m"
+            + ", critical speed " + to_string( config.critical_speed * 3.6, 0 ) + " km/h"
+            + ", shake factors: track " + to_string( Global.ShakeJointFactor, 2 ) + " " + to_string( Global.ShakeRoughnessFactor, 2 )
+            + ", general " + to_string( Global.ShakingMultiplierBF, 2 ) + " " + to_string( Global.ShakingMultiplierRL, 2 ) + " " + to_string( Global.ShakingMultiplierUD, 2 ) );
+    }
+
+    auto const speed { travel / Timedelta };
+    auto const jointfactor { static_cast<double>( Global.ShakeJointFactor ) };
+    auto const frogfactor { static_cast<double>( Global.ShakeJointFactor ) };
+
+    // continuous unevenness of the track under each end of the vehicle.
+    // it changes slowly enough to be calculated once per update, and blended from the previous result in between
+    double roughnessstart[ 2 ][ 3 ];
+    double roughnessend[ 2 ][ 3 ];
+    for( int end = 0; end < 2; ++end ) {
+        auto const &follower { end == 0 ? Axle0 : Axle1 };
+        auto const *track { follower.GetTrack() };
+        auto const location { vPosition + vFront * ( ( end == 0 ? 0.5 : -0.5 ) * config.bogie_distance ) };
+        auto const wear { track != nullptr ? 1.0 + 0.05 * std::min( track->iDamageFlag & 127, 20 ) : 1.0 };
+        auto const jointed { track != nullptr && track->joint_count() > 0 };
+        // NOTE: quality of the track changes on the spot where two tracks meet, e.g. plain welded track and a switch.
+        // applied directly that would make for a sudden jump of the track surface, and a jolt out of nowhere
+        // faster lines are built and kept to tighter geometry tolerances. track without a speed limit is taken as a regular ~120 km/h line
+        auto const tracklimit { track != nullptr ? const_cast<TTrack *>( track )->VelocityGet() : -1.0 };
+        auto const linespeed { tracklimit > 0.0 ? tracklimit : 120.0 };
+        auto const lineclass { std::clamp( ( linespeed - 60.0 ) / 140.0, 0.0, 1.0 ) }; // 0: 60 km/h or less, 1: 200 km/h or more
+        // continuous welded rail is always smoother than any jointed track, whatever the speed of either line
+        auto const quality { (
+            jointed ?
+                1.00 - 0.40 * lineclass : // 1.00 - 0.60
+                0.55 - 0.35 * lineclass ) }; // 0.55 - 0.20
+        auto const targetscale { quality * wear * Global.ShakeRoughnessFactor };
+        auto &scale { body.roughness_scale[ end ] };
+        if( scale < 0.0 ) { scale = targetscale; }
+        scale += ( targetscale - scale ) * std::clamp( Timedelta / 1.5, 0.0, 1.0 );
+        auto const sample {
+            sway::track_roughness(
+                location.x, location.z,
+                vLeft.x, vLeft.z,
+                vFront.x, vFront.z,
+                scale ) };
+        roughnessend[ end ][ 0 ] = sample.vertical;
+        roughnessend[ end ][ 1 ] = sample.lateral;
+        roughnessend[ end ][ 2 ] = sample.crosslevel;
+        for( int i = 0; i < 3; ++i ) {
+            roughnessstart[ end ][ i ] = ( ShakeRoughnessValid ? ShakeRoughness[ end ][ i ] : roughnessend[ end ][ i ] );
+            ShakeRoughness[ end ][ i ] = roughnessend[ end ][ i ];
+        }
+    }
+    ShakeRoughnessValid = true;
+
+    // track surface under given axle.
+    // Offset: location of the axle along the vehicle; Back: how far back from current location to look
+    auto const sampler = [ & ]( int const Bogieindex, double const Offset, double const Back ) {
+        sway::rail_sample sample;
+        auto const probe { axle_joint_probe( Offset ) };
+        if( probe.track == nullptr ) { return sample; }
+
+        auto const wear { 1.0 + 0.05 * std::min( probe.track->iDamageFlag & 127, 20 ) };
+        // how far into current update this sample is
+        auto const progress { travel != 0.0 ? std::clamp( 1.0 - Back / travel, 0.0, 1.0 ) : 1.0 };
+        sample.vertical   = std::lerp( roughnessstart[ Bogieindex ][ 0 ], roughnessend[ Bogieindex ][ 0 ], progress );
+        sample.lateral    = std::lerp( roughnessstart[ Bogieindex ][ 1 ], roughnessend[ Bogieindex ][ 1 ], progress );
+        sample.crosslevel = std::lerp( roughnessstart[ Bogieindex ][ 2 ], roughnessend[ Bogieindex ][ 2 ], progress );
+        // actual tilt of the track under this end of the vehicle. the body follows changes of it with a delay and overshoots,
+        // which makes it rock on track with uneven cant
+        sample.crosslevel += ( Bogieindex == 0 ? Axle0 : Axle1 ).GetRoll();
+        if( probe.count > 0 ) {
+            auto const position { probe.position - probe.direction * Back };
+            auto const jointindex {
+                std::clamp(
+                    static_cast<int>( std::floor( position / probe.spacing ) ),
+                    0, probe.count - 1 ) };
+            auto const isswitch { probe.track->eType == tt_Switch };
+            auto const key {
+                static_cast<std::uint32_t>( reinterpret_cast<std::uintptr_t>( probe.track ) >> 4 ) * 31U
+                + static_cast<std::uint32_t>( jointindex ) };
+            sample +=
+                sway::joint_dip(
+                    position - ( jointindex + 0.5 ) * probe.spacing,
+                    key,
+                    ( isswitch ? 0.004 : 0.0025 ) * wear * jointfactor,
+                    ( isswitch ? 0.002 : 0.0003 ) * jointfactor );
+        }
+        if( probe.track->eType == tt_Switch ) {
+            auto const frogdistance { probe.track->frog_distance() };
+            if( frogdistance > 0.0 ) {
+                auto const position { probe.position - probe.direction * Back };
+                auto const key { static_cast<std::uint32_t>( reinterpret_cast<std::uintptr_t>( probe.track ) >> 4 ) * 131U };
+                // the wheel drops into the gap of the frog and gets shoved sideways by the guard rail
+                sample += sway::joint_dip( position - frogdistance, key + 1U, 0.007 * wear * frogfactor, 0.004 * frogfactor );
+                // tips of the blades give a sideways nudge
+                sample += sway::joint_dip( position - 1.0, key + 2U, 0.0003 * frogfactor, 0.0006 * frogfactor );
+            }
+        }
+        return sample; };
+
+    // NOTE: curves of switches come without any transition, so the acceleration arrives all at once.
+    // a real vehicle eases into it as its bogies turn one after another, hence the slow response
+    ShakeLateralAcceleration += ( mover.AccN - ShakeLateralAcceleration ) * std::clamp( Timedelta / 0.25, 0.0, 1.0 );
+
+    sway::body_input input;
+    input.speed = speed;
+    input.lateral_acceleration = std::clamp( ShakeLateralAcceleration, -3.0, 3.0 );
+    input.longitudinal_acceleration = std::clamp( mover.AccSVBased, -3.0, 3.0 );
+    input.reference_roll = 0.5 * Roll(); // the vehicle as a whole is displayed at mean tilt of the track under both ends
+    // keep the viewpoint within the vehicle, external cameras can be far off
+    auto const halfwidth { 0.5 * std::abs( mover.Dim.W ) };
+    auto const halflength { 0.5 * std::abs( mover.Dim.L ) };
+    input.view_x = std::clamp( Viewpoint.x, -halfwidth, halfwidth );
+    input.view_y = std::clamp( Viewpoint.y, 0.0, std::max( 3.0, mover.Dim.H ) );
+    input.view_z = std::clamp( Viewpoint.z, -halflength, halflength );
+
+    body.update( Timedelta, input, sampler );
+    // flanges knocking on the rails
+    IsHunting = ( body.hunting() > 0.85 ) && ( std::abs( speed ) > 0.9 * config.critical_speed );
+    update_body_sway_matrix();
+
+    // engine vibration
+    ShakeVibration = glm::dvec3{};
+    if( ( mover.EngineType == TEngineType::DieselElectric
+       || mover.EngineType == TEngineType::DieselEngine )
+     && ( std::abs( mover.enrot ) > 0.0 )
+     && ( false == FreeFlyModeFlag ) ) {
+        auto const amount {
+            EngineShake.scale
+            // fade in with rpm above threshold
+            * std::clamp(
+                ( mover.enrot - EngineShake.fadein_offset ) * EngineShake.fadein_factor,
+                0.0, 1.0 )
+            // fade out with rpm above threshold
+            * std::lerp(
+                1.0, 0.0,
+                std::clamp(
+                    ( mover.enrot - EngineShake.fadeout_offset ) * EngineShake.fadeout_factor,
+                    0.0, 1.0 ) ) };
+        ShakeVibration.x = 0.0003 * amount * std::sin( mover.eAngle * 4.0 );
+        ShakeVibration.y = 0.00015 * amount * std::cos( mover.eAngle * 4.0 );
+    }
+}
+
+void
+TDynamicObject::update_shake( double const Timedelta, glm::dvec3 const &Viewpoint ) {
+
+    if( Global.PhysicalShake ) {
+        update_shake_physical( Timedelta, Viewpoint );
+        return;
+    }
+    if( BodySwayApplied ) {
+        mBodySway = glm::dmat4( 1.0 );
+        BodySwayApplied = false;
+        if( mMatrixBaseValid ) { mMatrix = mMatrixBase; }
+    }
     // Ra: mechanik powinien być telepany niezależnie od pozycji pojazdu
     // Ra: trzeba zrobić model bujania głową i wczepić go do pojazdu
 
@@ -8083,9 +8473,39 @@ TDynamicObject::update_shake( double const Timedelta ) {
 std::pair<double, double>
 TDynamicObject::shake_angles() const {
 
+    if( Global.PhysicalShake ) {
+        // the camera code expects the angles in terms of an observer facing the way the occupied cab does
+        auto const facing { MoverParameters->CabOccupied < 0 ? -1.0 : 1.0 };
+        auto const pose { BodySway != nullptr ? BodySway->pose() : sway::body_pose{} };
+        // with the body movement applied to the vehicle the head doesn't quite follow the tilt of the cab
+        auto const headroll { BodySway != nullptr && BodySwayApplied ? BodySway->residual().roll : 0.0 };
+        return {
+            -facing * ( pose.roll + headroll ) * Global.ShakingMultiplierRL,
+            // NOTE: the camera code applies half of the pitch value it receives
+            -facing * pose.pitch * 2.0 * Global.ShakingMultiplierUD };
+    }
+
     return {
         std::atan( ShakeState.velocity.x * BaseShake.angle_scale.x ),
         std::atan( ShakeState.velocity.z * BaseShake.angle_scale.z ) };
+}
+
+glm::dvec3
+TDynamicObject::shake_offset() const {
+
+    if( Global.PhysicalShake ) {
+        // if the vehicle itself moves with the body the camera rides along, and only needs what's left
+        auto const pose { BodySway == nullptr ? sway::body_pose{} : BodySwayApplied ? BodySway->residual() : BodySway->pose() };
+        return {
+            pose.x * Global.ShakingMultiplierRL + ShakeVibration.x,
+            pose.y * Global.ShakingMultiplierUD + ShakeVibration.y,
+            pose.z * Global.ShakingMultiplierBF };
+    }
+
+    return {
+        1.5 * ShakeState.offset.x,
+        2.0 * ShakeState.offset.y,
+        1.5 * ShakeState.offset.z };
 }
 
 void

@@ -148,6 +148,11 @@ struct global_settings {
     glm::ivec2 fb_size; // main window framebuffer size
 	float ShakingMultiplierBF {1.f}; // mnożnik bujania kamera przod/tyl
 	float ShakingMultiplierRL {1.f}; // mnożnik bujania kamera lewo/prawo
+	bool PhysicalShake {true}; // vehicle body movement simulated on its suspension; false restores the legacy camera shake
+	bool RailJoints {true}; // generate visible joints on tracks with jointed rail
+	bool BodySway {true}; // physical shake: move the vehicle body itself, with the camera riding along, instead of just the camera
+	float ShakeJointFactor {1.f}; // physical shake: strength of the jolts on rail joints
+	float ShakeRoughnessFactor {1.f}; // physical shake: strength of the continuous track unevenness
 	float ShakingMultiplierUD {1.f}; // mnożnik bujania kamera gora/dol
     float fDistanceFactor{ 1.f }; // baza do przeliczania odległości dla LoD
     float targetfps{ 0.0f };
