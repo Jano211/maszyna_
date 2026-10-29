@@ -418,8 +418,17 @@ int main( int, char *argv[] ) {
         auto const index { std::find( mock_span_names.begin(), mock_span_names.end(), std::string( "nb_1" ) ) };
         good = good && index != mock_span_names.end() && mock_span_bodies[ static_cast<std::size_t>( index - mock_span_names.begin() ) ].find( " parallel na_2" ) != std::string::npos
             && catenary_chain_overlaps( 1 ).size() == 1 && catenary_chain_overlaps( 1 ).front().connected;
+        // dwa wspólne przęsła (słup krzyżowy na z = 120): łańcuch nb przedłużony wstecz, zwarte - łącznik 0640 bez błędów
+        auto g { entry }; g.name = "o7"; place( g, 0.0, 0.3 );
+        catenary_scene_add( "td_naprezenie_test.scm", g );
+        auto longer { *catenary_chain_get( 1 ) };
+        longer.suspensions = { "o7", "o4", "o5", "o6" };
+        catenary_chain_update( 1, longer );
+        auto const twospans { catenary_chain_overlaps( 1 ) };
+        if( false == twospans.empty() ) { std::printf( "  dwa wspolne: przesel %zu, krzyzowe %zu, zwarte %d\n", twospans.front().spans.size(), twospans.front().crossing.size(), twospans.front().connected ? 1 : 0 ); }
+        good = good && twospans.size() == 1 && twospans.front().spans.size() == 2 && twospans.front().crossing.size() == 1 && twospans.front().connected && errors.empty();
         std::remove( "tests/catenary/td_naprezenie_test.scm" );
-        check( good, "przeslo naprezenia: wspolne przeslo wykryte, biezna wspolna po wczytaniu i w edytorze, izolowane / zwarte wg zasilacza" );
+        check( good, "przeslo naprezenia: wspolne przeslo wykryte, biezna wspolna po wczytaniu i w edytorze, izolowane / zwarte wg zasilacza, slup krzyzowy" );
     }
 
     // 6a'. kotwienia środkowe 0418 (jednostronna izolacja) i 0416 (do dźwigara bramki: środkowe podwieszenie na zwisie)
