@@ -14,5 +14,7 @@ public:
     gfx::geometry_handle m_geometry;
     std::shared_ptr<catenary_span> m_catenaryspan;
     std::string m_name { "none" };
+    std::string asParallel;
+    TTraction *hvParallel { nullptr };
     std::string const &name() const { return m_name; }
 };

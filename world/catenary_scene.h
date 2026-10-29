@@ -115,6 +115,18 @@ void catenary_chain_remove( std::size_t Index );
 bool catenary_chain_middle( std::size_t Index, std::size_t &Parts, std::size_t &Triangles );
 // łańcuch, do którego należy podwieszenie, i jego miejsce w łańcuchu; -1 gdy żaden
 int catenary_chain_of( std::size_t Suspension, std::size_t &Position );
+// przęsło naprężenia (część wspólna dwóch łańcuchów): przęsła łańcucha Index, przy których biegnie przęsło innego łańcucha (oba
+// końce przewodów do 0,8 m od siebie). Przęsła części wspólnej dostają same "parallel" (bieżnia wspólna), chyba że łańcuch ma
+// swoje "parallel". Słupy krzyżowe to wewnętrzne słupy części wspólnej; ten sam zasilacz = przęsło zwarte (łączniki 33-0640)
+struct catenary_overlap {
+    std::size_t other { 0 };                // drugi łańcuch
+    std::vector<std::size_t> spans;         // wspólne przęsła tego łańcucha (numery od 0), po kolei
+    std::vector<std::size_t> other_spans;   // odpowiadające im przęsła drugiego
+    std::vector<std::size_t> crossing;      // podwieszenia tego łańcucha na słupach krzyżowych (numery podwieszeń w scenie)
+    std::size_t outer[ 2 ] { static_cast<std::size_t>( -1 ), static_cast<std::size_t>( -1 ) }; // skrajne podwieszenia części wspólnej
+    bool connected { false };               // ten sam zasilacz: przęsło zwarte; inaczej izolowane
+};
+std::vector<catenary_overlap> catenary_chain_overlaps( std::size_t Index );
 
 // ---- kotwienia (wpisy "anchor" w pliku sieci): słup kotwowy z urządzeniem naprężającym ---------------------------------
 std::size_t catenary_anchor_size();

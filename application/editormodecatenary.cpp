@@ -48,6 +48,7 @@ double const kCurveRadius{4000.0}; // m, a track bent less is a straight for the
 float const kPolePick{12.0f};
 double const kInsertWidth{1.5}; // m in the plan from the line of a span: a pole placed there goes into the span
 double const kInsertEnds{2.0}; // m from the ends of the span where it doesn't
+double const kOverlapLift{0.30}; // m: the wire leaving a tension overlap to its anchor, over the working height at the last shared pole
 float const kSwitchFace{4.00f}; // m from the axis of the track to the face of a pole by a switch (2.50 on a line, 2.20 in a station)
 double const kSwitchRange{8.0}; // m from a pole to a switch path: the pole stands by the switch (also on the neighbouring track)
 // Iet-107 (PKP PLK, wytyczne projektowania sieci trakcyjnej): the largest stagger on a straight up to 160 km/h and above it
@@ -3539,7 +3540,57 @@ void catenary_editor::render_catenary_chain_ui()
 				tool.toward = toward;
 		}
 		render_catenary_chain_report(static_cast<std::size_t>(tool.chain_selected));
+		render_catenary_overlaps(static_cast<std::size_t>(tool.chain_selected));
 		render_catenary_anchor_ui(static_cast<std::size_t>(tool.chain_selected));
+	}
+}
+
+// the tension overlaps of the chain (spans shared with another chain): found by themselves, the shared spans get the running line
+// of both (parallel); the same power source - a connected overlap (connectors 33-0640 at the crossing poles), otherwise insulated
+void catenary_editor::render_catenary_overlaps(std::size_t const Chain)
+{
+	auto &tool{m_catenary};
+	auto const *chain{catenary_chain_get(Chain)};
+	if (chain == nullptr)
+		return;
+	auto const overlaps{catenary_chain_overlaps(Chain)};
+	for (auto const &overlap : overlaps)
+	{
+		auto const *other{catenary_chain_get(overlap.other)};
+		if (other == nullptr)
+			continue;
+		ImGui::PushID(static_cast<int>(overlap.other));
+		std::string crossing;
+		for (auto const index : overlap.crossing)
+			if (auto const *data{catenary_scene_get(index)}; data != nullptr)
+				crossing += (crossing.empty() ? "" : ", ") + data->name;
+		ImGui::TextColored(overlap.connected ? ImVec4(0.4f, 0.9f, 0.4f, 1.0f) : ImVec4(1.0f, 0.75f, 0.3f, 1.0f), "%s",
+		                   format(overlap.connected ? STR_C("Tension overlap with %s: %zu shared spans, connected (the same power source)") : STR_C("Tension overlap with %s: %zu shared spans, insulated (other power sources)"),
+		                          other->name.c_str(), overlap.spans.size()).c_str());
+		if (false == crossing.empty())
+			ImGui::TextUnformatted(format(STR_C("crossing poles: %s"), crossing.c_str()).c_str());
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("The shared spans take the running line of both chains (parallel). Connectors 33-0640 at the crossing poles of a connected overlap come later"));
+		// the wire of this chain leaving the overlap to its anchor goes up at the last shared pole
+		auto const tail{overlap.spans.front() + overlap.spans.size() + 1 >= chain->suspensions.size() + (chain->anchor_start.empty() ? 0u : 1u)};
+		auto const lifted{tail ? overlap.outer[1] : overlap.outer[0]};
+		if (auto const *data{catenary_scene_get(lifted)}; data != nullptr && data->has_at)
+		{
+			if (ImGui::SmallButton(format(STR_C("Lift the wire leaving to the anchor at %s by %.2f m"), data->name.c_str(), kOverlapLift).c_str()))
+			{
+				auto changed{*data};
+				changed.at[1] += kOverlapLift;
+				if (changed.has_rope)
+					changed.rope[1] += kOverlapLift;
+				tool.undo.push_back({++tool.group, false, lifted, *data, std::nullopt, false});
+				catenary_scene_update(lifted, changed);
+				tool.spots.erase(lifted);
+				tool.status = format(STR_C("The wire of %s at %s %.2f m higher (Ctrl+Z takes it back)"), chain->name.c_str(), data->name.c_str(), kOverlapLift);
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("ASSUMPTION: at the last pole of the overlap the wire going off to its anchor is lifted 0.30 m over the working height (with its messenger), so the pantograph leaves it; the cantilever is composed for it"));
+		}
+		ImGui::PopID();
 	}
 }
 

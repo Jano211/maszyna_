@@ -378,6 +378,50 @@ int main( int, char *argv[] ) {
         Global.AirTemperature = 10.f;
     }
 
+    // 6a''. przęsło naprężenia: dwa łańcuchy z jednym wspólnym przęsłem (słupy na z = 60 i 120, przewody 0,3 m obok siebie):
+    // wczytane - bieżnia wspólna łączona raz po wczytaniu; zasilacze różne - izolowane; w edytorze nowe przęsło dostaje "parallel"
+    {
+        auto a { entry }, b { entry }, c { entry }, d { entry }, e { entry }, f { entry };
+        a.name = "o1"; b.name = "o2"; c.name = "o3"; d.name = "o4"; e.name = "o5"; f.name = "o6";
+        auto const place = [ & ]( catenary::suspension &S, double const Z, double const Shift ) {
+            S.at[ 2 ] = S.rope[ 2 ] = S.pole[ 2 ] = Z;
+            S.at[ 0 ] += Shift; S.rope[ 0 ] += Shift;
+        };
+        place( a, 0.0, 0.0 ); place( b, 60.0, 0.0 ); place( c, 120.0, 0.0 );
+        place( d, 60.0, 0.3 ); place( e, 120.0, 0.3 ); place( f, 180.0, 0.3 );
+        catenary::chain one, two;
+        one.name = "na"; one.power = "pwr01"; one.type = "C120-2C"; one.suspensions = { "o1", "o2", "o3" };
+        two.name = "nb"; two.power = "pwr02"; two.type = "C120-2C"; two.suspensions = { "o4", "o5", "o6" };
+        std::string text;
+        for( auto const *item : { &a, &b, &c, &d, &e, &f } ) { text += catenary::write_suspension( *item ) + "\n"; }
+        text += catenary::write_chain( one ) + "\n" + catenary::write_chain( two ) + "\n";
+        { std::ofstream out { "tests/catenary/td_naprezenie_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear();
+        cParser directive( "td_naprezenie_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        auto const overlaps { catenary_chain_overlaps( 0 ) };
+        // po wczytaniu (przed InitTraction) łączy catenary_scene_loaded() - wpis w logu; gdy sceneria już była zainicjowana, przęsło
+        // drugiego łańcucha ma "parallel" od razu w treści
+        auto const inbody { std::any_of( mock_span_bodies.begin(), mock_span_bodies.end(), []( std::string const &B ) { return B.find( " parallel na_2" ) != std::string::npos; } ) };
+        auto const linked { inbody || std::any_of( logs.begin(), logs.end(), []( std::string const &L ) { return L.find( "tension overlaps" ) != std::string::npos; } ) };
+        std::printf( "  naprezenie: nakladek %zu, log %d, bledy %zu\n", overlaps.size(), linked ? 1 : 0, errors.size() );
+        for( auto const &o : overlaps ) { std::printf( "    z %zu: przesel %zu (pierwsze %zu), krzyzowe %zu, zwarte %d\n", o.other, o.spans.size(), o.spans.empty() ? 99 : o.spans.front(), o.crossing.size(), o.connected ? 1 : 0 ); }
+        for( auto const &e : errors ) { std::printf( "    blad: %s\n", e.c_str() ); }
+        auto good { overlaps.size() == 1 && overlaps.front().other == 1 && overlaps.front().spans == std::vector<std::size_t>{ 1 } && overlaps.front().other_spans == std::vector<std::size_t>{ 0 }
+            && overlaps.front().crossing.empty() && false == overlaps.front().connected && linked && errors.empty() };
+        // edytor: łańcuch nb od nowa - jego wspólne przęsło dostaje "parallel na_2"
+        mock_span_bodies.clear(); mock_span_names.clear();
+        auto changed { *catenary_chain_get( 1 ) };
+        changed.power = "pwr01";
+        catenary_chain_update( 1, changed );
+        auto const index { std::find( mock_span_names.begin(), mock_span_names.end(), std::string( "nb_1" ) ) };
+        good = good && index != mock_span_names.end() && mock_span_bodies[ static_cast<std::size_t>( index - mock_span_names.begin() ) ].find( " parallel na_2" ) != std::string::npos
+            && catenary_chain_overlaps( 1 ).size() == 1 && catenary_chain_overlaps( 1 ).front().connected;
+        std::remove( "tests/catenary/td_naprezenie_test.scm" );
+        check( good, "przeslo naprezenia: wspolne przeslo wykryte, biezna wspolna po wczytaniu i w edytorze, izolowane / zwarte wg zasilacza" );
+    }
+
     // 6a'. kotwienia środkowe 0418 (jednostronna izolacja) i 0416 (do dźwigara bramki: środkowe podwieszenie na zwisie)
     for( auto const *card : { "0418", "0416", "tee" } ) {
         auto a { entry }, b { entry }, c { entry };

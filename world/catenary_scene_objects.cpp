@@ -73,6 +73,13 @@ catenary_span_create( std::string const &Name, double const RangeMax, double con
             neighbours.push_back( matching );
         }
     }
+    // bieżnia wspólna (przęsło naprężenia): w kółko z tamtym przęsłem, tak jak łączy je InitTraction
+    if( false == span->asParallel.empty() && span->asParallel != "none" && span->asParallel != "*" && span->hvParallel == nullptr ) {
+        if( auto *other { simulation::Traction.find( span->asParallel ) }; other != nullptr && other != span ) {
+            span->hvParallel = ( other->hvParallel != nullptr ? other->hvParallel : other );
+            other->hvParallel = span;
+        }
+    }
     auto &section { simulation::Region->section( span->location() ) };
     if( section.m_geometrycreated ) {
         span->create_geometry( section.m_geometrybank );
@@ -100,6 +107,13 @@ catenary_span_delete( TTraction *Span ) {
         neighbours.push_back( neighbour );
     }
     for( auto *neighbour : neighbours ) { catenary_span_refresh( *neighbour ); }
+    // z kółka bieżni wspólnej: poprzednik wskazuje dalej za usuwanym (a gdy zostaje sam - na nic)
+    if( Span->hvParallel != nullptr ) {
+        auto *previous { Span->hvParallel };
+        while( previous->hvParallel != nullptr && previous->hvParallel != Span ) { previous = previous->hvParallel; }
+        if( previous->hvParallel == Span ) { previous->hvParallel = ( Span->hvParallel == previous ? nullptr : Span->hvParallel ); }
+        Span->hvParallel = nullptr;
+    }
     catenary_span_release( *Span );
     simulation::Region->erase_and_unregister( Span );
     auto const name { Span->name() };
