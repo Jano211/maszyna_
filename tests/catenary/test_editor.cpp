@@ -78,6 +78,27 @@ int main( int, char *argv[] ) {
     check( catenary_scene_update( index, moved ) && mock_deleted_parts == static_cast<int>( first ) && catenary_scene_parts( index ) > 10, "zmiana: stare czesci usuniete, nowe wstawione" );
     catenary::cantilever_result probe;
     check( catenary_scene_probe( moved, probe ), "proba zlozenia bez wstawiania" );
+    {
+        // górne mocowanie przesunięte o ±0,3 m (stay_shift): składa się, odciąg dobrany z rodziny, zapis i odczyt
+        auto const stayof = []( catenary::cantilever_result const &R ) { auto const *p { R.find( "stay" ) }; return p != nullptr ? p->part : std::string( "-" ); };
+        catenary::cantilever_result plain, up, down;
+        auto shifted { moved };
+        auto const a { catenary_scene_probe( moved, plain ) };
+        shifted.stay_shift = 0.30;
+        auto const b { catenary_scene_probe( shifted, up ) };
+        shifted.stay_shift = -0.30;
+        auto const c { catenary_scene_probe( shifted, down ) };
+        std::printf( "  odciag: karta %s (uwag %zu), +0,30 %s (uwag %zu), -0,30 %s (uwag %zu)\n", stayof( plain ).c_str(), plain.warnings.size(), stayof( up ).c_str(), up.warnings.size(), stayof( down ).c_str(), down.warnings.size() );
+        for( auto const &w : up.warnings ) { std::printf( "    +: %s\n", w.c_str() ); }
+        for( auto const &w : down.warnings ) { std::printf( "    -: %s\n", w.c_str() ); }
+        auto const mountup { up.values.count( "mount.stay" ) ? up.values.at( "mount.stay" ) : 0.0 }, mountplain { plain.values.count( "mount.stay" ) ? plain.values.at( "mount.stay" ) : 0.0 };
+        auto const text { catenary::write_suspension( shifted ) };
+        std::vector<std::string> tokens; std::istringstream words { text }; for( std::string w; words >> w; ) { tokens.push_back( w ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( tokens, "zapis", parsed, problems );
+        check( a && b && c && std::abs( mountup - mountplain - 0.30 ) < 0.02 && text.find( " stay_shift -0.300" ) != std::string::npos
+            && problems.empty() && parsed.entries.size() == 1 && parsed.entries.front().stay_shift == -0.30, "gorne mocowanie +-0,30 m (stay_shift): sklada sie, zapis i odczyt" );
+    }
     auto wrong { moved }; wrong.card = 9999;
     check( false == catenary_scene_probe( wrong, probe ) && false == probe.warnings.empty() && errors.empty(), "proba z karta spoza katalogu: przyczyna w wyniku, nie w logu" );
     std::string message;
