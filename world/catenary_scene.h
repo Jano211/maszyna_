@@ -128,6 +128,17 @@ struct catenary_overlap {
 };
 std::vector<catenary_overlap> catenary_chain_overlaps( std::size_t Index );
 
+// ---- uszynienie grupowe (wpisy "earthing" w pliku sieci): uchwyty 6120 na słupach, lina rysowana przez przęsła łańcuchów -------
+std::size_t catenary_earthing_size();
+catenary::earthing const *catenary_earthing_get( std::size_t Index );
+std::string catenary_earthing_file( std::size_t Index );
+std::size_t catenary_earthing_parts( std::size_t Index );
+std::size_t catenary_earthing_add( std::string const &File, catenary::earthing const &Data );
+// zmienia uszynienie (także przywraca usunięte), uchwyty i lina od nowa
+bool catenary_earthing_update( std::size_t Index, catenary::earthing const &Data );
+void catenary_earthing_remove( std::size_t Index );
+std::string catenary_scene_new_earthing_name( std::string const &File );
+
 // ---- kotwienia (wpisy "anchor" w pliku sieci): słup kotwowy z urządzeniem naprężającym ---------------------------------
 std::size_t catenary_anchor_size();
 catenary::anchor const *catenary_anchor_get( std::size_t Index );

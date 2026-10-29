@@ -125,6 +125,10 @@ struct cantilever_pole {
     std::string steady;                 // mocowanie izolatora wysięgu pomocniczego (schematy z trzema zaczepami)
     std::string console;                // konsola wysięgników rozstawionych (wpis "mount ... console"); pusta = słup ich nie nosi
     std::string steady_console;         // belka 4690 rozstawionych wysięgów pomocniczych (karta 33-0519, wysięgi 0167); mocowanie wysięgu na niej
+    // uszynienie grupowe (karta 0805): uchwyt liny 6120 na górze słupa (w marginesie 0,15 m nad mount_max) i jego tył (dwuteowniki: 6120-08);
+    // puste - słup go nie nosi (betony 1701/1711)
+    std::string earthing;
+    std::string earthing_back;
     // słup bramki z wysięgnikiem (zrobiony z wpisu "mast" z mocowaniami): model stawia bramka, nie wysięgnik; mount_max pod
     // dźwigarem bramki liczy sceneria wg jej poziomu (mast_low/mast_high minus below_beam), tu - pod dolnym mocowaniem
     bool   gantry { false };

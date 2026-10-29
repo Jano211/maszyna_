@@ -87,7 +87,11 @@ struct catenary_editor
 		// expert mode: the advanced settings shown (+-0.5 stagger, own hk, the top mount, spread cantilevers, messenger held by
 		// another cantilever, single beam elements, turning a gantry); off: only what a usual line needs. What's set stays shown
 		bool expert{false};
-		bool stay_shift_open{false}; // the slider of the top mount of the selected cantilever is shown
+		bool stay_shift_open{false};
+		// group earthing: the poles clicked one after another become the next earthing line (page 3)
+		bool earthing_building{false};
+		std::vector<std::string> earthing_poles;
+		std::string earthing_file; // the slider of the top mount of the selected cantilever is shown
 		bool wide_stagger{false}; // stagger -0.50..+0.50 m from the track axis (tuning at turnouts; not allowed on a line)
 		int bend{0}; // 0: from the track, 1: straight, 2: curve
 		float stagger{0.30f};
@@ -262,6 +266,9 @@ struct catenary_editor
 	void render_catenary_zigzag_ui();
 	void render_catenary_overlaps(std::size_t const Chain);
 	void render_catenary_insulator(std::size_t const Chain);
+	void render_catenary_earthing_ui();
+	// the earthing being built is finished: from two poles on it goes into the file
+	void catenary_earthing_finish();
 	void render_catenary_chain_report(std::size_t const Chain);
 	// a pole of this type can't stand there: its group doesn't stand by switches and a switch is by it
 	bool catenary_switch_error(std::string const &Pole, glm::dvec3 const &Foot, TTrack const *Track) const;

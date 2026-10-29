@@ -3060,6 +3060,35 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 	tool.status.clear();
 	auto const &mouse{ImGui::GetIO().MousePos};
 	tool.pressed = {mouse.x, mouse.y};
+	if (is_intent(Intent, intent_detail::select) && tool.page == 3 && tool.earthing_building)
+	{
+		// group earthing: the pole clicked goes onto the line being built
+		auto const *data{catenary_scene_get(static_cast<std::size_t>(Intent.index))};
+		auto const *catalog{catenary_scene_catalog()};
+		auto const *pole{data != nullptr && catalog != nullptr && data->has_pole ? catalog->pole(data->pole_type) : nullptr};
+		if (data == nullptr || data->name.empty())
+			return;
+		if (pole == nullptr || pole->earthing.empty())
+		{
+			tool.status = format(STR_C("Pole %s carries no earthing holder (6120): concrete poles have none"), data->pole_type.c_str());
+			return;
+		}
+		auto const file{catenary_scene_file_of(static_cast<std::size_t>(Intent.index))};
+		if (false == tool.earthing_poles.empty() && file != tool.earthing_file)
+		{
+			tool.status = STR("The earthing goes over the poles of one catenary file");
+			return;
+		}
+		if (std::find(tool.earthing_poles.begin(), tool.earthing_poles.end(), data->name) != tool.earthing_poles.end())
+		{
+			tool.status = format(STR_C("%s is on the earthing already"), data->name.c_str());
+			return;
+		}
+		tool.earthing_file = file;
+		tool.earthing_poles.push_back(data->name);
+		tool.status = format(STR_C("Earthing: %zu poles (LMB the next pole, Esc or the button finishes)"), tool.earthing_poles.size());
+		return;
+	}
 	if (is_intent(Intent, intent_detail::select))
 	{
 		if (tool.anchor_pick >= 0)
@@ -3476,6 +3505,88 @@ bool catenary_editor::catenary_undo()
 	tool.probed = false;
 	tool.status = STR("Taken back");
 	return true;
+}
+
+void catenary_editor::catenary_earthing_finish()
+{
+	auto &tool{m_catenary};
+	tool.earthing_building = false;
+	if (tool.earthing_poles.size() >= 2)
+	{
+		catenary::earthing data;
+		data.name = catenary_scene_new_earthing_name(tool.earthing_file);
+		data.poles = tool.earthing_poles;
+		catenary_earthing_add(tool.earthing_file, data);
+		tool.status = format(STR_C("Earthing %s over %zu poles"), data.name.c_str(), data.poles.size());
+	}
+	else
+		tool.status = STR("An earthing needs at least two poles: nothing made");
+	tool.earthing_poles.clear();
+}
+
+// group earthing (card 0805): the earthing rope over the tops of the poles, on holders 6120 (their execution from the data of the pole),
+// apart from the catenary; on gantries 6840 (card 0807) and its ends anchored to the poles come later
+void catenary_editor::render_catenary_earthing_ui()
+{
+	auto &tool{m_catenary};
+	ImGui::Separator();
+	ImGui::TextWrapped("%s", STR_C("Group earthing: the rope over the tops of the poles, on holders 6120. The poles one after another; the rope is drawn by the spans of the chains between them"));
+	if (ImGui::Button(tool.earthing_building ? STR_C("Finish the earthing (Esc)") : STR_C("New earthing: click the poles")))
+	{
+		if (tool.earthing_building)
+			catenary_earthing_finish();
+		else
+		{
+			tool.earthing_building = true;
+			tool.earthing_poles.clear();
+			tool.status = STR("LMB the poles of the earthing one after another; Esc finishes");
+		}
+	}
+	// along the chain selected on the Wires page: all its poles which carry a holder
+	if (auto const *chain{tool.chain_selected >= 0 ? catenary_chain_get(static_cast<std::size_t>(tool.chain_selected)) : nullptr}; chain != nullptr && false == tool.earthing_building)
+	{
+		ImGui::SameLine();
+		if (ImGui::Button(format(STR_C("Along chain %s"), chain->name.c_str()).c_str()))
+		{
+			auto const *catalog{catenary_scene_catalog()};
+			catenary::earthing data;
+			auto const file{catenary_chain_file(static_cast<std::size_t>(tool.chain_selected))};
+			for (auto const index : catenary_chain_members(static_cast<std::size_t>(tool.chain_selected)))
+			{
+				auto const *member{catenary_scene_get(index)};
+				auto const *pole{member != nullptr && catalog != nullptr && member->has_pole ? catalog->pole(member->pole_type) : nullptr};
+				if (pole != nullptr && false == pole->earthing.empty() && false == member->name.empty())
+					data.poles.push_back(member->name);
+			}
+			if (data.poles.size() >= 2)
+			{
+				data.name = catenary_scene_new_earthing_name(file);
+				catenary_earthing_add(file, data);
+				tool.status = format(STR_C("Earthing %s over %zu poles"), data.name.c_str(), data.poles.size());
+			}
+			else
+				tool.status = STR("The chain has fewer than two poles with earthing holders");
+		}
+	}
+	if (tool.earthing_building && false == tool.earthing_poles.empty())
+	{
+		std::string list;
+		for (auto const &name : tool.earthing_poles)
+			list += (list.empty() ? "" : ", ") + name;
+		ImGui::TextWrapped("%s", list.c_str());
+	}
+	for (std::size_t index = 0; index < catenary_earthing_size(); ++index)
+	{
+		auto const *earthing{catenary_earthing_get(index)};
+		if (earthing == nullptr)
+			continue;
+		ImGui::PushID(static_cast<int>(index));
+		ImGui::TextUnformatted(format(STR_C("%s: %zu poles, %zu holders (%s)"), earthing->name.c_str(), earthing->poles.size(), catenary_earthing_parts(index), catenary_earthing_file(index).c_str()).c_str());
+		ImGui::SameLine();
+		if (ImGui::SmallButton(STR_C("Remove")))
+			catenary_earthing_remove(index);
+		ImGui::PopID();
+	}
 }
 
 // a power source of the scenery (node ... tractionpowersource) picked from a list, or typed in; true when it changed
@@ -5752,6 +5863,10 @@ void catenary_editor::render_catenary_ui()
 	{
 		render_catenary_wires_ui();
 	}
+	else if (tool.page == 3)
+	{
+		render_catenary_earthing_ui();
+	}
 	else
 	{
 		render_catenary_cantilever_ui();
@@ -6395,7 +6510,7 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 	if (auto const hit{catenary_hit()}; hit >= 0)
 	{
 		Intent.index = hit;
-		Intent.action = m_catenary.anchor_pick >= 0 ? STR("Click: the tensioning device on this pole") : m_catenary.connect_from >= 0 ? STR("Click: hang the span to this pole") : STR("Click: select the pole");
+		Intent.action = m_catenary.page == 3 && m_catenary.earthing_building ? STR("Click: the earthing goes over this pole") : m_catenary.anchor_pick >= 0 ? STR("Click: the tensioning device on this pole") : m_catenary.connect_from >= 0 ? STR("Click: hang the span to this pole") : STR("Click: select the pole");
 		Intent.what = kind::catenary;
 		Intent.detail = static_cast<int>(intent_detail::select);
 		return true;
@@ -6417,7 +6532,8 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 		return true;
 	}
 	// the track a pole goes by: under the cursor or the nearest one to where the cursor points beside it
-	auto const targeted{(m_catenary.page != 2 || m_catenary.anchor_cantilever >= 0) && catenary_find_target(m_target)};
+	// the wires page and the earthing page place nothing by the tracks
+	auto const targeted{((m_catenary.page != 2 && m_catenary.page != 3) || m_catenary.anchor_cantilever >= 0) && catenary_find_target(m_target)};
 	if (false == targeted)
 		m_target = place_target{};
 	// a cantilever on the pole of an anchor: by any track
@@ -6536,6 +6652,11 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 		{
 			tool.zigzag_flip = false;
 			tool.status.clear();
+			return true;
+		}
+		if (tool.earthing_building)
+		{
+			catenary_earthing_finish();
 			return true;
 		}
 		if (tool.anchor_pick >= 0 || tool.connect_from >= 0 || tool.umbrella_from >= 0 || tool.anchor_cantilever >= 0)

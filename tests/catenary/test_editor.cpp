@@ -431,6 +431,43 @@ int main( int, char *argv[] ) {
         check( good, "przeslo naprezenia: wspolne przeslo wykryte, biezna wspolna po wczytaniu i w edytorze, izolowane / zwarte wg zasilacza, slup krzyzowy" );
     }
 
+    // 6a4. uszynienie grupowe: uchwyty 6120-01 na górze słupów 1611-11 (wykonanie z danych słupa), zapis i odczyt
+    {
+        auto a { entry }, b { entry }, c { entry };
+        a.name = "e1"; b.name = "e2"; c.name = "e3";
+        b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] = 60.0; c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 120.0;
+        catenary::chain line;
+        line.name = "ne"; line.power = "pwr01"; line.type = "C120-2C"; line.suspensions = { "e1", "e2", "e3" };
+        catenary::earthing earth;
+        earth.name = "u1"; earth.poles = { "e1", "e2", "e3" };
+        auto const written { catenary::write_earthing( earth ) };
+        std::string text;
+        for( auto const *item : { &a, &b, &c } ) { text += catenary::write_suspension( *item ) + "\n"; }
+        text += catenary::write_chain( line ) + "\n" + written + "\n";
+        std::vector<std::string> tokens; std::istringstream words { text };
+        for( std::string word; words >> word; ) { tokens.push_back( word ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( tokens, "uszynienie", parsed, problems );
+        auto good { problems.empty() && parsed.earthings.size() == 1 && catenary::write_earthing( parsed.earthings.front() ) == written };
+        { std::ofstream out { "tests/catenary/td_uszynienie_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear();
+        auto const before { simulation::State.created.size() };
+        cParser directive( "td_uszynienie_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        auto holders { 0 };
+        for( auto i { before }; i < simulation::State.created.size(); ++i ) { if( simulation::State.created[ i ].entry.find( "components/6120-01.t3d" ) != std::string::npos ) { ++holders; } }
+        std::printf( "  uszynienie: uchwytow %d, czesci %zu\n", holders, catenary_earthing_parts( 0 ) );
+        for( auto const &l : logs ) { if( l.find( "earthing" ) != std::string::npos ) { std::printf( "    %s\n", l.c_str() ); } }
+        good = good && holders == 3 && catenary_earthing_parts( 0 ) == 3 && errors.empty();
+        // edycja: uszynienie przez dwa słupy - uchwyty od nowa
+        auto shorter { *catenary_earthing_get( 0 ) };
+        shorter.poles = { "e1", "e2" };
+        good = good && catenary_earthing_update( 0, shorter ) && catenary_earthing_parts( 0 ) == 2;
+        std::remove( "tests/catenary/td_uszynienie_test.scm" );
+        check( good, "uszynienie grupowe: zapis i odczyt, uchwyty 6120-01 na slupach 1611-11, edycja" );
+    }
+
     // 6a3. izolator sekcyjny w połowie przęsła za i2: zapis i odczyt, przęsła za nim z jego zasilacza
     {
         auto a { entry }, b { entry }, c { entry }, d { entry };

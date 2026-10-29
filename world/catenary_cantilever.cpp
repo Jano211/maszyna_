@@ -290,6 +290,8 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     else if( key == "steady" ) { text( pole.steady ); }
                     else if( key == "console" ) { text( pole.console ); }
                     else if( key == "steady_console" ) { text( pole.steady_console ); }
+                    else if( key == "earthing" ) { text( pole.earthing ); }
+                    else if( key == "earthing_back" ) { text( pole.earthing_back ); }
                     else { report( entry, "unknown keyword \"" + key + "\"" ); good = false; --index; }
                 }
                 else {

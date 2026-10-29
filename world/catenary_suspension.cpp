@@ -174,6 +174,27 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
             if( good ) { Output.gantries.push_back( line ); }
             continue;
         }
+        if( type == "earthing" ) {
+            earthing line;
+            line.name = ( entry.name == "none" ? std::string() : entry.name );
+            line.range_max = entry.range_max;
+            line.range_min = entry.range_min;
+            auto closed { false };
+            while( index < count ) {
+                auto const key { Tokens[ index++ ] };
+                if( key == "endearthing" ) { closed = true; break; }
+                if( key == "node" ) { --index; break; }
+                if( key == "poles" ) {
+                    while( index < count && Tokens[ index ] != "endearthing" && Tokens[ index ] != "node" && Tokens[ index ] != "skin" ) { line.poles.push_back( Tokens[ index++ ] ); }
+                }
+                else if( key == "skin" && index < count ) { line.skin = Tokens[ index++ ]; }
+                else { report( line.name, "unexpected token \"" + key + "\" in an earthing" ); good = false; }
+            }
+            if( false == closed ) { report( line.name, "missing \"endearthing\"" ); good = false; }
+            if( line.poles.size() < 2 ) { report( line.name, "an earthing needs at least two poles" ); good = false; }
+            if( good ) { Output.earthings.push_back( line ); }
+            continue;
+        }
         if( type == "anchor" ) {
             anchor line;
             line.name = ( entry.name == "none" ? std::string() : entry.name );
@@ -405,6 +426,21 @@ std::string write_chain( chain const &Entry ) {
     text += " suspensions";
     for( auto const &name : Entry.suspensions ) { text += " " + name; }
     return text + " endchain";
+}
+
+std::string write_earthing( earthing const &Entry ) {
+
+    auto const number = []( double const Value ) {
+        std::ostringstream stream;
+        stream.imbue( std::locale::classic() );
+        stream << Value;
+        return stream.str();
+    };
+    std::string text { "node " + number( Entry.range_max ) + " " + number( Entry.range_min ) + " " + ( Entry.name.empty() ? std::string( "none" ) : Entry.name ) + " earthing" };
+    if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
+    text += " poles";
+    for( auto const &name : Entry.poles ) { text += " " + name; }
+    return text + " endearthing";
 }
 
 std::string write_gantry( gantry const &Entry ) {

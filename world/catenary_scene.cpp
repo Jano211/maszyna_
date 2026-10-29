@@ -29,6 +29,7 @@ http://mozilla.org/MPL/2.0/.
 #include "utilities/parser.h"
 
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <locale>
@@ -122,6 +123,15 @@ struct scene_anchor {
     double shape[ 4 ][ 3 ] { { 0.0, 0.0, 0.0 }, { 0.0, 0.0, 0.0 }, { 0.0, 0.0, 0.0 }, { 0.0, 0.0, 0.0 } };
 };
 std::vector<scene_anchor> Anchors;
+
+// uszynienie grupowe z pliku: uchwyty 6120 na słupach podwieszeń; linę rysują przęsła łańcuchów między tymi słupami
+struct scene_earthing {
+    catenary::earthing data;
+    std::string file;
+    std::vector<TAnimModel *> parts;
+    bool removed { false };
+};
+std::vector<scene_earthing> Earthings;
 
 // bramka wieloprzęsłowa: przęsła (wpisy gantry) stykają się na wspólnych słupach - ten sam punkt (w planie do 0,05 m).
 // Model wspólnego słupa stawia przęsło o najniższym numerze; true, gdy słup K przęsła Index stawia inne przęsło
@@ -1791,6 +1801,115 @@ overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector
     add_box( Solid, wire, alongspan, 0.08, 0.035 );         // zacisk 6601 na przewodzie
 }
 
+// uszynienie grupowe: uchwyt 6120 (karta 0805) na górze słupa podwieszenia, przodem do toru (X wzdłuż toru, słup w +Y, zero na
+// płaszczyźnie przylegania jak w mocowaniach), w połowie marginesu 0,15 m nad najwyższym mocowaniem (ZAŁOŻENIE: 0,075 m nad mount_max,
+// bez wychodzenia nad słup); lina przez punkt "wire" uchwytu (Jan 2026-10-25: X 0,0099, Y -0,0497, Z 0,1042)
+double constexpr kEarthingMargin { 0.075 };
+double const kEarthingWire[ 3 ] { 0.0099, -0.0497, 0.1042 };
+double constexpr kEarthingRadius { 0.0045 };
+
+struct earthing_place {
+    std::string part, back;
+    catenary::cantilever_placement front, rear;   // w układzie wysięgnika słupa, zero w osi słupa na główce szyny
+    double heading { 0.0 };
+    glm::dvec3 origin { 0.0 };
+    glm::dvec3 wire { 0.0 };                      // punkt liny we współrzędnych scenerii
+};
+
+bool
+earthing_place_of( std::size_t const Suspension, earthing_place &Place ) {
+    auto const *catalog { cantilevers() };
+    if( catalog == nullptr || Suspension >= Suspensions.size() || Suspensions[ Suspension ].removed ) { return false; }
+    auto const &data { Suspensions[ Suspension ].data };
+    auto const *pole { data.has_pole && data.has_at ? catalog->pole( data.pole_type ) : nullptr };
+    if( pole == nullptr || pole->earthing.empty() ) { return false; }
+    auto const towardx { data.pole[ 0 ] - data.at[ 0 ] }, towardz { data.pole[ 2 ] - data.at[ 2 ] };
+    if( towardx * towardx + towardz * towardz < 0.01 ) { return false; }
+    Place.heading = std::atan2( towardx, towardz );
+    Place.origin = { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
+    auto height { pole->mount_max > 0.0 ? pole->mount_max + kEarthingMargin : pole->top - 0.10 };
+    if( pole->top > 0.0 ) { height = std::min( height, pole->top - 0.02 ); }
+    auto const face { -0.5 * pole->depth( height ) };
+    Place.part = pole->earthing;
+    Place.back = pole->earthing_back;
+    Place.front = catenary::cantilever_placement();
+    Place.front.role = "earthing";
+    Place.front.part = pole->earthing;
+    Place.front.position[ 1 ] = face;
+    Place.front.position[ 2 ] = height;
+    Place.rear = Place.front;
+    Place.rear.part = pole->earthing_back;
+    Place.rear.position[ 1 ] = face + pole->depth( height );
+    catenary::cantilever_placement wire { Place.front };
+    wire.position[ 0 ] += kEarthingWire[ 0 ];
+    wire.position[ 1 ] += kEarthingWire[ 1 ];
+    wire.position[ 2 ] += kEarthingWire[ 2 ];
+    auto const part { catenary::cantilever_to_scene( wire, Place.heading ) };
+    Place.wire = Place.origin + glm::dvec3 { part.offset[ 0 ], part.offset[ 1 ], part.offset[ 2 ] };
+    return true;
+}
+
+// wstawia uchwyty uszynienia na słupach (albo usuwa, gdy uszynienie usunięte). zwraca liczbę wstawionych modeli
+std::size_t
+assemble_earthing( scene_earthing &Earthing ) {
+    for( auto *part : Earthing.parts ) { catenary_part_delete( part ); }
+    Earthing.parts.clear();
+    if( Earthing.removed ) { return 0; }
+    auto const *catalog { cantilevers() };
+    if( catalog == nullptr ) { return 0; }
+    auto const skin { Earthing.data.skin.empty() ? std::string( "none" ) : Earthing.data.skin };
+    std::size_t count { 0 };
+    for( auto const &name : Earthing.data.poles ) {
+        auto const index { suspension_named( Earthing.file, name ) };
+        earthing_place place;
+        if( false == earthing_place_of( index, place ) ) {
+            WriteLog( ( "Catenary: earthing \"" + Earthing.data.name + "\" goes over \"" + name + "\", whose pole carries no earthing holder (6120)" ).c_str() );
+            continue;
+        }
+        for( auto const *placement : { &place.front, &place.rear } ) {
+            if( placement->part.empty() ) { continue; }
+            auto const part { catenary::cantilever_to_scene( *placement, place.heading ) };
+            auto const entry {
+                "node " + text_number( Earthing.data.range_max, 1 ) + " " + text_number( Earthing.data.range_min, 1 ) + " none model 0 0 0 0 "
+                + catalog->models() + placement->part + ".t3d " + skin
+                + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) + " endmodel" };
+            glm::dvec3 const position { place.origin.x + part.offset[ 0 ], place.origin.y + part.offset[ 1 ], place.origin.z + part.offset[ 2 ] };
+            if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
+                catenary_part_detach( model );
+                Earthing.parts.push_back( model );
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+// lina uszynienia w przęśle łańcucha: gdy słupy obu końców przęsła są kolejnymi słupami uszynienia. Lina zwisa w przęśle
+// (ZAŁOŻENIE: strzałka 1 % rozpiętości)
+void
+earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
+    if( Earthings.empty() ) { return; }
+    auto const offset { Chain.data.anchor_start.empty() ? 0u : 1u };
+    if( Span < offset || Span + 1 - offset >= Chain.data.suspensions.size() ) { return; }
+    auto const &a { Chain.data.suspensions[ Span - offset ] }, &b { Chain.data.suspensions[ Span + 1 - offset ] };
+    for( auto const &earthing : Earthings ) {
+        if( earthing.removed || earthing.file != Chain.file ) { continue; }
+        auto const &poles { earthing.data.poles };
+        for( std::size_t k = 0; k + 1 < poles.size(); ++k ) {
+            if( false == ( ( poles[ k ] == a && poles[ k + 1 ] == b ) || ( poles[ k ] == b && poles[ k + 1 ] == a ) ) ) { continue; }
+            earthing_place first, second;
+            if( false == earthing_place_of( suspension_named( Chain.file, poles[ k ] ), first ) || false == earthing_place_of( suspension_named( Chain.file, poles[ k + 1 ] ), second ) ) { continue; }
+            auto const length { glm::length( second.wire - first.wire ) };
+            std::vector<glm::dvec3> points;
+            for( int step = 0; step <= 24; ++step ) {
+                auto const t { step / 24.0 };
+                points.push_back( first.wire + ( second.wire - first.wire ) * t - glm::dvec3 { 0.0, 0.01 * length * 4.0 * t * ( 1.0 - t ), 0.0 } );
+            }
+            add_tube( Solid, points, kEarthingRadius );
+        }
+    }
+}
+
 // izolator sekcyjny w połowie przęsła (Jan 2026-10-25): na przewodzie jezdnym element izolujący z prowadnicami (ok. 2 m), nad nim
 // izolator w linie nośnej. Do czasu modeli (żywiczny na jeden / dwa przewody, ceramiczny) bryły zastępcze; przewód w połowie przęsła
 // liczony prosto między końcami (ZAŁOŻENIE: przewód jezdny bez strzałki), lina nośna o strzałkę niżej (ok. 1/10 wysokości konstrukcyjnej)
@@ -1847,6 +1966,8 @@ rebuild_span( scene_chain &Chain, std::size_t const Span ) {
         overlap_connector( Chain, Span, rope );
         // izolator sekcyjny w połowie przęsła (bryła zastępcza do czasu modeli)
         section_insulator( Chain, Span, rope );
+        // lina uszynienia grupowego między słupami przęsła
+        earthing_rope( Chain, Span, rope );
         if( false == rope.empty() ) { catenary_span_attach( *span, rope ); }
     }
 }
@@ -1862,6 +1983,30 @@ rebuild_chain( scene_chain &Chain ) {
     for( auto *span : Chain.spans ) { if( span != nullptr ) { catenary_span_delete( span ); } }
     Chain.spans.assign( Chain.removed || Chain.data.suspensions.size() < 2 ? 0 : chain_points( Chain ) - 1, nullptr );
     for( std::size_t span = 0; span < Chain.spans.size(); ++span ) { rebuild_span( Chain, span ); }
+}
+
+// uszynienia, które idą przez słup podwieszenia: uchwyty od nowa (słup przesunięty w edytorze)
+void
+follow_earthings( std::size_t const Index ) {
+    if( Index >= Suspensions.size() || Suspensions[ Index ].data.name.empty() ) { return; }
+    for( auto &earthing : Earthings ) {
+        if( earthing.removed || earthing.file != Suspensions[ Index ].file ) { continue; }
+        if( std::find( earthing.data.poles.begin(), earthing.data.poles.end(), Suspensions[ Index ].data.name ) != earthing.data.poles.end() ) { assemble_earthing( earthing ); }
+    }
+}
+
+// przęsła łańcuchów, które leżą między słupami uszynienia: od nowa (lina)
+void
+earthing_spans( scene_earthing const &Earthing ) {
+    for( auto &chain : Chains ) {
+        if( chain.removed || chain.file != Earthing.file ) { continue; }
+        auto const offset { chain.data.anchor_start.empty() ? 0u : 1u };
+        for( std::size_t k = 0; k + 1 < chain.data.suspensions.size(); ++k ) {
+            auto const &poles { Earthing.data.poles };
+            auto const has = [ & ]( std::string const &Name ) { return std::find( poles.begin(), poles.end(), Name ) != poles.end(); };
+            if( has( chain.data.suspensions[ k ] ) && has( chain.data.suspensions[ k + 1 ] ) ) { rebuild_span( chain, k + offset ); }
+        }
+    }
 }
 
 // numery podwieszeń parasola o podanej nazwie (bez usuniętych)
@@ -1914,6 +2059,15 @@ add_content( catenary::suspension_file const &File, std::string const &Filename 
         Anchors.emplace_back( anchor );
         assemble_anchor( Anchors.back() );
         follow_anchor( Anchors.back() );
+    }
+    // uszynienie przed łańcuchami: linę między słupami rysują przęsła
+    for( auto const &line : File.earthings ) {
+        if( twice( "earthing", line.name, std::any_of( Earthings.begin(), Earthings.end(), [ & ]( scene_earthing const &E ) { return false == E.removed && E.file == Filename && E.data.name == line.name; } ) ) ) { continue; }
+        scene_earthing earthing;
+        earthing.data = line;
+        earthing.file = Filename;
+        Earthings.emplace_back( earthing );
+        assemble_earthing( Earthings.back() );
     }
     // przęsła łańcuchów powstają od razu: przed inicjalizacją scenerii łączy je InitTraction razem z resztą sieci
     for( auto const &line : File.chains ) {
@@ -2222,6 +2376,8 @@ catenary_scene_clear() {
     Chains.clear();
     Gantries.clear();
     Anchors.clear();
+    for( auto &earthing : Earthings ) { for( auto *part : earthing.parts ) { catenary_part_delete( part ); } }
+    Earthings.clear();
     Files.clear();
     FileLayers.clear();
     InlineFiles.clear();
@@ -2411,6 +2567,7 @@ catenary_scene_update( std::size_t const Index, catenary::suspension const &Data
     }
     reassemble( Index );
     follow_chains( Index );
+    follow_earthings( Index );
     return true;
 }
 
@@ -2454,6 +2611,7 @@ catenary_scene_restore( std::size_t const Index, catenary::suspension const &Dat
     mark_changed( suspension.file );
     reassemble( Index );
     follow_chains( Index );
+    follow_earthings( Index );
     return true;
 }
 
@@ -2525,6 +2683,9 @@ catenary_scene_entries( std::string const &File ) {
     }
     for( auto const &anchor : Anchors ) {
         if( false == anchor.removed && anchor.file == File ) { lines.emplace_back( catenary::write_anchor( anchor.data ) ); }
+    }
+    for( auto const &earthing : Earthings ) {
+        if( false == earthing.removed && earthing.file == File ) { lines.emplace_back( catenary::write_earthing( earthing.data ) ); }
     }
     for( auto const &chain : Chains ) {
         if( false == chain.removed && chain.file == File ) { lines.emplace_back( catenary::write_chain( chain.data ) ); }
@@ -2600,6 +2761,10 @@ catenary_scene_save( std::string &Message ) {
         for( auto const &anchor : Anchors ) {
             if( anchor.removed || anchor.file != file.name ) { continue; }
             text += catenary::write_anchor( anchor.data ) + "\r\n";
+        }
+        for( auto const &earthing : Earthings ) {
+            if( earthing.removed || earthing.file != file.name ) { continue; }
+            text += catenary::write_earthing( earthing.data ) + "\r\n";
         }
         auto const path { Global.asCurrentSceneryPath + file.name };
         std::ofstream output { path, std::ios::binary | std::ios::trunc };
@@ -2778,6 +2943,67 @@ catenary_chain_overlaps( std::size_t const Index ) {
         }
     }
     return result;
+}
+
+// ---- uszynienie grupowe ---------------------------------------------------------------------------------------------------
+
+std::size_t catenary_earthing_size() { return Earthings.size(); }
+
+catenary::earthing const *
+catenary_earthing_get( std::size_t const Index ) {
+    return ( Index < Earthings.size() && false == Earthings[ Index ].removed ? &Earthings[ Index ].data : nullptr );
+}
+
+std::string catenary_earthing_file( std::size_t const Index ) { return ( Index < Earthings.size() ? Earthings[ Index ].file : std::string() ); }
+
+std::size_t catenary_earthing_parts( std::size_t const Index ) { return ( Index < Earthings.size() ? Earthings[ Index ].parts.size() : 0 ); }
+
+std::size_t
+catenary_earthing_add( std::string const &File, catenary::earthing const &Data ) {
+    scene_earthing earthing;
+    earthing.data = Data;
+    earthing.file = File;
+    Earthings.emplace_back( earthing );
+    mark_changed( File );
+    assemble_earthing( Earthings.back() );
+    earthing_spans( Earthings.back() );
+    return Earthings.size() - 1;
+}
+
+bool
+catenary_earthing_update( std::size_t const Index, catenary::earthing const &Data ) {
+    if( Index >= Earthings.size() ) { return false; }
+    auto &earthing { Earthings[ Index ] };
+    auto const before { earthing.data };
+    earthing.removed = false;
+    earthing.data = Data;
+    mark_changed( earthing.file );
+    assemble_earthing( earthing );
+    // lina znika z przęseł, przez które już nie idzie, i pojawia się w nowych
+    scene_earthing old { earthing };
+    old.data = before;
+    earthing_spans( old );
+    earthing_spans( earthing );
+    return true;
+}
+
+void
+catenary_earthing_remove( std::size_t const Index ) {
+    if( Index >= Earthings.size() || Earthings[ Index ].removed ) { return; }
+    auto &earthing { Earthings[ Index ] };
+    earthing.removed = true;
+    mark_changed( earthing.file );
+    assemble_earthing( earthing );
+    earthing_spans( earthing );
+}
+
+std::string
+catenary_scene_new_earthing_name( std::string const &File ) {
+    auto stem { std::filesystem::path( File ).stem().string() };
+    for( int number = 1; ; ++number ) {
+        auto const name { stem + "_u" + std::to_string( number ) };
+        if( std::none_of( Earthings.begin(), Earthings.end(), [ & ]( scene_earthing const &E ) { return E.file == File && E.data.name == name; } ) ) { return name; }
+    }
 }
 
 // ---- bramki -------------------------------------------------------------------------------------------------------------
