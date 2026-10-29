@@ -46,6 +46,9 @@ struct suspension {
     // górne mocowanie (odciągu) przesunięte w pionie względem karty, ±0,5 m (Jan 2026-10-26, wysięgniki rurowe): solver dobiera do niego
     // krótszą albo dłuższą rurę / pręt odciągu z tej samej rodziny części; wpis "stay_shift <m>"
     double stay_shift { 0.0 };
+    // przechył słupa w poprzek toru (Jan 2026-10-19): słup razem z mocowaniami pochylony o tyle stopni w stronę toru (ujemny - od toru),
+    // obrót wokół jego podstawy; wysięgnik składa się do przechylonych mocowań. Wpis "lean <stopnie>"; parasole i rozstawione bez przechyłu
+    double lean { 0.0 };
     bool   has_spread { false };
     double spread[ 3 ] { 0.0, 0.0, 0.0 };
 };

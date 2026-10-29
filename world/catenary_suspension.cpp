@@ -34,7 +34,7 @@ std::string normalize_path( std::string Path ) {
 
 // słowa kluczowe wewnątrz wpisu podwieszenia
 bool is_keyword( std::string const &Token ) {
-    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "endsuspension" };
+    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "lean", "endsuspension" };
     return keywords.find( Token ) != keywords.end();
 }
 
@@ -307,6 +307,10 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 if( list.empty() ) { entry.above_pole = true; }
                 else { report( entry.name, "\"above_pole\" takes no values" ); good = false; }
             }
+            else if( key == "lean" ) {
+                if( list.size() == 1 && to_number( list[ 0 ], entry.lean ) && std::abs( entry.lean ) <= 5.0 ) {}
+                else { report( entry.name, "\"lean\" needs one number of degrees, up to 5" ); entry.lean = 0.0; good = false; }
+            }
             else if( key == "stay_shift" ) {
                 if( list.size() == 1 && to_number( list[ 0 ], entry.stay_shift ) && std::abs( entry.stay_shift ) <= 0.5 + 1e-9 ) {}
                 else { report( entry.name, "\"stay_shift\" needs one number from -0.5 to 0.5: the top mount moved up (+) or down (-), metres" ); entry.stay_shift = 0.0; good = false; }
@@ -389,6 +393,7 @@ std::string write_suspension( suspension const &Entry ) {
     if( Entry.shared_pole ) { text += " shared_pole"; }
     if( Entry.above_pole ) { text += " above_pole"; }
     if( Entry.stay_shift != 0.0 ) { text += " stay_shift " + number( Entry.stay_shift, 3 ); }
+    if( Entry.lean != 0.0 ) { text += " lean " + number( Entry.lean, 2 ); }
     return text + " endsuspension";
 }
 

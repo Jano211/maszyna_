@@ -350,6 +350,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             lowered.mount_stay += data.stay_shift;
             auto umbrella { Umbrella != nullptr ? *Umbrella : catenary::cantilever_umbrella() };
             umbrella.turn = drop_turn( data, *pole, heading );
+            umbrella.lean = ( data.umbrella.empty() && false == data.shared_pole && false == pole->gantry ? data.lean : 0.0 );
             return catenary::solve_cantilever_on_pole( Catalog, lowered, *pole, reach, Attach.y - Wire.y, input.messenger, Overrides, umbrella, Result );
         }
         auto attempt { input };
@@ -1844,6 +1845,24 @@ earthing_place_of( std::size_t const Suspension, earthing_place &Place ) {
     wire.position[ 0 ] += kEarthingWire[ 0 ];
     wire.position[ 1 ] += kEarthingWire[ 1 ];
     wire.position[ 2 ] += kEarthingWire[ 2 ];
+    // przechylony słup: uchwyt na jego szczycie idzie z nim
+    if( data.lean != 0.0 && data.umbrella.empty() && false == data.shared_pole ) {
+        auto const angle { data.lean * 3.14159265358979323846 / 180.0 };
+        auto const c { std::cos( angle ) }, s { std::sin( angle ) };
+        for( auto *placement : { &Place.front, &Place.rear, &wire } ) {
+            auto const y { placement->position[ 1 ] }, z { placement->position[ 2 ] };
+            placement->position[ 1 ] = c * y - s * z;
+            placement->position[ 2 ] = s * y + c * z;
+            double rotated[ 9 ];
+            auto const &r { placement->rotation };
+            for( int column = 0; column < 3; ++column ) {
+                rotated[ 0 + column ] = r[ 0 + column ];
+                rotated[ 3 + column ] = c * r[ 3 + column ] - s * r[ 6 + column ];
+                rotated[ 6 + column ] = s * r[ 3 + column ] + c * r[ 6 + column ];
+            }
+            std::copy( std::begin( rotated ), std::end( rotated ), placement->rotation );
+        }
+    }
     auto const part { catenary::cantilever_to_scene( wire, Place.heading ) };
     Place.wire = Place.origin + glm::dvec3 { part.offset[ 0 ], part.offset[ 1 ], part.offset[ 2 ] };
     return true;
