@@ -83,6 +83,10 @@ struct catenary_editor
 		bool toward{true};
 		bool alternate{true}; // on a straight the next one goes the other way
 		float rope_lift{0.60f}; // how much higher a new messenger holder is than the messenger here (m)
+		// expert mode: the advanced settings shown (+-0.5 stagger, own hk, the top mount, spread cantilevers, messenger held by
+		// another cantilever, single beam elements, turning a gantry); off: only what a usual line needs. What's set stays shown
+		bool expert{false};
+		bool stay_shift_open{false}; // the slider of the top mount of the selected cantilever is shown
 		bool wide_stagger{false}; // stagger -0.50..+0.50 m from the track axis (tuning at turnouts; not allowed on a line)
 		int bend{0}; // 0: from the track, 1: straight, 2: curve
 		float stagger{0.30f};
@@ -226,6 +230,9 @@ struct catenary_editor
 	static bool track_curve(catenary_spot const &Spot);
 	// X: the selected pole the other way (short cantilever <-> long one), or the next pole the other way than the zigzag proposes
 	void catenary_flip();
+	// the drop of the selected cantilever on a gantry (without an umbrella) to the other side of the track: at the same distance
+	// from the track axis, the wires stay where they are, so the card may go from a short cantilever to a long one or back
+	bool catenary_drop_flip(std::size_t const Index);
 	// the poles of the chain from position From on get the zigzag of Iet-107: the first of them keeps its side (or goes the other
 	// way with Flip), the next ones in turn on a straight, outwards on a curve
 	void catenary_zigzag_chain(std::size_t const Chain, std::size_t const From, bool const Flip);

@@ -309,6 +309,36 @@ int main( int argc, char *argv[] ) {
         failed = failed || !good;
     }
 
+    {
+        // zwis 4850 na dźwigarze skośnym do toru (Jan 2026-10-26): słup z mocowaniami obrócony wokół swojej osi o turn, reszta
+        // wysięgnika bez zmian; mocowania po obrocie w tej samej odległości od osi zwisu
+        auto const *pole { catalog.pole( "4850-4" ) };
+        auto const *scheme { catalog.scheme_for_reach( 1110, 5, 2.0 ) };
+        auto good { pole != nullptr && scheme != nullptr };
+        if( good ) {
+            auto const input { catenary::cantilever_nominal_input( *scheme, 2.0 ) };
+            auto const distance { 2.0 + 0.5 * pole->depth( 0.0 ) };
+            catenary::cantilever_umbrella straight, turned;
+            turned.turn = 8.0;
+            catenary::cantilever_result a, b;
+            auto const solved { catenary::solve_cantilever_on_pole( catalog, *scheme, *pole, distance, 1.75, input.messenger, {}, straight, a )
+                && catenary::solve_cantilever_on_pole( catalog, *scheme, *pole, distance, 1.75, input.messenger, {}, turned, b ) };
+            auto const *pa { a.find( "pole" ) }, *pb { b.find( "pole" ) };
+            auto const *ma { a.find( "strut_mount" ) }, *mb { b.find( "strut_mount" ) };
+            auto const *sa { a.find( "strut" ) }, *sb { b.find( "strut" ) };
+            good = solved && pa != nullptr && pb != nullptr && ma != nullptr && mb != nullptr && sa != nullptr && sb != nullptr;
+            if( good ) {
+                auto const radius = []( catenary::cantilever_placement const *P, double D ) { return std::hypot( P->position[ 0 ], P->position[ 1 ] - D ); };
+                auto const angle { std::atan2( mb->position[ 0 ], -( mb->position[ 1 ] - distance ) ) * 180.0 / 3.14159265358979323846 };
+                good = std::abs( radius( ma, distance ) - radius( mb, distance ) ) < 1e-9 && std::abs( std::abs( angle ) - 8.0 ) < 1e-6
+                    && std::abs( sa->position[ 1 ] - sb->position[ 1 ] ) < 1e-9 && b.values.count( "pole.turn" ) == 1;
+                std::printf( "  zwis obrocony: mocowanie ukosnika X %.4f (bylo %.4f), kat %.2f\n", mb->position[ 0 ], ma->position[ 0 ], angle );
+            }
+        }
+        std::printf( "zwis rowno z dzwigarem skosnym (turn): %s\n", good ? "OK" : "BLAD" );
+        failed = failed || !good;
+    }
+
     std::printf( failed ? "TEST NIE PRZESZEDL\n" : "wszystko OK\n" );
     return failed ? 1 : 0;
 }

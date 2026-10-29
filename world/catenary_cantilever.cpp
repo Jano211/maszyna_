@@ -2319,6 +2319,25 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
         Result.values.erase( "mount.stay" );
         Result.values.erase( "mount.strut" );
     }
+    if( Umbrella.turn != 0.0 ) {
+        // słup z mocowaniami obrócony wokół swojej osi (X = polex, Y = Distance); wysięgnik zostaje w swojej płaszczyźnie (zawiasy)
+        auto const angle { Umbrella.turn * 3.14159265358979323846 / 180.0 };
+        auto const c { std::cos( angle ) }, s { std::sin( angle ) };
+        for( auto &placement : poleparts ) {
+            auto const dx { placement.position[ 0 ] - polex }, dy { placement.position[ 1 ] - Distance };
+            placement.position[ 0 ] = polex + c * dx - s * dy;
+            placement.position[ 1 ] = Distance + s * dx + c * dy;
+            double rotated[ 9 ];
+            auto const &r { placement.rotation };
+            for( int column = 0; column < 3; ++column ) {
+                rotated[ 0 + column ] = c * r[ 0 + column ] - s * r[ 3 + column ];
+                rotated[ 3 + column ] = s * r[ 0 + column ] + c * r[ 3 + column ];
+                rotated[ 6 + column ] = r[ 6 + column ];
+            }
+            std::copy( std::begin( rotated ), std::end( rotated ), placement.rotation );
+        }
+        Result.values[ "pole.turn" ] = Umbrella.turn;
+    }
     Result.parts.insert( Result.parts.end(), poleparts.begin(), poleparts.end() );
     return true;
 }

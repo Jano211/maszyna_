@@ -247,6 +247,8 @@ text_number( double const Value, int const Precision = 4 ) {
 // zwraca liczbę wstawionych części; 0 gdy wysięgnika nie dało się złożyć
 // Wire: oś przewodów jezdnych przy podwieszeniu, Rope: oś liny nośnej, Attach: pion przez zaczepy izolatorów,
 // a przy wpisie ze słupem oś słupa na wysokości główki szyny. Umbrella: ustawienia strony parasola (tylko przy słupie);
+// obrót zwisu na dźwigarze bramki względem płaszczyzny wysięgnika (stopnie; 0 do ok. 2° skosu - zwis idzie za wysięgnikiem)
+double drop_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Pole, double Heading );
 // Probe: tylko złożenie bez wstawiania części, wynik solvera trafia tam (zwraca 1, gdy się złożył)
 std::size_t
 assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Catalog, glm::dvec3 const &Wire, glm::dvec3 const *Rope, glm::dvec3 const &Attach,
@@ -335,12 +337,15 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             // słup z katalogu: zaczepy, mocowania i słup liczy solver; Attach to oś słupa na wysokości główki szyny
             auto lowered { *scheme };
             lowered.mount_strut -= Drop;
-            return catenary::solve_cantilever_on_pole( Catalog, lowered, *pole, reach, Attach.y - Wire.y, input.messenger, Overrides,
-                ( Umbrella != nullptr ? *Umbrella : catenary::cantilever_umbrella() ), Result );
+            lowered.mount_stay += data.stay_shift;
+            auto umbrella { Umbrella != nullptr ? *Umbrella : catenary::cantilever_umbrella() };
+            umbrella.turn = drop_turn( data, *pole, heading );
+            return catenary::solve_cantilever_on_pole( Catalog, lowered, *pole, reach, Attach.y - Wire.y, input.messenger, Overrides, umbrella, Result );
         }
         auto attempt { input };
         attempt.overrides = Overrides;
         attempt.strut_mount.z -= Drop;
+        attempt.stay_mount.z += data.stay_shift;
         return catenary::solve_cantilever( Catalog, *scheme, attempt, Result );
     };
     // inny zestaw izolatorów (25 kV) bez kart katalogowych (Jan 2026-10-17: „lepić na oko”): rury ukośnika, odciągu i wysięgu
@@ -378,9 +383,28 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             fits.emplace_back( tube, candidates );
         }
     }
+    // górne mocowanie przesunięte (stay_shift, ±0,5 m - Jan 2026-10-26): odciąg (rura albo pręt) dobierany z tej samej rodziny części,
+    // najbliższe długości najpierw (przy równej liczbie uwag zostaje karta); bez podmiany, gdy odciąg podano w scenerii
+    if( data.stay_shift != 0.0 && scheme->roles.count( "stay" ) && std::none_of( data.overrides.begin(), data.overrides.end(), []( std::pair<std::string, std::string> const &O ) { return O.first == "stay"; } )
+     && std::none_of( fits.begin(), fits.end(), []( auto const &Fit ) { return Fit.first == "stay"; } ) ) {
+        auto const &name { scheme->roles.at( "stay" ) };
+        auto const *original { Catalog.part( name ) };
+        auto const dash { name.find( '-' ) };
+        if( original != nullptr && dash != std::string::npos ) {
+            auto const family { name.substr( 0, dash + 1 ) };
+            std::vector<std::pair<double, std::string>> sorted;
+            for( auto const &part : Catalog.parts() ) {
+                if( part.first.compare( 0, family.size(), family ) == 0 && part.second.kind == original->kind ) { sorted.emplace_back( std::abs( part.second.length - original->length ), part.first ); }
+            }
+            std::sort( sorted.begin(), sorted.end() );
+            std::vector<std::string> candidates;
+            for( std::size_t index = 0; index < sorted.size() && index < 7; ++index ) { candidates.push_back( sorted[ index ].second ); }
+            if( candidates.size() > 1 ) { fits.emplace_back( "stay", candidates ); }
+        }
+    }
     catenary::cantilever_result result;
     auto solved { false };
-    if( data.insulators.empty() ) {
+    if( fits.empty() ) {
         solved = solve( input.overrides, 0.0, result );
     }
     else {
@@ -388,7 +412,9 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         std::size_t baseline { 0 };     // uwagi niezależne od doboru (np. mocowanie odciągu ścięte do mount_max)
         { catenary::cantilever_result plain; solve( input.overrides, 0.0, plain );
           for( auto const &warning : plain.warnings ) { if( warning.find( "highest mount position" ) != std::string::npos ) { ++baseline; } } }
-        for( int step = 0; step <= 5 && best > baseline; ++step ) {
+        // obniżanie zaczepu ukośnika tylko przy podmienionych izolatorach
+        auto const steps { data.insulators.empty() ? 0 : 5 };
+        for( int step = 0; step <= steps && best > baseline; ++step ) {
             auto const drop { 0.1 * step };
             std::vector<std::size_t> choice( fits.size(), 0 );
             while( true ) {
@@ -579,6 +605,45 @@ gantry_beam_ends( catenary::gantry const &Data, catenary::gantry_mast const &Fir
     From[ 0 ] = from.x; From[ 1 ] = from.y; From[ 2 ] = from.z;
     To[ 0 ] = to.x; To[ 1 ] = to.y; To[ 2 ] = to.z;
 }
+
+namespace {
+// Jan 2026-10-26: przy skosie bramki do toru do ok. 2° zwis wisi skośnie względem dźwigara (w płaszczyźnie wysięgnika), powyżej
+// stoi równo z dźwigarem, a wysięgnik obraca się na zawiasach (tak jak wysięgniki obrotowe)
+double constexpr kDropSkewLimit { 2.0 };
+
+double
+drop_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Pole, double const Heading ) {
+    if( Pole.drop.empty() || false == Data.has_pole ) { return 0.0; }
+    auto const *catalog { cantilevers() };
+    if( catalog == nullptr ) { return 0.0; }
+    for( auto const &gantry : Gantries ) {
+        if( gantry.removed ) { continue; }
+        auto const *first { catalog->mast( gantry.data.masts[ 0 ] ) };
+        auto const single { gantry.data.masts[ 1 ].empty() };
+        auto const *second { single ? nullptr : catalog->mast( gantry.data.masts[ 1 ] ) };
+        auto const *beam { catalog->beam( gantry.data.beam ) };
+        if( first == nullptr || ( second == nullptr && false == single ) || beam == nullptr || beam->drop != Pole.drop ) { continue; }
+        double from[ 3 ], to[ 3 ];
+        gantry_beam_ends( gantry.data, *first, second, beam->span, from, to );
+        auto const ux { to[ 0 ] - from[ 0 ] }, uz { to[ 2 ] - from[ 2 ] };
+        auto const length2 { ux * ux + uz * uz };
+        if( length2 < 1e-6 ) { continue; }
+        auto const along { std::clamp( ( ( Data.pole[ 0 ] - from[ 0 ] ) * ux + ( Data.pole[ 2 ] - from[ 2 ] ) * uz ) / length2, 0.0, 1.0 ) };
+        auto const dx { from[ 0 ] + ux * along - Data.pole[ 0 ] }, dz { from[ 2 ] + uz * along - Data.pole[ 2 ] };
+        auto const bottom { from[ 1 ] + ( to[ 1 ] - from[ 1 ] ) * along };
+        if( dx * dx + dz * dz > 0.09 || std::abs( bottom - Data.pole[ 1 ] ) > 1.0 ) { continue; }
+        // kierunek dźwigara w układzie wysięgnika: Y (do konstrukcji) = (sin h, cos h), X (wzdłuż toru) = (-cos h, sin h)
+        auto const length { std::sqrt( length2 ) };
+        auto const bx { ux / length }, bz { uz / length };
+        auto alongx { -bx * std::cos( Heading ) + bz * std::sin( Heading ) };
+        auto alongy { bx * std::sin( Heading ) + bz * std::cos( Heading ) };
+        if( alongy < 0.0 ) { alongx = -alongx; alongy = -alongy; }
+        auto const turn { std::atan2( -alongx, alongy ) * 180.0 / 3.14159265358979323846 };
+        return ( std::abs( turn ) > kDropSkewLimit ? turn : 0.0 );
+    }
+    return 0.0;
+}
+} // namespace
 
 namespace {
 

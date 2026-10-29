@@ -306,6 +306,9 @@ struct cantilever_umbrella {
     bool spread { false };
     double console_x { 0.0 };
     bool console_parts { true };            // czy stawiać konsole (stawia je jedna strona)
+    // obrót słupa razem z mocowaniami wokół jego osi względem płaszczyzny wysięgnika [stopnie, od X do Y]: zwis na dźwigarze bramki
+    // skośnej do toru o więcej niż ok. 2° stoi równo z dźwigarem, a wysięgnik obraca się na zawiasach mocowań w swoją płaszczyznę
+    double turn { 0.0 };
 };
 bool solve_cantilever_on_pole( cantilever_catalog const &Catalog, cantilever_scheme const &Scheme, cantilever_pole const &Pole,
     double Distance, double RailHead, cantilever_point const &Messenger, std::map<std::string, std::string> const &Overrides,
