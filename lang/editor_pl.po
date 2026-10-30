@@ -12000,3 +12000,27 @@ msgstr "Przęsło innego łańcucha jest wspólne, gdy oba końce jego przewodu 
 
 msgid "nearest: %s by span %zu, %.2f m across (up to 0.80), %.2f m in height (up to 1.00), side by side %.0f%% (at least 70)"
 msgstr "najbliżej: %s przy przęśle %zu, %.2f m w poprzek (do 0,80), %.2f m w pionie (do 1,00), obok siebie %.0f%% (co najmniej 70)"
+
+msgid "Staggers of Iet-107: %zu poles changed, %zu by switches or in tension overlaps left as they are"
+msgstr "Odsuwy wg Iet-107: zmienionych słupów %zu, przy rozjazdach i w przęsłach naprężenia pozostawionych %zu"
+
+msgid "%zu couldn't take it (no card for their A or not by a track)"
+msgstr "%zu się nie dało (brak karty dla ich A albo nie przy torze)"
+
+msgid "Even the staggers of the chain by Iet-107"
+msgstr "Wyrównaj odsuwy łańcucha wg Iet-107"
+
+msgid "Every pole keeps its side of the track (its short or long cantilever), only the stagger is set as for the zigzag on the Poles page; the poles by switches and in tension overlaps stay as they are. The poles stay where they stand, the cards follow the distance A"
+msgstr "Każdy słup zostaje po swojej stronie toru (krótki albo długi wysięgnik), zmienia się tylko odsuw – jak ustawiony dla zygzaka w zakładce Słupy; słupy przy rozjazdach i w przęsłach naprężenia zostają bez zmian. Słupy stoją, gdzie stały, karty idą za odległością A"
+
+msgid "From this pole on the staggers as set for the zigzag; every pole keeps its side of the track, by switches and in tension overlaps nothing changes"
+msgstr "Od tego słupa odsuwy jak dla zygzaka; każdy słup zostaje po swojej stronie toru, przy rozjazdach i w przęsłach naprężenia nic się nie zmienia"
+
+msgid "swap this pole"
+msgstr "zamień ten słup"
+
+msgid "This pole goes to the other side of the track (short <-> long cantilever), with the stagger of the zigzag; the others stay as they are"
+msgstr "Ten słup przechodzi na drugą stronę toru (krótki <-> długi wysięgnik), z odsuwem zygzaka; pozostałe bez zmian"
+
+msgid "The staggers of the whole chain as set for the zigzag; every pole keeps its side, by switches and in tension overlaps nothing changes"
+msgstr "Odsuwy całego łańcucha jak dla zygzaka; każdy słup zostaje po swojej stronie, przy rozjazdach i w przęsłach naprężenia nic się nie zmienia"
