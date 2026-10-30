@@ -1653,7 +1653,9 @@ void catenary_editor::catenary_take_settings(std::size_t const Index)
 	stagger_of(Index, offset);
 	tool.stagger = static_cast<float>(std::abs(offset));
 	tool.toward = offset >= 0.0;
-	tool.height = static_cast<float>(data->at[1] - railhead);
+	// the height over the rails without the rise of the middle of a superelevated track, which catenary_compose() adds itself
+	// (Jan 2026-10-30: with it read back here every swap X lifted the wires again)
+	tool.height = static_cast<float>(data->at[1] - railhead - catenary_cant_shift(*spot, data->at[1] - railhead).y);
 	// its system height: own when it differs from the card's
 	if (auto const *catalog{catenary_scene_catalog()}; catalog != nullptr && data->has_rope)
 	{
@@ -5560,7 +5562,7 @@ std::uint64_t catenary_editor::catenary_preview(std::string const &Name)
 	if (catalog == nullptr)
 		return 0;
 	if (m_previews == nullptr)
-		m_previews = std::make_shared<editor_previews::image_cache>(256, 128);
+		m_previews = std::make_shared<editor_previews::image_cache>(512, 128);
 	std::string model;
 	auto gantry{true};
 	if (auto const *mast{catalog->mast(Name)}; mast != nullptr)
@@ -5589,7 +5591,9 @@ std::uint64_t catenary_editor::catenary_preview(std::string const &Name)
 
 void catenary_editor::catenary_preview_image(std::string const &Name, float const Side)
 {
-	auto const side{Side * std::max(1.0f, Global.ui_scale)};
+	// Ctrl or Shift held: three times bigger
+	auto const &io{ImGui::GetIO()};
+	auto const side{Side * std::max(1.0f, Global.ui_scale) * (io.KeyCtrl || io.KeyShift ? 3.0f : 1.0f)};
 	if (auto const texture{catenary_preview(Name)}; texture != 0)
 		ImGui::Image(static_cast<ImTextureID>(texture), ImVec2(side, side));
 	else
