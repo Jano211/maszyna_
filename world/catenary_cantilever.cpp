@@ -573,6 +573,25 @@ gantry_mast const *cantilever_catalog::mast( std::string const &Name ) const {
     return ( lookup != m_masts.end() ? &lookup->second : nullptr );
 }
 
+bool cantilever_catalog::drop_fits( gantry_beam const &Beam, std::string const &Drop ) {
+    if( Drop.empty() ) { return false; }
+    std::size_t start { 0 };
+    while( start <= Beam.drop.size() ) {
+        auto const end { std::min( Beam.drop.find( ',', start ), Beam.drop.size() ) };
+        if( Beam.drop.compare( start, end - start, Drop ) == 0 && end - start == Drop.size() ) { return true; }
+        start = end + 1;
+    }
+    return false;
+}
+
+bool cantilever_catalog::drops_interchangeable( std::string const &First, std::string const &Second ) const {
+    if( First == Second ) { return false == First.empty(); }
+    for( auto const &beam : m_beams ) {
+        if( drop_fits( beam.second, First ) && drop_fits( beam.second, Second ) ) { return true; }
+    }
+    return false;
+}
+
 gantry_beam const *cantilever_catalog::beam( std::string const &Name ) const {
     auto const lookup { m_beams.find( Name ) };
     return ( lookup != m_beams.end() ? &lookup->second : nullptr );

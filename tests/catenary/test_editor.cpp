@@ -283,7 +283,12 @@ int main( int, char *argv[] ) {
             auto const turn { probe.values.count( "pole.turn" ) ? probe.values.at( "pole.turn" ) : 0.0 };
             std::printf( "  polbramka: zwis 4840-3 obrocony o %.2f st.\n", turn );
             good = good && assembled && std::abs( std::abs( turn ) - 5.0 ) < 0.01;
-            // ten sam zwis na dźwigarze prostopadłym (skos 1°): bez obrotu
+            // ESN-544 też pasuje do 1901 (Jan 2026-10-30)
+            if( auto const *catalog { catenary_scene_catalog() }; catalog != nullptr ) {
+                auto const *beam { catalog->beam( "polbramka_1901_10m" ) };
+                good = good && beam != nullptr && catenary::cantilever_catalog::drop_fits( *beam, "ESN-544" ) && catenary::cantilever_catalog::drop_fits( *beam, "4840" )
+                    && false == catenary::cantilever_catalog::drop_fits( *beam, "4850" ) && catalog->drops_interchangeable( "4840", "ESN-544" );
+            }
             catenary_gantry_remove( index );
             check( good, "polbramka 1901: jeden model, zwis 4840 na Hk, przy skosie 5 st. zwis rowno z dzwigarem" );
         }

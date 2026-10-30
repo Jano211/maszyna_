@@ -595,7 +595,7 @@ bool catenary_editor::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3
 	auto const *beam{gantry != nullptr ? catalog->beam(gantry->beam) : nullptr};
 	std::vector<std::pair<double, std::string>> drops;
 	for (auto const &pole : catalog->poles())
-		if (beam != nullptr && pole.second.drop == beam->drop)
+		if (beam != nullptr && catenary::cantilever_catalog::drop_fits(*beam, pole.second.drop))
 			drops.emplace_back(pole.second.length, pole.first);
 	std::sort(drops.begin(), drops.end());
 	if (drops.empty())
@@ -1122,7 +1122,7 @@ bool catenary_editor::catenary_gantry_second(glm::dvec3 const &Point, glm::dvec3
 			direction = glm::dot(across, delta) >= 0.0 ? across : -across;
 		}
 		Beam = a->name;
-		Second = {first.x + direction.x * a->semi, first.y, first.z + direction.y * a->semi};
+		Second = {first.x + direction.x * (a->offset + a->semi), first.y, first.z + direction.y * (a->offset + a->semi)};
 		return catalog->beam(Beam) != nullptr;
 	}
 	// a single element: from the face of its one mast for its length; otherwise between the faces of the masts 0.20 m less than the beam
@@ -1869,7 +1869,7 @@ bool catenary_editor::catenary_drop_spot(std::size_t const Index, double const A
 	catenary_take_settings(Index);
 	std::vector<std::pair<double, std::string>> drops;
 	for (auto const &entry : catalog->poles())
-		if (entry.second.drop == own->drop)
+		if (catalog->drops_interchangeable(entry.second.drop, own->drop))
 			drops.emplace_back(entry.second.length, entry.first);
 	std::sort(drops.begin(), drops.end());
 	auto const take = [&](std::string const &Name) {
@@ -5117,7 +5117,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 				if (ImGui::BeginCombo(STR_C("Drop of the pole"), data->pole_type.c_str()))
 				{
 					for (auto const &pole : catalog->poles())
-						if (pole.second.drop == own->drop && ImGui::Selectable(format("%s  %.1f m", pole.first.c_str(), pole.second.length).c_str(), pole.first == data->pole_type))
+						if (catalog->drops_interchangeable(pole.second.drop, own->drop) && ImGui::Selectable(format("%s  %.1f m", pole.first.c_str(), pole.second.length).c_str(), pole.first == data->pole_type))
 						{
 							auto changed{*data};
 							changed.pole_type = pole.first;
@@ -5607,7 +5607,7 @@ void catenary_editor::render_catenary_ui()
 						auto const *beam{catalog->beam(changed.beam)};
 						std::vector<std::pair<double, std::string>> drops;
 						for (auto const &pole : catalog->poles())
-							if (beam != nullptr && pole.second.drop == beam->drop)
+							if (beam != nullptr && catenary::cantilever_catalog::drop_fits(*beam, pole.second.drop))
 								drops.emplace_back(pole.second.length, pole.first);
 						std::sort(drops.begin(), drops.end());
 						if (catenary_gantry_beam(selected, from, to, bottom) && false == drops.empty())
@@ -5894,7 +5894,7 @@ void catenary_editor::render_catenary_ui()
 						if (ImGui::Selectable(automatic.c_str(), tool.drop_choice.empty()))
 							tool.drop_choice.clear();
 						for (auto const &pole : catalog->poles())
-							if (pole.second.drop == beam->drop && ImGui::Selectable(format("%s  %.1f m", pole.first.c_str(), pole.second.length).c_str(), pole.first == tool.drop_choice))
+							if (catenary::cantilever_catalog::drop_fits(*beam, pole.second.drop) && ImGui::Selectable(format("%s  %.1f m", pole.first.c_str(), pole.second.length).c_str(), pole.first == tool.drop_choice))
 								tool.drop_choice = pole.first;
 						ImGui::EndCombo();
 					}

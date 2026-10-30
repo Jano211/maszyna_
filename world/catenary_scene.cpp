@@ -611,10 +611,10 @@ gantry_beam_ends( catenary::gantry const &Data, catenary::gantry_mast const &Fir
     auto const length { std::max( glm::length( plan ), 1e-6 ) };
     auto const inward { plan * ( 1.0 / length ) };
     if( First.semi > 0.0 ) {
-        // półbramka: dźwigar od osi słupa na swoją długość (ZAŁOŻENIE: Beam_out od osi), bramka T na obie strony; zwisy na Hk
+        // półbramka: dźwigar od ściany słupa (offset od osi) na swoją długość Beam_out (Jan 2026-10-30), bramka T na obie strony; zwisy na Hk
         auto const hk { glm::dvec3 { 0.0, First.mount_low, 0.0 } };
-        auto const from { a + hk - ( First.sides > 1 ? inward * First.semi : glm::dvec3 { 0.0 } ) };
-        auto const to { a + hk + inward * First.semi };
+        auto const from { a + hk - ( First.sides > 1 ? inward * ( First.offset + First.semi ) : inward * First.offset ) };
+        auto const to { a + hk + inward * ( First.offset + First.semi ) };
         From[ 0 ] = from.x; From[ 1 ] = from.y; From[ 2 ] = from.z;
         To[ 0 ] = to.x; To[ 1 ] = to.y; To[ 2 ] = to.z;
         return;
@@ -642,7 +642,7 @@ drop_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Po
         auto const single { gantry.data.masts[ 1 ].empty() };
         auto const *second { single ? nullptr : catalog->mast( gantry.data.masts[ 1 ] ) };
         auto const *beam { catalog->beam( gantry.data.beam ) };
-        if( first == nullptr || ( second == nullptr && false == single ) || beam == nullptr || beam->drop != Pole.drop ) { continue; }
+        if( first == nullptr || ( second == nullptr && false == single ) || beam == nullptr || false == catenary::cantilever_catalog::drop_fits( *beam, Pole.drop ) ) { continue; }
         double from[ 3 ], to[ 3 ];
         gantry_beam_ends( gantry.data, *first, second, beam->span, from, to );
         auto const ux { to[ 0 ] - from[ 0 ] }, uz { to[ 2 ] - from[ 2 ] };
