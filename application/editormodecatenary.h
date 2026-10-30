@@ -135,7 +135,7 @@ struct catenary_editor
 		int mast_first{0};
 		int mast_second{0};
 		bool mast_second_own{false}; // the second mast was picked by the user: it no longer follows the first
-		bool gantry_high{false};
+		bool gantry_high{true}; // the upper mount by default (Jan 2026-10-30)
 		int gantry_side{1};
 		bool gantry_placing{false}; // the next two clicks put the masts
 		bool gantry_single{false}; // what's placed is a single beam element on one through mast: the second click sets its direction

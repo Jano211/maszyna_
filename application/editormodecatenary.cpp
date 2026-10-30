@@ -1960,13 +1960,22 @@ bool catenary_editor::catenary_drop_flip(std::size_t const Index)
 
 void catenary_editor::catenary_zigzag_chain(std::size_t const Chain, std::size_t const From, bool const Flip)
 {
+	// Jan 2026-10-30: the zigzag evens only the staggers, every pole keeps its side of the track (its short or long cantilever, as hung);
+	// by switches and in tension overlaps it changes nothing. Flip: the pole From alone goes to the other side
 	auto &tool{m_catenary};
 	auto const members{catenary_chain_members(Chain)};
 	if (catenary_chain_get(Chain) == nullptr || From >= members.size())
 		return;
+	std::vector<std::size_t> overlapping;
+	for (auto const &overlap : catenary_chain_overlaps(Chain))
+	{
+		overlapping.insert(overlapping.end(), overlap.crossing.begin(), overlap.crossing.end());
+		overlapping.push_back(overlap.outer[0]);
+		overlapping.push_back(overlap.outer[1]);
+	}
 	auto const group{++tool.group};
-	std::size_t changed{0}, failed{0};
-	for (auto k{From}; k < members.size(); ++k)
+	std::size_t changed{0}, failed{0}, skipped{0};
+	for (auto k{From}; k < (Flip ? From + 1 : members.size()); ++k)
 	{
 		auto const index{members[k]};
 		auto const *spot{catenary_scene_get(index) != nullptr ? catenary_spot_of(index) : nullptr};
@@ -1976,14 +1985,13 @@ void catenary_editor::catenary_zigzag_chain(std::size_t const Chain, std::size_t
 			++failed;
 			continue;
 		}
+		if (false == Flip && (spot->by_switch || std::find(overlapping.begin(), overlapping.end(), index) != overlapping.end()))
+		{
+			++skipped;
+			continue;
+		}
 		auto const curve{track_curve(*spot) && spot->inward != 0};
-		bool toward{offset >= 0.0};
-		if (curve)
-			toward = spot->side != spot->inward; // to the outside of the curve: towards the pole standing there
-		else if (k == From)
-			toward = (offset >= 0.0) != Flip; // the first keeps its side, or goes the other way
-		else if (double lateral{0.0}; lateral_of(members[k - 1], right_of(spot->forward), lateral) && std::abs(lateral) >= kZigzagEpsilon)
-			toward = (lateral > 0.0 ? -1 : 1) == spot->side; // the other side of the track axis than the pole before
+		auto const toward{(offset >= 0.0) != (Flip && k == From)};
 		auto const stagger{zigzag_stagger(curve)};
 		if (std::abs(std::abs(offset) - stagger) < 0.002 && (offset >= 0.0) == toward)
 			continue; // it is so already
@@ -1994,8 +2002,9 @@ void catenary_editor::catenary_zigzag_chain(std::size_t const Chain, std::size_t
 	}
 	if (tool.selected >= 0)
 		catenary_take_settings(static_cast<std::size_t>(tool.selected));
-	tool.status = failed == 0 ? format(STR_C("Zigzag of Iet-107: %zu poles changed, the others had it already"), changed)
-	                          : format(STR_C("Zigzag of Iet-107: %zu poles changed, %zu couldn't take it (no card for their A or not by a track)"), changed, failed);
+	tool.status = format(STR_C("Staggers of Iet-107: %zu poles changed, %zu by switches or in tension overlaps left as they are"), changed, skipped);
+	if (failed > 0)
+		tool.status += ", " + format(STR_C("%zu couldn't take it (no card for their A or not by a track)"), failed);
 }
 
 catenary_editor::chain_report const &catenary_editor::catenary_chain_report(std::size_t const Chain) const
@@ -4797,10 +4806,10 @@ void catenary_editor::render_catenary_chain_report(std::size_t const Chain)
 	auto const poles{catenary_chain_members(Chain).size()};
 	ImGui::Separator();
 	ImGui::TextUnformatted(format(STR_C("Iet-107: %zu spans, %.0f m (spans %.1f - %.1f m)"), poles > 0 ? poles - 1 : std::size_t{0}, report.length, report.shortest, report.longest).c_str());
-	if (ImGui::Button(STR_C("Zigzag the chain by Iet-107")))
+	if (ImGui::Button(STR_C("Even the staggers of the chain by Iet-107")))
 		catenary_zigzag_chain(Chain, 0, false);
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("%s", STR_C("The first pole keeps its side of the track, the next ones get the wires in turn on the other side of the track axis, on a curve to its outside; the staggers as set for the zigzag on the Poles page. The poles stay where they stand, the cards follow the distance A"));
+		ImGui::SetTooltip("%s", STR_C("Every pole keeps its side of the track (its short or long cantilever), only the stagger is set as for the zigzag on the Poles page; the poles by switches and in tension overlaps stay as they are. The poles stay where they stand, the cards follow the distance A"));
 	ImGui::SameLine();
 	ImGui::Checkbox(STR_C("Staggers in the view"), &tool.show_staggers);
 	if (report.issues.empty())
@@ -5261,17 +5270,17 @@ void catenary_editor::render_catenary_cantilever_ui()
 				if (ImGui::SmallButton(STR_C("from this pole on")))
 					catenary_zigzag_chain(static_cast<std::size_t>(chain), position, false);
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("This pole keeps its side of the track, the next ones of the chain get the wires in turn on the other side of the track axis (on a curve to its outside), with the staggers set for the zigzag"));
+					ImGui::SetTooltip("%s", STR_C("From this pole on the staggers as set for the zigzag; every pole keeps its side of the track, by switches and in tension overlaps nothing changes"));
 				ImGui::SameLine();
-				if (ImGui::SmallButton(STR_C("swap from this pole on")))
+				if (ImGui::SmallButton(STR_C("swap this pole")))
 					catenary_zigzag_chain(static_cast<std::size_t>(chain), position, true);
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("This pole goes to the other side of the track (short <-> long cantilever) and the next ones of the chain follow it in turn: the zigzag moved by one pole"));
+					ImGui::SetTooltip("%s", STR_C("This pole goes to the other side of the track (short <-> long cantilever), with the stagger of the zigzag; the others stay as they are"));
 				ImGui::SameLine();
 				if (ImGui::SmallButton((STR("the whole chain") + "##zigzag").c_str()))
 					catenary_zigzag_chain(static_cast<std::size_t>(chain), 0, false);
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("The first pole of the chain keeps its side, all the others get the zigzag of Iet-107 from it"));
+					ImGui::SetTooltip("%s", STR_C("The staggers of the whole chain as set for the zigzag; every pole keeps its side, by switches and in tension overlaps nothing changes"));
 				if (tool.zigzag)
 				{
 					auto const &report{catenary_chain_report(static_cast<std::size_t>(chain))};
@@ -5530,13 +5539,23 @@ void catenary_editor::render_catenary_ui()
 					tool.mast_second_own = true;
 			}
 			ImGui::PopItemWidth();
-			ImGui::TextUnformatted(STR_C("Beam:"));
-			ImGui::SameLine();
-			if (ImGui::RadioButton(STR_C("lower mount"), false == tool.gantry_high))
-				tool.gantry_high = false;
-			ImGui::SameLine();
-			if (ImGui::RadioButton(STR_C("upper mount"), tool.gantry_high))
-				tool.gantry_high = true;
+			// the lower / upper mount only where the masts have two heights (a semi-gantry 1901 has one)
+			auto const twoheights = [&](int const Chosen) {
+				auto const *mast{catalog->mast(tool.masts[std::clamp(Chosen, 0, static_cast<int>(tool.masts.size()) - 1)])};
+				return mast != nullptr && std::abs(mast->mount_high - mast->mount_low) > 0.001;
+			};
+			auto const *firstmast{catalog->mast(tool.masts[std::clamp(tool.mast_first, 0, static_cast<int>(tool.masts.size()) - 1)])};
+			auto const semi{firstmast != nullptr && firstmast->semi > 0.0};
+			if (twoheights(tool.mast_first) || (false == semi && false == tool.gantry_single && twoheights(tool.mast_second)))
+			{
+				ImGui::TextUnformatted(STR_C("Beam:"));
+				ImGui::SameLine();
+				if (ImGui::RadioButton(STR_C("lower mount"), false == tool.gantry_high))
+					tool.gantry_high = false;
+				ImGui::SameLine();
+				if (ImGui::RadioButton(STR_C("upper mount"), tool.gantry_high))
+					tool.gantry_high = true;
+			}
 			ImGui::Checkbox(STR_C("Square to the track"), &tool.gantry_square);
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("The beam goes square to the track the first mast is put by"));
@@ -5606,13 +5625,21 @@ void catenary_editor::render_catenary_ui()
 				{
 					// the mount of the beam of this span, changed in place (the drops and the cantilevers on them follow)
 					auto high{gantry->high};
-					ImGui::TextUnformatted(STR_C("Beam of this gantry:"));
-					ImGui::SameLine();
-					if (ImGui::RadioButton((std::string{STR_C("lower mount")} + "##selected").c_str(), false == high))
-						high = false;
-					ImGui::SameLine();
-					if (ImGui::RadioButton((std::string{STR_C("upper mount")} + "##selected").c_str(), high))
-						high = true;
+					// only where a mast of it has two heights (not a semi-gantry 1901)
+					auto twoheights{false};
+					for (auto const &name : gantry->masts)
+						if (auto const *mast{name.empty() ? nullptr : catalog->mast(name)}; mast != nullptr && std::abs(mast->mount_high - mast->mount_low) > 0.001)
+							twoheights = true;
+					if (twoheights)
+					{
+						ImGui::TextUnformatted(STR_C("Beam of this gantry:"));
+						ImGui::SameLine();
+						if (ImGui::RadioButton((std::string{STR_C("lower mount")} + "##selected").c_str(), false == high))
+							high = false;
+						ImGui::SameLine();
+						if (ImGui::RadioButton((std::string{STR_C("upper mount")} + "##selected").c_str(), high))
+							high = true;
+					}
 					if (high != gantry->high)
 					{
 						auto const selected{static_cast<std::size_t>(tool.gantry_selected)};
