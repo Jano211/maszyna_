@@ -12153,3 +12153,15 @@ msgstr "Ten łańcuch idzie przez drugi uchwyt przewodu wysięgnika; jego lina n
 
 msgid "A pole placed under the span of a chain (its wire point within 1.5 m of the span, not at its ends) goes into that chain between the two poles; not while a chain is being built (the pole goes on with it)"
 msgstr "Słup postawiony pod przęsłem łańcucha (punkt przewodu do 1,5 m od przęsła, nie przy jego końcach) wchodzi do tego łańcucha między dwa słupy; nie w czasie budowania łańcucha (słup idzie dalej z nim)"
+
+msgid "Span %s - %s"
+msgstr "Przęsło %s - %s"
+
+msgid "Remove the wires of the span"
+msgstr "Usuń druty przęsła"
+
+msgid "The wires between these two poles go, the poles stay: the chain splits in two (a part with one pole only stops being a chain). Ctrl+Z takes it back"
+msgstr "Druty między tymi dwoma słupami znikają, słupy zostają: łańcuch dzieli się na dwa (część z jednym słupem przestaje być łańcuchem). Ctrl+Z cofa"
+
+msgid "The wires between %s and %s removed, the poles stay (Ctrl+Z takes it back)"
+msgstr "Druty między %s a %s usunięte, słupy zostają (Ctrl+Z cofa)"

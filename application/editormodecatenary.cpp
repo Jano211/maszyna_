@@ -1535,7 +1535,7 @@ int catenary_editor::catenary_hit() const
 }
 
 // the chain whose span is under the cursor; -1 if none
-int catenary_editor::catenary_span_hit() const
+int catenary_editor::catenary_span_hit(std::size_t *Span) const
 {
 	screen_projection const projection;
 	auto best{kPolePick * kPolePick * 0.5f};
@@ -1557,6 +1557,8 @@ int catenary_editor::catenary_span_hit() const
 			{
 				best = distance;
 				result = static_cast<int>(chain);
+				if (Span != nullptr)
+					*Span = k;
 			}
 		}
 	}
@@ -3345,7 +3347,10 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 	if (is_intent(Intent, intent_detail::chain))
 	{
 		tool.anchor_selected = -1;
+		std::size_t span{0};
+		auto const hit{catenary_span_hit(&span)};
 		catenary_chain_show(Intent.index);
+		tool.span_selected = hit == Intent.index ? static_cast<int>(span) : -1;
 		return;
 	}
 	if (is_intent(Intent, intent_detail::anchor))
@@ -3419,6 +3424,8 @@ void catenary_editor::catenary_chain_show(int const Chain)
 	tool.selected = -1;
 	if (tool.page != 5)
 		tool.page = 2; // the anchors page stays: it shows the anchors of the chain
+	if (tool.chain_selected != Chain)
+		tool.span_selected = -1;
 	tool.chain_selected = Chain;
 	if (auto const *chain{Chain >= 0 ? catenary_chain_get(static_cast<std::size_t>(Chain)) : nullptr}; chain != nullptr)
 	{
@@ -3430,6 +3437,65 @@ void catenary_editor::catenary_chain_show(int const Chain)
 		if (auto const found{std::find(tool.networks.begin(), tool.networks.end(), chain->type)}; found != tool.networks.end())
 			tool.network = static_cast<int>(found - tool.networks.begin());
 	}
+}
+
+void catenary_editor::catenary_span_remove(std::size_t const Chain, std::size_t const Span)
+{
+	auto &tool{m_catenary};
+	auto const *chain{catenary_chain_get(Chain)};
+	if (chain == nullptr || Span + 1 >= chain->suspensions.size())
+		return;
+	auto const before{*chain};
+	auto const &list{before.suspensions};
+	auto const file{catenary_chain_file(Chain)};
+	// the two parts: up to the pole of the span, from the pole after it; what each keeps goes with its poles
+	auto part = [&](std::size_t const From, std::size_t const To, bool const Start) {
+		catenary::chain result{before};
+		result.suspensions.assign(list.begin() + static_cast<std::ptrdiff_t>(From), list.begin() + static_cast<std::ptrdiff_t>(To));
+		auto const has = [&](std::string const &Name) { return std::find(result.suspensions.begin(), result.suspensions.end(), Name) != result.suspensions.end(); };
+		if (Start)
+		{
+			result.anchor_end.clear();
+			result.anchor_end_contact.clear();
+		}
+		else
+		{
+			result.anchor_start.clear();
+			result.anchor_start_contact.clear();
+		}
+		if (false == has(result.middle))
+			result.middle.clear();
+		auto &pairs{result.messenger_from};
+		pairs.erase(std::remove_if(pairs.begin(), pairs.end(), [&](auto const &Pair) { return false == has(Pair.first); }), pairs.end());
+		auto &nets{result.second_net};
+		nets.erase(std::remove_if(nets.begin(), nets.end(), [&](std::string const &Name) { return false == has(Name); }), nets.end());
+		// a section insulator stays in a span of this part (not after its last pole)
+		auto &insulators{result.insulators};
+		insulators.erase(std::remove_if(insulators.begin(), insulators.end(), [&](auto const &Insulator) { return false == has(Insulator.after) || Insulator.after == result.suspensions.back(); }), insulators.end());
+		if (false == result.parallel.empty() && result.suspensions.size() < 2)
+			result.parallel.clear();
+		return result;
+	};
+	auto first{part(0, Span + 1, true)};
+	auto second{part(Span + 1, list.size(), false)};
+	++tool.group;
+	tool.undo.push_back({tool.group, true, Chain, std::nullopt, before, false});
+	if (first.suspensions.size() >= 2)
+	{
+		catenary_chain_update(Chain, first);
+		if (second.suspensions.size() >= 2)
+		{
+			second.name = catenary_scene_new_chain_name(file);
+			auto const added{catenary_chain_add(file, second)};
+			tool.undo.push_back({tool.group, true, added, std::nullopt, std::nullopt, false});
+		}
+	}
+	else if (second.suspensions.size() >= 2)
+		catenary_chain_update(Chain, second);
+	else
+		catenary_chain_remove(Chain);
+	tool.span_selected = -1;
+	tool.status = format(STR_C("The wires between %s and %s removed, the poles stay (Ctrl+Z takes it back)"), list[Span].c_str(), list[Span + 1].c_str());
 }
 
 // the panel settings of the chain go to the selected chain
@@ -3814,6 +3880,20 @@ void catenary_editor::render_catenary_chain_ui()
 			tool.selected = -1;
 			if (bool toward{tool.toward}; catenary_propose_toward(toward))
 				tool.toward = toward;
+		}
+		// the span clicked in the view: its wires can go, the poles stay
+		if (auto const &list{chain->suspensions}; tool.span_selected >= 0 && static_cast<std::size_t>(tool.span_selected) + 1 < list.size())
+		{
+			auto const k{static_cast<std::size_t>(tool.span_selected)};
+			ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Span %s - %s"), list[k].c_str(), list[k + 1].c_str()).c_str());
+			ImGui::SameLine();
+			if (ImGui::Button(STR_C("Remove the wires of the span")))
+			{
+				catenary_span_remove(static_cast<std::size_t>(tool.chain_selected), k);
+				return;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("The wires between these two poles go, the poles stay: the chain splits in two (a part with one pole only stops being a chain). Ctrl+Z takes it back"));
 		}
 		render_catenary_chain_report(static_cast<std::size_t>(tool.chain_selected));
 		render_catenary_overlaps(static_cast<std::size_t>(tool.chain_selected));
