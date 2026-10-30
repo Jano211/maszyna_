@@ -17,11 +17,18 @@ http://mozilla.org/MPL/2.0/.
 #include "world/catenary_suspension.h"
 #include "world/catenary_cantilever.h"
 
+#include <cstdint>
 #include <limits>
+#include <memory>
 #include <map>
 #include <optional>
 #include <string>
 #include <vector>
+
+namespace editor_previews
+{
+class image_cache;
+}
 
 struct catenary_editor
 {
@@ -180,6 +187,13 @@ struct catenary_editor
 		bool file_own{false}; // the catenary file was given by the user: it doesn't follow the active layer
 	};
 	catenary_tool m_catenary;
+	// thumbnails of the masts, semi-gantries, beams, drops and poles: the images of their models made like those of the node bank
+	// (eu07 -generate-nodebank-previews -catenary), read in a thread of their own
+	std::shared_ptr<editor_previews::image_cache> m_previews;
+	// texture of the image of the pole, mast or beam of the catalogue by that name; 0 while it's read or when there's none
+	std::uint64_t catenary_preview(std::string const &Name);
+	// the image, or a note that there's none
+	void catenary_preview_image(std::string const &Name, float Side);
 	void catenary_scan();
 	// the catenary file of the new poles follows the active layer of the scenery
 	void catenary_file_follow();

@@ -10,9 +10,13 @@
 #include "editor/editorPreviews.hpp"
 #include <png.h>
 #include <cstring>
+#include <fstream>
+#include <set>
+#include <sstream>
 
 // standalone generation of preview images of the models of the node bank of the scenery editor:
-// -generate-nodebank-previews [-entries "node ... endmodel" ...] [-resolution <pixels>] [-margin <pixels>] [-no-shadows] [-software]
+// -generate-nodebank-previews [-entries "node ... endmodel" ...] [-catenary] [-resolution <pixels>] [-margin <pixels>] [-no-shadows] [-software]
+// -catenary: the models of the catenary catalogue (data/traction_supports.txt) instead of the node bank, for the catenary editor
 // each image is a square png on white background, saved in textures/previews/nodebank under the path of the model
 
 namespace
@@ -25,6 +29,7 @@ struct preview_settings
 	int margin{64};
 	bool shadows{true};
 	bool software{false};
+	bool catenary{false}; // the masts, beams, drops and poles of the catenary catalogue (data/traction_supports.txt)
 };
 
 // prints a line on the console the generator was started from, and puts it in the log
@@ -98,6 +103,10 @@ bool parse_arguments(int const Argc, char *Argv[], preview_settings &Settings)
 		{
 			Settings.software = true;
 		}
+		else if (token == "-catenary")
+		{
+			Settings.catenary = true;
+		}
 		else
 		{
 			report("unknown option " + token, true);
@@ -110,6 +119,43 @@ bool parse_arguments(int const Argc, char *Argv[], preview_settings &Settings)
 		return false;
 	}
 	return true;
+}
+
+// the models of the catenary catalogue (data/traction_supports.txt) as node definitions, for the thumbnails of the catenary editor:
+// "pole|mast|beam <name> model <path> ...". The masts, beams and drops (poles with "drop") of the gantries have no texture of their
+// own, they get the first gantry texture of the editor, which looks them up by the same skin (editormodecatenary.cpp)
+std::vector<std::string> catenary_entries()
+{
+	std::vector<std::string> entries;
+	std::ifstream file("data/traction_supports.txt", std::ios_base::in | std::ios_base::binary);
+	std::set<std::string> models;
+	std::string line;
+	while (std::getline(file, line))
+	{
+		if (auto const comment{line.find("//")}; comment != std::string::npos)
+			line.erase(comment);
+		std::istringstream words{line};
+		std::string kind, name, token, model;
+		words >> kind >> name;
+		if (kind != "pole" && kind != "mast" && kind != "beam")
+			continue;
+		auto drop{false};
+		while (words >> token)
+		{
+			if (token == "model")
+				words >> model;
+			else if (token == "drop")
+				drop = true;
+		}
+		if (model.empty())
+			continue;
+		auto const gantry{kind != "pole" || drop};
+		auto const skin{gantry ? std::string{"siec_trakcyjna/bramki_new1"} : std::string{"none"}};
+		if (false == models.emplace(model + "|" + skin).second)
+			continue;
+		entries.emplace_back("node -1 0 none model 0 0 0 0 " + model + ".t3d " + skin + " endmodel");
+	}
+	return entries;
 }
 
 // node definitions of the node bank, read the way the node bank panel of the editor reads them
@@ -305,7 +351,7 @@ int generate_nodebank_previews(int Argc, char *Argv[])
 	preview_settings settings;
 	if (false == parse_arguments(Argc, Argv, settings))
 	{
-		report("usage: " + std::string(Argv[0]) + " -generate-nodebank-previews [-entries \"node ... endmodel\" ...] [-resolution <pixels>] [-margin <pixels>] [-no-shadows] [-software]", true);
+		report("usage: " + std::string(Argv[0]) + " -generate-nodebank-previews [-entries \"node ... endmodel\" ...] [-catenary] [-resolution <pixels>] [-margin <pixels>] [-no-shadows] [-software]", true);
 		return finish(1);
 	}
 
@@ -357,7 +403,7 @@ int generate_nodebank_previews(int Argc, char *Argv[])
 	}
 	report(std::string("renderer: ") + reinterpret_cast<char const *>(glGetString(GL_RENDERER)));
 
-	auto const entries{settings.entries.empty() ? nodebank_entries() : settings.entries};
+	auto const entries{settings.catenary ? catenary_entries() : settings.entries.empty() ? nodebank_entries() : settings.entries};
 	if (entries.empty())
 	{
 		report("no entries to draw, nodebank.txt is missing or empty", true);

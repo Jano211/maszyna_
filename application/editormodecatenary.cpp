@@ -18,6 +18,7 @@ http://mozilla.org/MPL/2.0/.
 #include "application/editorprojection.h"
 #include "editor/editorFormat.hpp"
 #include "editor/editorGeometry.hpp"
+#include "editor/editorPreviews.hpp"
 
 #include "simulation/simulation.h"
 #include "world/TractionPower.h"
@@ -367,7 +368,8 @@ int spans_at(double const *Point, std::size_t const Except)
 
 // the items of a combo of poles or masts, by the groups of the described catalogue (foundation, where they stand), the
 // rest at the end; Tag gives a word added to a name (e.g. through / end mast). Returns true when another one was chosen
-bool grouped_items(std::vector<std::string> const &Names, int &Chosen, std::function<std::string(std::string const &)> const &Tag = {}, std::function<bool(std::string const &)> const &Show = {})
+bool grouped_items(std::vector<std::string> const &Names, int &Chosen, std::function<std::string(std::string const &)> const &Tag = {}, std::function<bool(std::string const &)> const &Show = {},
+                   std::function<void(std::string const &)> const &Hover = {})
 {
 	auto const &structures{catenary_scene_structures()};
 	auto changed{false};
@@ -379,6 +381,13 @@ bool grouped_items(std::vector<std::string> const &Names, int &Chosen, std::func
 		{
 			changed = Index != Chosen;
 			Chosen = Index;
+		}
+		// the thumbnail of the item under the cursor
+		if (Hover && ImGui::IsItemHovered())
+		{
+			ImGui::BeginTooltip();
+			Hover(Names[Index]);
+			ImGui::EndTooltip();
 		}
 	};
 	// the names left out (Show) count as shown already
@@ -4912,9 +4921,15 @@ void catenary_editor::render_catenary_cantilever_ui()
 	{
 		if (ImGui::BeginCombo(STR_C("Pole"), tool.poles[std::clamp(tool.pole, 0, static_cast<int>(tool.poles.size()) - 1)].c_str()))
 		{
-			if (grouped_items(tool.poles, tool.pole))
+			if (grouped_items(tool.poles, tool.pole, {}, {}, [&](std::string const &Name) { catenary_preview_image(Name, 160.0f); }))
 				changed = true;
 			ImGui::EndCombo();
+		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::BeginTooltip();
+			catenary_preview_image(tool.poles[std::clamp(tool.pole, 0, static_cast<int>(tool.poles.size()) - 1)], 160.0f);
+			ImGui::EndTooltip();
 		}
 		changed |= ImGui::SliderFloat(STR_C("Face of the pole from the track axis (m)"), &tool.clearance, 1.60f, 4.50f, "%.2f");
 		if (ImGui::IsItemHovered())
@@ -5498,6 +5513,44 @@ void catenary_editor::render_catenary_messenger_from(std::size_t const Chain)
 	ImGui::PopItemWidth();
 }
 
+// the skin the images of the models of the gantries are made with (they have no texture of their own); the poles with their own
+static std::string catenary_preview_skin(bool const Gantry)
+{
+	return Gantry ? std::string{kGantrySkins[0]} : std::string{"none"};
+}
+
+std::uint64_t catenary_editor::catenary_preview(std::string const &Name)
+{
+	auto const *catalog{catenary_scene_catalog()};
+	if (catalog == nullptr)
+		return 0;
+	if (m_previews == nullptr)
+		m_previews = std::make_shared<editor_previews::image_cache>(256, 128);
+	std::string model;
+	auto gantry{true};
+	if (auto const *mast{catalog->mast(Name)}; mast != nullptr)
+		model = mast->model;
+	else if (auto const *beam{catalog->beam(Name)}; beam != nullptr)
+		model = beam->model;
+	else if (auto const *pole{catalog->pole(Name)}; pole != nullptr)
+	{
+		model = pole->model;
+		gantry = false == pole->drop.empty(); // a drop hangs on a gantry and takes its texture
+	}
+	if (model.empty())
+		return 0;
+	return m_previews->image(editor_previews::preview_path(model, catenary_preview_skin(gantry)) + ".png");
+}
+
+void catenary_editor::catenary_preview_image(std::string const &Name, float const Side)
+{
+	auto const side{Side * std::max(1.0f, Global.ui_scale)};
+	if (auto const texture{catenary_preview(Name)}; texture != 0)
+		ImGui::Image(static_cast<ImTextureID>(texture), ImVec2(side, side));
+	else
+		ImGui::TextDisabled("%s", STR_C("no image (eu07 -generate-nodebank-previews -catenary)"));
+}
+
 // the gantries page: placing a new gantry (the masts, the mount, the texture), the big button first
 void catenary_editor::render_catenary_gantry_placing()
 {
@@ -5536,7 +5589,7 @@ void catenary_editor::render_catenary_gantry_placing()
 				    auto const *mast{catalog->mast(Name)};
 				    return mast == nullptr ? std::string{} : mast->through ? STR(" (through)") : STR(" (end)");
 			    },
-			    gantrymast);
+			    gantrymast, [&](std::string const &Name) { catenary_preview_image(Name, 160.0f); });
 			ImGui::EndCombo();
 		}
 	};
@@ -5555,6 +5608,13 @@ void catenary_editor::render_catenary_gantry_placing()
 			tool.mast_second_own = true;
 	}
 	ImGui::PopItemWidth();
+	// what's being put up: both masts side by side
+	catenary_preview_image(tool.masts[std::clamp(tool.mast_first, 0, static_cast<int>(tool.masts.size()) - 1)], 112.0f);
+	if (false == tool.gantry_single)
+	{
+		ImGui::SameLine();
+		catenary_preview_image(tool.masts[std::clamp(tool.mast_second, 0, static_cast<int>(tool.masts.size()) - 1)], 112.0f);
+	}
 	// the lower / upper mount only where the masts have two heights (a semi-gantry 1901 has one)
 	auto const twoheights = [&](int const Chosen) {
 		auto const *mast{catalog->mast(tool.masts[std::clamp(Chosen, 0, static_cast<int>(tool.masts.size()) - 1)])};
@@ -5718,8 +5778,17 @@ void catenary_editor::render_catenary_gantry_selected(bool const Semi)
 	if (ImGui::BeginCombo(STR_C("Beam"), gantry->beam.c_str()))
 	{
 		for (auto const &beam : catalog->beams())
-			if (beam.second.single == gantry->masts[1].empty() && ImGui::Selectable(format("%s  %.1f m", beam.first.c_str(), beam.second.span).c_str(), beam.first == gantry->beam))
-				catenary_gantry_reshape(beam.first, 0.0, false);
+			if (beam.second.single == gantry->masts[1].empty())
+			{
+				if (ImGui::Selectable(format("%s  %.1f m", beam.first.c_str(), beam.second.span).c_str(), beam.first == gantry->beam))
+					catenary_gantry_reshape(beam.first, 0.0, false);
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::BeginTooltip();
+					catenary_preview_image(beam.first, 160.0f);
+					ImGui::EndTooltip();
+				}
+			}
 		ImGui::EndCombo();
 	}
 	ImGui::PopItemWidth();
@@ -5974,8 +6043,17 @@ void catenary_editor::render_catenary_gantry_selected(bool const Semi)
 			if (ImGui::Selectable(automatic.c_str(), tool.drop_choice.empty()))
 				tool.drop_choice.clear();
 			for (auto const &pole : catalog->poles())
-				if (catenary::cantilever_catalog::drop_fits(*beam, pole.second.drop) && ImGui::Selectable(format("%s  %.1f m", pole.first.c_str(), pole.second.length).c_str(), pole.first == tool.drop_choice))
-					tool.drop_choice = pole.first;
+				if (catenary::cantilever_catalog::drop_fits(*beam, pole.second.drop))
+				{
+					if (ImGui::Selectable(format("%s  %.1f m", pole.first.c_str(), pole.second.length).c_str(), pole.first == tool.drop_choice))
+						tool.drop_choice = pole.first;
+					if (ImGui::IsItemHovered())
+					{
+						ImGui::BeginTooltip();
+						catenary_preview_image(pole.first, 160.0f);
+						ImGui::EndTooltip();
+					}
+				}
 			ImGui::EndCombo();
 		}
 		ImGui::PopItemWidth();
@@ -6026,7 +6104,7 @@ void catenary_editor::render_catenary_semi_placing()
 			        auto const *mast{catalog->mast(Name)};
 			        return mast == nullptr ? std::string{} : format(mast->sides > 1 ? STR_C(" (T, %.1f m both ways)") : STR_C(" (%.1f m)"), mast->semi);
 		        },
-		        semimast))
+		        semimast, [&](std::string const &Name) { catenary_preview_image(Name, 160.0f); }))
 		{
 			tool.mast_first = tool.semi_mast;
 			tool.mast_second = tool.semi_mast;
@@ -6034,6 +6112,7 @@ void catenary_editor::render_catenary_semi_placing()
 		ImGui::EndCombo();
 	}
 	ImGui::PopItemWidth();
+	catenary_preview_image(tool.masts[tool.semi_mast], 128.0f);
 	ImGui::Checkbox(STR_C("Square to the track"), &tool.gantry_square);
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%s", STR_C("The beam goes square to the track the mast is put by"));
@@ -6095,6 +6174,8 @@ void catenary_editor::render_catenary_ui()
 		ImGui::TextWrapped("%s", STR_C("The cantilever catalogue isn't loaded: data/traction_cantilevers.txt and data/traction_supports.txt (with the poles) are needed"));
 		return;
 	}
+	if (m_previews != nullptr)
+		m_previews->update();
 	ImGui::Checkbox(STR_C("Expert mode"), &tool.expert);
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%s", STR_C("Shows the advanced settings: stagger +-0.5 m, own system height, the top mount moved, spread cantilevers, the messenger held by another cantilever, single beam elements and turning a gantry. What a pole already has set is shown anyway"));
