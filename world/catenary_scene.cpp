@@ -3116,12 +3116,21 @@ int
 catenary_chain_of( std::size_t const Suspension, std::size_t &Position ) {
     if( Suspension >= Suspensions.size() || Suspensions[ Suspension ].data.name.empty() ) { return -1; }
     auto const &suspension { Suspensions[ Suspension ] };
-    for( std::size_t index = 0; index < Chains.size(); ++index ) {
-        auto const &chain { Chains[ index ] };
-        if( chain.removed || chain.file != suspension.file ) { continue; }
-        auto const found { std::find( chain.data.suspensions.begin(), chain.data.suspensions.end(), suspension.data.name ) };
-        if( found != chain.data.suspensions.end() ) {
-            Position = static_cast<std::size_t>( found - chain.data.suspensions.begin() );
+    auto const &name { suspension.data.name };
+    // w kilku łańcuchach (wysięgnik z drugą siecią): najpierw łańcuch, który tu się kończy na drugiej sieci, potem który tu się
+    // kończy, na końcu którykolwiek - łańcuch idzie dalej z końca (Jan 2026-10-31: zawieszanie od 102x ciągnęło łańcuch A)
+    for( int pass = 0; pass < 3; ++pass ) {
+        for( std::size_t index = 0; index < Chains.size(); ++index ) {
+            auto const &chain { Chains[ index ] };
+            if( chain.removed || chain.file != suspension.file ) { continue; }
+            auto const &names { chain.data.suspensions };
+            auto const found { std::find( names.begin(), names.end(), name ) };
+            if( found == names.end() ) { continue; }
+            auto const position { static_cast<std::size_t>( found - names.begin() ) };
+            auto const end { position == 0 || position + 1 == names.size() };
+            auto const second { std::find( chain.data.second_net.begin(), chain.data.second_net.end(), name ) != chain.data.second_net.end() };
+            if( ( pass == 0 && ( false == end || false == second ) ) || ( pass == 1 && false == end ) ) { continue; }
+            Position = position;
             return static_cast<int>( index );
         }
     }
