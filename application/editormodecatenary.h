@@ -125,6 +125,7 @@ struct catenary_editor
 		int anchor_pick{-1}; // anchoring this chain to an existing pole: the next pole clicked carries the tensioning device
 		bool anchor_pick_start{false}; // ... at the start of the chain, otherwise at its end
 		bool anchor_pick_contact{false}; // ... the contact wires only (anchored apart from the messenger)
+		int span_selected{-1}; // the span of the chain shown clicked in the view (from its pole k to k + 1 of the list)
 		int anchor_selected{-1}; // the anchor picked in the view: its chain is shown, the panel marks it, Del removes it
 		bool anchor_scroll{false}; // the panel scrolls to the anchor picked in the view, once
 		char power[64]{"none"};
@@ -312,7 +313,7 @@ struct catenary_editor
 	// the same from the const paths (the overlay): the places are a cache filled on demand
 	catenary_spot const *catenary_spot_view(std::size_t const Index) const { return const_cast<catenary_editor *>(this)->catenary_spot_of(Index); }
 	int catenary_hit() const;
-	int catenary_span_hit() const;
+	int catenary_span_hit(std::size_t *Span = nullptr) const;
 	void catenary_press(track_intent const &Intent);
 	void catenary_select(int const Index);
 	void catenary_apply(catenary_spot const &Spot);
@@ -406,6 +407,8 @@ struct catenary_editor
 	int catenary_anchor_hit() const;
 	// shows the chain in the panel as a click on its span does
 	void catenary_chain_show(int Chain);
+	// removes span k of the chain (the wires between its poles k and k + 1), the poles stay: the chain splits in two
+	void catenary_span_remove(std::size_t Chain, std::size_t Span);
 	void render_catenary_cantilever_ui();
 	void render_catenary_wires_ui();
 	void render_catenary_gantry_placing();
