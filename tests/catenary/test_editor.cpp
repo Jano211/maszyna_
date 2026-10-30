@@ -473,6 +473,47 @@ int main( int, char *argv[] ) {
         check( good, "uszynienie grupowe: zapis i odczyt, uchwyty 6120-01 na slupach 1611-11, edycja" );
     }
 
+    // 6a5. uszynienie przez słup z kilkoma wysięgnikami (para rozstawionych + trzeci w osi słupa): jeden uchwyt na słup, obrócony
+    // jak słup (płaszczyzna przez konsolę), nie w stronę rozstawionych wysięgników
+    {
+        auto a { entry }, b { entry }, c { entry }, d { entry };
+        a.name = "r1"; b.name = "r2"; c.name = "r3"; d.name = "r4";
+        for( auto *item : { &a, &b, &c } ) { item->pole[ 2 ] = 0.0; }
+        a.at[ 2 ] = a.rope[ 2 ] = -1.2; b.at[ 2 ] = b.rope[ 2 ] = 1.2; c.at[ 2 ] = c.rope[ 2 ] = 0.0;
+        a.umbrella = b.umbrella = "rp";
+        a.has_spread = b.has_spread = true;
+        a.spread[ 0 ] = b.spread[ 0 ] = -2.313; a.spread[ 1 ] = b.spread[ 1 ] = 0.2; a.spread[ 2 ] = -1.2; b.spread[ 2 ] = 1.2;
+        c.shared_pole = true;
+        d.at[ 2 ] = d.rope[ 2 ] = d.pole[ 2 ] = 60.0;
+        catenary::chain line;
+        line.name = "nr"; line.power = "pwr01"; line.type = "C120-2C"; line.suspensions = { "r1", "r4" };
+        catenary::earthing earth;
+        earth.name = "u1"; earth.poles = { "r1", "r2", "r3", "r4" };
+        std::string text;
+        for( auto const *item : { &a, &b, &c, &d } ) { text += catenary::write_suspension( *item ) + "\n"; }
+        text += catenary::write_chain( line ) + "\n" + catenary::write_earthing( earth ) + "\n";
+        { std::ofstream out { "tests/catenary/td_uszynienie2_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear();
+        auto const before { simulation::State.created.size() };
+        cParser directive( "td_uszynienie2_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        std::vector<std::string> angles;
+        for( auto i { before }; i < simulation::State.created.size(); ++i ) {
+            auto const &text { simulation::State.created[ i ].entry };
+            if( text.find( "components/6120-01.t3d" ) == std::string::npos ) { continue; }
+            auto const at { text.find( " angles " ) };
+            angles.push_back( at == std::string::npos ? std::string() : text.substr( at, text.find( " endmodel" ) - at ) );
+        }
+        std::printf( "  uszynienie na slupie z kilkoma wysiegnikami: uchwytow %zu, czesci %zu\n", angles.size(), catenary_earthing_parts( 0 ) );
+        for( auto const &item : angles ) { std::printf( "   %s\n", item.c_str() ); }
+        // lina w przęśle r1-r4 (para rozstawionych to jeden słup)
+        auto const rope { std::find( mock_span_names.begin(), mock_span_names.end(), std::string( "nr_1" ) ) != mock_span_names.end() };
+        auto const good { angles.size() == 2 && catenary_earthing_parts( 0 ) == 2 && angles[ 0 ] == angles[ 1 ] && rope };
+        std::remove( "tests/catenary/td_uszynienie2_test.scm" );
+        check( good, "uszynienie: jeden uchwyt na slup z kilkoma wysiegnikami, obrot slupa" );
+    }
+
     // 6a3. izolator sekcyjny w połowie przęsła za i2: zapis i odczyt, przęsła za nim z jego zasilacza
     {
         auto a { entry }, b { entry }, c { entry }, d { entry };

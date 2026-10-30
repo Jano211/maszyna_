@@ -31,6 +31,9 @@ Bujanie na gl46: stuki i przysiad na przerwach szyn z jego `track_rails` (`TTrac
 6. Uszynienie grupowe: wpis `earthing poles … endearthing`, uchwyt z klucza słupa `earthing`/`earthing_back` (6120-01/-02/-07+08),
    0,075 m nad mount_max (ZAŁOŻENIE), lina rysowana przez przęsła łańcuchów między kolejnymi słupami (strzałka 1 %); zakładka
    „Uszynienie” w pasku (klikanie słupów, „Wzdłuż łańcucha”). 6840 na bramkach, końce lin – później.
+   Poprawka 30.10: jeden uchwyt na słup – wpisy z tym samym typem słupa w tym samym miejscu (parasol, para rozstawionych, trzeci
+   w osi) to jeden słup; obrót z wpisu, który słup stawia (przy rozstawionych płaszczyzna przez punkt na konsoli). Edytor nie dodaje
+   drugiego wpisu tego samego słupa (klik i „Wzdłuż łańcucha”); lina łączy kolejne słupy, nie kolejne nazwy.
 7. Przechył słupa w poprzek toru: `lean <°>` (do ±5), słup z mocowaniami obrócony wokół podstawy; suwak ±1,5° przy słupie i
    „Lekki przechył słupów łańcucha” (0,1–0,5°, stały dla nazwy). Parasole / rozstawione / bramki bez przechyłu.
 - G:\Maszyna2510\data\traction_supports.txt zapisany 30.10 00:50 (45830 B). Tłumaczenia w lang/editor_pl.po.
