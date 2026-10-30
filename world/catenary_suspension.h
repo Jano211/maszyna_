@@ -94,6 +94,12 @@ struct chain {
         double at { -1.0 };     // m od podwieszenia "after"; ujemne - w połowie przęsła
     };
     std::vector<section_insulator> insulators;
+    // druga sieć wysięgnika (Jan 2026-10-30, przęsła naprężenia: 102x - druga lina i drugi przewód, 117x/118x, 0115/0116, 0135/0136,
+    // 0155/0156 - drugi przewód, 0120, 120x - dwa przewody): w punkcie łańcucha <podwieszenie z listy> przewód idzie przez drugi
+    // uchwyt przewodu wysięgnika (wire_b albo second_wire), lina przez drugi uchwyt liny (messenger_clamp_b); bez niego - z wysięgnika
+    // samej liny (messenger_from) albo swobodnie (prosto między sąsiednimi punktami liny). Wysięgnik składa łańcuch, który ma to
+    // podwieszenie jako zwykłe. Wpis "second_net <z listy>", przed "suspensions"
+    std::vector<std::string> second_net;
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
 };
 

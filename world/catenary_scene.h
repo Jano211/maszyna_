@@ -127,6 +127,11 @@ struct catenary_overlap {
     bool connected { false };               // ten sam zasilacz: przęsło zwarte; inaczej izolowane
 };
 std::vector<catenary_overlap> catenary_chain_overlaps( std::size_t Index );
+// druga sieć wysięgnika podwieszenia z ostatniego złożenia (102x, 117x/118x, 0120, 120x, przerwy izolacyjne teowników): drugi
+// przewód; Rope - druga lina, gdy wysięgnik ją trzyma (HasRope). false - wysięgnik nie ma drugiej sieci
+bool catenary_scene_second_net( std::size_t Index, double *Wire, double *Rope, bool &HasRope );
+// łańcuch, który ma drugą sieć tego podwieszenia; -1 - żaden
+int catenary_scene_second_net_chain( std::size_t Index );
 // najbliższe przęsło innego łańcucha, gdy wykrycie nie wyszło (do edytora): w poprzek / w pionie (m), zachodzenie wzdłuż (0-1)
 struct catenary_overlap_miss {
     std::size_t other { 0 };

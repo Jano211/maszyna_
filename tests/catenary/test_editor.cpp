@@ -514,6 +514,58 @@ int main( int, char *argv[] ) {
         check( good, "uszynienie: jeden uchwyt na slup z kilkoma wysiegnikami, obrot slupa" );
     }
 
+    // 6a6. druga sieć wysięgnika 102x (dwie sieci w przęśle naprężenia): łańcuch "nb" idzie przez drugi przewód i drugą linę
+    // wysięgnika s2, który składa łańcuch "na"; zapis i odczyt "second_net"
+    {
+        auto a { entry }, b { entry }, c { entry }, d { entry }, f { entry };
+        a.name = "s1"; b.name = "s2"; c.name = "s3"; d.name = "s4"; f.name = "s5";
+        b.card = 1024; b.execution = 1; b.has_rope = false;
+        for( auto *item : { &a, &d } ) { item->at[ 2 ] = item->rope[ 2 ] = item->pole[ 2 ] = 40.0; }
+        for( auto *item : { &c, &f } ) { item->at[ 2 ] = item->rope[ 2 ] = item->pole[ 2 ] = 160.0; }
+        d.at[ 0 ] = d.rope[ 0 ] = f.at[ 0 ] = f.rope[ 0 ] = 0.5; d.pole[ 0 ] = f.pole[ 0 ] = -2.5;
+        d.pole[ 2 ] += 3.0; f.pole[ 2 ] += 3.0;
+        catenary::chain one, two;
+        one.name = "na"; one.power = "pwr01"; one.type = "C120-2C"; one.suspensions = { "s1", "s2", "s3" };
+        two.name = "nb"; two.power = "pwr01"; two.type = "C120-2C"; two.suspensions = { "s4", "s2", "s5" }; two.second_net = { "s2" };
+        auto const written { catenary::write_chain( two ) };
+        std::string text;
+        for( auto const *item : { &a, &b, &c, &d, &f } ) { text += catenary::write_suspension( *item ) + "\n"; }
+        text += catenary::write_chain( one ) + "\n" + written + "\n";
+        std::vector<std::string> tokens; std::istringstream words { text };
+        for( std::string word; words >> word; ) { tokens.push_back( word ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( tokens, "druga_siec", parsed, problems );
+        auto good { problems.empty() && parsed.chains.size() == 2 && catenary::write_chain( parsed.chains.back() ) == written && written.find( " second_net s2" ) != std::string::npos };
+        { std::ofstream out { "tests/catenary/td_druga_siec_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear();
+        cParser directive( "td_druga_siec_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        std::size_t s2 { catenary_scene_size() };
+        for( std::size_t index = 0; index < catenary_scene_size(); ++index ) { if( catenary_scene_get( index ) != nullptr && catenary_scene_get( index )->name == "s2" ) { s2 = index; } }
+        double wire[ 3 ], rope[ 3 ];
+        bool hasrope { false };
+        auto const net { catenary_scene_second_net( s2, wire, rope, hasrope ) };
+        // przęsło nb_1 (s4 - s2) kończy się w drugim przewodzie, na_1 (s1 - s2) w pierwszym
+        auto const body = [ & ]( std::string const &Name ) {
+            for( std::size_t k = mock_span_names.size(); k-- > 0; ) { if( mock_span_names[ k ] == Name ) { return mock_span_bodies[ k ]; } }
+            return std::string();
+        };
+        std::istringstream first { body( "na_1" ) }, second { body( "nb_1" ) };
+        std::string skip;
+        std::getline( first, skip ); std::getline( second, skip );
+        double ax, ay, az, bx, by, bz, wa[ 3 ], wb[ 3 ];
+        first >> ax >> ay >> az >> wa[ 0 ] >> wa[ 1 ] >> wa[ 2 ];
+        second >> bx >> by >> bz >> wb[ 0 ] >> wb[ 1 ] >> wb[ 2 ];
+        std::printf( "  druga siec: %d (lina %d), przewod B %.3f %.3f %.3f, na_1 konczy %.3f %.3f, nb_1 konczy %.3f %.3f, lancuch %d\n", net ? 1 : 0, hasrope ? 1 : 0,
+            wire[ 0 ], wire[ 1 ], wire[ 2 ], wa[ 0 ], wa[ 1 ], wb[ 0 ], wb[ 1 ], catenary_scene_second_net_chain( s2 ) );
+        for( auto const &e : errors ) { std::printf( "    blad: %s\n", e.c_str() ); }
+        good = good && net && hasrope && std::abs( wb[ 0 ] - wire[ 0 ] ) < 0.002 && std::abs( wb[ 1 ] - wire[ 1 ] ) < 0.002 && std::abs( wa[ 0 ] - wb[ 0 ] ) > 0.01
+            && catenary_scene_second_net_chain( s2 ) == 1;
+        std::remove( "tests/catenary/td_druga_siec_test.scm" );
+        check( good, "druga siec 102x: lancuch nb przez drugi przewod i druga line, zapis i odczyt" );
+    }
+
     // 6a3. izolator sekcyjny w połowie przęsła za i2: zapis i odczyt, przęsła za nim z jego zasilacza
     {
         auto a { entry }, b { entry }, c { entry }, d { entry };

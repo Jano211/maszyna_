@@ -12138,3 +12138,15 @@ msgstr "Typ: %s"
 
 msgid "The remarks of Iet-107 to the chains and the spans over their limit in red. Off: nothing is checked (unusual layouts, poles placed by the orthophoto)"
 msgstr "Uwagi Iet-107 do łańcuchów i przęsła ponad limit na czerwono. Wyłączona: nic nie jest sprawdzane (nietypowe układy, słupy stawiane z ortofotomapy)"
+
+msgid "On the second network of the cantilever"
+msgstr "Na drugiej sieci wysięgnika"
+
+msgid "Another chain is on the second network of this cantilever already"
+msgstr "Drugą sieć tego wysięgnika ma już inny łańcuch"
+
+msgid "This chain goes through the second contact wire clamp and the second messenger clamp of the cantilever (another chain has its first network)"
+msgstr "Ten łańcuch idzie przez drugi uchwyt przewodu i drugi uchwyt liny wysięgnika (pierwszą sieć ma inny łańcuch)"
+
+msgid "This chain goes through the second contact wire clamp of the cantilever; its messenger: from a messenger only cantilever on this pole, otherwise freely past it"
+msgstr "Ten łańcuch idzie przez drugi uchwyt przewodu wysięgnika; jego lina nośna: z wysięgnika samej liny na tym słupie, a bez niego swobodnie obok"

@@ -107,6 +107,10 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else if( key == "middle" ) { one( line.middle ); }
                 else if( key == "middle_device" ) { one( line.middle_device ); }
                 else if( key == "middle_height" ) { number( line.middle_heights[ 0 ] ); number( line.middle_heights[ 1 ] ); }
+                else if( key == "second_net" ) {
+                    std::string listed;
+                    if( one( listed ) ) { line.second_net.push_back( listed ); }
+                }
                 else if( key == "messenger_from" ) {
                     std::string listed, holder;
                     if( one( listed ) && one( holder ) ) { line.messenger_from.emplace_back( listed, holder ); }
@@ -428,6 +432,7 @@ std::string write_chain( chain const &Entry ) {
         if( Entry.middle_heights[ 0 ] > 0.0 || Entry.middle_heights[ 1 ] > 0.0 ) { text += " middle_height " + number( Entry.middle_heights[ 0 ] ) + " " + number( Entry.middle_heights[ 1 ] ); }
     }
     for( auto const &pair : Entry.messenger_from ) { text += " messenger_from " + pair.first + " " + pair.second; }
+    for( auto const &listed : Entry.second_net ) { text += " second_net " + listed; }
     for( auto const &insulator : Entry.insulators ) {
         text += " insulator " + insulator.after + " " + insulator.kind + " " + ( insulator.power.empty() ? std::string( "-" ) : insulator.power );
         if( insulator.at >= 0.0 ) { text += " at " + number( std::round( insulator.at * 100.0 ) / 100.0 ); }
