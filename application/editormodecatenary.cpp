@@ -3080,10 +3080,15 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 			tool.status = STR("The earthing goes over the poles of one catenary file");
 			return;
 		}
-		if (std::find(tool.earthing_poles.begin(), tool.earthing_poles.end(), data->name) != tool.earthing_poles.end())
+		// one holder per pole: another cantilever of the same pole (umbrella, spread pair, the third one) counts as this pole
+		for (auto const sharer : pole_sharers(static_cast<std::size_t>(Intent.index)))
 		{
-			tool.status = format(STR_C("%s is on the earthing already"), data->name.c_str());
-			return;
+			auto const *other{catenary_scene_get(sharer)};
+			if (other != nullptr && catenary_scene_file_of(sharer) == file && std::find(tool.earthing_poles.begin(), tool.earthing_poles.end(), other->name) != tool.earthing_poles.end())
+			{
+				tool.status = format(STR_C("%s is on the earthing already"), other->name.c_str());
+				return;
+			}
 		}
 		tool.earthing_file = file;
 		tool.earthing_poles.push_back(data->name);
@@ -3552,12 +3557,16 @@ void catenary_editor::render_catenary_earthing_ui()
 			auto const *catalog{catenary_scene_catalog()};
 			catenary::earthing data;
 			auto const file{catenary_chain_file(static_cast<std::size_t>(tool.chain_selected))};
+			std::vector<std::size_t> taken; // poles on the list already (one holder per pole)
 			for (auto const index : catenary_chain_members(static_cast<std::size_t>(tool.chain_selected)))
 			{
 				auto const *member{catenary_scene_get(index)};
 				auto const *pole{member != nullptr && catalog != nullptr && member->has_pole ? catalog->pole(member->pole_type) : nullptr};
-				if (pole != nullptr && false == pole->earthing.empty() && false == member->name.empty())
-					data.poles.push_back(member->name);
+				if (pole == nullptr || pole->earthing.empty() || member->name.empty() || std::find(taken.begin(), taken.end(), index) != taken.end())
+					continue;
+				data.poles.push_back(member->name);
+				for (auto const sharer : pole_sharers(index))
+					taken.push_back(sharer);
 			}
 			if (data.poles.size() >= 2)
 			{

@@ -1817,14 +1817,38 @@ struct earthing_place {
     glm::dvec3 wire { 0.0 };                      // punkt liny we współrzędnych scenerii
 };
 
+// słup podwieszenia jako jeden słup w terenie (Jan 2026-10-30: na słupie z kilkoma wysięgnikami jeden uchwyt, obrócony jak słup):
+// wpis, który ten słup stawia - pierwszy (najniższy numer) bez "shared_pole" spośród wpisów z tym samym typem słupa w tym samym
+// miejscu (do 0,05 m w planie); parasol i para rozstawionych stawia słup pierwszym wpisem pary. Brak słupa - Suspensions.size()
+std::size_t
+earthing_pole( std::size_t const Suspension ) {
+    if( Suspension >= Suspensions.size() || Suspensions[ Suspension ].removed ) { return Suspensions.size(); }
+    auto const &own { Suspensions[ Suspension ] };
+    if( false == own.data.has_pole ) { return Suspensions.size(); }
+    auto best { Suspensions.size() }, shared { Suspensions.size() };
+    for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
+        auto const &other { Suspensions[ index ] };
+        if( other.removed || other.file != own.file || false == other.data.has_pole || false == other.data.has_at || other.data.pole_type != own.data.pole_type ) { continue; }
+        auto const dx { other.data.pole[ 0 ] - own.data.pole[ 0 ] }, dz { other.data.pole[ 2 ] - own.data.pole[ 2 ] };
+        if( dx * dx + dz * dz > 0.05 * 0.05 ) { continue; }
+        if( false == other.data.shared_pole ) { if( best == Suspensions.size() ) { best = index; } }
+        else if( shared == Suspensions.size() ) { shared = index; }
+    }
+    return best != Suspensions.size() ? best : shared;
+}
+
 bool
 earthing_place_of( std::size_t const Suspension, earthing_place &Place ) {
     auto const *catalog { cantilevers() };
-    if( catalog == nullptr || Suspension >= Suspensions.size() || Suspensions[ Suspension ].removed ) { return false; }
-    auto const &data { Suspensions[ Suspension ].data };
+    auto const standing { earthing_pole( Suspension ) };
+    if( catalog == nullptr || standing >= Suspensions.size() ) { return false; }
+    auto const &data { Suspensions[ standing ].data };
     auto const *pole { data.has_pole && data.has_at ? catalog->pole( data.pole_type ) : nullptr };
     if( pole == nullptr || pole->earthing.empty() ) { return false; }
-    auto const towardx { data.pole[ 0 ] - data.at[ 0 ] }, towardz { data.pole[ 2 ] - data.at[ 2 ] };
+    // obrót słupa: płaszczyzna wysięgnika, który go stawia; przy rozstawionych przez punkt na konsoli (słup stoi równolegle do niej,
+    // przesunięty wzdłuż toru), nie od przewodu do osi słupa
+    auto const *toward { data.has_spread ? data.spread : data.pole };
+    auto const towardx { toward[ 0 ] - data.at[ 0 ] }, towardz { toward[ 2 ] - data.at[ 2 ] };
     if( towardx * towardx + towardz * towardz < 0.01 ) { return false; }
     Place.heading = std::atan2( towardx, towardz );
     Place.origin = { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
@@ -1878,8 +1902,14 @@ assemble_earthing( scene_earthing &Earthing ) {
     if( catalog == nullptr ) { return 0; }
     auto const skin { Earthing.data.skin.empty() ? std::string( "none" ) : Earthing.data.skin };
     std::size_t count { 0 };
+    std::vector<std::size_t> done;     // słupy z uchwytem (kilka wpisów listy na jednym słupie - jeden uchwyt)
     for( auto const &name : Earthing.data.poles ) {
         auto const index { suspension_named( Earthing.file, name ) };
+        auto const standing { earthing_pole( index ) };
+        if( standing < Suspensions.size() ) {
+            if( std::find( done.begin(), done.end(), standing ) != done.end() ) { continue; }
+            done.push_back( standing );
+        }
         earthing_place place;
         if( false == earthing_place_of( index, place ) ) {
             WriteLog( ( "Catenary: earthing \"" + Earthing.data.name + "\" goes over \"" + name + "\", whose pole carries no earthing holder (6120)" ).c_str() );
@@ -1903,6 +1933,18 @@ assemble_earthing( scene_earthing &Earthing ) {
     return count;
 }
 
+// słupy uszynienia po kolei (wpisy stawiające słup), kolejne wpisy na tym samym słupie jako jeden
+std::vector<std::size_t>
+earthing_poles( scene_earthing const &Earthing ) {
+    std::vector<std::size_t> list;
+    for( auto const &name : Earthing.data.poles ) {
+        auto const standing { earthing_pole( suspension_named( Earthing.file, name ) ) };
+        if( standing >= Suspensions.size() || ( false == list.empty() && list.back() == standing ) ) { continue; }
+        list.push_back( standing );
+    }
+    return list;
+}
+
 // lina uszynienia w przęśle łańcucha: gdy słupy obu końców przęsła są kolejnymi słupami uszynienia. Lina zwisa w przęśle
 // (ZAŁOŻENIE: strzałka 1 % rozpiętości)
 void
@@ -1910,14 +1952,17 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
     if( Earthings.empty() ) { return; }
     auto const offset { Chain.data.anchor_start.empty() ? 0u : 1u };
     if( Span < offset || Span + 1 - offset >= Chain.data.suspensions.size() ) { return; }
-    auto const &a { Chain.data.suspensions[ Span - offset ] }, &b { Chain.data.suspensions[ Span + 1 - offset ] };
+    auto const a { earthing_pole( suspension_named( Chain.file, Chain.data.suspensions[ Span - offset ] ) ) };
+    auto const b { earthing_pole( suspension_named( Chain.file, Chain.data.suspensions[ Span + 1 - offset ] ) ) };
+    if( a >= Suspensions.size() || b >= Suspensions.size() || a == b ) { return; }
     for( auto const &earthing : Earthings ) {
         if( earthing.removed || earthing.file != Chain.file ) { continue; }
-        auto const &poles { earthing.data.poles };
+        // kolejne słupy uszynienia (kilka wpisów na jednym słupie to jeden słup)
+        auto const poles { earthing_poles( earthing ) };
         for( std::size_t k = 0; k + 1 < poles.size(); ++k ) {
             if( false == ( ( poles[ k ] == a && poles[ k + 1 ] == b ) || ( poles[ k ] == b && poles[ k + 1 ] == a ) ) ) { continue; }
             earthing_place first, second;
-            if( false == earthing_place_of( suspension_named( Chain.file, poles[ k ] ), first ) || false == earthing_place_of( suspension_named( Chain.file, poles[ k + 1 ] ), second ) ) { continue; }
+            if( false == earthing_place_of( poles[ k ], first ) || false == earthing_place_of( poles[ k + 1 ], second ) ) { continue; }
             auto const length { glm::length( second.wire - first.wire ) };
             std::vector<glm::dvec3> points;
             for( int step = 0; step <= 24; ++step ) {
@@ -2010,7 +2055,10 @@ follow_earthings( std::size_t const Index ) {
     if( Index >= Suspensions.size() || Suspensions[ Index ].data.name.empty() ) { return; }
     for( auto &earthing : Earthings ) {
         if( earthing.removed || earthing.file != Suspensions[ Index ].file ) { continue; }
-        if( std::find( earthing.data.poles.begin(), earthing.data.poles.end(), Suspensions[ Index ].data.name ) != earthing.data.poles.end() ) { assemble_earthing( earthing ); }
+        auto const poles { earthing_poles( earthing ) };
+        auto const standing { earthing_pole( Index ) };
+        if( std::find( earthing.data.poles.begin(), earthing.data.poles.end(), Suspensions[ Index ].data.name ) != earthing.data.poles.end()
+         || ( standing < Suspensions.size() && std::find( poles.begin(), poles.end(), standing ) != poles.end() ) ) { assemble_earthing( earthing ); }
     }
 }
 
@@ -2020,9 +2068,11 @@ earthing_spans( scene_earthing const &Earthing ) {
     for( auto &chain : Chains ) {
         if( chain.removed || chain.file != Earthing.file ) { continue; }
         auto const offset { chain.data.anchor_start.empty() ? 0u : 1u };
+        auto const poles { earthing_poles( Earthing ) };
+        auto const has = [ & ]( std::string const &Name ) {
+            auto const standing { earthing_pole( suspension_named( chain.file, Name ) ) };
+            return standing < Suspensions.size() && std::find( poles.begin(), poles.end(), standing ) != poles.end(); };
         for( std::size_t k = 0; k + 1 < chain.data.suspensions.size(); ++k ) {
-            auto const &poles { Earthing.data.poles };
-            auto const has = [ & ]( std::string const &Name ) { return std::find( poles.begin(), poles.end(), Name ) != poles.end(); };
             if( has( chain.data.suspensions[ k ] ) && has( chain.data.suspensions[ k + 1 ] ) ) { rebuild_span( chain, k + offset ); }
         }
     }
