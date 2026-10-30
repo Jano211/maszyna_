@@ -9345,8 +9345,16 @@ TDynamicObject::pantograph_arcing( TAnimPant &Pantograph, int const Index, doubl
      && Difference < 0.01
      && ( Index == 0 ? MoverParameters->PantFrontVolt : MoverParameters->PantRearVolt ) > 0.0 };
     float started { 0.f };
+    if( touching && false == Pantograph.ArcContact && Pantograph.ArcKnown ) {
+        // pierwsze dotknięcie: przewód naładowuje to, co za pantografem (przy otwartym wyłączniku tylko odgromnik i woltomierz -
+        // ledwo widoczny błysk; pojazd z falownikami ładuje filtr wejściowy - wyraźny); lód na przewodzie albo szron na ślizgu
+        // (zimny start) - mocniej
+        auto const filter { MoverParameters->EngineType == TEngineType::ElectricInductionMotor ? 0.35 : 0.0 };
+        auto const strength { 0.08 + filter + 0.45 * catenary_arcing::icing() + std::min( 0.4, Current / 1500.0 ) };
+        started = catenary_arcing::touch( &Pantograph, point, strength );
+    }
     if( touching ) {
-        started = catenary_arcing::contact( &Pantograph, point, glm::dvec3 { 0.0 }, Current, Pantograph.hvPowerWire, Timedelta );
+        started = std::max( started, catenary_arcing::contact( &Pantograph, point, glm::dvec3 { 0.0 }, Current, Pantograph.hvPowerWire, Timedelta ) );
         Pantograph.ArcCurrent = Current;
     }
     else if( Pantograph.ArcContact ) {
@@ -9355,6 +9363,7 @@ TDynamicObject::pantograph_arcing( TAnimPant &Pantograph, int const Index, doubl
         Pantograph.ArcCurrent = 0.0;
     }
     Pantograph.ArcContact = touching;
+    Pantograph.ArcKnown = true;
     // trzask łuku, gdy pojazd ma dźwięk "pantographarc:"
     if( started > 0.f && static_cast<std::size_t>( Index ) < m_pantographsounds.size() ) {
         auto &sound { m_pantographsounds[ Index ].arc };

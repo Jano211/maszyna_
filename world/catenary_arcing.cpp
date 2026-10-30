@@ -154,6 +154,16 @@ float contact( void const *Key, glm::dvec3 const &Point, glm::dvec3 const &Veloc
     return started;
 }
 
+float touch( void const *Key, glm::dvec3 const &Point, double const Strength ) {
+    if( false == Global.CatenaryArcing || Key == nullptr || Strength <= 0.0 ) { return 0.f; }
+    auto &state { Pantographs[ Key ] };
+    state.point = Point;
+    state.touched = true;
+    auto const strength { std::clamp( static_cast<float>( Strength ), 0.f, 1.f ) };
+    ignite( state, strength, uniform( 0.03f, 0.06f ) + 0.08f * strength );
+    return strength;
+}
+
 float release( void const *Key, glm::dvec3 const &Point, glm::dvec3 const &Velocity, double const Current ) {
     if( false == Global.CatenaryArcing || Key == nullptr ) { return 0.f; }
     auto &state { Pantographs[ Key ] };
@@ -182,8 +192,8 @@ void update( double const Dt ) {
                 arc item;
                 item.position = state.point;
                 item.intensity = state.arcstrength * flicker;
-                // miedź barwi łuk na zielono-niebiesko, najjaśniejszy rdzeń jest prawie biały
-                item.color = glm::mix( glm::vec3 { 0.45f, 0.62f, 1.f }, glm::vec3 { 0.85f, 0.9f, 1.f }, uniform( 0.f, 1.f ) );
+                // łuk niebieski do niebiesko-białego (Jan 2026-10-30: bardziej niebieski)
+                item.color = glm::mix( glm::vec3 { 0.25f, 0.4f, 1.f }, glm::vec3 { 0.5f, 0.62f, 1.f }, uniform( 0.f, 1.f ) );
                 Arcs.push_back( item );
                 emit( state, state.arcstrength, Dt );
                 state.arctime -= dt;

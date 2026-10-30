@@ -5397,11 +5397,11 @@ void opengl46_renderer::Render_catenary_arcing()
 	}
 	// kolory liniowe po pow 2.2 w shaderze, ponad 1: jaśniej niż biel, do blooma
 	glm::vec4 const colours[kHeats + 1]{
-		{3.0f, 2.8f, 2.2f, 1.f}, // biało-żółte
-		{2.6f, 1.8f, 0.8f, 1.f},
-		{2.0f, 1.0f, 0.35f, 0.9f}, // pomarańczowe
-		{1.3f, 0.45f, 0.15f, 0.7f}, // czerwone, gasnące
-		{3.2f, 3.4f, 4.0f, 1.f}}; // rdzeń łuku, niebiesko-biały
+		{1.9f, 1.8f, 1.6f, 0.9f}, // biało-żółte (Jan 2026-10-30: słabiej)
+		{1.7f, 1.2f, 0.6f, 0.85f},
+		{1.4f, 0.7f, 0.25f, 0.75f}, // pomarańczowe
+		{1.0f, 0.35f, 0.1f, 0.6f}, // czerwone, gasnące
+		{1.1f, 1.5f, 2.8f, 0.9f}}; // rdzeń łuku, niebieski
 	::glPushMatrix();
 	::glDisable(GL_CULL_FACE);
 	::glDepthMask(GL_FALSE);

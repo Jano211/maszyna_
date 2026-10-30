@@ -48,6 +48,9 @@ float icing();
 // we współrzędnych scenerii; Velocity - prędkość pojazdu (m/s, świat); Current - prąd przez pantograf (A); Span - przęsło
 // pod ślizgiem. Zwraca siłę łuku, który się w tym kroku zaczął (0 - żaden): dla dźwięku
 float contact( void const *Key, glm::dvec3 const &Point, glm::dvec3 const &Velocity, double Current, TTraction const *Span, double Dt );
+// pierwsze dotknięcie przewodu (podniesienie pantografu): krótki błysk siły Strength 0-1 (ładowanie filtra wejściowego, lód
+// na przewodzie albo na ślizgu). Zwraca siłę (0 - żaden)
+float touch( void const *Key, glm::dvec3 const &Point, double Strength );
 // ślizg stracił przewód (opuszczony, koniec przęsła, za wysoko): łuk, gdy płynął prąd. Zwraca jego siłę (0 - żaden)
 float release( void const *Key, glm::dvec3 const &Point, glm::dvec3 const &Velocity, double Current );
 

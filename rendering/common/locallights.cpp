@@ -191,12 +191,12 @@ void gfx::local_lights::gather(glm::dvec3 const &Camera, scene::basic_region &Re
 				}
 				light flash;
 				flash.position = arc.position;
-				flash.color = arc.color * (Global.gfx_lights_freespot_intensity * 25.f * arc.intensity);
+				flash.color = arc.color * (Global.gfx_lights_freespot_intensity * 10.f * arc.intensity);
 				if (max_component(flash.color) <= LIGHT_THRESHOLD)
 				{
 					continue;
 				}
-				flash.range = std::min(light_range(flash.color), 60.f);
+				flash.range = std::min(light_range(flash.color), 40.f);
 				flash.radius = 0.05f;
 				flash.soft_falloff = true;
 				flash.cast_shadows = false;

@@ -64,6 +64,14 @@ int main() {
     auto const idle { catenary_arcing::release( &other, point, glm::dvec3 { 0.0 }, 2.0 ) };
     catenary_arcing::update( dt );
     check( dropped > 0.5f && idle == 0.f && false == catenary_arcing::arcs().empty(), "opuszczenie pod pradem: luk, bez pradu: nic" );
+    // pierwsze dotknięcie: krótki błysk
+    catenary_arcing::clear();
+    int raised { 2 };
+    auto const touched { catenary_arcing::touch( &raised, point, 0.3 ) };
+    catenary_arcing::update( dt );
+    auto const flash { catenary_arcing::arcs().empty() ? 0.f : catenary_arcing::arcs().front().intensity };
+    for( int step = 0; step < 10; ++step ) { catenary_arcing::update( dt ); }
+    check( touched > 0.f && flash > 0.f && catenary_arcing::arcs().empty(), "podniesienie pantografu: krotki blysk (do 0,2 s)" );
     // wyłączone w ustawieniach
     Global.CatenaryArcing = false;
     catenary_arcing::clear();
