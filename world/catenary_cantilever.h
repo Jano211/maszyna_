@@ -190,7 +190,7 @@ struct gantry_mast {
     std::string stay;
     std::string steady;
     double below_beam { 0.15 };
-    // półbramka (1901): słup z dźwigarem w jednym modelu ("semi <długość dźwigara>"); bramka typu T: dźwigary na dwie strony
+    // półbramka (1901): słup z dźwigarem w jednym modelu ("semi <długość dźwigara od ściany słupa>", ściana = "offset" od osi); bramka typu T: dźwigary na dwie strony
     // ("sides 2"). Prześwit (mount) to wysokość konstrukcyjna Hk, na której wiszą zwisy rodziny "drop". Dźwigar w modelu wzdłuż +X
     // (jak dźwigary); "turn" obraca model wokół pionu, gdyby szedł inaczej. Dla półbramki katalog zakłada dźwigar o jej nazwie
     // (pojedynczy element bez modelu), więc w pliku sieci to zwykły wpis "gantry beam <nazwa> mast <nazwa> x y z tip x y z"
@@ -230,6 +230,11 @@ public:
     // karta z tej samej dziesiątki co Card, której pasmo A obejmuje podaną odległość; nullptr gdy żadna
     cantilever_scheme const *scheme_for_reach( int Card, int Execution, double Reach ) const;
     gantry_mast const *mast( std::string const &Name ) const;
+    // zwis rodziny Drop pasuje do dźwigara: "drop" dźwigara może podawać kilka rodzin po przecinku (półbramki 1901 i ESN-540 biorą
+    // i 4840, i ESN-544 - Jan 2026-10-30)
+    static bool drop_fits( gantry_beam const &Beam, std::string const &Drop );
+    // dwie rodziny zwisów wymienne: ta sama albo obie pasują do któregoś dźwigara
+    bool drops_interchangeable( std::string const &First, std::string const &Second ) const;
     gantry_beam const *beam( std::string const &Name ) const;
     std::map<std::string, gantry_mast> const &masts() const { return m_masts; }
     std::map<std::string, gantry_beam> const &beams() const { return m_beams; }

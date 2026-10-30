@@ -35,7 +35,12 @@ Bujanie na gl46: stuki i przysiad na przerwach szyn z jego `track_rails` (`TTrac
    „Lekki przechył słupów łańcucha” (0,1–0,5°, stały dla nazwy). Parasole / rozstawione / bramki bez przechyłu.
 - G:\Maszyna2510\data\traction_supports.txt zapisany 30.10 00:50 (45830 B). Tłumaczenia w lang/editor_pl.po.
 
-**Czeka na Jana:** odpowiedzi na 4 pytania (półbramki, 4840, wymiary 1711, 6120 gotowe?); test w exe wszystkiego powyżej;
+**Odpowiedzi Jana 30.10 09:04 (wprowadzone):** dźwigar 1901 „chyba” wzdłuż +X; Beam_out OD ŚCIANY słupa (offset 0,30 = W/2);
+4840 stoi tak samo jak 4850 (0,12 w stronę toru), ESN-544 na odwrót (0,25 w stronę toru, bez obrotu); 4840 i ESN-544 pasują do
+1901 i ESN-540 (`drop 4840,ESN-544`, `drop_fits` / `drops_interchangeable`); 6120 „chyba skończone”; 1711 i rodziny 150x/160x
+dojdą z modelami (wymiary z katalogu ESN wtedy). Mocowania zwisów nadal wyk. 05 (ZAŁOŻENIE).
+
+**Czeka na Jana (stare):** odpowiedzi na 4 pytania (półbramki, 4840, wymiary 1711, 6120 gotowe?); test w exe wszystkiego powyżej;
 dalej stare: 101x jako uchwyt wyżej, spread 4890, 4690-04 na masztach, obejma 0,15 m.
 
 ## Poprzedni start – 2026-10-29 23:00

@@ -432,19 +432,26 @@ beam 1910-1 model siec_trakcyjna/dzwigary/1910-1 span 6.5 drop 4850 single endbe
 beam 1910-2 model siec_trakcyjna/dzwigary/1910-2 span 10.2 drop 4850 single endbeam   // dzwigar polbramki 10,2 m
 
 // polbramki 1901 (scenery/siec_trakcyjna/polbramki/polbramka_1901_*.inc, tagi Type/W/L/H/Hk/Beam_out/Drop_type): slup z dzwigarem
-// w jednym modelu. semi = Beam_out (ZALOZENIE: od osi slupa), mount = Hk (zwisy na tej wysokosci), sides 2 = bramka typu T.
-// ZALOZENIE (do potwierdzenia): dzwigar w modelu wzdluz +X, zero w osi slupa na glowce szyny; gdyby szedl inaczej - "turn <stopnie>"
-mast polbramka_1901_7-3m model siec_trakcyjna/polbramki/polbramka_1901_7-3m width 0.600 length 0.400 height 9.80 mount 7.835 7.835 semi 7.30 drop 4840 endmast
-mast polbramka_1901_10m model siec_trakcyjna/polbramki/polbramka_1901_10m width 0.600 length 0.400 height 9.80 mount 7.835 7.835 semi 10.00 drop 4840 endmast
-mast polbramka_1901_2x7-3m model siec_trakcyjna/polbramki/polbramka_1901_2x7-3m width 0.600 length 0.400 height 9.80 mount 7.835 7.835 semi 7.30 sides 2 drop 4840 endmast
-mast polbramka_1901_2x10m model siec_trakcyjna/polbramki/polbramka_1901_2x10m width 0.600 length 0.400 height 9.80 mount 7.835 7.835 semi 10.00 sides 2 drop 4840 endmast
+// w jednym modelu. semi = Beam_out od sciany slupa (Jan 2026-10-30), offset = polowa W (sciana od osi), mount = Hk (zwisy na tej
+// wysokosci), sides 2 = bramka typu T. Zwisy 4840 i ESN-544 pasuja do 1901 i do ESN-540 (Jan 2026-10-30): drop z dwiema rodzinami. Dzwigar w modelu wzdluz +X ("chyba" - Jan 2026-10-30); gdyby szedl inaczej - "turn <stopnie>"
+mast polbramka_1901_7-3m model siec_trakcyjna/polbramki/polbramka_1901_7-3m width 0.600 length 0.400 height 9.80 mount 7.835 7.835 offset 0.300 semi 7.30 drop 4840,ESN-544 endmast
+mast polbramka_1901_10m model siec_trakcyjna/polbramki/polbramka_1901_10m width 0.600 length 0.400 height 9.80 mount 7.835 7.835 offset 0.300 semi 10.00 drop 4840,ESN-544 endmast
+mast polbramka_1901_2x7-3m model siec_trakcyjna/polbramki/polbramka_1901_2x7-3m width 0.600 length 0.400 height 9.80 mount 7.835 7.835 offset 0.300 semi 7.30 sides 2 drop 4840,ESN-544 endmast
+mast polbramka_1901_2x10m model siec_trakcyjna/polbramki/polbramka_1901_2x10m width 0.600 length 0.400 height 9.80 mount 7.835 7.835 offset 0.300 semi 10.00 sides 2 drop 4840,ESN-544 endmast
 
-// zwisy 4840 (stare polbramki 1901): dlugosci z tagow e_H. ZALOZENIE (do potwierdzenia): profil 200x120 odwrotnie niz 4850 - 0,20 m
-// w strone toru, mocowania wyk. 05 jak przy 4850
-pole 4840-2 model siec_trakcyjna/zwisy/4840/4840-2 top 0.0000 length 2.2000 depth 0.2000 0.2000 mount_max -0.0010 mount_min -2.2000 turn 90 drop 4840 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 2.2 m
-pole 4840-3 model siec_trakcyjna/zwisy/4840/4840-3 top 0.0000 length 2.5000 depth 0.2000 0.2000 mount_max -0.0010 mount_min -2.5000 turn 90 drop 4840 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 2.5 m
-pole 4840-4 model siec_trakcyjna/zwisy/4840/4840-4 top 0.0000 length 2.9000 depth 0.2000 0.2000 mount_max -0.0010 mount_min -2.9000 turn 90 drop 4840 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 2.9 m
-pole 4840-5 model siec_trakcyjna/zwisy/4840/4840-5 top 0.0000 length 3.2000 depth 0.2000 0.2000 mount_max -0.0010 mount_min -3.2000 turn 90 drop 4840 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 3.2 m
+// zwisy 4840 (stare polbramki 1901): dlugosci z tagow e_H, stoja tak samo jak 4850 (Jan 2026-10-30): 0,12 m w strone toru;
+// mocowania wyk. 05 jak przy 4850
+pole 4840-2 model siec_trakcyjna/zwisy/4840/4840-2 top 0.0000 length 2.2000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -2.2000 turn 90 drop 4840 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 2.2 m
+pole 4840-3 model siec_trakcyjna/zwisy/4840/4840-3 top 0.0000 length 2.5000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -2.5000 turn 90 drop 4840 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 2.5 m
+pole 4840-4 model siec_trakcyjna/zwisy/4840/4840-4 top 0.0000 length 2.9000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -2.9000 turn 90 drop 4840 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 2.9 m
+pole 4840-5 model siec_trakcyjna/zwisy/4840/4840-5 top 0.0000 length 3.2000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -3.2000 turn 90 drop 4840 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 3.2 m
+
+// zwisy ESN-544 (polbramki ESN-540): profil 0,25 x 0,12, ustawiony odwrotnie niz 4850 (Jan 2026-10-30) - 0,25 m w strone toru, bez obrotu.
+// ZALOZENIE: mocowania wyk. 05 jak przy 4850 (polbramki ESN-540 nie maja jeszcze wpisow mast)
+pole ESN-544-1 model siec_trakcyjna/zwisy/ESN-544/ESN-544-1 top 0.0000 length 1.6500 depth 0.2500 0.2500 mount_max -0.0010 mount_min -1.6500 drop ESN-544 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 1.65 m
+pole ESN-544-2 model siec_trakcyjna/zwisy/ESN-544/ESN-544-2 top 0.0000 length 2.0000 depth 0.2500 0.2500 mount_max -0.0010 mount_min -2.0000 drop ESN-544 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 2.00 m
+pole ESN-544-3 model siec_trakcyjna/zwisy/ESN-544/ESN-544-3 top 0.0000 length 2.3500 depth 0.2500 0.2500 mount_max -0.0010 mount_min -2.3500 drop ESN-544 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 2.35 m
+pole ESN-544-4 model siec_trakcyjna/zwisy/ESN-544/ESN-544-4 top 0.0000 length 2.6500 depth 0.2500 0.2500 mount_max -0.0010 mount_min -2.6500 drop ESN-544 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 2.65 m
 
 pole 4850-1 model siec_trakcyjna/zwisy/4850/4850-1 top 0.0000 length 1.8000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -1.8000 turn 90 drop 4850 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 1.8 m
 pole 4850-2 model siec_trakcyjna/zwisy/4850/4850-2 top 0.0000 length 2.1000 depth 0.1200 0.1200 mount_max -0.0010 mount_min -2.1000 turn 90 drop 4850 strut 4610-05 stay 4620-05 steady 4630-05 steady_console 4690-05 endpole   // zwis 2.1 m
