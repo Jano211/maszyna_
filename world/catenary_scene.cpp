@@ -1358,6 +1358,12 @@ held_rope_at( std::size_t const Index, glm::dvec3 &Rope ) {
         if( std::find( chain.data.second_net.begin(), chain.data.second_net.end(), name ) != chain.data.second_net.end() ) { continue; }
         double point[ 3 ];
         if( held_rope( chain, static_cast<std::size_t>( found - names.begin() ), point ) ) {
+            // uchwyt liny wyżej (wysięgnik samej liny ponad tym, "Messenger holder higher"): ten wysięgnik zostaje przy swojej linie;
+            // inaczej sięgałby liną o tyle w górę i rozjeżdżał się (Jan 2026-10-30). Tylko trzymający na tej samej wysokości
+            // (rozstawione, wysięgi pomocnicze) prowadzi linki tego
+            double own[ 3 ];
+            rope_of( Suspensions[ Index ].data, own );
+            if( std::abs( point[ 1 ] - own[ 1 ] ) > 0.15 ) { continue; }
             Rope = glm::dvec3 { point[ 0 ], point[ 1 ], point[ 2 ] };
             return true;
         }
