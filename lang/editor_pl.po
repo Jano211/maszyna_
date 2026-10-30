@@ -12024,3 +12024,90 @@ msgstr "Ten słup przechodzi na drugą stronę toru (krótki <-> długi wysięgn
 
 msgid "The staggers of the whole chain as set for the zigzag; every pole keeps its side, by switches and in tension overlaps nothing changes"
 msgstr "Odsuwy całego łańcucha jak dla zygzaka; każdy słup zostaje po swojej stronie, przy rozjazdach i w przęsłach naprężenia nic się nie zmienia"
+
+msgid "Only the nominal span: the recommended distance of the next pole and the limit in the remarks of Iet-107 (traction_layout.txt)"
+msgstr "Tylko rozpiętość nominalna: zalecana odległość następnego słupa i limit w uwagach Iet-107 (traction_layout.txt)"
+
+msgid "Placing"
+msgstr "Wstawianie"
+
+msgid "Selected gantry"
+msgstr "Wybrana bramka"
+
+msgid "Selected semi-gantry"
+msgstr "Wybrana półbramka"
+
+msgid "Cancel the semi-gantry"
+msgstr "Anuluj półbramkę"
+
+msgid "Place a semi-gantry"
+msgstr "Postaw półbramkę"
+
+msgid "LMB the mast, LMB where the beam points (a T gantry: both ways)"
+msgstr "LPM słup, LPM w stronę, w którą idzie dźwigar (bramka T: w obie strony)"
+
+msgid "Semi-gantry"
+msgstr "Półbramka"
+
+msgid " (T, %.1f m both ways)"
+msgstr " (T, %.1f m w obie strony)"
+
+msgid " (%.1f m)"
+msgstr " (%.1f m)"
+
+msgid "The beam goes square to the track the mast is put by"
+msgstr "Dźwigar prostopadle do toru, przy którym stawiany jest słup"
+
+msgid "Mast from the track"
+msgstr "Słup od toru"
+
+msgid "The mast goes with its face at this distance from the axis of the track under the cursor, on the side of the cursor"
+msgstr "Słup staje licem w tej odległości od osi toru pod kursorem, po stronie kursora"
+
+msgid "Face from the track axis (m)##semi"
+msgstr "Lico od osi toru (m)##semi"
+
+msgid "No semi-gantries in the catalogue (traction_supports.txt: a mast with \"semi\")"
+msgstr "Brak półbramek w katalogu (traction_supports.txt: słup z \"semi\")"
+
+msgid "LMB on a span selects its chain, LMB on a tensioning device its anchor"
+msgstr "LPM na przęśle wybiera jego łańcuch, LPM na urządzeniu naprężającym jego kotwienie"
+
+msgid "Chain %s"
+msgstr "Łańcuch %s"
+
+msgid "End anchors"
+msgstr "Kotwienia końcowe"
+
+msgid "The anchors of the chain (end and middle): the Anchors page"
+msgstr "Kotwienia łańcucha (końcowe i środkowe): zakładka Kotwienia"
+
+msgid "Semi-gantries"
+msgstr "Półbramki"
+
+msgid "Semi-gantries: the mast with its beam in one model (1901), T gantries; the cantilevers on their drops"
+msgstr "Półbramki: słup z dźwigarem w jednym modelu (1901), bramki T; wysięgniki na ich zwisach"
+
+msgid "The anchors of the chain selected: at its ends (tensioning devices, fixed) and the middle anchor"
+msgstr "Kotwienia wybranego łańcucha: na końcach (urządzenia naprężające, stałe) i kotwienie środkowe"
+
+msgid "Poles with cantilevers: LMB by a track places one (Ins: editing only), LMB on a pole selects it"
+msgstr "Słupy z wysięgnikami: LPM przy torze stawia słup (Ins: tylko edycja), LPM na słupie go wybiera"
+
+msgid "Anchors: LMB on the pole the tensioning device goes on"
+msgstr "Kotwienia: LPM na słupie, na który idzie urządzenie naprężające"
+
+msgid "Anchors: LMB on a span selects its chain, LMB on a tensioning device selects the anchor"
+msgstr "Kotwienia: LPM na przęśle wybiera łańcuch, LPM na urządzeniu naprężającym wybiera kotwienie"
+
+msgid "Semi-gantries: LMB where the beam points"
+msgstr "Półbramki: LPM w stronę, w którą idzie dźwigar"
+
+msgid "Semi-gantries: LMB the mast"
+msgstr "Półbramki: LPM słup"
+
+msgid "Semi-gantries: LMB by a track puts a cantilever on the selected one, drag it to move it"
+msgstr "Półbramki: LPM przy torze wiesza wysięgnik na wybranej, przeciąganie ją przesuwa"
+
+msgid "Semi-gantries: LMB on one selects it, or place a new one"
+msgstr "Półbramki: LPM na półbramce ją wybiera, albo postaw nową"

@@ -2743,8 +2743,10 @@ void scene_walk::Render_Alpha(TTraction *Traction)
 		// the rope of the tensioning device at the end of the span (steel)
 		if (solid.rope != null_handle)
 		{
+			// lit like the wires, by the ambient of the sun (the line shader draws the colour as it is: unlit it glowed at night)
 			auto const &steel{catenary_rope_metal()};
-			model_ubs.param[0] = glm::vec4(steel.color[0], steel.color[1], steel.color[2], 1.0f);
+			auto const light{glm::vec3(Global.DayLight.ambient) + 0.5f * glm::vec3(Global.DayLight.diffuse)};
+			model_ubs.param[0] = glm::vec4(steel.color[0] * light.r, steel.color[1] * light.g, steel.color[2] * light.b, 1.0f);
 			walk_draw(solid.rope);
 			++m_renderpass.draw_stats.drawcalls;
 		}

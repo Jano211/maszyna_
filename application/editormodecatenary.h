@@ -162,7 +162,8 @@ struct catenary_editor
 		std::string catalog_group;
 		std::string catalog_family;
 		int catalog_card{0};
-		int page{0}; // the page of the catenary field of work: 0 poles, 1 gantries, 2 wires
+		int page{0}; // the page of the catenary field of work: 0 poles, 1 gantries, 2 wires, 3 earthing, 4 semi-gantries, 5 anchors
+		int semi_mast{-1}; // the semi-gantry chosen on its page (in masts)
 		int gantry_hang{0}; // the next cantilevers on the selected gantry: 0 on drops of the beam, 1 straight on its masts
 		// the staggers of the next poles by Iet-107 of PKP PLK (4.6.4, 7.4.2): on a straight the other side of the track axis than
 		// the pole before (the full cycle in two spans), on a curve to its outside; the values by the speed of the line
@@ -391,6 +392,10 @@ struct catenary_editor
 	void catenary_chain_show(int Chain);
 	void render_catenary_cantilever_ui();
 	void render_catenary_wires_ui();
+	void render_catenary_gantry_placing();
+	void render_catenary_gantry_selected(bool Semi);
+	void render_catenary_semi_placing();
+	void render_catenary_anchors_page();
 	void catenary_choose_page(int const Page);
 	void draw_catenary_overlay() const;
 	std::string catenary_intent_label(catenary_spot const &Spot) const;
