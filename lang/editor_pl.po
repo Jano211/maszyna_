@@ -12126,3 +12126,12 @@ msgstr "w połowie"
 
 msgid "A section insulator in the span after this pole, in its middle or where set below: the spans after it can take another power source (another section). Placeholder shapes until the models are made"
 msgstr "Izolator sekcyjny w przęśle za tym słupem, w połowie albo tam, gdzie ustawiono niżej: przęsła za nim mogą mieć inny zasilacz (inną sekcję). Bryły zastępcze do czasu modeli"
+
+msgid "%.2f m"
+msgstr "%.2f m"
+
+msgid "Clouds, fog and weather report"
+msgstr "Chmury, mgła i komunikat pogodowy"
+
+msgid "Type: %s"
+msgstr "Typ: %s"
