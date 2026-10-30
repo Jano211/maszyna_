@@ -2987,21 +2987,8 @@ void catenary_editor::catenary_connect(std::size_t const To)
 	}
 	// the chain of a pole: one it ends, when it's in more of them (a cantilever with a second network: the chain of that network
 	// ends there while the chain of its first network goes through)
-	auto const chain_of = [&](std::size_t const Index, std::size_t &Position) {
-		auto const *data{catenary_scene_get(Index)};
-		for (std::size_t chain = 0; data != nullptr && false == data->name.empty() && chain < catenary_chain_size(); ++chain)
-		{
-			auto const *candidate{catenary_chain_get(chain)};
-			if (candidate == nullptr || candidate->suspensions.size() < 2 || catenary_chain_file(chain) != catenary_scene_file_of(Index))
-				continue;
-			if (candidate->suspensions.front() == data->name || candidate->suspensions.back() == data->name)
-			{
-				Position = candidate->suspensions.front() == data->name ? 0 : candidate->suspensions.size() - 1;
-				return static_cast<int>(chain);
-			}
-		}
-		return catenary_chain_of(Index, Position);
-	};
+	// the chain of a pole in more of them: the one it ends (catenary_chain_of)
+	auto const chain_of = [&](std::size_t const Index, std::size_t &Position) { return catenary_chain_of(Index, Position); };
 	std::size_t pa{0}, pb{0};
 	auto ca{chain_of(from, pa)};
 	auto cb{chain_of(To, pb)};
