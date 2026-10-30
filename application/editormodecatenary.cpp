@@ -143,6 +143,15 @@ void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data
 	Data.at[2] = Current.at[2];
 }
 
+// a semi-gantry (its first mast with a beam of its own, "semi" in the catalogue): it has its own page
+bool catenary_gantry_semi(std::size_t const Index)
+{
+	auto const *gantry{catenary_gantry_get(Index)};
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *mast{gantry != nullptr && catalog != nullptr ? catalog->mast(gantry->masts[0]) : nullptr};
+	return mast != nullptr && mast->semi > 0.0;
+}
+
 // the suspensions on the pole of this one (the same type at the same point, as the scenery pairs an umbrella): this one too
 std::vector<std::size_t> pole_sharers(std::size_t const Index)
 {
@@ -358,7 +367,7 @@ int spans_at(double const *Point, std::size_t const Except)
 
 // the items of a combo of poles or masts, by the groups of the described catalogue (foundation, where they stand), the
 // rest at the end; Tag gives a word added to a name (e.g. through / end mast). Returns true when another one was chosen
-bool grouped_items(std::vector<std::string> const &Names, int &Chosen, std::function<std::string(std::string const &)> const &Tag = {})
+bool grouped_items(std::vector<std::string> const &Names, int &Chosen, std::function<std::string(std::string const &)> const &Tag = {}, std::function<bool(std::string const &)> const &Show = {})
 {
 	auto const &structures{catenary_scene_structures()};
 	auto changed{false};
@@ -372,12 +381,16 @@ bool grouped_items(std::vector<std::string> const &Names, int &Chosen, std::func
 			Chosen = Index;
 		}
 	};
+	// the names left out (Show) count as shown already
 	std::vector<bool> shown(Names.size(), false);
+	if (Show)
+		for (std::size_t i = 0; i < Names.size(); ++i)
+			shown[i] = false == Show(Names[i]);
 	for (auto const &group : structures.polegroups())
 	{
 		std::vector<int> members;
 		for (auto const &name : group.poles)
-			if (auto const found{std::find(Names.begin(), Names.end(), name)}; found != Names.end())
+			if (auto const found{std::find(Names.begin(), Names.end(), name)}; found != Names.end() && (false == static_cast<bool>(Show) || Show(name)))
 				members.push_back(static_cast<int>(found - Names.begin()));
 		if (members.empty())
 			continue;
@@ -462,7 +475,7 @@ bool catenary_editor::catenary_snap_span(TTrack *&Track, int &Path, double &Para
 	bezier const hovered{Track->m_paths[Path]};
 	auto const cursor{plan_of(hovered.point(Parameter))};
 	auto const *last{last_pole_near(hovered.point(Parameter))};
-	if (last == nullptr || (tool.page == 1 && tool.gantry_selected >= 0))
+	if (last == nullptr || ((tool.page == 1 || tool.page == 4) && tool.gantry_selected >= 0))
 		return false;
 	auto const target{span_step_length(path_radius(*Track, Path, Parameter))};
 	auto const from{plan_of(wire_of(*last))};
@@ -2212,7 +2225,7 @@ bool catenary_editor::catenary_propose_toward(bool &Toward)
 bool catenary_editor::catenary_insert_at(catenary_spot const &Spot, chain_insert &Insert) const
 {
 	auto const &tool{m_catenary};
-	if (false == tool.insert_spans || false == Spot.data.has_at || (tool.page == 1 && tool.gantry_selected >= 0))
+	if (false == tool.insert_spans || false == Spot.data.has_at || ((tool.page == 1 || tool.page == 4) && tool.gantry_selected >= 0))
 		return false;
 	auto const wire{plan_of(wire_of(Spot.data))};
 	glm::dvec3 const camera{Global.pCamera.Pos};
@@ -3124,7 +3137,7 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		catenary_select(Intent.index);
 		// a pole selected on the gantries page: the cantilever on the gantry, its settings are shown there; on the wires page it's
 		// the pole the wires go from
-		if (tool.page == 1 && tool.gantry_selected < 0)
+		if ((tool.page == 1 || tool.page == 4) && tool.gantry_selected < 0)
 			tool.page = 0;
 		// held and dragged: the pole goes along the track
 		tool.dragging = tool.selected >= 0 ? 1 : 0;
@@ -3135,7 +3148,7 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		tool.gantry_selected = Intent.index;
 		tool.selected = -1;
 		tool.anchor_selected = -1;
-		tool.page = 1;
+		tool.page = catenary_gantry_semi(static_cast<std::size_t>(Intent.index)) ? 4 : 1;
 		tool.status = STR("The cantilevers now go on drops on this gantry: LMB over a track; drag the beam to move the gantry");
 		// held and dragged: the whole gantry goes with the cursor
 		tool.dragging = 2;
@@ -3238,9 +3251,10 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 	}
 	if (is_intent(Intent, intent_detail::anchor))
 	{
-		// the anchor: its chain on the wires page, the anchor marked in the panel
+		// the anchor: its chain on the anchors page, the anchor marked in the panel
 		bool start{false};
 		auto const chain{catenary_anchor_chain(static_cast<std::size_t>(Intent.index), start)};
+		tool.page = 5;
 		catenary_chain_show(chain);
 		tool.anchor_selected = Intent.index;
 		tool.anchor_scroll = true;
@@ -3304,7 +3318,8 @@ void catenary_editor::catenary_chain_show(int const Chain)
 {
 	auto &tool{m_catenary};
 	tool.selected = -1;
-	tool.page = 2;
+	if (tool.page != 5)
+		tool.page = 2; // the anchors page stays: it shows the anchors of the chain
 	tool.chain_selected = Chain;
 	if (auto const *chain{Chain >= 0 ? catenary_chain_get(static_cast<std::size_t>(Chain)) : nullptr}; chain != nullptr)
 	{
@@ -3722,7 +3737,7 @@ void catenary_editor::render_catenary_chain_ui()
 			}
 			tool.status = format(STR_C("%zu poles of the chain lean a little towards the track (Ctrl+Z takes it back)"), count);
 		}
-		render_catenary_anchor_ui(static_cast<std::size_t>(tool.chain_selected));
+		ImGui::TextDisabled("%s", STR_C("The anchors of the chain (end and middle): the Anchors page"));
 	}
 }
 
@@ -3935,89 +3950,8 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 	if (members.size() < 2)
 		return;
 	ImGui::Separator();
-	// middle anchor (cards 63-0406 / 0408): at one of the inner poles of the chain, the anchor rope goes to the poles on both sides
-	{
-		auto changed{*chain};
-		std::vector<std::string> labels{STR("none")};
-		int chosen{0};
-		for (std::size_t k = 1; k + 1 < chain->suspensions.size(); ++k)
-		{
-			labels.push_back(format(STR_C("pole %d (%s)"), static_cast<int>(k + 1), chain->suspensions[k].c_str()));
-			if (chain->suspensions[k] == chain->middle)
-				chosen = static_cast<int>(labels.size()) - 1;
-		}
-		ImGui::PushItemWidth(180.0f);
-		auto edited{false};
-		if (ImGui::BeginCombo(STR_C("Middle anchor"), labels[chosen].c_str()))
-		{
-			for (std::size_t k = 0; k < labels.size(); ++k)
-				if (ImGui::Selectable(labels[k].c_str(), static_cast<int>(k) == chosen))
-				{
-					changed.middle = k == 0 ? std::string{} : chain->suspensions[k];
-					changed.middle_heights[0] = changed.middle_heights[1] = 0.0;
-					edited = true;
-				}
-			ImGui::EndCombo();
-		}
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("The anchor rope is clamped on the messenger 1 m on each side of this pole and goes to the poles next to it; in the middle of both spans a V ties it to the contact wire. The weight anchors measure their distance from it"));
-		if (false == chain->middle.empty())
-		{
-			char const *const cards[] = {"0406", "0408", "0418", "0416"};
-			int insulated{0};
-			for (int k = 0; k < 4; ++k)
-				if (chain->middle_device == cards[k])
-					insulated = k;
-			std::string const kinds[] = {STR("with insulation (card 0406)"), STR("without insulation (card 0408)"), STR("insulated on one side (card 0418)"), STR("to the beam of a gantry (card 0416)")};
-			char const *const items[] = {kinds[0].c_str(), kinds[1].c_str(), kinds[2].c_str(), kinds[3].c_str()};
-			if (ImGui::Combo(STR_C("Middle anchor kind"), &insulated, items, 4))
-			{
-				changed.middle_device = cards[std::clamp(insulated, 0, 3)];
-				edited = true;
-			}
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("0416: the middle pole is a drop of a gantry; the anchor ropes go from the beam above the messenger to clamps on it about 3 m on both sides, the poles next to it carry nothing"));
-			// heights of the anchor rope on the poles before and after (when the cantilever is in the way)
-			auto const where{std::find(chain->suspensions.begin(), chain->suspensions.end(), chain->middle) - chain->suspensions.begin()};
-			auto const members{catenary_chain_members(Chain)};
-			for (int side = 0; side < 2 && chain->middle_device != "0416"; ++side)
-			{
-				auto const k{static_cast<std::size_t>(where) + (side == 0 ? -1 : 1)};
-				auto const *neighbour{k < members.size() ? catenary_scene_get(members[k]) : nullptr};
-				if (neighbour == nullptr || false == neighbour->has_pole)
-					continue;
-				auto const automatic{(neighbour->has_rope ? neighbour->rope[1] : neighbour->at[1] + 1.70) - neighbour->pole[1]};
-				auto height{static_cast<float>(chain->middle_heights[side] > 0.0 ? chain->middle_heights[side] : automatic)};
-				ImGui::PushID(side);
-				if (ImGui::SliderFloat(side == 0 ? STR_C("Anchor rope on the pole before (m)") : STR_C("Anchor rope on the pole after (m)"), &height, 4.0f, 10.0f, "%.2f"))
-				{
-					changed.middle_heights[side] = height;
-					edited = true;
-				}
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("Height of the anchor of the middle anchor rope on that pole above the rail heads; by default at the messenger. Move it when it hits the cantilever"));
-				ImGui::PopID();
-			}
-			if ((chain->middle_heights[0] > 0.0 || chain->middle_heights[1] > 0.0) && ImGui::Button(STR_C("Anchor rope at the messenger")))
-			{
-				changed.middle_heights[0] = changed.middle_heights[1] = 0.0;
-				edited = true;
-			}
-		}
-		ImGui::PopItemWidth();
-		if (edited)
-		{
-			// one undo step for one drag of a slider
-			auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
-			if (tool.undo.empty() || false == last.chain || last.index != Chain || false == ImGui::IsMouseDragging(0))
-				tool.undo.push_back({++tool.group, true, Chain, std::nullopt, *chain, false});
-			catenary_chain_update(Chain, changed);
-			chain = catenary_chain_get(Chain);
-			if (chain == nullptr)
-				return;
-		}
-	}
-	ImGui::TextUnformatted(STR_C("Anchors"));
+	// the end anchors: anchor 1 at the start of the chain, anchor 2 at its end
+	if (ImGui::CollapsingHeader(STR_C("End anchors"), ImGuiTreeNodeFlags_DefaultOpen))
 	// each end: the anchor of the network (or of the messenger only), then the one of the contact wires when they're anchored apart
 	for (int slot = 0; slot < 4; ++slot)
 	{
@@ -4321,6 +4255,93 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 				tool.anchor_selected = -1;
 		}
 		ImGui::PopID();
+	}
+	// the end anchors may have changed the chain
+	chain = catenary_chain_get(Chain);
+	if (chain == nullptr)
+		return;
+	// middle anchor (cards 63-0406 / 0408): at one of the inner poles of the chain, the anchor rope goes to the poles on both sides
+	if (ImGui::CollapsingHeader(STR_C("Middle anchor"), ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		auto changed{*chain};
+		std::vector<std::string> labels{STR("none")};
+		int chosen{0};
+		for (std::size_t k = 1; k + 1 < chain->suspensions.size(); ++k)
+		{
+			labels.push_back(format(STR_C("pole %d (%s)"), static_cast<int>(k + 1), chain->suspensions[k].c_str()));
+			if (chain->suspensions[k] == chain->middle)
+				chosen = static_cast<int>(labels.size()) - 1;
+		}
+		ImGui::PushItemWidth(180.0f);
+		auto edited{false};
+		if (ImGui::BeginCombo(STR_C("Middle anchor"), labels[chosen].c_str()))
+		{
+			for (std::size_t k = 0; k < labels.size(); ++k)
+				if (ImGui::Selectable(labels[k].c_str(), static_cast<int>(k) == chosen))
+				{
+					changed.middle = k == 0 ? std::string{} : chain->suspensions[k];
+					changed.middle_heights[0] = changed.middle_heights[1] = 0.0;
+					edited = true;
+				}
+			ImGui::EndCombo();
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("The anchor rope is clamped on the messenger 1 m on each side of this pole and goes to the poles next to it; in the middle of both spans a V ties it to the contact wire. The weight anchors measure their distance from it"));
+		if (false == chain->middle.empty())
+		{
+			char const *const cards[] = {"0406", "0408", "0418", "0416"};
+			int insulated{0};
+			for (int k = 0; k < 4; ++k)
+				if (chain->middle_device == cards[k])
+					insulated = k;
+			std::string const kinds[] = {STR("with insulation (card 0406)"), STR("without insulation (card 0408)"), STR("insulated on one side (card 0418)"), STR("to the beam of a gantry (card 0416)")};
+			char const *const items[] = {kinds[0].c_str(), kinds[1].c_str(), kinds[2].c_str(), kinds[3].c_str()};
+			if (ImGui::Combo(STR_C("Middle anchor kind"), &insulated, items, 4))
+			{
+				changed.middle_device = cards[std::clamp(insulated, 0, 3)];
+				edited = true;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("0416: the middle pole is a drop of a gantry; the anchor ropes go from the beam above the messenger to clamps on it about 3 m on both sides, the poles next to it carry nothing"));
+			// heights of the anchor rope on the poles before and after (when the cantilever is in the way)
+			auto const where{std::find(chain->suspensions.begin(), chain->suspensions.end(), chain->middle) - chain->suspensions.begin()};
+			auto const members{catenary_chain_members(Chain)};
+			for (int side = 0; side < 2 && chain->middle_device != "0416"; ++side)
+			{
+				auto const k{static_cast<std::size_t>(where) + (side == 0 ? -1 : 1)};
+				auto const *neighbour{k < members.size() ? catenary_scene_get(members[k]) : nullptr};
+				if (neighbour == nullptr || false == neighbour->has_pole)
+					continue;
+				auto const automatic{(neighbour->has_rope ? neighbour->rope[1] : neighbour->at[1] + 1.70) - neighbour->pole[1]};
+				auto height{static_cast<float>(chain->middle_heights[side] > 0.0 ? chain->middle_heights[side] : automatic)};
+				ImGui::PushID(side);
+				if (ImGui::SliderFloat(side == 0 ? STR_C("Anchor rope on the pole before (m)") : STR_C("Anchor rope on the pole after (m)"), &height, 4.0f, 10.0f, "%.2f"))
+				{
+					changed.middle_heights[side] = height;
+					edited = true;
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("Height of the anchor of the middle anchor rope on that pole above the rail heads; by default at the messenger. Move it when it hits the cantilever"));
+				ImGui::PopID();
+			}
+			if ((chain->middle_heights[0] > 0.0 || chain->middle_heights[1] > 0.0) && ImGui::Button(STR_C("Anchor rope at the messenger")))
+			{
+				changed.middle_heights[0] = changed.middle_heights[1] = 0.0;
+				edited = true;
+			}
+		}
+		ImGui::PopItemWidth();
+		if (edited)
+		{
+			// one undo step for one drag of a slider
+			auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
+			if (tool.undo.empty() || false == last.chain || last.index != Chain || false == ImGui::IsMouseDragging(0))
+				tool.undo.push_back({++tool.group, true, Chain, std::nullopt, *chain, false});
+			catenary_chain_update(Chain, changed);
+			chain = catenary_chain_get(Chain);
+			if (chain == nullptr)
+				return;
+		}
 	}
 }
 
@@ -4663,8 +4684,10 @@ void catenary_editor::catenary_choose_page(int const Page)
 	tool.anchor_pick = -1;
 	tool.anchor_selected = -1;
 	tool.anchor_cantilever = -1;
-	if (Page != 1)
+	if (Page != 1 && Page != 4)
 		tool.gantry_selected = -1; // the poles go by the track again, not on the drops of a gantry
+	else if (tool.gantry_selected >= 0 && catenary_gantry_semi(static_cast<std::size_t>(tool.gantry_selected)) != (Page == 4))
+		tool.gantry_selected = -1; // a gantry on the semi-gantries page or the other way round
 	tool.status.clear();
 }
 
@@ -5475,6 +5498,582 @@ void catenary_editor::render_catenary_messenger_from(std::size_t const Chain)
 	ImGui::PopItemWidth();
 }
 
+// the gantries page: placing a new gantry (the masts, the mount, the texture), the big button first
+void catenary_editor::render_catenary_gantry_placing()
+{
+	auto &tool{m_catenary};
+	auto const *catalog{catenary_scene_catalog()};
+	// a semi-gantry has its own page: here the masts of the gantries
+	auto const gantrymast = [&](std::string const &Name) {
+		auto const *mast{catalog->mast(Name)};
+		return mast == nullptr || mast->semi <= 0.0;
+	};
+	for (auto *chosen : {&tool.mast_first, &tool.mast_second})
+		if (*chosen < 0 || *chosen >= static_cast<int>(tool.masts.size()) || false == gantrymast(tool.masts[*chosen]))
+			for (int i = 0; i < static_cast<int>(tool.masts.size()); ++i)
+				if (gantrymast(tool.masts[i]))
+				{
+					*chosen = i;
+					break;
+				}
+	if (ImGui::Button(tool.gantry_placing ? STR_C("Cancel the gantry") : STR_C("Place a gantry"), ImVec2(-1.0f, 40.0f)))
+	{
+		tool.gantry_placing = false == tool.gantry_placing;
+		tool.gantry_single = false;
+		tool.gantry_first.reset();
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("LMB the first mast, LMB the second: the beam is the one of the catalogue nearest to that distance"));
+	if (false == ImGui::CollapsingHeader(STR_C("Placing"), tool.gantry_selected < 0 ? ImGuiTreeNodeFlags_DefaultOpen : 0))
+		return;
+	ImGui::PushItemWidth(160.0f);
+	auto const combo = [&](char const *Label, int &Chosen) {
+		if (ImGui::BeginCombo(Label, tool.masts[std::clamp(Chosen, 0, static_cast<int>(tool.masts.size()) - 1)].c_str()))
+		{
+			grouped_items(
+			    tool.masts, Chosen,
+			    [&](std::string const &Name) {
+				    auto const *mast{catalog->mast(Name)};
+				    return mast == nullptr ? std::string{} : mast->through ? STR(" (through)") : STR(" (end)");
+			    },
+			    gantrymast);
+			ImGui::EndCombo();
+		}
+	};
+	{
+		// the second mast follows the first until the user picks it himself
+		auto const before{tool.mast_first};
+		combo(STR_C("First mast"), tool.mast_first);
+		if (tool.mast_first != before && false == tool.mast_second_own)
+			tool.mast_second = tool.mast_first;
+	}
+	ImGui::SameLine();
+	{
+		auto const before{tool.mast_second};
+		combo(STR_C("Second mast"), tool.mast_second);
+		if (tool.mast_second != before)
+			tool.mast_second_own = true;
+	}
+	ImGui::PopItemWidth();
+	// the lower / upper mount only where the masts have two heights (a semi-gantry 1901 has one)
+	auto const twoheights = [&](int const Chosen) {
+		auto const *mast{catalog->mast(tool.masts[std::clamp(Chosen, 0, static_cast<int>(tool.masts.size()) - 1)])};
+		return mast != nullptr && std::abs(mast->mount_high - mast->mount_low) > 0.001;
+	};
+	if (twoheights(tool.mast_first) || (false == tool.gantry_single && twoheights(tool.mast_second)))
+	{
+		ImGui::TextUnformatted(STR_C("Beam:"));
+		ImGui::SameLine();
+		if (ImGui::RadioButton(STR_C("lower mount"), false == tool.gantry_high))
+			tool.gantry_high = false;
+		ImGui::SameLine();
+		if (ImGui::RadioButton(STR_C("upper mount"), tool.gantry_high))
+			tool.gantry_high = true;
+	}
+	ImGui::Checkbox(STR_C("Square to the track"), &tool.gantry_square);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("The beam goes square to the track the first mast is put by"));
+	ImGui::Checkbox(STR_C("First mast from the track"), &tool.gantry_snap);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("The first mast goes with its face at this distance from the axis of the track under the cursor, on the side of the cursor; the second one as far as the beam spans"));
+	if (tool.gantry_snap)
+	{
+		ImGui::SameLine();
+		ImGui::PushItemWidth(120.0f);
+		// a gantry selected: the distance of its first mast, changed here it moves the whole gantry square to that track
+		auto const *selected{tool.gantry_selected >= 0 && false == tool.gantry_placing ? catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected)) : nullptr};
+		double face{0.0};
+		glm::dvec2 away{0.0};
+		auto const measured{selected != nullptr && catenary_mast_face(selected->masts[0], glm::dvec3{selected->points[0][0], selected->points[0][1], selected->points[0][2]}, face, away)};
+		if (measured)
+			tool.gantry_face = static_cast<float>(face);
+		if (ImGui::DragFloat(STR_C("Face from the track axis (m)##placing"), &tool.gantry_face, 0.01f, 0.5f, 20.0f, "%.2f") && measured && std::abs(tool.gantry_face - face) > 1e-4)
+		{
+			catenary_gantry_shift(away * (static_cast<double>(tool.gantry_face) - face));
+			tool.status = format(STR_C("Gantry %s: mast %d %.2f m from the track axis"), selected->name.c_str(), 1, tool.gantry_face);
+		}
+		if (ImGui::IsItemActivated())
+			tool.shift_group = 0;
+		ImGui::PopItemWidth();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("From the axis of the track to the face of the first mast. Placing: the first mast goes there. A gantry selected: drag or Ctrl+click and type, the gantry moves square to the track; dragged with the mouse it goes only along the track, at this distance"));
+	}
+	ImGui::SameLine();
+	if (tool.gantry_skin[0] == '\0')
+		std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", kGantrySkins[0]);
+	ImGui::PushItemWidth(200.0f);
+	if (ImGui::BeginCombo(STR_C("Texture"), tool.gantry_skin))
+	{
+		for (auto const *skin : kGantrySkins)
+			if (ImGui::Selectable(skin, std::string{skin} == tool.gantry_skin))
+				std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", skin);
+		ImGui::EndCombo();
+	}
+	ImGui::PopItemWidth();
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("Replaceable texture of the masts, the beam and the drops of the new gantry (the models have none of their own)"));
+	if (false == tool.gantry_placing && tool.expert)
+	{
+		if (ImGui::Button(STR_C("Place a single beam element")))
+		{
+			tool.gantry_placing = true;
+			tool.gantry_single = true;
+			tool.gantry_first.reset();
+			tool.status = STR("LMB the through mast (the first mast above), LMB where the element points: the element of the catalogue nearest to that length");
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("A single beam element (3017-3025, 1910) on one through mast: on one side fixed to the mast, on the other end to a console"));
+	}
+}
+
+// the gantry selected (on the gantries page or the semi-gantries page): its beam, mount, heights, texture, the drops for the cantilevers
+void catenary_editor::render_catenary_gantry_selected(bool const Semi)
+{
+	auto &tool{m_catenary};
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *gantry{tool.gantry_selected >= 0 ? catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected)) : nullptr};
+	if (gantry == nullptr || catalog == nullptr)
+		return;
+	ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Gantry %s, beam %s: the cantilevers go on drops on it"), gantry->name.c_str(), gantry->beam.c_str()).c_str());
+	{
+		// the mount of the beam of this span, changed in place (the drops and the cantilevers on them follow)
+		auto high{gantry->high};
+		// only where a mast of it has two heights (not a semi-gantry 1901)
+		auto twoheights{false};
+		for (auto const &name : gantry->masts)
+			if (auto const *mast{name.empty() ? nullptr : catalog->mast(name)}; mast != nullptr && std::abs(mast->mount_high - mast->mount_low) > 0.001)
+				twoheights = true;
+		if (twoheights)
+		{
+			ImGui::TextUnformatted(STR_C("Beam of this gantry:"));
+			ImGui::SameLine();
+			if (ImGui::RadioButton((std::string{STR_C("lower mount")} + "##selected").c_str(), false == high))
+				high = false;
+			ImGui::SameLine();
+			if (ImGui::RadioButton((std::string{STR_C("upper mount")} + "##selected").c_str(), high))
+				high = true;
+		}
+		if (high != gantry->high)
+		{
+			auto const selected{static_cast<std::size_t>(tool.gantry_selected)};
+			// the drops on the beam: where along it they hang, to hang them again on it at its new level
+			std::vector<std::pair<std::size_t, catenary::suspension>> hangers;
+			catenary_gantry_hangers(selected, hangers);
+			glm::dvec3 from, to;
+			double bottom{0.0};
+			catenary_gantry_beam(selected, from, to, bottom);
+			std::vector<std::pair<std::size_t, double>> along;
+			for (auto const &[index, data] : hangers)
+			{
+				auto const *pole{catalog->pole(data.pole_type)};
+				if (pole == nullptr || pole->gantry)
+					continue; // the cantilevers on the masts follow the beam by themselves
+				auto const u{plan_of(to) - plan_of(from)};
+				along.emplace_back(index, std::clamp(glm::dot(plan_of(glm::dvec3{data.pole[0], 0.0, data.pole[2]}) - plan_of(from), u) / std::max(glm::dot(u, u), 1e-9), 0.0, 1.0));
+			}
+			auto changed{*gantry};
+			changed.high = high;
+			++tool.group;
+			catenary_change change;
+			change.group = tool.group;
+			change.gantry = true;
+			change.index = selected;
+			change.gantry_before = *gantry;
+			tool.undo.push_back(change);
+			catenary_gantry_update(selected, changed);
+			auto const *beam{catalog->beam(changed.beam)};
+			std::vector<std::pair<double, std::string>> drops;
+			for (auto const &pole : catalog->poles())
+				if (beam != nullptr && catenary::cantilever_catalog::drop_fits(*beam, pole.second.drop))
+					drops.emplace_back(pole.second.length, pole.first);
+			std::sort(drops.begin(), drops.end());
+			if (catenary_gantry_beam(selected, from, to, bottom) && false == drops.empty())
+				for (auto const &[index, t] : along)
+				{
+					auto const *before{catenary_scene_get(index)};
+					if (before == nullptr)
+						continue;
+					tool.undo.push_back({tool.group, false, index, *before, std::nullopt, false});
+					auto data{*before};
+					data.pole[1] = from.y + (to.y - from.y) * t;
+					// the shortest drop which still reaches down to the lowest mount of the cantilever
+					for (auto const &drop : drops)
+					{
+						data.pole_type = drop.second;
+						catenary::cantilever_result probe;
+						catenary_scene_probe(data, probe);
+						if (std::none_of(probe.warnings.begin(), probe.warnings.end(), [](std::string const &Warning) { return Warning.find("below the lowest mount") != std::string::npos; }))
+							break;
+					}
+					catenary_scene_update(index, data);
+					tool.spots.erase(index);
+				}
+			tool.status = format(high ? STR_C("Gantry %s: the beam on the upper mount") : STR_C("Gantry %s: the beam on the lower mount"), changed.name.c_str());
+		}
+	}
+	// another beam: the first mast stays, the second goes as far as the beam spans (a semi-gantry has its beam in the model)
+	if (false == Semi)
+	{
+	ImGui::PushItemWidth(120.0f);
+	if (ImGui::BeginCombo(STR_C("Beam"), gantry->beam.c_str()))
+	{
+		for (auto const &beam : catalog->beams())
+			if (beam.second.single == gantry->masts[1].empty() && ImGui::Selectable(format("%s  %.1f m", beam.first.c_str(), beam.second.span).c_str(), beam.first == gantry->beam))
+				catenary_gantry_reshape(beam.first, 0.0, false);
+		ImGui::EndCombo();
+	}
+	ImGui::PopItemWidth();
+	ImGui::SameLine();
+	auto const step = [&](int const Direction) {
+		// the beam one step (0.1 m) longer or shorter
+		auto const *current{catalog->beam(gantry->beam)};
+		if (current == nullptr)
+			return;
+		std::string next;
+		auto best{std::numeric_limits<double>::max()};
+		for (auto const &beam : catalog->beams())
+		{
+			if (beam.second.single != current->single)
+				continue;
+			auto const difference{(beam.second.span - current->span) * Direction};
+			if (difference > 0.01 && difference < best)
+			{
+				best = difference;
+				next = beam.first;
+			}
+		}
+		if (false == next.empty())
+			catenary_gantry_reshape(next, 0.0, false);
+	};
+	if (ImGui::SmallButton("-"))
+		step(-1);
+	ImGui::SameLine();
+	if (ImGui::SmallButton("+"))
+		step(1);
+	ImGui::SameLine();
+	if (ImGui::Button((STR("Square to the track") + "##squareselected").c_str()))
+		catenary_gantry_reshape({}, 0.0, true);
+	ImGui::SameLine();
+	if (ImGui::Button(STR_C("Take the masts")))
+		catenary_gantry_reshape({}, 0.0, false);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("The masts chosen above go to this gantry; the first mast stays, the second goes as far as the beam needs"));
+	// a gantry of many spans: the next span from a through mast at an end of this one, in line with it
+	for (int k = 0; k < 2; ++k)
+	{
+		auto const *type{catalog->mast(gantry->masts[k])};
+		auto const free{spans_at(gantry->points[k], static_cast<std::size_t>(tool.gantry_selected)) == 0};
+		if (k == 1)
+			ImGui::SameLine();
+		ImGui::BeginDisabled(type == nullptr || false == type->through || false == free);
+		if (ImGui::Button(format(STR_C("Next span from mast %d"), k + 1).c_str()))
+		{
+			tool.gantry_placing = true;
+			glm::dvec3 const from{gantry->points[k][0], gantry->points[k][1], gantry->points[k][2]};
+			glm::dvec3 const other{gantry->points[1 - k][0], gantry->points[1 - k][1], gantry->points[1 - k][2]};
+			tool.gantry_first = from;
+			// in line: "square to the track" with a track along which right_of() is the way out of this span
+			auto const out{glm::normalize(plan_of(from) - plan_of(other))};
+			tool.gantry_track = glm::dvec2{out.y, -out.x};
+			tool.gantry_square = true;
+			std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", gantry->skin.c_str());
+			if (auto const found{std::find(tool.masts.begin(), tool.masts.end(), gantry->masts[k])}; found != tool.masts.end())
+				tool.mast_first = static_cast<int>(found - tool.masts.begin());
+			tool.status = STR("LMB: the next mast of the gantry, as far as the nearest beam spans (the mast type: the second one above)");
+		}
+		ImGui::EndDisabled();
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			ImGui::SetTooltip("%s", type != nullptr && false == type->through ? STR_C("An end mast: a beam can go on one side of it only; a through mast is needed") : false == free ? STR_C("This mast has beams on both sides already") : STR_C("The beam of the next span on the other side of this through mast, in line with this span"));
+		if (false == tool.expert)
+			continue;
+		ImGui::SameLine();
+		ImGui::BeginDisabled(type == nullptr || false == type->through || false == free || gantry->masts[k].empty());
+		if (ImGui::Button(format(STR_C("Single element from mast %d"), k + 1).c_str()))
+		{
+			tool.gantry_placing = true;
+			tool.gantry_single = true;
+			glm::dvec3 const from{gantry->points[k][0], gantry->points[k][1], gantry->points[k][2]};
+			glm::dvec3 const other{gantry->points[1 - k][0], gantry->points[1 - k][1], gantry->points[1 - k][2]};
+			tool.gantry_first = from;
+			auto const out{glm::normalize(plan_of(from) - plan_of(other))};
+			tool.gantry_track = glm::dvec2{out.y, -out.x};
+			tool.gantry_square = true;
+			std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", gantry->skin.c_str());
+			if (auto const found{std::find(tool.masts.begin(), tool.masts.end(), gantry->masts[k])}; found != tool.masts.end())
+				tool.mast_first = static_cast<int>(found - tool.masts.begin());
+			tool.status = STR("LMB: as far as the single element should reach, in line with this span");
+		}
+		ImGui::EndDisabled();
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			ImGui::SetTooltip("%s", STR_C("A single beam element (3017-3025, 1910) on the other side of this through mast, in line with this span"));
+	}
+	} // false == Semi
+	if (tool.expert)
+	{
+		float turn{0.0f};
+		ImGui::PushItemWidth(120.0f);
+		if (ImGui::DragFloat(STR_C("Turn (degrees)"), &turn, 0.1f, -10.0f, 10.0f, "%.1f") && turn != 0.0f)
+			catenary_gantry_reshape({}, turn, false);
+		ImGui::PopItemWidth();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("Drag sideways: turns the gantry around its first mast"));
+	}
+	gantry = catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected));
+	if (gantry == nullptr)
+		return;
+	// the heights of the masts: their zero is at the rail heads; the foundation head (variants -1...-4) takes the ground.
+	// both together, and each by itself no more than 0.20 m from the other
+	auto const heighten = [&](catenary::gantry const &Changed) {
+		auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
+		auto const lastgroup{last.group};
+		auto const ongoing{false == tool.undo.empty() && std::any_of(tool.undo.rbegin(), tool.undo.rend(), [&](catenary_change const &Change) {
+			return Change.group == lastgroup && Change.gantry && Change.index == static_cast<std::size_t>(tool.gantry_selected) && Change.gantry_before.has_value(); })};
+		if (tool.undo.empty() || false == last.gantry || false == ongoing)
+		{
+			catenary_change change;
+			change.group = ++tool.group;
+			change.gantry = true;
+			change.index = static_cast<std::size_t>(tool.gantry_selected);
+			change.gantry_before = *gantry;
+			tool.undo.push_back(change);
+		}
+		auto const group{tool.undo.back().group};
+		catenary_gantry_update(static_cast<std::size_t>(tool.gantry_selected), Changed);
+		// a mast shared with the next span (a gantry of many spans) has one height: the other span takes it too
+		for (auto const other : gantry_group(static_cast<std::size_t>(tool.gantry_selected)))
+		{
+			auto const *span{catenary_gantry_get(other)};
+			if (span == nullptr || other == static_cast<std::size_t>(tool.gantry_selected))
+				continue;
+			auto follower{*span};
+			auto moved{false};
+			for (int k = 0; k < 2; ++k)
+				for (int m = 0; m < 2; ++m)
+					if (false == follower.masts[k].empty() && false == Changed.masts[m].empty() && same_mast(follower.points[k], Changed.points[m]) && std::abs(follower.points[k][1] - Changed.points[m][1]) > 1e-6)
+					{
+						follower.points[k][1] = Changed.points[m][1];
+						moved = true;
+					}
+			if (false == moved)
+				continue;
+			if (std::none_of(tool.undo.rbegin(), tool.undo.rend(), [&](catenary_change const &Change) { return Change.group == group && Change.gantry && Change.index == other; }))
+			{
+				catenary_change change;
+				change.group = group;
+				change.gantry = true;
+				change.index = other;
+				change.gantry_before = *span;
+				tool.undo.push_back(change);
+			}
+			catenary_gantry_update(other, follower);
+		}
+	};
+	{
+		auto both{static_cast<float>(gantry->points[0][1])};
+		ImGui::PushItemWidth(120.0f);
+		if (ImGui::DragFloat(STR_C("Gantry at the height (m)"), &both, 0.01f, -1000.0f, 5000.0f, "%.2f"))
+		{
+			auto changed{*gantry};
+			auto const shift{static_cast<double>(both) - gantry->points[0][1]};
+			changed.points[0][1] += shift;
+			changed.points[1][1] += shift;
+			heighten(changed);
+		}
+		ImGui::PopItemWidth();
+		gantry = catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected));
+		if (gantry == nullptr)
+			return;
+	}
+	for (int mast = 0; mast < 2; ++mast)
+	{
+		if (gantry->masts[mast].empty())
+			continue; // a single element has no second mast
+		auto height{static_cast<float>(gantry->points[mast][1])};
+		ImGui::PushItemWidth(120.0f);
+		ImGui::PushID(mast);
+		auto const label{format(STR_C("Mast %d at the height (m)"), mast + 1)};
+		if (ImGui::DragFloat(label.c_str(), &height, 0.01f, -1000.0f, 5000.0f, "%.2f"))
+		{
+			auto changed{*gantry};
+			auto const other{gantry->points[1 - mast][1]};
+			changed.points[mast][1] = std::clamp(static_cast<double>(height), other - 0.20, other + 0.20);
+			heighten(changed);
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("The zero of the mast is at the rail heads (the clearance of the beam is counted from it); the ground is taken by the foundation head of the variant -1...-4. Drag or Ctrl+click to type"));
+		ImGui::PopID();
+		ImGui::PopItemWidth();
+		if (mast == 0)
+			ImGui::SameLine();
+	}
+	gantry = catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected));
+	if (gantry == nullptr)
+		return;
+	if (ImGui::Button(STR_C("Give it the texture")))
+	{
+		// the gantry and the drops hanging from its beam
+		auto changed{*gantry};
+		changed.skin = tool.gantry_skin;
+		catenary_change change;
+		change.group = ++tool.group;
+		change.gantry = true;
+		change.index = static_cast<std::size_t>(tool.gantry_selected);
+		change.gantry_before = *gantry;
+		tool.undo.push_back(change);
+		glm::dvec3 from, to;
+		double bottom{0.0};
+		catenary_gantry_beam(static_cast<std::size_t>(tool.gantry_selected), from, to, bottom);
+		for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+		{
+			auto const *data{catenary_scene_get(index)};
+			if (data == nullptr || false == data->has_pole)
+				continue;
+			auto const *pole{catalog->pole(data->pole_type)};
+			auto const point{glm::dvec3{data->pole[0], data->pole[1], data->pole[2]}};
+			auto const u{to - from};
+			auto const t{std::clamp(glm::dot(point - from, u) / std::max(glm::dot(u, u), 1e-9), 0.0, 1.0)};
+			if (pole == nullptr || pole->drop.empty() || glm::distance(point, from + u * t) > 0.3)
+				continue;
+			tool.undo.push_back({tool.group, false, index, *data, std::nullopt, false});
+			auto skinned{*data};
+			skinned.skin = tool.gantry_skin;
+			catenary_scene_update(index, skinned);
+		}
+		catenary_gantry_update(static_cast<std::size_t>(tool.gantry_selected), changed);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button(STR_C("Remove the gantry")))
+	{
+		catenary_change change;
+		change.group = ++tool.group;
+		change.gantry = true;
+		change.index = static_cast<std::size_t>(tool.gantry_selected);
+		change.gantry_before = *gantry;
+		tool.undo.push_back(change);
+		catenary_gantry_remove(static_cast<std::size_t>(tool.gantry_selected));
+		tool.gantry_selected = -1;
+	}
+	ImGui::SameLine();
+	if (ImGui::Button(STR_C("Back to the poles")))
+		tool.gantry_selected = -1;
+	// the next cantilevers: on drops of the beam, or straight on the masts
+	ImGui::RadioButton(STR_C("On drops"), &tool.gantry_hang, 0);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("LMB over a track hangs the cantilever on a drop moved along the beam to the track"));
+	ImGui::SameLine();
+	ImGui::RadioButton(STR_C("On the masts"), &tool.gantry_hang, 1);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("LMB by a track puts the cantilever straight on the mast of the gantry on that side; the card from the distance of the mast"));
+	// which drop the next cantilevers hang on
+	if (auto const *beam{tool.gantry_hang == 0 ? catalog->beam(gantry->beam) : nullptr}; beam != nullptr)
+	{
+		ImGui::PushItemWidth(160.0f);
+		auto const automatic{STR("the shortest which fits")};
+		if (ImGui::BeginCombo(STR_C("Drop"), tool.drop_choice.empty() ? automatic.c_str() : tool.drop_choice.c_str()))
+		{
+			if (ImGui::Selectable(automatic.c_str(), tool.drop_choice.empty()))
+				tool.drop_choice.clear();
+			for (auto const &pole : catalog->poles())
+				if (catenary::cantilever_catalog::drop_fits(*beam, pole.second.drop) && ImGui::Selectable(format("%s  %.1f m", pole.first.c_str(), pole.second.length).c_str(), pole.first == tool.drop_choice))
+					tool.drop_choice = pole.first;
+			ImGui::EndCombo();
+		}
+		ImGui::PopItemWidth();
+	}
+}
+
+// the semi-gantries page: placing a semi-gantry (1901 and the like: the mast with its beam in one model, a T gantry both ways).
+// LMB the mast, LMB where the beam points; one height of the beam, no second mast
+void catenary_editor::render_catenary_semi_placing()
+{
+	auto &tool{m_catenary};
+	auto const *catalog{catenary_scene_catalog()};
+	auto const semimast = [&](std::string const &Name) {
+		auto const *mast{catalog->mast(Name)};
+		return mast != nullptr && mast->semi > 0.0;
+	};
+	if (tool.semi_mast < 0 || tool.semi_mast >= static_cast<int>(tool.masts.size()) || false == semimast(tool.masts[tool.semi_mast]))
+	{
+		tool.semi_mast = -1;
+		for (int i = 0; i < static_cast<int>(tool.masts.size()) && tool.semi_mast < 0; ++i)
+			if (semimast(tool.masts[i]))
+				tool.semi_mast = i;
+	}
+	if (tool.semi_mast < 0)
+	{
+		ImGui::TextWrapped("%s", STR_C("No semi-gantries in the catalogue (traction_supports.txt: a mast with \"semi\")"));
+		return;
+	}
+	if (ImGui::Button(tool.gantry_placing ? STR_C("Cancel the semi-gantry") : STR_C("Place a semi-gantry"), ImVec2(-1.0f, 40.0f)))
+	{
+		tool.gantry_placing = false == tool.gantry_placing;
+		tool.gantry_single = false;
+		tool.gantry_first.reset();
+		// the placing goes by the first mast of the gantries
+		tool.mast_first = tool.semi_mast;
+		tool.mast_second = tool.semi_mast;
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("LMB the mast, LMB where the beam points (a T gantry: both ways)"));
+	if (false == ImGui::CollapsingHeader(STR_C("Placing"), tool.gantry_selected < 0 ? ImGuiTreeNodeFlags_DefaultOpen : 0))
+		return;
+	ImGui::PushItemWidth(220.0f);
+	if (ImGui::BeginCombo(STR_C("Semi-gantry"), tool.masts[tool.semi_mast].c_str()))
+	{
+		if (grouped_items(
+		        tool.masts, tool.semi_mast,
+		        [&](std::string const &Name) {
+			        auto const *mast{catalog->mast(Name)};
+			        return mast == nullptr ? std::string{} : format(mast->sides > 1 ? STR_C(" (T, %.1f m both ways)") : STR_C(" (%.1f m)"), mast->semi);
+		        },
+		        semimast))
+		{
+			tool.mast_first = tool.semi_mast;
+			tool.mast_second = tool.semi_mast;
+		}
+		ImGui::EndCombo();
+	}
+	ImGui::PopItemWidth();
+	ImGui::Checkbox(STR_C("Square to the track"), &tool.gantry_square);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("The beam goes square to the track the mast is put by"));
+	ImGui::Checkbox(STR_C("Mast from the track"), &tool.gantry_snap);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("The mast goes with its face at this distance from the axis of the track under the cursor, on the side of the cursor"));
+	if (tool.gantry_snap)
+	{
+		ImGui::SameLine();
+		ImGui::PushItemWidth(120.0f);
+		ImGui::DragFloat(STR_C("Face from the track axis (m)##semi"), &tool.gantry_face, 0.01f, 0.5f, 20.0f, "%.2f");
+		ImGui::PopItemWidth();
+	}
+	if (tool.gantry_skin[0] == '\0')
+		std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", kGantrySkins[0]);
+	ImGui::PushItemWidth(200.0f);
+	if (ImGui::BeginCombo(STR_C("Texture"), tool.gantry_skin))
+	{
+		for (auto const *skin : kGantrySkins)
+			if (ImGui::Selectable(skin, std::string{skin} == tool.gantry_skin))
+				std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", skin);
+		ImGui::EndCombo();
+	}
+	ImGui::PopItemWidth();
+}
+
+// the anchors page: the end anchors (the anchor at each end of the chain) and the middle anchor of the chain selected
+void catenary_editor::render_catenary_anchors_page()
+{
+	auto &tool{m_catenary};
+	auto const *chain{tool.chain_selected >= 0 ? catenary_chain_get(static_cast<std::size_t>(tool.chain_selected)) : nullptr};
+	if (chain == nullptr)
+	{
+		ImGui::TextDisabled("%s", STR_C("LMB on a span selects its chain, LMB on a tensioning device its anchor"));
+		return;
+	}
+	ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Chain %s"), chain->name.c_str()).c_str());
+	render_catenary_anchor_ui(static_cast<std::size_t>(tool.chain_selected));
+}
+
 void catenary_editor::render_catenary_ui()
 {
 	auto &tool{m_catenary};
@@ -5502,475 +6101,40 @@ void catenary_editor::render_catenary_ui()
 	if (tool.page == 0)
 	{
 		// placing new poles or only changing the ones standing (Ins switches)
-		if (ImGui::RadioButton(STR_C("Placing poles"), tool.pole_insert))
+		// two big buttons, the active one lit
+		auto const half{(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f};
+		auto const mode = [&](char const *Label, bool const Active) {
+			if (Active)
+				ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+			auto const pressed{ImGui::Button(Label, ImVec2(half, 32.0f))};
+			if (Active)
+				ImGui::PopStyleColor();
+			return pressed;
+		};
+		if (mode(STR_C("Placing poles"), tool.pole_insert))
 			tool.pole_insert = true;
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("LMB by a track places a new pole, LMB on a pole selects it (Ins switches)"));
 		ImGui::SameLine();
-		if (ImGui::RadioButton(STR_C("Editing only"), false == tool.pole_insert))
+		if (mode(STR_C("Editing only"), false == tool.pole_insert))
 			tool.pole_insert = false;
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("LMB only selects the poles standing, a drag moves them; no new pole by a track (Ins switches)"));
 	}
 	// the page chosen in the toolbar: poles, gantries, wires
-	if (tool.page == 1)
+	if (tool.page == 1 || tool.page == 4)
 	{
-		// gantries
+		// gantries and semi-gantries: placing a new one, then the selected one
+		auto const semi{tool.page == 4};
 		ImGui::Separator();
 		if (false == tool.masts.empty())
 		{
-			ImGui::PushItemWidth(160.0f);
-			auto const combo = [&](char const *Label, int &Chosen) {
-				if (ImGui::BeginCombo(Label, tool.masts[std::clamp(Chosen, 0, static_cast<int>(tool.masts.size()) - 1)].c_str()))
-				{
-					grouped_items(tool.masts, Chosen, [&](std::string const &Name) {
-						auto const *mast{catalog->mast(Name)};
-						return mast == nullptr ? std::string{} : mast->semi > 0.0 ? (mast->sides > 1 ? STR(" (T gantry)") : STR(" (semi-gantry)")) : mast->through ? STR(" (through)") : STR(" (end)");
-					});
-					ImGui::EndCombo();
-				}
-			};
-			{
-				// the second mast follows the first until the user picks it himself
-				auto const before{tool.mast_first};
-				combo(STR_C("First mast"), tool.mast_first);
-				if (tool.mast_first != before && false == tool.mast_second_own)
-					tool.mast_second = tool.mast_first;
-			}
-			ImGui::SameLine();
-			{
-				auto const before{tool.mast_second};
-				combo(STR_C("Second mast"), tool.mast_second);
-				if (tool.mast_second != before)
-					tool.mast_second_own = true;
-			}
-			ImGui::PopItemWidth();
-			// the lower / upper mount only where the masts have two heights (a semi-gantry 1901 has one)
-			auto const twoheights = [&](int const Chosen) {
-				auto const *mast{catalog->mast(tool.masts[std::clamp(Chosen, 0, static_cast<int>(tool.masts.size()) - 1)])};
-				return mast != nullptr && std::abs(mast->mount_high - mast->mount_low) > 0.001;
-			};
-			auto const *firstmast{catalog->mast(tool.masts[std::clamp(tool.mast_first, 0, static_cast<int>(tool.masts.size()) - 1)])};
-			auto const semi{firstmast != nullptr && firstmast->semi > 0.0};
-			if (twoheights(tool.mast_first) || (false == semi && false == tool.gantry_single && twoheights(tool.mast_second)))
-			{
-				ImGui::TextUnformatted(STR_C("Beam:"));
-				ImGui::SameLine();
-				if (ImGui::RadioButton(STR_C("lower mount"), false == tool.gantry_high))
-					tool.gantry_high = false;
-				ImGui::SameLine();
-				if (ImGui::RadioButton(STR_C("upper mount"), tool.gantry_high))
-					tool.gantry_high = true;
-			}
-			ImGui::Checkbox(STR_C("Square to the track"), &tool.gantry_square);
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("The beam goes square to the track the first mast is put by"));
-			ImGui::Checkbox(STR_C("First mast from the track"), &tool.gantry_snap);
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("The first mast goes with its face at this distance from the axis of the track under the cursor, on the side of the cursor; the second one as far as the beam spans"));
-			if (tool.gantry_snap)
-			{
-				ImGui::SameLine();
-				ImGui::PushItemWidth(120.0f);
-				// a gantry selected: the distance of its first mast, changed here it moves the whole gantry square to that track
-				auto const *selected{tool.gantry_selected >= 0 && false == tool.gantry_placing ? catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected)) : nullptr};
-				double face{0.0};
-				glm::dvec2 away{0.0};
-				auto const measured{selected != nullptr && catenary_mast_face(selected->masts[0], glm::dvec3{selected->points[0][0], selected->points[0][1], selected->points[0][2]}, face, away)};
-				if (measured)
-					tool.gantry_face = static_cast<float>(face);
-				if (ImGui::DragFloat(STR_C("Face from the track axis (m)##placing"), &tool.gantry_face, 0.01f, 0.5f, 20.0f, "%.2f") && measured && std::abs(tool.gantry_face - face) > 1e-4)
-				{
-					catenary_gantry_shift(away * (static_cast<double>(tool.gantry_face) - face));
-					tool.status = format(STR_C("Gantry %s: mast %d %.2f m from the track axis"), selected->name.c_str(), 1, tool.gantry_face);
-				}
-				if (ImGui::IsItemActivated())
-					tool.shift_group = 0;
-				ImGui::PopItemWidth();
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("From the axis of the track to the face of the first mast. Placing: the first mast goes there. A gantry selected: drag or Ctrl+click and type, the gantry moves square to the track; dragged with the mouse it goes only along the track, at this distance"));
-			}
-			ImGui::SameLine();
-			if (tool.gantry_skin[0] == '\0')
-				std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", kGantrySkins[0]);
-			ImGui::PushItemWidth(200.0f);
-			if (ImGui::BeginCombo(STR_C("Texture"), tool.gantry_skin))
-			{
-				for (auto const *skin : kGantrySkins)
-					if (ImGui::Selectable(skin, std::string{skin} == tool.gantry_skin))
-						std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", skin);
-				ImGui::EndCombo();
-			}
-			ImGui::PopItemWidth();
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("Replaceable texture of the masts, the beam and the drops of the new gantry (the models have none of their own)"));
-			if (ImGui::Button(tool.gantry_placing ? STR_C("Cancel the gantry") : STR_C("Place a gantry")))
-			{
-				tool.gantry_placing = false == tool.gantry_placing;
-				tool.gantry_single = false;
-				tool.gantry_first.reset();
-			}
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("LMB the first mast, LMB the second: the beam is the one of the catalogue nearest to that distance"));
-			if (false == tool.gantry_placing && tool.expert)
-			{
-				ImGui::SameLine();
-				if (ImGui::Button(STR_C("Place a single beam element")))
-				{
-					tool.gantry_placing = true;
-					tool.gantry_single = true;
-					tool.gantry_first.reset();
-					tool.status = STR("LMB the through mast (the first mast above), LMB where the element points: the element of the catalogue nearest to that length");
-				}
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("A single beam element (3017-3025, 1910) on one through mast: on one side fixed to the mast, on the other end to a console"));
-			}
-			if (auto const *gantry{tool.gantry_selected >= 0 ? catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected)) : nullptr}; gantry != nullptr)
-			{
-				ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Gantry %s, beam %s: the cantilevers go on drops on it"), gantry->name.c_str(), gantry->beam.c_str()).c_str());
-				{
-					// the mount of the beam of this span, changed in place (the drops and the cantilevers on them follow)
-					auto high{gantry->high};
-					// only where a mast of it has two heights (not a semi-gantry 1901)
-					auto twoheights{false};
-					for (auto const &name : gantry->masts)
-						if (auto const *mast{name.empty() ? nullptr : catalog->mast(name)}; mast != nullptr && std::abs(mast->mount_high - mast->mount_low) > 0.001)
-							twoheights = true;
-					if (twoheights)
-					{
-						ImGui::TextUnformatted(STR_C("Beam of this gantry:"));
-						ImGui::SameLine();
-						if (ImGui::RadioButton((std::string{STR_C("lower mount")} + "##selected").c_str(), false == high))
-							high = false;
-						ImGui::SameLine();
-						if (ImGui::RadioButton((std::string{STR_C("upper mount")} + "##selected").c_str(), high))
-							high = true;
-					}
-					if (high != gantry->high)
-					{
-						auto const selected{static_cast<std::size_t>(tool.gantry_selected)};
-						// the drops on the beam: where along it they hang, to hang them again on it at its new level
-						std::vector<std::pair<std::size_t, catenary::suspension>> hangers;
-						catenary_gantry_hangers(selected, hangers);
-						glm::dvec3 from, to;
-						double bottom{0.0};
-						catenary_gantry_beam(selected, from, to, bottom);
-						std::vector<std::pair<std::size_t, double>> along;
-						for (auto const &[index, data] : hangers)
-						{
-							auto const *pole{catalog->pole(data.pole_type)};
-							if (pole == nullptr || pole->gantry)
-								continue; // the cantilevers on the masts follow the beam by themselves
-							auto const u{plan_of(to) - plan_of(from)};
-							along.emplace_back(index, std::clamp(glm::dot(plan_of(glm::dvec3{data.pole[0], 0.0, data.pole[2]}) - plan_of(from), u) / std::max(glm::dot(u, u), 1e-9), 0.0, 1.0));
-						}
-						auto changed{*gantry};
-						changed.high = high;
-						++tool.group;
-						catenary_change change;
-						change.group = tool.group;
-						change.gantry = true;
-						change.index = selected;
-						change.gantry_before = *gantry;
-						tool.undo.push_back(change);
-						catenary_gantry_update(selected, changed);
-						auto const *beam{catalog->beam(changed.beam)};
-						std::vector<std::pair<double, std::string>> drops;
-						for (auto const &pole : catalog->poles())
-							if (beam != nullptr && catenary::cantilever_catalog::drop_fits(*beam, pole.second.drop))
-								drops.emplace_back(pole.second.length, pole.first);
-						std::sort(drops.begin(), drops.end());
-						if (catenary_gantry_beam(selected, from, to, bottom) && false == drops.empty())
-							for (auto const &[index, t] : along)
-							{
-								auto const *before{catenary_scene_get(index)};
-								if (before == nullptr)
-									continue;
-								tool.undo.push_back({tool.group, false, index, *before, std::nullopt, false});
-								auto data{*before};
-								data.pole[1] = from.y + (to.y - from.y) * t;
-								// the shortest drop which still reaches down to the lowest mount of the cantilever
-								for (auto const &drop : drops)
-								{
-									data.pole_type = drop.second;
-									catenary::cantilever_result probe;
-									catenary_scene_probe(data, probe);
-									if (std::none_of(probe.warnings.begin(), probe.warnings.end(), [](std::string const &Warning) { return Warning.find("below the lowest mount") != std::string::npos; }))
-										break;
-								}
-								catenary_scene_update(index, data);
-								tool.spots.erase(index);
-							}
-						tool.status = format(high ? STR_C("Gantry %s: the beam on the upper mount") : STR_C("Gantry %s: the beam on the lower mount"), changed.name.c_str());
-					}
-				}
-				// another beam: the first mast stays, the second goes as far as the beam spans
-				ImGui::PushItemWidth(120.0f);
-				if (ImGui::BeginCombo(STR_C("Beam"), gantry->beam.c_str()))
-				{
-					for (auto const &beam : catalog->beams())
-						if (beam.second.single == gantry->masts[1].empty() && ImGui::Selectable(format("%s  %.1f m", beam.first.c_str(), beam.second.span).c_str(), beam.first == gantry->beam))
-							catenary_gantry_reshape(beam.first, 0.0, false);
-					ImGui::EndCombo();
-				}
-				ImGui::PopItemWidth();
-				ImGui::SameLine();
-				auto const step = [&](int const Direction) {
-					// the beam one step (0.1 m) longer or shorter
-					auto const *current{catalog->beam(gantry->beam)};
-					if (current == nullptr)
-						return;
-					std::string next;
-					auto best{std::numeric_limits<double>::max()};
-					for (auto const &beam : catalog->beams())
-					{
-						if (beam.second.single != current->single)
-							continue;
-						auto const difference{(beam.second.span - current->span) * Direction};
-						if (difference > 0.01 && difference < best)
-						{
-							best = difference;
-							next = beam.first;
-						}
-					}
-					if (false == next.empty())
-						catenary_gantry_reshape(next, 0.0, false);
-				};
-				if (ImGui::SmallButton("-"))
-					step(-1);
-				ImGui::SameLine();
-				if (ImGui::SmallButton("+"))
-					step(1);
-				ImGui::SameLine();
-				if (ImGui::Button((STR("Square to the track") + "##squareselected").c_str()))
-					catenary_gantry_reshape({}, 0.0, true);
-				ImGui::SameLine();
-				if (ImGui::Button(STR_C("Take the masts")))
-					catenary_gantry_reshape({}, 0.0, false);
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("The masts chosen above go to this gantry; the first mast stays, the second goes as far as the beam needs"));
-				// a gantry of many spans: the next span from a through mast at an end of this one, in line with it
-				for (int k = 0; k < 2; ++k)
-				{
-					auto const *type{catalog->mast(gantry->masts[k])};
-					auto const free{spans_at(gantry->points[k], static_cast<std::size_t>(tool.gantry_selected)) == 0};
-					if (k == 1)
-						ImGui::SameLine();
-					ImGui::BeginDisabled(type == nullptr || false == type->through || false == free);
-					if (ImGui::Button(format(STR_C("Next span from mast %d"), k + 1).c_str()))
-					{
-						tool.gantry_placing = true;
-						glm::dvec3 const from{gantry->points[k][0], gantry->points[k][1], gantry->points[k][2]};
-						glm::dvec3 const other{gantry->points[1 - k][0], gantry->points[1 - k][1], gantry->points[1 - k][2]};
-						tool.gantry_first = from;
-						// in line: "square to the track" with a track along which right_of() is the way out of this span
-						auto const out{glm::normalize(plan_of(from) - plan_of(other))};
-						tool.gantry_track = glm::dvec2{out.y, -out.x};
-						tool.gantry_square = true;
-						std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", gantry->skin.c_str());
-						if (auto const found{std::find(tool.masts.begin(), tool.masts.end(), gantry->masts[k])}; found != tool.masts.end())
-							tool.mast_first = static_cast<int>(found - tool.masts.begin());
-						tool.status = STR("LMB: the next mast of the gantry, as far as the nearest beam spans (the mast type: the second one above)");
-					}
-					ImGui::EndDisabled();
-					if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-						ImGui::SetTooltip("%s", type != nullptr && false == type->through ? STR_C("An end mast: a beam can go on one side of it only; a through mast is needed") : false == free ? STR_C("This mast has beams on both sides already") : STR_C("The beam of the next span on the other side of this through mast, in line with this span"));
-					if (false == tool.expert)
-						continue;
-					ImGui::SameLine();
-					ImGui::BeginDisabled(type == nullptr || false == type->through || false == free || gantry->masts[k].empty());
-					if (ImGui::Button(format(STR_C("Single element from mast %d"), k + 1).c_str()))
-					{
-						tool.gantry_placing = true;
-						tool.gantry_single = true;
-						glm::dvec3 const from{gantry->points[k][0], gantry->points[k][1], gantry->points[k][2]};
-						glm::dvec3 const other{gantry->points[1 - k][0], gantry->points[1 - k][1], gantry->points[1 - k][2]};
-						tool.gantry_first = from;
-						auto const out{glm::normalize(plan_of(from) - plan_of(other))};
-						tool.gantry_track = glm::dvec2{out.y, -out.x};
-						tool.gantry_square = true;
-						std::snprintf(tool.gantry_skin, sizeof(tool.gantry_skin), "%s", gantry->skin.c_str());
-						if (auto const found{std::find(tool.masts.begin(), tool.masts.end(), gantry->masts[k])}; found != tool.masts.end())
-							tool.mast_first = static_cast<int>(found - tool.masts.begin());
-						tool.status = STR("LMB: as far as the single element should reach, in line with this span");
-					}
-					ImGui::EndDisabled();
-					if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-						ImGui::SetTooltip("%s", STR_C("A single beam element (3017-3025, 1910) on the other side of this through mast, in line with this span"));
-				}
-				if (tool.expert)
-				{
-					float turn{0.0f};
-					ImGui::PushItemWidth(120.0f);
-					if (ImGui::DragFloat(STR_C("Turn (degrees)"), &turn, 0.1f, -10.0f, 10.0f, "%.1f") && turn != 0.0f)
-						catenary_gantry_reshape({}, turn, false);
-					ImGui::PopItemWidth();
-					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("Drag sideways: turns the gantry around its first mast"));
-				}
-				gantry = catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected));
-				if (gantry == nullptr)
-					return;
-				// the heights of the masts: their zero is at the rail heads; the foundation head (variants -1...-4) takes the ground.
-				// both together, and each by itself no more than 0.20 m from the other
-				auto const heighten = [&](catenary::gantry const &Changed) {
-					auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
-					auto const lastgroup{last.group};
-					auto const ongoing{false == tool.undo.empty() && std::any_of(tool.undo.rbegin(), tool.undo.rend(), [&](catenary_change const &Change) {
-						return Change.group == lastgroup && Change.gantry && Change.index == static_cast<std::size_t>(tool.gantry_selected) && Change.gantry_before.has_value(); })};
-					if (tool.undo.empty() || false == last.gantry || false == ongoing)
-					{
-						catenary_change change;
-						change.group = ++tool.group;
-						change.gantry = true;
-						change.index = static_cast<std::size_t>(tool.gantry_selected);
-						change.gantry_before = *gantry;
-						tool.undo.push_back(change);
-					}
-					auto const group{tool.undo.back().group};
-					catenary_gantry_update(static_cast<std::size_t>(tool.gantry_selected), Changed);
-					// a mast shared with the next span (a gantry of many spans) has one height: the other span takes it too
-					for (auto const other : gantry_group(static_cast<std::size_t>(tool.gantry_selected)))
-					{
-						auto const *span{catenary_gantry_get(other)};
-						if (span == nullptr || other == static_cast<std::size_t>(tool.gantry_selected))
-							continue;
-						auto follower{*span};
-						auto moved{false};
-						for (int k = 0; k < 2; ++k)
-							for (int m = 0; m < 2; ++m)
-								if (false == follower.masts[k].empty() && false == Changed.masts[m].empty() && same_mast(follower.points[k], Changed.points[m]) && std::abs(follower.points[k][1] - Changed.points[m][1]) > 1e-6)
-								{
-									follower.points[k][1] = Changed.points[m][1];
-									moved = true;
-								}
-						if (false == moved)
-							continue;
-						if (std::none_of(tool.undo.rbegin(), tool.undo.rend(), [&](catenary_change const &Change) { return Change.group == group && Change.gantry && Change.index == other; }))
-						{
-							catenary_change change;
-							change.group = group;
-							change.gantry = true;
-							change.index = other;
-							change.gantry_before = *span;
-							tool.undo.push_back(change);
-						}
-						catenary_gantry_update(other, follower);
-					}
-				};
-				{
-					auto both{static_cast<float>(gantry->points[0][1])};
-					ImGui::PushItemWidth(120.0f);
-					if (ImGui::DragFloat(STR_C("Gantry at the height (m)"), &both, 0.01f, -1000.0f, 5000.0f, "%.2f"))
-					{
-						auto changed{*gantry};
-						auto const shift{static_cast<double>(both) - gantry->points[0][1]};
-						changed.points[0][1] += shift;
-						changed.points[1][1] += shift;
-						heighten(changed);
-					}
-					ImGui::PopItemWidth();
-					gantry = catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected));
-					if (gantry == nullptr)
-						return;
-				}
-				for (int mast = 0; mast < 2; ++mast)
-				{
-					if (gantry->masts[mast].empty())
-						continue; // a single element has no second mast
-					auto height{static_cast<float>(gantry->points[mast][1])};
-					ImGui::PushItemWidth(120.0f);
-					ImGui::PushID(mast);
-					auto const label{format(STR_C("Mast %d at the height (m)"), mast + 1)};
-					if (ImGui::DragFloat(label.c_str(), &height, 0.01f, -1000.0f, 5000.0f, "%.2f"))
-					{
-						auto changed{*gantry};
-						auto const other{gantry->points[1 - mast][1]};
-						changed.points[mast][1] = std::clamp(static_cast<double>(height), other - 0.20, other + 0.20);
-						heighten(changed);
-					}
-					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("The zero of the mast is at the rail heads (the clearance of the beam is counted from it); the ground is taken by the foundation head of the variant -1...-4. Drag or Ctrl+click to type"));
-					ImGui::PopID();
-					ImGui::PopItemWidth();
-					if (mast == 0)
-						ImGui::SameLine();
-				}
-				gantry = catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected));
-				if (gantry == nullptr)
-					return;
-				if (ImGui::Button(STR_C("Give it the texture")))
-				{
-					// the gantry and the drops hanging from its beam
-					auto changed{*gantry};
-					changed.skin = tool.gantry_skin;
-					catenary_change change;
-					change.group = ++tool.group;
-					change.gantry = true;
-					change.index = static_cast<std::size_t>(tool.gantry_selected);
-					change.gantry_before = *gantry;
-					tool.undo.push_back(change);
-					glm::dvec3 from, to;
-					double bottom{0.0};
-					catenary_gantry_beam(static_cast<std::size_t>(tool.gantry_selected), from, to, bottom);
-					for (std::size_t index = 0; index < catenary_scene_size(); ++index)
-					{
-						auto const *data{catenary_scene_get(index)};
-						if (data == nullptr || false == data->has_pole)
-							continue;
-						auto const *pole{catalog->pole(data->pole_type)};
-						auto const point{glm::dvec3{data->pole[0], data->pole[1], data->pole[2]}};
-						auto const u{to - from};
-						auto const t{std::clamp(glm::dot(point - from, u) / std::max(glm::dot(u, u), 1e-9), 0.0, 1.0)};
-						if (pole == nullptr || pole->drop.empty() || glm::distance(point, from + u * t) > 0.3)
-							continue;
-						tool.undo.push_back({tool.group, false, index, *data, std::nullopt, false});
-						auto skinned{*data};
-						skinned.skin = tool.gantry_skin;
-						catenary_scene_update(index, skinned);
-					}
-					catenary_gantry_update(static_cast<std::size_t>(tool.gantry_selected), changed);
-				}
-				ImGui::SameLine();
-				if (ImGui::Button(STR_C("Remove the gantry")))
-				{
-					catenary_change change;
-					change.group = ++tool.group;
-					change.gantry = true;
-					change.index = static_cast<std::size_t>(tool.gantry_selected);
-					change.gantry_before = *gantry;
-					tool.undo.push_back(change);
-					catenary_gantry_remove(static_cast<std::size_t>(tool.gantry_selected));
-					tool.gantry_selected = -1;
-				}
-				ImGui::SameLine();
-				if (ImGui::Button(STR_C("Back to the poles")))
-					tool.gantry_selected = -1;
-				// the next cantilevers: on drops of the beam, or straight on the masts
-				ImGui::RadioButton(STR_C("On drops"), &tool.gantry_hang, 0);
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("LMB over a track hangs the cantilever on a drop moved along the beam to the track"));
-				ImGui::SameLine();
-				ImGui::RadioButton(STR_C("On the masts"), &tool.gantry_hang, 1);
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("LMB by a track puts the cantilever straight on the mast of the gantry on that side; the card from the distance of the mast"));
-				// which drop the next cantilevers hang on
-				if (auto const *beam{tool.gantry_hang == 0 ? catalog->beam(gantry->beam) : nullptr}; beam != nullptr)
-				{
-					ImGui::PushItemWidth(160.0f);
-					auto const automatic{STR("the shortest which fits")};
-					if (ImGui::BeginCombo(STR_C("Drop"), tool.drop_choice.empty() ? automatic.c_str() : tool.drop_choice.c_str()))
-					{
-						if (ImGui::Selectable(automatic.c_str(), tool.drop_choice.empty()))
-							tool.drop_choice.clear();
-						for (auto const &pole : catalog->poles())
-							if (catenary::cantilever_catalog::drop_fits(*beam, pole.second.drop) && ImGui::Selectable(format("%s  %.1f m", pole.first.c_str(), pole.second.length).c_str(), pole.first == tool.drop_choice))
-								tool.drop_choice = pole.first;
-						ImGui::EndCombo();
-					}
-					ImGui::PopItemWidth();
-				}
-			}
+			if (semi)
+				render_catenary_semi_placing();
+			else
+				render_catenary_gantry_placing();
+			if (tool.gantry_selected >= 0 && ImGui::CollapsingHeader(semi ? STR_C("Selected semi-gantry") : STR_C("Selected gantry"), ImGuiTreeNodeFlags_DefaultOpen))
+				render_catenary_gantry_selected(semi);
 		}
 		// the cantilevers going on the drops and on the masts of the selected gantry, and the selected one of them
 		if ((tool.gantry_selected >= 0 || tool.selected >= 0) && ImGui::CollapsingHeader(STR_C("Cantilevers"), ImGuiTreeNodeFlags_DefaultOpen))
@@ -5985,6 +6149,10 @@ void catenary_editor::render_catenary_ui()
 	else if (tool.page == 3)
 	{
 		render_catenary_earthing_ui();
+	}
+	else if (tool.page == 5)
+	{
+		render_catenary_anchors_page();
 	}
 	else
 	{
@@ -6652,7 +6820,7 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 	}
 	// the track a pole goes by: under the cursor or the nearest one to where the cursor points beside it
 	// the wires page and the earthing page place nothing by the tracks
-	auto const targeted{((m_catenary.page != 2 && m_catenary.page != 3) || m_catenary.anchor_cantilever >= 0) && catenary_find_target(m_target)};
+	auto const targeted{((m_catenary.page != 2 && m_catenary.page != 3 && m_catenary.page != 5) || m_catenary.anchor_cantilever >= 0) && catenary_find_target(m_target)};
 	if (false == targeted)
 		m_target = place_target{};
 	// a cantilever on the pole of an anchor: by any track
@@ -6690,7 +6858,7 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 	}
 	// the wires page places nothing, the gantries page places only on the selected gantry
 	// the poles page in editing only: nothing new by the tracks
-	if (targeted && (m_catenary.page != 1 || m_catenary.gantry_selected >= 0) && (m_catenary.page != 0 || m_catenary.pole_insert))
+	if (targeted && ((m_catenary.page != 1 && m_catenary.page != 4) || m_catenary.gantry_selected >= 0) && (m_catenary.page != 0 || m_catenary.pole_insert))
 	{
 		catenary_spot spot;
 		if (catenary_spot_at(*m_target.track, m_target.path, m_target.point, m_target.cursor, 0, spot, true))
@@ -6713,6 +6881,14 @@ std::string catenary_editor::catenary_mode_name() const
 		return m_catenary.anchor_pick >= 0 ? STR_C("Wires: LMB on the pole the tensioning device goes on") : m_catenary.connect_from >= 0 ? STR_C("Wires: LMB on the next pole hangs the span to it") : STR_C("Wires: LMB on a span selects its chain, LMB on a pole selects it");
 	if (m_catenary.anchor_cantilever >= 0)
 		return STR_C("Anchor: LMB by the track the cantilever on the anchor pole reaches to; Esc stops");
+	if (m_catenary.page == 5)
+		return m_catenary.anchor_pick >= 0 ? STR_C("Anchors: LMB on the pole the tensioning device goes on") : STR_C("Anchors: LMB on a span selects its chain, LMB on a tensioning device selects the anchor");
+	if (m_catenary.page == 4)
+	{
+		if (m_catenary.gantry_placing)
+			return m_catenary.gantry_first.has_value() ? STR_C("Semi-gantries: LMB where the beam points") : STR_C("Semi-gantries: LMB the mast");
+		return m_catenary.gantry_selected >= 0 ? STR_C("Semi-gantries: LMB by a track puts a cantilever on the selected one, drag it to move it") : STR_C("Semi-gantries: LMB on one selects it, or place a new one");
+	}
 	if (m_catenary.page == 1)
 	{
 		if (m_catenary.gantry_placing)
@@ -6818,7 +6994,7 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 		return true;
 	}
 	// the swap of the short and the long cantilever: of the selected pole, or of the next one
-	if (Key == GLFW_KEY_X && (tool.page == 0 || tool.selected >= 0 || tool.anchor_cantilever >= 0 || (tool.page == 1 && tool.gantry_selected >= 0)))
+	if (Key == GLFW_KEY_X && (tool.page == 0 || tool.selected >= 0 || tool.anchor_cantilever >= 0 || ((tool.page == 1 || tool.page == 4) && tool.gantry_selected >= 0)))
 	{
 		catenary_flip();
 		return true;
@@ -6857,7 +7033,7 @@ bool catenary_editor::catenary_pick_part(void const *Node)
 		tool.status = STR("A part of the catenary: its pole is selected in the Catenary tool, it moves along the track by a drag");
 		break;
 	case 2:
-		catenary_choose_page(1);
+		catenary_choose_page(catenary_gantry_semi(index) ? 4 : 1);
 		tool.gantry_selected = static_cast<int>(index);
 		tool.status = STR("A part of the catenary: its gantry is selected in the Catenary tool");
 		break;
@@ -6865,6 +7041,7 @@ bool catenary_editor::catenary_pick_part(void const *Node)
 	{
 		bool start{false};
 		auto const chain{catenary_anchor_chain(index, start)};
+		catenary_choose_page(5);
 		catenary_chain_show(chain);
 		tool.anchor_selected = static_cast<int>(index);
 		tool.anchor_scroll = true;
