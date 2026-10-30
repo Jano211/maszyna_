@@ -145,6 +145,10 @@ void structure_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 else if( key == "curve" && k < words.size() ) { family.curve = ( words[ k++ ] == "yes" ? 1 : 0 ); }
                 else if( key == "toward" && k < words.size() ) { auto const &value { words[ k++ ] }; family.toward = ( value == "yes" ? 1 : value == "no" ? 0 : 2 ); }
                 else if( key == "image" && k < words.size() ) { family.image = words[ k++ ]; }
+                else if( key == "stagger" && k < words.size() ) {
+                    try { family.stagger = std::stod( words[ k++ ] ); }
+                    catch( std::exception const & ) { report( "family \"" + id + "\": stagger \"" + words[ k - 1 ] + "\" isn't a number" ); good = false; }
+                }
                 else { report( "family \"" + id + "\": unknown keyword \"" + key + "\"" ); good = false; }
             }
             if( false == good ) { text = nullptr; continue; }

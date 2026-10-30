@@ -99,7 +99,7 @@ exec 1 : wyk. 1 - dwa przewody, hk 1,70
 exec 2 : wyk. 2 - dwa przewody, hk 1,70
 exec 3 : wyk. 3 - jeden przewód, hk 1,70
 exec 4 : wyk. 4 - jeden przewód, hk 1,30
-family 120x n_tube_zero cards 1201-1206 : 120x
+family 120x n_tube_zero cards 1201-1206 stagger 0 : 120x
 
 group n_tube_second tension execution user : Rurowe przechylne z drugim (podniesionym) przewodem (117x, 118x)
 text Drugi przewód (wyprowadzany do kotwy) na uchwycie 4120-3 wprost na wysięgu, 0,08 m od przewodu ramion.
@@ -111,7 +111,7 @@ group n_tube_double tension execution user : Rurowe - dwie sieci w przęśle nap
 text Dwie liny nośne (dwie sieci) na jednym wysięgniku: dwa uchwyty liny na ukosniku i dwa przewody na wysięgu.
 exec 1 : wyk. 1 - hk 1,30
 exec 2 : wyk. 2 - hk 1,50
-family 102x n_tube_double cards 1022-1026 : 102x
+family 102x n_tube_double cards 1022-1026 stagger 0 : 102x
 
 group n_tube_rope tension execution user : Rurowe - łuk albo skrócone przęsło naprężenia, wysięg z liny (105x, 125x, 127x)
 text Sieć zewnętrzna: zamiast rury wysięgu lina od uchwytu przy nasadzie ukośnika, ramiona wiszące na linie.
@@ -125,7 +125,7 @@ family 127x n_tube_rope cards 1270-1277 : 127x - nieprzechylne, para ramion (?)
 group n_tee12 tension execution reach : Teowniki - sieć 1, 2: przerwy izolacyjne i przęsła naprężenia (0115, 0116, 0120, 0137-0140)
 family 0115 n_tee12 cards 0115 toward yes : 0115 - sekcyjna przerwa izolacyjna, do słupa
 family 0116 n_tee12 cards 0116 toward no : 0116 - sekcyjna przerwa izolacyjna, od słupa
-family 0120 n_tee12 cards 0120 : 0120 - przęsło naprężenia (bez ramion, dwa przewody)
+family 0120 n_tee12 cards 0120 stagger 0 : 0120 - przęsło naprężenia (bez ramion, dwa przewody)
 family 0137 n_tee12 cards 0137 0138 0139 0140 curve yes toward card : 0137-0140 - przęsło naprężenia na łuku
 
 group n_tee34 tension execution reach : Teowniki - sieć 3, 4: przerwy izolacyjne (0135, 0136)
@@ -136,7 +136,7 @@ group n_tee5 tension execution reach : Teowniki - sieć 5: przerwy izolacyjne i 
 family 0155 n_tee5 cards 0155 toward yes : 0155 - sekcyjna przerwa izolacyjna, do słupa
 family 0156 n_tee5 cards 0156 toward no : 0156 - sekcyjna przerwa izolacyjna, od słupa
 family 0158 n_tee5 cards 0158 0159 toward card : 0158, 0159 - skrócone przęsło naprężenia
-family 0160 n_tee5 cards 0160 : 0160 - przęsło naprężenia
+family 0160 n_tee5 cards 0160 stagger 0 : 0160 - przęsło naprężenia
 family 0172 n_tee5 cards 0172 0173 0174 curve yes : 0172-0174 - przęsło naprężenia na łuku
 
 // ---- sama lina nosna ------------------------------------------------------------------------------------------------
@@ -207,7 +207,7 @@ text Podwieszenia dla sieci o hk innej niż normalna: są niskie i wysokie. Opis
 exec 1 : wyk. 1
 exec 2 : wyk. 2
 exec 3 : wyk. 3
-family 070x s_tube_vol2 cards 0700-0705 : 070x - hk 0,55 (?)
+family 070x s_tube_vol2 cards 0700-0705 stagger 0 : 070x - hk 0,55 (?)
 family 071x s_tube_vol2 cards 0710-0715 toward yes : 071x - poziome, hk 0,35 (?)
 family 072x s_tube_vol2 cards 0720-0725 toward no : 072x - poziome, hk 0,35 (?)
 family 073x s_tube_vol2 cards 0730-0738 toward yes : 073x - hk 0,60 (?)
@@ -216,7 +216,7 @@ family 075x s_tube_vol2 cards 0751-0755 : 075x - przechylne, hk 1,50 (?)
 family 076x s_tube_vol2 cards 0761-0765 : 076x - przechylne, hk 1,50 (?)
 family 077x s_tube_vol2 cards 0770-0775 : 077x - przechylne, hk 1,90 (?)
 family 078x s_tube_vol2 cards 0780-0785 : 078x - przechylne, hk 1,90 (?)
-family 079x s_tube_vol2 cards 0790-0795 : 079x - poziome, hk 1,00 (?)
+family 079x s_tube_vol2 cards 0790-0795 stagger 0 : 079x - poziome, hk 1,00 (?)
 
 // ===================================================================================================================
 // Slupy.

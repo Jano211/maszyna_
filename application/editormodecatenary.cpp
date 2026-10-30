@@ -603,11 +603,19 @@ bool catenary_editor::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3
 		if (auto const proposed{zigzag_toward(Spot)}; proposed.has_value())
 			Spot.toward = *proposed;
 	}
-	// a group of the catalogue with a stagger of its own (the "zero" cantilevers 120x of a tension span: 0) gives it to the new poles
-	auto stagger{zigzag_stagger(Spot.curve)};
-	if (auto const *group{Placing ? catenary_scene_structures().group(m_catenary.catalog_group) : nullptr}; group != nullptr && group->stagger >= 0.0)
-		stagger = group->stagger;
+	// a family or a group of the catalogue with a stagger of its own (the wires straight on the cantilever in a tension span: 120x,
+	// 102x, 0120, 0160, 070x, 079x - 0) gives it to the new poles: the family is known once the card is picked, so composed again with it
+	auto const stagger{zigzag_stagger(Spot.curve)};
 	catenary_compose(Spot, m_catenary.clearance, stagger, Spot.toward);
+	if (Placing)
+	{
+		auto const &structures{catenary_scene_structures()};
+		auto const *family{Spot.family.empty() ? nullptr : structures.family(Spot.family)};
+		auto const *group{structures.group(m_catenary.catalog_group)};
+		auto const own{family != nullptr && family->stagger >= 0.0 ? family->stagger : group != nullptr ? group->stagger : -1.0};
+		if (false == m_catenary.stagger_own && own >= 0.0 && std::abs(own - stagger) > 1e-4)
+			catenary_compose(Spot, m_catenary.clearance, own, Spot.toward);
+	}
 	// a gantry is selected: the cantilever hangs on a drop on its beam
 	glm::dvec3 from, to;
 	double bottom{0.0};
@@ -4458,6 +4466,7 @@ bool catenary_editor::render_catenary_catalog_ui()
 						break;
 					}
 				tool.catalog_family.clear();
+				tool.stagger_own = false;
 				tool.catalog_card = 0;
 				changed = true;
 			}
@@ -4479,6 +4488,7 @@ bool catenary_editor::render_catenary_catalog_ui()
 				tool.catalog_group = candidate.id;
 				tool.catalog_family.clear();
 				tool.catalog_card = 0;
+				tool.stagger_own = false;
 				changed = true;
 			}
 			if (ImGui::IsItemHovered() && false == candidate.text.empty())
@@ -4512,6 +4522,7 @@ bool catenary_editor::render_catenary_catalog_ui()
 			{
 				tool.catalog_family = candidate.id;
 				tool.catalog_card = 0;
+				tool.stagger_own = false;
 				changed = true;
 			}
 			if (ImGui::IsItemHovered() && false == candidate.text.empty())
@@ -4762,10 +4773,12 @@ void catenary_editor::render_catenary_zigzag_ui()
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("Over 160 km/h: the stagger on a straight up to 0.20 m, the normal span 62 +-4 m, the tension section up to 1400 m (Iet-107 7.4)"));
-		ImGui::SliderFloat(STR_C("Stagger on a straight, either side (m)"), &tool.zigzag_straight, 0.0f, static_cast<float>(zigzag_limit(false)), "%.2f");
+		if (ImGui::SliderFloat(STR_C("Stagger on a straight, either side (m)"), &tool.zigzag_straight, 0.0f, static_cast<float>(zigzag_limit(false)), "%.2f"))
+			tool.stagger_own = true;
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("From the track axis, in turn to its two sides: up to 0.30 m, over 160 km/h up to 0.20 m (Iet-107 3.4.4.3, 7.4.2.1)"));
-		ImGui::SliderFloat(STR_C("Stagger on a curve, outwards (m)"), &tool.zigzag_curve, 0.0f, static_cast<float>(zigzag_limit(true)), "%.2f");
+		if (ImGui::SliderFloat(STR_C("Stagger on a curve, outwards (m)"), &tool.zigzag_curve, 0.0f, static_cast<float>(zigzag_limit(true)), "%.2f"))
+			tool.stagger_own = true;
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("To the outside of the curve at every pole, up to 0.30 m (Iet-107 7.4.2.1); the span on the curve no longer than lets the wires be tangent to the track axis in its middle: 2 sqrt(2 R z)"));
 		// what the next pole gets
@@ -4791,7 +4804,17 @@ void catenary_editor::render_catenary_zigzag_ui()
 	}
 	else
 	{
-		catenary_stagger_slider(tool);
+		// the group / family with a stagger of its own (wires straight on the cantilever: 0): the slider starts from it
+		if (false == tool.stagger_own)
+		{
+			auto const &structures{catenary_scene_structures()};
+			auto const *family{tool.catalog_family.empty() ? nullptr : structures.family(tool.catalog_family)};
+			auto const *group{structures.group(tool.catalog_group)};
+			if (auto const own{family != nullptr && family->stagger >= 0.0 ? family->stagger : group != nullptr ? group->stagger : -1.0}; own >= 0.0)
+				tool.stagger = static_cast<float>(own);
+		}
+		if (catenary_stagger_slider(tool))
+			tool.stagger_own = true;
 		ImGui::Checkbox(STR_C("Wires towards the pole"), &tool.toward);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("On a straight the wires zigzag: towards the pole and away from it in turn. On a curve they go to its outside, which decides it"));
