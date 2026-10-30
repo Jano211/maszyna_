@@ -23,4 +23,6 @@ g++ $F -I. $T/test_catalog.cpp world/catenary_catalog.cpp world/catenary_cantile
 g++ $F -I$T/mock -I. $T/conv_pick.cpp $T/mock_objects.cpp world/catenary_scene.cpp world/catenary_tensioner.cpp world/catenary_layout.cpp world/catenary_catalog.cpp world/catenary_suspension.cpp world/catenary_cantilever.cpp world/catenary_span.cpp world/catenary_network.cpp world/catenary_solver.cpp -o $T/conv_pick
 # 9. urzadzenie naprezajace (kotwienie ciezarowe): tablica 0011-1, naciagi z dzwigni = karty 0002, lina, stan sieci
 g++ $F -I. $T/test_tensioner.cpp world/catenary_tensioner.cpp -o $T/tt
-echo "zbudowane: t ts sim tsc tc te tk conv_pick tt"
+# 10. iskrzenie pantografu: oblodzenie z pogody, łuki, iskry
+g++ $F -I$T/mock_arcing -I. -Iref/glm $T/test_arcing.cpp world/catenary_arcing.cpp -o $T/ta
+echo "zbudowane: t ts sim tsc tc te tk conv_pick tt ta"

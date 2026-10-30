@@ -28,6 +28,7 @@ http://mozilla.org/MPL/2.0/.
 #include "utilities/glmHelpers.h"
 #include "Console.h"
 #include "world/Traction.h"
+#include "world/catenary_arcing.h"
 #include "audio/sound.h"
 #include "model/MdlMngr.h"
 #include "model/Model3d.h"
@@ -3985,6 +3986,7 @@ bool TDynamicObject::Update(double dt, double dt1)
                 ( fPantCurrent > 0.0 ? MoverParameters->EnergyMeter.first : MoverParameters->EnergyMeter.second ) += MoverParameters->PantFrontVolt * fPantCurrent * dt1 / 3600000.0;
                 break;
             } // pozostałe na razie nie obsługiwane
+            pantograph_arcing( *p, i, PantDiff, fPantCurrent, dt1 );
             if( MoverParameters->PantPress > (
                     MoverParameters->TrainType == dt_EZT ?
                         2.45 : // Ra 2013-12: Niebugocław mówi, że w EZT podnoszą się przy 2.5
@@ -6341,6 +6343,16 @@ void TDynamicObject::LoadMMediaFile( std::string const &TypeName, std::string co
                     }
                 }
 
+				else if( token == "pantographarc:" ) {
+					// trzask łuku przy iskrzeniu pantografu (catenary_arcing)
+                    sound_source pantographarc { sound_placement::external };
+                    pantographarc.deserialize( parser, sound_type::single );
+                    pantographarc.owner( this );
+                    for( auto &pantograph : m_pantographsounds ) {
+                        pantograph.arc = pantographarc;
+                    }
+                }
+
 				else if( token == "compressor:" ) {
 					// pliki ze sprezarka
                     sCompressor.deserialize( parser, sound_type::multipart, sound_parameters::range );
@@ -7178,6 +7190,7 @@ void TDynamicObject::LoadMMediaFile( std::string const &TypeName, std::string co
                     -pants[ pantographindex ].fParamPants->vPos.x ) };
             pantographsounds.sPantUp.offset( pantographoffset );
             pantographsounds.sPantDown.offset( pantographoffset );
+            pantographsounds.arc.offset( pantographoffset );
             ++pantographindex;
         }
     }
@@ -9307,6 +9320,48 @@ vehicle_table::update_steps_parallel( double const Deltatime, int const Iteratio
         steps( group );
     }
     return true;
+}
+
+// iskrzenie pantografu (catenary_arcing): punkt styku ślizgu z przewodem, łuk przy oblodzeniu, przejściu sekcji i oderwaniu pod prądem
+void
+TDynamicObject::pantograph_arcing( TAnimPant &Pantograph, int const Index, double const Difference, double const Current, double const Timedelta ) {
+    if( false == Global.CatenaryArcing || Timedelta <= 0.0 ) { return; }
+    auto const front { VectorFront() }, up { VectorUp() }, left { VectorLeft() };
+    auto const base { GetPosition() + left * Pantograph.vPos.z + up * Pantograph.vPos.y + front * Pantograph.vPos.x };
+    auto point { base + up * Pantograph.PantWys };
+    // nad ślizgiem: punkt przewodu w płaszczyźnie pantografu (jak w vehicle_table::update_traction)
+    if( auto const *wire { Pantograph.hvPowerWire }; wire != nullptr ) {
+        auto const across { glm::dot( wire->vParametric, front ) };
+        if( std::abs( across ) > 1e-9 ) {
+            auto const t { std::clamp( -( glm::dot( wire->pPoint1, front ) - glm::dot( base, front ) ) / across, 0.0, 1.0 ) };
+            point = wire->pPoint1 + t * wire->vParametric;
+        }
+    }
+    auto const side { Index == 0 ? end::front : end::rear };
+    auto const touching {
+        Index < 2
+     && Pantograph.hvPowerWire != nullptr
+     && MoverParameters->Pantographs[ side ].is_active
+     && Difference < 0.01
+     && ( Index == 0 ? MoverParameters->PantFrontVolt : MoverParameters->PantRearVolt ) > 0.0 };
+    float started { 0.f };
+    if( touching ) {
+        started = catenary_arcing::contact( &Pantograph, point, glm::dvec3 { 0.0 }, Current, Pantograph.hvPowerWire, Timedelta );
+        Pantograph.ArcCurrent = Current;
+    }
+    else if( Pantograph.ArcContact ) {
+        // ślizg zszedł z przewodu: łuk, gdy coś pobierało prąd
+        started = catenary_arcing::release( &Pantograph, point, glm::dvec3 { 0.0 }, Pantograph.ArcCurrent );
+        Pantograph.ArcCurrent = 0.0;
+    }
+    Pantograph.ArcContact = touching;
+    // trzask łuku, gdy pojazd ma dźwięk "pantographarc:"
+    if( started > 0.f && static_cast<std::size_t>( Index ) < m_pantographsounds.size() ) {
+        auto &sound { m_pantographsounds[ Index ].arc };
+        if( false == sound.empty() ) {
+            sound.gain( 0.4f + 0.6f * started ).pitch( 0.85f + 0.3f * static_cast<float>( std::rand() % 100 ) / 100.f ).play();
+        }
+    }
 }
 
 // legacy method, checks for presence and height of traction wire for specified vehicle

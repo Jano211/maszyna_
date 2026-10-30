@@ -9,6 +9,7 @@ http://mozilla.org/MPL/2.0/.
 
 #include "stdafx.h"
 #include "rendering/opengl46/opengl46renderer.h"
+#include "world/catenary_arcing.h"
 #include "utilities/color.h"
 #include "utilities/Globals.h"
 #include "utilities/Timer.h"
@@ -1948,6 +1949,7 @@ void opengl46_renderer::Render_pass(viewport_config &vp, rendermode const Mode)
 
 		// particles
 		Render_particles();
+		Render_catenary_arcing();
 
 		// precipitation; done at end, only before cab render
 		Render_precipitation();
@@ -5335,6 +5337,89 @@ void opengl46_renderer::Render_editor_overlay()
 	::glPopMatrix();
 }
 
+
+void opengl46_renderer::Render_catenary_arcing()
+{
+	auto const &sparks{catenary_arcing::sparks()};
+	auto const &arcs{catenary_arcing::arcs()};
+	if (sparks.empty() && arcs.empty())
+		return;
+	glDebug("Render_catenary_arcing");
+	// iskry wg temperatury: od biało-żółtych do czerwonych; ostatnia grupa to rdzenie łuków
+	constexpr int kHeats{4};
+	auto const camera{m_renderpass.pass_camera.position()};
+	if (m_arcing_revision != catenary_arcing::revision())
+	{
+		m_arcing_revision = catenary_arcing::revision();
+		if (m_arcing_bank == null_handle)
+			m_arcing_bank = Create_Bank();
+		std::vector<gfx::vertex_array> groups(kHeats + 1);
+		for (auto const &spark : sparks)
+		{
+			// smuga za iskrą: droga z ostatniego kroku, co najmniej 3 cm, żeby wolne iskry też było widać
+			auto const head{glm::vec3{spark.position - camera}};
+			auto tail{glm::vec3{spark.previous - camera}};
+			if (glm::length(head - tail) < 0.03f)
+				tail = head - (glm::length(spark.velocity) > 1e-3f ? glm::normalize(spark.velocity) : glm::vec3{0.f, 1.f, 0.f}) * 0.03f;
+			auto const group{std::clamp(static_cast<int>((1.f - spark.heat) * kHeats), 0, kHeats - 1)};
+			groups[group].emplace_back(tail, glm::vec3{0.f, 1.f, 0.f}, glm::vec2{});
+			groups[group].emplace_back(head, glm::vec3{0.f, 1.f, 0.f}, glm::vec2{});
+		}
+		// łuk: kilka krótkich zygzaków od punktu styku, co klatkę inaczej
+		for (auto const &arc : arcs)
+		{
+			auto const centre{glm::vec3{arc.position - camera}};
+			auto const reach{0.05f + 0.25f * arc.intensity};
+			for (int strand = 0; strand < 5; ++strand)
+			{
+				auto point{centre};
+				for (int step = 0; step < 4; ++step)
+				{
+					auto const next{point + glm::vec3{(std::rand() % 200 - 100) * 0.01f, (std::rand() % 200 - 100) * 0.01f, (std::rand() % 200 - 100) * 0.01f} * reach * 0.5f};
+					groups[kHeats].emplace_back(point, glm::vec3{0.f, 1.f, 0.f}, glm::vec2{});
+					groups[kHeats].emplace_back(next, glm::vec3{0.f, 1.f, 0.f}, glm::vec2{});
+					point = next;
+				}
+			}
+		}
+		m_arcing_geometry.resize(groups.size());
+		gfx::userdata_array userdata;
+		for (std::size_t group = 0; group < groups.size(); ++group)
+		{
+			auto &geometry{m_arcing_geometry[group]};
+			if (groups[group].empty())
+				groups[group].emplace_back(glm::vec3{0.f}, glm::vec3{0.f, 1.f, 0.f}, glm::vec2{}), groups[group].emplace_back(glm::vec3{0.f}, glm::vec3{0.f, 1.f, 0.f}, glm::vec2{});
+			if (geometry != null_handle)
+				m_geometry.replace(groups[group], userdata, geometry);
+			else
+				geometry = m_geometry.create_chunk(groups[group], userdata, m_arcing_bank, GL_LINES);
+		}
+	}
+	// kolory liniowe po pow 2.2 w shaderze, ponad 1: jaśniej niż biel, do blooma
+	glm::vec4 const colours[kHeats + 1]{
+		{3.0f, 2.8f, 2.2f, 1.f}, // biało-żółte
+		{2.6f, 1.8f, 0.8f, 1.f},
+		{2.0f, 1.0f, 0.35f, 0.9f}, // pomarańczowe
+		{1.3f, 0.45f, 0.15f, 0.7f}, // czerwone, gasnące
+		{3.2f, 3.4f, 4.0f, 1.f}}; // rdzeń łuku, niebiesko-biały
+	::glPushMatrix();
+	::glDisable(GL_CULL_FACE);
+	::glDepthMask(GL_FALSE);
+	::glEnable(GL_BLEND);
+	::glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	m_line_shader->bind();
+	for (std::size_t group = 0; group < m_arcing_geometry.size(); ++group)
+	{
+		if (m_arcing_geometry[group] == null_handle)
+			continue;
+		model_ubs.param[0] = colours[std::min<std::size_t>(group, kHeats)];
+		draw(m_arcing_geometry[group]);
+		++m_renderpass.draw_stats.drawcalls;
+	}
+	::glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	::glEnable(GL_CULL_FACE);
+	::glPopMatrix();
+}
 
 bool opengl46_renderer::Debug_Ui_State(std::optional<bool> param)
 {

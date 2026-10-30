@@ -26,6 +26,7 @@ http://mozilla.org/MPL/2.0/.
 #include "vehicle/Train.h"
 #include "simulation/simulation.h"
 #include "rendering/geometrybank.h"
+#include "world/catenary_arcing.h"
 
 namespace
 {
@@ -176,6 +177,30 @@ void gfx::local_lights::gather(glm::dvec3 const &Camera, scene::basic_region &Re
 					continue;
 				}
 				gather_vehicle(vehicle, Camera, Geometry, freespotbrightness, compartmentbrightness);
+			}
+		}
+
+		// łuki pantografów (catenary_arcing): niebiesko-biały błysk, jasny także w dzień, bez cieni (zmienia się co klatkę)
+		if (Global.CatenaryArcing && (range > 0.f))
+		{
+			for (auto const &arc : catenary_arcing::arcs())
+			{
+				if (glm::length(arc.position - Camera) > range)
+				{
+					continue;
+				}
+				light flash;
+				flash.position = arc.position;
+				flash.color = arc.color * (Global.gfx_lights_freespot_intensity * 25.f * arc.intensity);
+				if (max_component(flash.color) <= LIGHT_THRESHOLD)
+				{
+					continue;
+				}
+				flash.range = std::min(light_range(flash.color), 60.f);
+				flash.radius = 0.05f;
+				flash.soft_falloff = true;
+				flash.cast_shadows = false;
+				m_lights.push_back(flash);
 			}
 		}
 

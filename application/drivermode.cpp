@@ -20,6 +20,7 @@ http://mozilla.org/MPL/2.0/.
 #include "scene/scene.h"
 #include "rendering/lightarray.h"
 #include "rendering/particles.h"
+#include "world/catenary_arcing.h"
 #include "vehicle/Train.h"
 #include "vehicle/Driver.h"
 #include "vehicle/DynObj.h"
@@ -463,6 +464,8 @@ bool driver_mode::update()
 	// NOTE: particle system runs on simulation time, but needs actual camera position to determine how to update each particle source
 	Timer::subsystem.loop_particles.start();
 	simulation::Particles.update();
+	// iskrzenie pantografów: łuki gasną, iskry lecą (czas symulacji, 0 przy pauzie)
+	catenary_arcing::update(Timer::GetDeltaTime());
 	Timer::subsystem.loop_particles.stop();
 
 	Timer::subsystem.loop_renderer_update.start();

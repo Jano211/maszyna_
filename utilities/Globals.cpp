@@ -1668,6 +1668,17 @@ global_settings::ConfigParse_gfx( cParser &Parser, std::string_view const Token 
         Parser >> gfx_grass_density;
         gfx_grass_density = std::clamp(gfx_grass_density, 0.f, 4.f);
     }
+    else if (Token == "catenary.arcing")
+    {
+        Parser.getTokens(1);
+        Parser >> CatenaryArcing;
+    }
+    else if (Token == "catenary.arcing.scale")
+    {
+        Parser.getTokens(1);
+        Parser >> CatenaryArcingScale;
+        CatenaryArcingScale = std::clamp(CatenaryArcingScale, 0.f, 10.f);
+    }
     else if (Token == "gfx.smoke.gpu")
     {
         Parser.getTokens(1);
@@ -2400,6 +2411,8 @@ global_settings::export_as_text( std::ostream &Output ) const {
     export_as_text( Output, "gfx.grass.distance", gfx_grass_distance );
     export_as_text( Output, "gfx.grass.fadedistance", gfx_grass_fadedistance );
     export_as_text( Output, "gfx.grass.density", gfx_grass_density );
+    export_as_text( Output, "catenary.arcing", CatenaryArcing );
+    export_as_text( Output, "catenary.arcing.scale", CatenaryArcingScale );
     export_as_text( Output, "gfx.smoke.gpu", gfx_smoke_gpu );
     export_as_text( Output, "gfx.smoke.lighting", gfx_smoke_lighting );
     export_as_text( Output, "gfx.particles.soft", gfx_particles_soft );

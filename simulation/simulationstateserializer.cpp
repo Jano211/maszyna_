@@ -28,6 +28,7 @@ http://mozilla.org/MPL/2.0/.
 #include "rendering/lightarray.h"
 #include "world/TractionPower.h"
 #include "world/catenary_scene.h"
+#include "world/catenary_arcing.h"
 #include "world/Road.h"
 #include "world/Sweep.h"
 #include "world/RoadPoint.h"
@@ -69,6 +70,7 @@ state_serializer::deserialize_begin( std::string const &Scenariofile ) {
 
     // podwieszenia sieci trakcyjnej poprzedniej scenerii
     catenary_scene_clear();
+    catenary_arcing::clear();
 
     // TODO: move initialization to separate routine so we can reuse it
     SafeDelete( Region );

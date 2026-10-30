@@ -35,6 +35,18 @@ Bujanie na gl46: stuki i przysiad na przerwach szyn z jego `track_rails` (`TTrac
    „Lekki przechył słupów łańcucha” (0,1–0,5°, stały dla nazwy). Parasole / rozstawione / bramki bez przechyłu.
 - G:\Maszyna2510\data\traction_supports.txt zapisany 30.10 00:50 (45830 B). Tłumaczenia w lang/editor_pl.po.
 
+**Iskrzenie pantografu (30.10 wieczór, Jan: „mamy renderer 4.6, pierdolnij iskrzenie na mrozie”):** `world/catenary_arcing.*`
+(symulacja, niezależna od renderera): oblodzenie z pogody (`icing()`: od +1 °C w dół, szczyt ok. -3 °C, mgła < 2 km / opady
+zwiększają, silny mróz mniej; każde przęsło ×0,4–1,6 stałe z adresu), łuki losowo przy jeździe pod oblodzonym przewodem (częstość
+z prędkości i prądu, na postoju nic), zawsze przy przejściu na przęsło innego zasilacza pod prądem (izolator sekcyjny, izolowane
+przęsło naprężenia) i przy oderwaniu ślizgu pod obciążeniem. Iskry: krople lecą z prędkością pojazdu + rozprysk, opór 3,5/s,
+grawitacja, 0,2–1,2 s, stygną biało-żółte → czerwone. Wołane: `TDynamicObject::pantograph_arcing` (pętla pantografów, punkt
+styku z przewodu w płaszczyźnie pantografu), `catenary_arcing::update` w drivermode obok cząsteczek, `clear` przy nowej scenerii.
+Renderer 4.6: `Render_catenary_arcing` po cząsteczkach – smugi linii, mieszanie addytywne, kolory > 1 (bloom), rdzeń łuku z
+zygzaków; światło łuku w `gfx::local_lights::gather` (niebiesko-białe, bez cieni, do 60 m; Vulkan dostaje światło, smug nie).
+Dźwięk: opcjonalny wpis `pantographarc: <plik>` w .mmd pojazdu (nie ma pliku – cisza). Ustawienia: `catenary.arcing yes|no`,
+`catenary.arcing.scale <0-10>` (Globals). Test: `ta`. W exe NIESPRAWDZONE.
+
 **Odpowiedzi Jana 30.10 09:04 (wprowadzone):** dźwigar 1901 „chyba” wzdłuż +X; Beam_out OD ŚCIANY słupa (offset 0,30 = W/2);
 4840 stoi tak samo jak 4850 (0,12 w stronę toru), ESN-544 na odwrót (0,25 w stronę toru, bez obrotu); 4840 i ESN-544 pasują do
 1901 i ESN-540 (`drop 4840,ESN-544`, `drop_fits` / `drops_interchangeable`); 6120 „chyba skończone”; 1711 i rodziny 150x/160x
