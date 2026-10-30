@@ -102,6 +102,7 @@ struct catenary_editor
 		char file[128]{};
 		int selected{-1};
 		// chains: the poles placed one after another are joined by spans
+		bool pole_insert{true}; // the Poles page: LMB by a track places a pole; off - the poles are only selected and changed
 		bool chaining{true};
 		int continue_pending{-1}; // the chain goes on from this pole, from the next frame of the panel (the button is in the middle of it)
 		bool insert_spans{true}; // a pole placed in a span of a chain goes into the chain between the two poles of the span

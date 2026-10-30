@@ -3279,6 +3279,8 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 			catenary_umbrella_place(spot);
 		return;
 	}
+	if (tool.page == 0 && false == tool.pole_insert)
+		return;
 	if (m_target.track != Intent.track || false == catenary_spot_at(*Intent.track, Intent.path, m_target.point, m_target.cursor, 0, spot, true))
 		return;
 	if (spot.card == 0)
@@ -5469,6 +5471,19 @@ void catenary_editor::render_catenary_ui()
 	ImGui::Checkbox(STR_C("Expert mode"), &tool.expert);
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%s", STR_C("Shows the advanced settings: stagger +-0.5 m, own system height, the top mount moved, spread cantilevers, the messenger held by another cantilever, single beam elements and turning a gantry. What a pole already has set is shown anyway"));
+	if (tool.page == 0)
+	{
+		// placing new poles or only changing the ones standing (Ins switches)
+		if (ImGui::RadioButton(STR_C("Placing poles"), tool.pole_insert))
+			tool.pole_insert = true;
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("LMB by a track places a new pole, LMB on a pole selects it (Ins switches)"));
+		ImGui::SameLine();
+		if (ImGui::RadioButton(STR_C("Editing only"), false == tool.pole_insert))
+			tool.pole_insert = false;
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("LMB only selects the poles standing, a drag moves them; no new pole by a track (Ins switches)"));
+	}
 	// the page chosen in the toolbar: poles, gantries, wires
 	if (tool.page == 1)
 	{
@@ -6628,7 +6643,8 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 		}
 	}
 	// the wires page places nothing, the gantries page places only on the selected gantry
-	if (targeted && (m_catenary.page != 1 || m_catenary.gantry_selected >= 0))
+	// the poles page in editing only: nothing new by the tracks
+	if (targeted && (m_catenary.page != 1 || m_catenary.gantry_selected >= 0) && (m_catenary.page != 0 || m_catenary.pole_insert))
 	{
 		catenary_spot spot;
 		if (catenary_spot_at(*m_target.track, m_target.path, m_target.point, m_target.cursor, 0, spot, true))
@@ -6661,17 +6677,25 @@ std::string catenary_editor::catenary_mode_name() const
 		return STR_C("Umbrella: LMB by the track on the other side of the pole puts the second cantilever on it; Esc stops");
 	if (m_catenary.selected >= 0)
 		return STR_C("Catenary: the selected pole follows the settings below; C goes on with the chain from it");
-	if (m_catenary.chaining && m_catenary.last >= 0)
+	if (m_catenary.chaining && m_catenary.last >= 0 && (m_catenary.page != 0 || m_catenary.pole_insert))
 		return STR_C("Catenary: LMB by the track places the next pole of the chain; Esc ends the chain");
+	if (m_catenary.page == 0 && false == m_catenary.pole_insert)
+		return STR_C("Catenary, editing only: LMB on a pole selects it, a drag moves it; Ins - placing");
 	return STR_C("Catenary: LMB by the track places a pole on that side, LMB on a pole selects it");
 }
 
 void catenary_editor::catenary_key_hints(std::vector<key_hint> &Hints) const
 {
-	Hints = {{"LMB by a track", "places a pole on that side, with the card for its distance"}, {"LMB on a pole", "selects it: the settings then change it at once"}};
+	Hints.clear();
+	if (m_catenary.page != 0 || m_catenary.pole_insert)
+		Hints.push_back({"LMB by a track", "places a pole on that side, with the card for its distance"});
+	Hints.push_back({"LMB on a pole", "selects it: the settings then change it at once"});
+	if (m_catenary.page == 0)
+		Hints.push_back({"Ins", m_catenary.pole_insert ? "editing only: no new poles by a click" : "placing new poles by the tracks"});
 	Hints.push_back({"LMB on a tensioning device", "selects the anchor and its chain"});
 	Hints.push_back({"Drag a tensioning device", "moves the anchor pole along the track"});
-	Hints.push_back({"LMB under a span", "puts the pole into the chain between the two poles"});
+	if (m_catenary.page != 0 || m_catenary.pole_insert)
+		Hints.push_back({"LMB under a span", "puts the pole into the chain between the two poles"});
 	if (m_catenary.chaining && m_catenary.last >= 0 && m_catenary.selected < 0)
 		Hints.push_back({"Esc", "ends the chain: the next pole starts a new one"});
 	if (m_catenary.selected < 0 && m_catenary.page == 0)
@@ -6751,6 +6775,13 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 	if (Key == GLFW_KEY_X && (tool.page == 0 || tool.selected >= 0 || tool.anchor_cantilever >= 0 || (tool.page == 1 && tool.gantry_selected >= 0)))
 	{
 		catenary_flip();
+		return true;
+	}
+	// placing poles <-> editing only
+	if (Key == GLFW_KEY_INSERT && tool.page == 0)
+	{
+		tool.pole_insert = false == tool.pole_insert;
+		tool.status = tool.pole_insert ? STR("Placing poles: LMB by a track places a new pole") : STR("Editing only: LMB selects the poles standing, no new ones");
 		return true;
 	}
 	// the step of the next span: at the cursor, the recommended one, the own one
