@@ -2215,6 +2215,13 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
         poleparts.push_back( placement );
     };
     std::vector<std::string> notes;
+    // przechył słupa w stronę toru (-Y) wokół jego podstawy (Y = Distance, Z = RailHead)
+    auto const leanangle { ( Umbrella.spread || false == Umbrella.shared.empty() ? 0.0 : Umbrella.lean ) * 3.14159265358979323846 / 180.0 };
+    auto const leancos { std::cos( leanangle ) }, leansin { std::sin( leanangle ) };
+    auto const leaned = [ & ]( cantilever_point const &Point ) {
+        auto const dy { Point.y - Distance }, dz { Point.z - RailHead };
+        return cantilever_point { Distance + leancos * dy - leansin * dz, RailHead + leansin * dy + leancos * dz };
+    };
     // mocowanie z osią śrub na wysokości Bolts; zwraca punkt zaczepu izolatora
     std::map<std::string, double> heights;
     auto const fix = [ & ]( std::string const &Role, cantilever_mount const &Mount, double Bolts ) {
@@ -2241,7 +2248,8 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
         if( false == twin && console == nullptr && false == Mount.back.empty() ) { add( Role + "_back", Mount.back, "", face + depth, Bolts ); }
         if( false == Mount.hinge.empty() ) { add( Role + "_hinge", Mount.hinge, "", face + Mount.point[ 0 ], Bolts + Mount.point[ 1 ] ); }
         if( false == Mount.rod.empty() ) { add( Role + "_rod", Mount.rod, "", face + Mount.point[ 0 ], Bolts + Mount.point[ 1 ] ); }
-        return cantilever_point { face + Mount.attach_y(), Bolts + Mount.attach_z() };
+        // przechylony słup: zaczep idzie z nim (części słupa obraca się na końcu)
+        return leaned( cantilever_point { face + Mount.attach_y(), Bolts + Mount.attach_z() } );
     };
 
     // słup bramki stawia bramka
@@ -2334,6 +2342,23 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
             return Placement.role.compare( 0, 6, "strut_" ) == 0 || Placement.role.compare( 0, 5, "stay_" ) == 0; } ), poleparts.end() );
         Result.values.erase( "mount.stay" );
         Result.values.erase( "mount.strut" );
+    }
+    if( leanangle != 0.0 ) {
+        // słup z mocowaniami przechylony wokół podstawy (oś wzdłuż toru)
+        for( auto &placement : poleparts ) {
+            auto const point { leaned( cantilever_point { placement.position[ 1 ], placement.position[ 2 ] } ) };
+            placement.position[ 1 ] = point.y;
+            placement.position[ 2 ] = point.z;
+            double rotated[ 9 ];
+            auto const &r { placement.rotation };
+            for( int column = 0; column < 3; ++column ) {
+                rotated[ 0 + column ] = r[ 0 + column ];
+                rotated[ 3 + column ] = leancos * r[ 3 + column ] - leansin * r[ 6 + column ];
+                rotated[ 6 + column ] = leansin * r[ 3 + column ] + leancos * r[ 6 + column ];
+            }
+            std::copy( std::begin( rotated ), std::end( rotated ), placement.rotation );
+        }
+        Result.values[ "pole.lean" ] = Umbrella.lean;
     }
     if( Umbrella.turn != 0.0 ) {
         // słup z mocowaniami obrócony wokół swojej osi (X = polex, Y = Distance); wysięgnik zostaje w swojej płaszczyźnie (zawiasy)

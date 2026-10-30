@@ -339,6 +339,33 @@ int main( int argc, char *argv[] ) {
         failed = failed || !good;
     }
 
+    {
+        // przechył słupa 1° w stronę toru: słup i mocowania obrócone wokół podstawy, mocowanie ukośnika bliżej toru o ok. h sin 1°
+        auto const *pole { catalog.pole( "1611-11" ) };
+        auto const *scheme { catalog.scheme_for_reach( 1110, 1, 2.0 ) };
+        auto good { pole != nullptr && scheme != nullptr };
+        if( good ) {
+            auto const input { catenary::cantilever_nominal_input( *scheme, 2.0 ) };
+            auto const distance { 2.0 + 0.5 * pole->depth( 5.6 ) };
+            catenary::cantilever_umbrella upright, leaning;
+            leaning.lean = 1.0;
+            catenary::cantilever_result a, b;
+            good = catenary::solve_cantilever_on_pole( catalog, *scheme, *pole, distance, -5.6, input.messenger, {}, upright, a )
+                && catenary::solve_cantilever_on_pole( catalog, *scheme, *pole, distance, -5.6, input.messenger, {}, leaning, b );
+            auto const *ma { a.find( "strut_mount" ) }, *mb { b.find( "strut_mount" ) }, *pb { b.find( "pole" ) };
+            good = good && ma != nullptr && mb != nullptr && pb != nullptr;
+            if( good ) {
+                auto const height { ma->position[ 2 ] + 5.6 };
+                auto const shift { ma->position[ 1 ] - mb->position[ 1 ] };
+                std::printf( "  przechyl 1 st.: mocowanie ukosnika %.3f m nad glowka, blizej toru o %.4f m (h sin = %.4f)\n", height, shift, height * std::sin( 3.14159265358979323846 / 180.0 ) );
+                good = std::abs( shift - ( ( ma->position[ 1 ] - distance ) * ( 1.0 - std::cos( 3.14159265358979323846 / 180.0 ) ) + height * std::sin( 3.14159265358979323846 / 180.0 ) ) ) < 1e-6
+                    && std::abs( pb->rotation[ 4 ] - std::cos( 3.14159265358979323846 / 180.0 ) ) < 1e-9 && b.values.count( "pole.lean" ) == 1;
+            }
+        }
+        std::printf( "przechyl slupa w strone toru (lean): %s\n", good ? "OK" : "BLAD" );
+        failed = failed || !good;
+    }
+
     std::printf( failed ? "TEST NIE PRZESZEDL\n" : "wszystko OK\n" );
     return failed ? 1 : 0;
 }

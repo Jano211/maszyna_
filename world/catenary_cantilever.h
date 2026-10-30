@@ -322,6 +322,8 @@ struct cantilever_umbrella {
     // obrót słupa razem z mocowaniami wokół jego osi względem płaszczyzny wysięgnika [stopnie, od X do Y]: zwis na dźwigarze bramki
     // skośnej do toru o więcej niż ok. 2° stoi równo z dźwigarem, a wysięgnik obraca się na zawiasach mocowań w swoją płaszczyznę
     double turn { 0.0 };
+    // przechył słupa z mocowaniami w stronę toru [stopnie], obrót wokół osi wzdłuż toru przez podstawę słupa (główka szyny)
+    double lean { 0.0 };
 };
 bool solve_cantilever_on_pole( cantilever_catalog const &Catalog, cantilever_scheme const &Scheme, cantilever_pole const &Pole,
     double Distance, double RailHead, cantilever_point const &Messenger, std::map<std::string, std::string> const &Overrides,

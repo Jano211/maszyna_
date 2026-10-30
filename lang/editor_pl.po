@@ -11952,3 +11952,15 @@ msgstr "Uszynienie"
 
 msgid "Group earthing: the earthing rope over the tops of the poles (holders 6120, card 0805)"
 msgstr "Uszynienie grupowe: lina uszynienia po szczytach słupów (uchwyty 6120, karta 0805)"
+
+msgid "Lean of the pole towards the track (deg)"
+msgstr "Przechył słupa w stronę toru (°)"
+
+msgid "A pole is seldom quite upright: it leans a little, the mounts with it, the cantilever is assembled to them. + towards the track. Ctrl+click types a value"
+msgstr "Słup rzadko stoi idealnie pionowo: jest lekko pochylony, mocowania razem z nim, wysięgnik składa się do nich. + w stronę toru. Ctrl+klik i wpisz"
+
+msgid "Poles of the chain leaning a little (random 0.1-0.5 deg)"
+msgstr "Lekki przechył słupów łańcucha (losowo 0,1–0,5°)"
+
+msgid "%zu poles of the chain lean a little towards the track (Ctrl+Z takes it back)"
+msgstr "%zu słupów łańcucha lekko pochylonych w stronę toru (Ctrl+Z cofa)"

@@ -1,6 +1,6 @@
 # Sieć trakcyjna w exe – lista zadań
 
-Stan na 2026-10-29 23:00 (bieżący stan i kolejność prac: PRZEKAZANIE.md, sekcja START TUTAJ). Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
+Stan na 2026-10-30 01:00 (bieżący stan i kolejność prac: PRZEKAZANIE.md, sekcja START TUTAJ). Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
 (https://claude.ai/artifact/LboXDQjty15vbb7ieh8AUn) – Jan może odhaczać tam; przy zmianach przenosić tutaj.
 Zestawienie z notatek w `tests/catenary/*.md` (PRZEKAZANIE, KONCEPCJA, KONCEPCJA_EDYTOR, BRAMKI, KOTWIENIA, GLOWACKI,
 ROZSZERZANIE) i z pracy nad kotwieniami 23–24.10.
@@ -148,9 +148,9 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [ ] Kontrola 12° wysięgnika na skrajnych słupach kotwienia środkowego
 - [x] Sieci bez danych w urządzeniach: `network <symbol> as <kod>` (YC95-2C, YC120-2C, SKB70-C, Yp) – 25.10, „na oko”
 - [x] Kotwienie środkowe do dźwigara bramki (0416) i z jednostronną izolacją (0418)
-- [ ] Podniesienie drutu o 0,30 m na słupie, gdzie krzyżują się przęsła naprężenia
-- [ ] Przęsła naprężenia: wykrywanie + łączniki międzysekcyjne 33-0640 + `parallel` – PO ŚRODZIE, koncepcja w PRZEKAZANIE (25.10 20:25)
-- [ ] Izolatory sekcyjne PO ŚRODZIE (Jan 25.10 20:03: na środku przęsła, 3 modele, iskry; bez Movera) – Dwa typy: rolkowe (ESN-2025) i nowe na izolatorach żywicznych; przejezdne i nieprzejezdne (dwa izolatory jak na linie nośnej)
+- [x] Podniesienie drutu o 0,30 m na słupie, gdzie krzyżują się przęsła naprężenia (przycisk w panelu łańcucha, 30.10)
+- [x] Przęsła naprężenia: wykrywanie + łączniki międzysekcyjne 33-0640 (proceduralnie) + `parallel` – 30.10, do sprawdzenia w exe
+- [~] Izolatory sekcyjne (30.10: wpis, zasilanie, bryły zastępcze; brak modeli, iskier) PO ŚRODZIE (Jan 25.10 20:03: na środku przęsła, 3 modele, iskry; bez Movera) – Dwa typy: rolkowe (ESN-2025) i nowe na izolatorach żywicznych; przejezdne i nieprzejezdne (dwa izolatory jak na linie nośnej)
 
 **Wizualizacja i czas**
 
@@ -188,11 +188,11 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 
 **Bramki**
 
-- [ ] Półbramki PO ŚRODZIE: `t_gantry` (T, dźwigary na dwie strony) i `semi_gantry`; 1901 – wymiary w .inc, gotowe modele (Jan 25.10); reszta (ESN-540, new_1901/1905/1906/1907) – parametry do ustalenia
+- [~] Półbramki (30.10: 1901 cztery wpisy z .inc, założenia do potwierdzenia) PO ŚRODZIE: `t_gantry` (T, dźwigary na dwie strony) i `semi_gantry`; 1901 – wymiary w .inc, gotowe modele (Jan 25.10); reszta (ESN-540, new_1901/1905/1906/1907) – parametry do ustalenia
 - [ ] Dźwigary środkowe 3011–3014 i konsole regulacyjne, bramki > 34,9 m z klocków (tryb ekspert)
-- [ ] Zwisy 4840 i ESN-544
-- [ ] Przesuwanie zwisu po dźwigarze przeciąganiem
-- [ ] Wysokość wspólnego słupa zmieniona w jednym przęśle ma iść do sąsiedniego
+- [~] Zwisy 4840 (30.10) i ESN-544
+- [x] Przesuwanie zwisu po dźwigarze przeciąganiem (30.10)
+- [x] Wysokość wspólnego słupa zmieniona w jednym przęśle ma iść do sąsiedniego (30.10)
 
 **Konwersja scenerii**
 

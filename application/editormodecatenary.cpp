@@ -133,6 +133,7 @@ glm::dvec3 wire_of(catenary::suspension const &Data)
 void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data)
 {
 	Data.stay_shift = Current.stay_shift; // the top mount moved by hand stays where it was put
+	Data.lean = Current.lean;             // and so does the lean of the pole
 	if (false == Current.above_pole)
 		return;
 	Data.above_pole = true;
@@ -3682,6 +3683,25 @@ void catenary_editor::render_catenary_chain_ui()
 		}
 		render_catenary_chain_report(static_cast<std::size_t>(tool.chain_selected));
 		render_catenary_overlaps(static_cast<std::size_t>(tool.chain_selected));
+		if (ImGui::SmallButton(STR_C("Poles of the chain leaning a little (random 0.1-0.5 deg)")))
+		{
+			// each pole its own lean towards the track, the same every time for the same pole (by its name)
+			++tool.group;
+			std::size_t count{0};
+			for (auto const index : catenary_chain_members(static_cast<std::size_t>(tool.chain_selected)))
+			{
+				auto const *data{catenary_scene_get(index)};
+				if (data == nullptr || false == data->has_pole || false == data->umbrella.empty() || data->shared_pole)
+					continue;
+				auto const hash{std::hash<std::string>{}(data->name)};
+				auto changed{*data};
+				changed.lean = std::round((0.1 + 0.4 * static_cast<double>(hash % 1000) / 999.0) * 20.0) / 20.0;
+				tool.undo.push_back({tool.group, false, index, *data, std::nullopt, false});
+				catenary_scene_update(index, changed);
+				++count;
+			}
+			tool.status = format(STR_C("%zu poles of the chain lean a little towards the track (Ctrl+Z takes it back)"), count);
+		}
 		render_catenary_anchor_ui(static_cast<std::size_t>(tool.chain_selected));
 	}
 }
@@ -4938,6 +4958,35 @@ void catenary_editor::render_catenary_cantilever_ui()
 					tool.probed = false;
 				}
 				ImGui::PopItemWidth();
+			}
+		}
+		// the lean of the pole across the track (with its mounts, the cantilever goes to them); umbrellas, spread cantilevers and gantry
+		// masts stand upright
+		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole && data->umbrella.empty() && false == data->shared_pole)
+		{
+			auto const *catalog{catenary_scene_catalog()};
+			auto const *own{catalog != nullptr ? catalog->pole(data->pole_type) : nullptr};
+			if (own != nullptr && false == own->gantry && own->drop.empty())
+			{
+				auto const index{static_cast<std::size_t>(tool.selected)};
+				auto lean{static_cast<float>(data->lean)};
+				ImGui::PushItemWidth(160.0f);
+				if (ImGui::SliderFloat(STR_C("Lean of the pole towards the track (deg)"), &lean, -1.5f, 1.5f, "%+.2f"))
+				{
+					lean = std::round(lean * 20.0f) / 20.0f;
+					auto changed{*data};
+					changed.lean = lean;
+					if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
+					{
+						tool.shift_group = ++tool.group;
+						tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
+					}
+					catenary_scene_update(index, changed);
+					tool.probed = false;
+				}
+				ImGui::PopItemWidth();
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("A pole is seldom quite upright: it leans a little, the mounts with it, the cantilever is assembled to them. + towards the track. Ctrl+click types a value"));
 			}
 		}
 	}

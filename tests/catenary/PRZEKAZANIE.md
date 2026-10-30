@@ -1,8 +1,44 @@
-# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-10-29 23:00)
+# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-10-30 01:00)
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – 2026-10-29 23:00 (najpierw to, potem sekcja 26.10 niżej)
+## START TUTAJ – 2026-10-30 01:00 (najpierw to)
+
+**GAŁĘZIE (od 29.10): pracujemy na gl46.** `siec-gl46` (= `feat/gl46-migration` kolegi + sieć), `bujanie-gl46`, wspólna
+`wszystko-gl46` (Jan ją buduje, VS 2026: `cmake .. -G "Visual Studio 18 2026" -A x64` w `build-gl46`, submoduły Vulkana).
+Każda zmiana sieci: commit na `siec-gl46` → push → merge do `wszystko-gl46` → push. Stare `siec-trakcyjna` / `wszystko` (GL 3.3)
+stoją na 2fab5e1 / 84a97dc – przenosić tam tylko na prośbę Jana („przerób pod gl33”). Nowe rzeczy kolegi: merge jego gałęzi.
+Bujanie na gl46: stuki i przysiad na przerwach szyn z jego `track_rails` (`TTrack::rail_gaps()`: krzyżownica `frog()`, iglice
+`blade()`, skrzyżowania `rail_crossings()`); tor cięty na przecięciach bez zwykłych styków.
+
+**Zrobione w nocy 29/30.10 (Jan: „ogarniaj po kolei, zaczątek wszystkiego”, bez modeli). W exe NIESPRAWDZONE – tylko testy i składnia.**
+1. Uwagi 26.10: „Zwis na drugą stronę toru” (`catenary_drop_flip`, karta dobierana od nowa); zwis przy skosie dźwigara do toru
+   > 2° stoi równo z dźwigarem, wysięgnik obraca się (`drop_turn` w scenie, `cantilever_umbrella::turn` – słup z mocowaniami obrócony
+   wokół osi); suwak „Górne mocowanie przesunięte” ±0,5 m (`stay_shift` we wpisie, dobór odciągu z rodziny części, 07xx/10xx/11xx/12xx);
+   „Tryb ekspert” (chowa ±0,5, własne hk, górne mocowanie, rozstawione, linę z innego wysięgnika, pojedyncze elementy dźwigara, obrót bramki).
+2. Edytor: zwis przeciągany po dźwigarze (druty zostają, karta od nowa – `catenary_drop_spot`); wysokość wspólnego słupa bramki idzie
+   do sąsiedniego przęsła; przyciski lica szlak 2,50 / stacja 2,20 / rozjazd 4,00 + podpowiedź przy rozjeździe (`catenary_by_switch`).
+3. Półbramki 1901 i bramki T: `mast … semi <Beam_out> [sides 2] drop 4840` w traction_supports.txt (4 wpisy z .inc), katalog robi z nich
+   dźwigar-„single” bez modelu; stawianie jak bramka (drugi klik = kierunek). Zwisy 4840-2…-5 (depth 0,20). ZAŁOŻENIA (pytania wysłane
+   Janowi 29.10 ok. 23:45): dźwigar w modelu wzdłuż +X, zero w osi słupa; Beam_out od osi; 4840 wyk. 05, 0,20 m w stronę toru.
+4. Przęsła naprężenia: wspólne przęsła łańcuchów (końce przewodów < 0,8 m) wykrywane same – `parallel` po wczytaniu
+   (`link_overlaps`, raz) i w edytorze (`span_parallel`), odpinanie bieżni przy usuwaniu przęsła; `catenary_chain_overlaps` (słupy
+   krzyżowe, zwarte = ten sam zasilacz); panel łańcucha: lista przęseł naprężenia + przycisk „Podnieś przewód odchodzący o 0,30 m”;
+   łącznik 33-0640 proceduralnie (`overlap_connector`, 1,5 m za słupem krzyżowym, łuk między linami + S do przewodu – ZAŁOŻENIA).
+5. Izolatory sekcyjne: `insulator <po podwieszeniu> resin|ceramic <zasilacz|->` w łańcuchu, przęsła za nim z jego zasilacza
+   (przęsło z izolatorem jeszcze ze starego – ZAŁOŻENIE), bryły zastępcze w połowie przęsła; edytor przy słupie łańcucha; wybór
+   zasilacza z listy `Powergrid`. Iskry, modele, podział przęsła – później.
+6. Uszynienie grupowe: wpis `earthing poles … endearthing`, uchwyt z klucza słupa `earthing`/`earthing_back` (6120-01/-02/-07+08),
+   0,075 m nad mount_max (ZAŁOŻENIE), lina rysowana przez przęsła łańcuchów między kolejnymi słupami (strzałka 1 %); zakładka
+   „Uszynienie” w pasku (klikanie słupów, „Wzdłuż łańcucha”). 6840 na bramkach, końce lin – później.
+7. Przechył słupa w poprzek toru: `lean <°>` (do ±5), słup z mocowaniami obrócony wokół podstawy; suwak ±1,5° przy słupie i
+   „Lekki przechył słupów łańcucha” (0,1–0,5°, stały dla nazwy). Parasole / rozstawione / bramki bez przechyłu.
+- G:\Maszyna2510\data\traction_supports.txt zapisany 30.10 00:50 (45830 B). Tłumaczenia w lang/editor_pl.po.
+
+**Czeka na Jana:** odpowiedzi na 4 pytania (półbramki, 4840, wymiary 1711, 6120 gotowe?); test w exe wszystkiego powyżej;
+dalej stare: 101x jako uchwyt wyżej, spread 4890, 4690-04 na masztach, obejma 0,15 m.
+
+## Poprzedni start – 2026-10-29 23:00
 
 **Zmiany kolegi (renderer GL 4.6) na kodzie z siec-radio** – gałąź `feat/gl46-migration` w MaSzyna-EU07/maszyna: zmergował
 siec-radio (619f048) 26.10 16:36 i dopisał 5 commitów sieci. Przeniesione do `siec-trakcyjna` cherry-pickiem (`-x`, hash
