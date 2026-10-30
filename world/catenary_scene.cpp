@@ -3233,9 +3233,10 @@ catenary_chain_overlap_miss( std::size_t const Index, catenary_overlap_miss &Mis
 
 bool
 catenary_scene_second_net( std::size_t const Index, double *Wire, double *Rope, bool &HasRope ) {
-    if( Index >= Suspensions.size() || Suspensions[ Index ].removed || ( false == Suspensions[ Index ].has_net_b_wire && false == Suspensions[ Index ].has_net_b_rope ) ) { return false; }
+    if( Index >= Suspensions.size() || Suspensions[ Index ].removed || ( false == Suspensions[ Index ].has_net_b_wire && false == Suspensions[ Index ].has_net_b_rope && false == Suspensions[ Index ].has_wire_pair ) ) { return false; }
     auto const &suspension { Suspensions[ Index ] };
     if( suspension.has_net_b_wire ) { std::copy( std::begin( suspension.net_b_wire ), std::end( suspension.net_b_wire ), Wire ); }
+    else if( suspension.has_wire_pair ) { std::copy( std::begin( suspension.wire_pair[ 1 ] ), std::end( suspension.wire_pair[ 1 ] ), Wire ); }
     else { std::copy( std::begin( suspension.data.at ), std::end( suspension.data.at ), Wire ); }
     HasRope = suspension.has_net_b_rope;
     if( HasRope ) { std::copy( std::begin( suspension.net_b_rope ), std::end( suspension.net_b_rope ), Rope ); }
