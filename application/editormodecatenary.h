@@ -412,6 +412,7 @@ struct catenary_editor
 	void render_catenary_gantry_selected(bool Semi);
 	void render_catenary_semi_placing();
 	void render_catenary_anchors_page();
+	void render_catenary_second_net(std::size_t Chain);
 	void catenary_choose_page(int const Page);
 	void draw_catenary_overlay() const;
 	std::string catenary_intent_label(catenary_spot const &Spot) const;

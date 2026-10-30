@@ -2979,11 +2979,49 @@ void catenary_editor::catenary_connect(std::size_t const To)
 		tool.status = STR("The poles are in different files: a chain can't join them");
 		return;
 	}
+	// the chain of a pole: one it ends, when it's in more of them (a cantilever with a second network: the chain of that network
+	// ends there while the chain of its first network goes through)
+	auto const chain_of = [&](std::size_t const Index, std::size_t &Position) {
+		auto const *data{catenary_scene_get(Index)};
+		for (std::size_t chain = 0; data != nullptr && false == data->name.empty() && chain < catenary_chain_size(); ++chain)
+		{
+			auto const *candidate{catenary_chain_get(chain)};
+			if (candidate == nullptr || candidate->suspensions.size() < 2 || catenary_chain_file(chain) != catenary_scene_file_of(Index))
+				continue;
+			if (candidate->suspensions.front() == data->name || candidate->suspensions.back() == data->name)
+			{
+				Position = candidate->suspensions.front() == data->name ? 0 : candidate->suspensions.size() - 1;
+				return static_cast<int>(chain);
+			}
+		}
+		return catenary_chain_of(Index, Position);
+	};
 	std::size_t pa{0}, pb{0};
-	auto const ca{catenary_chain_of(from, pa)};
-	auto const cb{catenary_chain_of(To, pb)};
+	auto ca{chain_of(from, pa)};
+	auto cb{chain_of(To, pb)};
 	auto const *chaina{ca >= 0 ? catenary_chain_get(static_cast<std::size_t>(ca)) : nullptr};
 	auto const *chainb{cb >= 0 ? catenary_chain_get(static_cast<std::size_t>(cb)) : nullptr};
+	// a pole in the middle of another chain whose cantilever has a second network nobody uses (102x, 117x/118x, 0120, 120x...):
+	// the span goes onto that second network, the chain of the first one stays as it is
+	auto const second_free = [&](std::size_t const Index) {
+		double wire[3], rope[3];
+		bool hasrope{false};
+		return catenary_scene_second_net(Index, wire, rope, hasrope) && catenary_scene_second_net_chain(Index) < 0;
+	};
+	auto const middle = [](catenary::chain const *Chain, std::size_t const Position) { return Chain != nullptr && Position > 0 && Position + 1 < Chain->suspensions.size(); };
+	auto secondfrom{false}, secondto{false};
+	if (middle(chainb, pb) && second_free(To))
+	{
+		secondto = true;
+		chainb = nullptr;
+		cb = -1;
+	}
+	if (middle(chaina, pa) && second_free(from))
+	{
+		secondfrom = true;
+		chaina = nullptr;
+		ca = -1;
+	}
 	if (chaina != nullptr && ca == cb)
 	{
 		tool.status = STR("Both poles are in this chain already");
@@ -3023,6 +3061,8 @@ void catenary_editor::catenary_connect(std::size_t const To)
 			if (pb != 0)
 				std::reverse(other.begin(), other.end());
 			changed.suspensions.insert(changed.suspensions.end(), other.begin(), other.end());
+			changed.second_net.insert(changed.second_net.end(), chainb->second_net.begin(), chainb->second_net.end());
+			changed.messenger_from.insert(changed.messenger_from.end(), chainb->messenger_from.begin(), chainb->messenger_from.end());
 			tool.undo.push_back({tool.group, true, static_cast<std::size_t>(cb), std::nullopt, *chainb, false});
 			catenary_chain_remove(static_cast<std::size_t>(cb));
 		}
@@ -3056,6 +3096,15 @@ void catenary_editor::catenary_connect(std::size_t const To)
 		created.suspensions = {namea, nameb};
 		result = static_cast<int>(catenary_chain_add(file, created));
 		tool.undo.push_back({tool.group, true, static_cast<std::size_t>(result), std::nullopt, std::nullopt, false});
+	}
+	// the poles taken on their second network
+	if (auto const *made{result >= 0 ? catenary_chain_get(static_cast<std::size_t>(result)) : nullptr}; made != nullptr && (secondfrom || secondto))
+	{
+		auto changed{*made};
+		for (auto const &[take, name] : {std::pair{secondfrom, namea}, std::pair{secondto, nameb}})
+			if (take && std::find(changed.second_net.begin(), changed.second_net.end(), name) == changed.second_net.end())
+				changed.second_net.push_back(name);
+		catenary_chain_update(static_cast<std::size_t>(result), changed);
 	}
 	tool.chain_selected = result;
 	// the next click goes on from this pole
@@ -5372,6 +5421,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 				}
 				render_catenary_messenger_from(static_cast<std::size_t>(chain));
 				render_catenary_insulator(static_cast<std::size_t>(chain));
+				render_catenary_second_net(static_cast<std::size_t>(chain));
 			}
 			if (ImGui::Button(STR_C("Remove the pole")))
 				catenary_delete_selected();
@@ -5476,6 +5526,41 @@ void catenary_editor::render_catenary_insulator(std::size_t const Chain)
 	}
 	else if (slid)
 		catenary_chain_update(Chain, changed);
+}
+
+// the selected pole in the chain on the second network of its cantilever (102x: the second messenger and contact wire, 117x/118x and
+// the insulating breaks of the tees: the second contact wire, 0120 and 120x: the second of the two contact wires)
+void catenary_editor::render_catenary_second_net(std::size_t const Chain)
+{
+	auto &tool{m_catenary};
+	auto const *chain{catenary_chain_get(Chain)};
+	auto const *data{tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr};
+	if (chain == nullptr || data == nullptr || data->name.empty() || std::find(chain->suspensions.begin(), chain->suspensions.end(), data->name) == chain->suspensions.end())
+		return;
+	double wire[3], rope[3];
+	bool hasrope{false};
+	auto const listed{std::find(chain->second_net.begin(), chain->second_net.end(), data->name) != chain->second_net.end()};
+	auto const offered{catenary_scene_second_net(static_cast<std::size_t>(tool.selected), wire, rope, hasrope)};
+	if (false == offered && false == listed)
+		return;
+	auto const user{catenary_scene_second_net_chain(static_cast<std::size_t>(tool.selected))};
+	auto on{listed};
+	ImGui::BeginDisabled(false == listed && user >= 0);
+	if (ImGui::Checkbox(STR_C("On the second network of the cantilever"), &on))
+	{
+		auto changed{*chain};
+		if (on)
+			changed.second_net.push_back(data->name);
+		else
+			changed.second_net.erase(std::remove(changed.second_net.begin(), changed.second_net.end(), data->name), changed.second_net.end());
+		tool.undo.push_back({++tool.group, true, Chain, std::nullopt, *chain, false});
+		catenary_chain_update(Chain, changed);
+	}
+	ImGui::EndDisabled();
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+		ImGui::SetTooltip("%s", false == listed && user >= 0 ? STR_C("Another chain is on the second network of this cantilever already")
+		                                                     : hasrope ? STR_C("This chain goes through the second contact wire clamp and the second messenger clamp of the cantilever (another chain has its first network)")
+		                                                               : STR_C("This chain goes through the second contact wire clamp of the cantilever; its messenger: from a messenger only cantilever on this pole, otherwise freely past it"));
 }
 
 void catenary_editor::render_catenary_messenger_from(std::size_t const Chain)
