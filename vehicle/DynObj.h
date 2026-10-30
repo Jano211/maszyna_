@@ -105,6 +105,7 @@ class TAnimPant
     TTraction *hvPowerWire; // aktualnie podczepione druty, na razie tu
     // iskrzenie (catenary_arcing): ślizg był w styku pod prądem w poprzednim kroku, i ten prąd
     bool ArcContact { false };
+    bool ArcKnown { false }; // stan styku już znany (pierwszy krok po wczytaniu nie daje błysku dotknięcia)
     double ArcCurrent { 0.0 };
     float fWidthExtra; // dodatkowy rozmiar poziomy poza część roboczą (fWidth)
     float fHeightExtra[5]; //łamana symulująca kształt nabieżnika
