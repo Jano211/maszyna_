@@ -2250,6 +2250,10 @@ bool catenary_editor::catenary_insert_at(catenary_spot const &Spot, chain_insert
 	auto const &tool{m_catenary};
 	if (false == tool.insert_spans || false == Spot.data.has_at || ((tool.page == 1 || tool.page == 4) && tool.gantry_selected >= 0))
 		return false;
+	// a chain being built goes on: the pole is its next one, not one of the chain whose wires it stands under (two chains side by
+	// side in a tension span; Jan 2026-10-30)
+	if (tool.chaining && tool.last >= 0 && catenary_scene_get(static_cast<std::size_t>(tool.last)) != nullptr)
+		return false;
 	auto const wire{plan_of(wire_of(Spot.data))};
 	glm::dvec3 const camera{Global.pCamera.Pos};
 	auto best{kInsertWidth};
@@ -4665,7 +4669,7 @@ void catenary_editor::render_catenary_chain_state()
 	ImGui::SameLine();
 	ImGui::Checkbox(STR_C("Into spans"), &tool.insert_spans);
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("%s", STR_C("A pole placed under the span of a chain (its wire point within 1.5 m of the span, not at its ends) goes into that chain between the two poles"));
+		ImGui::SetTooltip("%s", STR_C("A pole placed under the span of a chain (its wire point within 1.5 m of the span, not at its ends) goes into that chain between the two poles; not while a chain is being built (the pole goes on with it)"));
 	if (false == tool.chaining)
 		return;
 	auto const *last{tool.last >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.last)) : nullptr};
