@@ -5369,7 +5369,7 @@ void opengl46_renderer::Render_catenary_arcing()
 		for (auto const &arc : arcs)
 		{
 			auto const centre{glm::vec3{arc.position - camera}};
-			auto const reach{0.05f + 0.25f * arc.intensity};
+			auto const reach{catenary_arcing::parameters().arc_core_size[0] + catenary_arcing::parameters().arc_core_size[1] * arc.intensity};
 			for (int strand = 0; strand < 5; ++strand)
 			{
 				auto point{centre};
@@ -5395,13 +5395,9 @@ void opengl46_renderer::Render_catenary_arcing()
 				geometry = m_geometry.create_chunk(groups[group], userdata, m_arcing_bank, GL_LINES);
 		}
 	}
-	// kolory liniowe po pow 2.2 w shaderze, ponad 1: jaśniej niż biel, do blooma
-	glm::vec4 const colours[kHeats + 1]{
-		{1.9f, 1.8f, 1.6f, 0.9f}, // biało-żółte (Jan 2026-10-30: słabiej)
-		{1.7f, 1.2f, 0.6f, 0.85f},
-		{1.4f, 0.7f, 0.25f, 0.75f}, // pomarańczowe
-		{1.0f, 0.35f, 0.1f, 0.6f}, // czerwone, gasnące
-		{1.1f, 1.5f, 2.8f, 0.9f}}; // rdzeń łuku, niebieski
+	// kolory z ustawień (data/traction_arcing.txt); w shaderze pow 2.2, ponad 1: jaśniej niż biel, do blooma
+	auto const &settings{catenary_arcing::parameters()};
+	glm::vec4 const colours[kHeats + 1]{settings.spark_color[0], settings.spark_color[1], settings.spark_color[2], settings.spark_color[3], settings.core_color};
 	::glPushMatrix();
 	::glDisable(GL_CULL_FACE);
 	::glDepthMask(GL_FALSE);
