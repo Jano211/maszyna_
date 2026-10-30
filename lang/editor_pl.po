@@ -11991,3 +11991,12 @@ msgstr "tylko edycja: kliknięcie nie wstawia słupów"
 
 msgid "placing new poles by the tracks"
 msgstr "wstawianie nowych słupów przy torach"
+
+msgid "Tension overlaps: none"
+msgstr "Przęsła naprężenia: brak"
+
+msgid "A span of another chain is shared when both ends of its wire are within 0.8 m across and 1 m in height of this one's, and they run side by side on at least 70% of the shorter span"
+msgstr "Przęsło innego łańcucha jest wspólne, gdy oba końce jego przewodu są do 0,8 m w poprzek i do 1 m w pionie od przewodu tego, a biegną obok siebie na co najmniej 70% krótszego przęsła"
+
+msgid "nearest: %s by span %zu, %.2f m across (up to 0.80), %.2f m in height (up to 1.00), side by side %.0f%% (at least 70)"
+msgstr "najbliżej: %s przy przęśle %zu, %.2f m w poprzek (do 0,80), %.2f m w pionie (do 1,00), obok siebie %.0f%% (co najmniej 70)"

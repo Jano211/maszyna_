@@ -3726,6 +3726,19 @@ void catenary_editor::render_catenary_overlaps(std::size_t const Chain)
 	if (chain == nullptr)
 		return;
 	auto const overlaps{catenary_chain_overlaps(Chain)};
+	if (overlaps.empty())
+	{
+		// nothing found: what's missing, against the nearest span of another chain running along
+		ImGui::TextDisabled("%s", STR_C("Tension overlaps: none"));
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("A span of another chain is shared when both ends of its wire are within 0.8 m across and 1 m in height of this one's, and they run side by side on at least 70% of the shorter span"));
+		catenary_overlap_miss miss;
+		if (catenary_chain_overlap_miss(Chain, miss))
+			if (auto const *other{catenary_chain_get(miss.other)}; other != nullptr)
+				ImGui::TextDisabled("%s", format(STR_C("nearest: %s by span %zu, %.2f m across (up to 0.80), %.2f m in height (up to 1.00), side by side %.0f%% (at least 70)"),
+				                                 other->name.c_str(), miss.span + 1, miss.across, miss.height, miss.along * 100.0).c_str());
+		return;
+	}
 	for (auto const &overlap : overlaps)
 	{
 		auto const *other{catenary_chain_get(overlap.other)};
