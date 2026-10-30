@@ -12114,3 +12114,15 @@ msgstr "Półbramki: LPM na półbramce ją wybiera, albo postaw nową"
 
 msgid "no image (eu07 -generate-nodebank-previews -catenary)"
 msgstr "brak obrazka (eu07 -generate-nodebank-previews -catenary)"
+
+msgid "From %s (m)"
+msgstr "Od %s (m)"
+
+msgid "Where the section insulator is in the span, from this pole along the wires. Ctrl+click types a value"
+msgstr "Miejsce izolatora sekcyjnego w przęśle, od tego słupa wzdłuż przewodów. Ctrl+klik – wpisanie wartości"
+
+msgid "in the middle"
+msgstr "w połowie"
+
+msgid "A section insulator in the span after this pole, in its middle or where set below: the spans after it can take another power source (another section). Placeholder shapes until the models are made"
+msgstr "Izolator sekcyjny w przęśle za tym słupem, w połowie albo tam, gdzie ustawiono niżej: przęsła za nim mogą mieć inny zasilacz (inną sekcję). Bryły zastępcze do czasu modeli"

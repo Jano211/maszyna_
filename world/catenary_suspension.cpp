@@ -117,6 +117,7 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                     if( one( insulator.after ) && one( insulator.kind ) && one( power ) ) {
                         if( insulator.kind != "resin" && insulator.kind != "ceramic" ) { report( line.name, "insulator kind \"" + insulator.kind + "\" isn't \"resin\" or \"ceramic\"" ); good = false; }
                         insulator.power = ( power == "-" ? std::string() : power );
+                        if( index < count && Tokens[ index ] == "at" ) { ++index; number( insulator.at ); }
                         line.insulators.push_back( insulator );
                     }
                 }
@@ -427,7 +428,10 @@ std::string write_chain( chain const &Entry ) {
         if( Entry.middle_heights[ 0 ] > 0.0 || Entry.middle_heights[ 1 ] > 0.0 ) { text += " middle_height " + number( Entry.middle_heights[ 0 ] ) + " " + number( Entry.middle_heights[ 1 ] ); }
     }
     for( auto const &pair : Entry.messenger_from ) { text += " messenger_from " + pair.first + " " + pair.second; }
-    for( auto const &insulator : Entry.insulators ) { text += " insulator " + insulator.after + " " + insulator.kind + " " + ( insulator.power.empty() ? std::string( "-" ) : insulator.power ); }
+    for( auto const &insulator : Entry.insulators ) {
+        text += " insulator " + insulator.after + " " + insulator.kind + " " + ( insulator.power.empty() ? std::string( "-" ) : insulator.power );
+        if( insulator.at >= 0.0 ) { text += " at " + number( std::round( insulator.at * 100.0 ) / 100.0 ); }
+    }
     text += " suspensions";
     for( auto const &name : Entry.suspensions ) { text += " " + name; }
     return text + " endchain";

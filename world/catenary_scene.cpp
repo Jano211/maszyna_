@@ -2009,9 +2009,10 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
     }
 }
 
-// izolator sekcyjny w połowie przęsła (Jan 2026-10-25): na przewodzie jezdnym element izolujący z prowadnicami (ok. 2 m), nad nim
-// izolator w linie nośnej. Do czasu modeli (żywiczny na jeden / dwa przewody, ceramiczny) bryły zastępcze; przewód w połowie przęsła
-// liczony prosto między końcami (ZAŁOŻENIE: przewód jezdny bez strzałki), lina nośna o strzałkę niżej (ok. 1/10 wysokości konstrukcyjnej)
+// izolator sekcyjny w przęśle (Jan 2026-10-25, w połowie; 2026-10-30: "at" m od podwieszenia "after"): na przewodzie jezdnym element
+// izolujący z prowadnicami (ok. 2 m), nad nim izolator w linie nośnej. Do czasu modeli (żywiczny na jeden / dwa przewody, ceramiczny)
+// bryły zastępcze; przewód liczony prosto między końcami (ZAŁOŻENIE: przewód jezdny bez strzałki), lina nośna z parabolą strzałki
+// (w połowie ok. 1/10 wysokości konstrukcyjnej niżej). Element nie wychodzi poza przęsło
 void
 section_insulator( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
     auto const &data { Chain.data };
@@ -2023,11 +2024,15 @@ section_insulator( scene_chain const &Chain, std::size_t const Span, std::vector
         bool anchoreda, anchoredb;
         if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) ) { return; }
         glm::dvec3 const a { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, b { wb[ 0 ], wb[ 1 ], wb[ 2 ] };
-        auto const wire { ( a + b ) * 0.5 };
-        auto const height { 0.5 * ( ( ra[ 1 ] - wa[ 1 ] ) + ( rb[ 1 ] - wb[ 1 ] ) ) };
-        auto const rope { glm::dvec3 { 0.5 * ( ra[ 0 ] + rb[ 0 ] ), 0.5 * ( ra[ 1 ] + rb[ 1 ] ) - 0.1 * height, 0.5 * ( ra[ 2 ] + rb[ 2 ] ) } };
-        auto const along { b - a };
         auto const ceramic { insulator.kind == "ceramic" };
+        auto const length { std::max( glm::length( b - a ), 1e-3 ) };
+        auto const half { ( ceramic ? 1.6 : 2.0 ) * 0.5 };
+        auto const t { insulator.at < 0.0 ? 0.5 : std::clamp( insulator.at / length, std::min( 0.5, half / length ), std::max( 0.5, 1.0 - half / length ) ) };
+        auto const wire { a + ( b - a ) * t };
+        auto const height { 0.5 * ( ( ra[ 1 ] - wa[ 1 ] ) + ( rb[ 1 ] - wb[ 1 ] ) ) };
+        glm::dvec3 const ropea { ra[ 0 ], ra[ 1 ], ra[ 2 ] }, ropeb { rb[ 0 ], rb[ 1 ], rb[ 2 ] };
+        auto const rope { ropea + ( ropeb - ropea ) * t - glm::dvec3 { 0.0, 0.4 * height * t * ( 1.0 - t ), 0.0 } };
+        auto const along { b - a };
         add_box( Solid, wire + glm::dvec3 { 0.0, 0.06, 0.0 }, along, ceramic ? 1.6 : 2.0, ceramic ? 0.12 : 0.08 );   // element izolujący z prowadnicami
         add_box( Solid, rope, along, 0.6, 0.07 );                                                               // izolator w linie nośnej
         return;

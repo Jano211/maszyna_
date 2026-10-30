@@ -521,7 +521,7 @@ int main( int, char *argv[] ) {
         b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] = 60.0; c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 120.0; d.at[ 2 ] = d.rope[ 2 ] = d.pole[ 2 ] = 180.0;
         catenary::chain line;
         line.name = "ni"; line.power = "pwr01"; line.type = "C120-2C"; line.suspensions = { "i1", "i2", "i3", "i4" };
-        line.insulators.push_back( { "i2", "ceramic", "pwr09" } );
+        line.insulators.push_back( { "i2", "ceramic", "pwr09", 12.5 } );
         auto const written { catenary::write_chain( line ) };
         std::string text;
         for( auto const *item : { &a, &b, &c, &d } ) { text += catenary::write_suspension( *item ) + "\n"; }
