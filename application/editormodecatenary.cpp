@@ -3014,7 +3014,9 @@ void catenary_editor::catenary_connect(std::size_t const To)
 	};
 	auto const middle = [](catenary::chain const *Chain, std::size_t const Position) { return Chain != nullptr && Position > 0 && Position + 1 < Chain->suspensions.size(); };
 	auto secondfrom{false}, secondto{false};
-	if (middle(chainb, pb) && second_free(To))
+	// the pole clicked onto is in another chain (its middle or its end): the second network, while it's free. A chain is made longer
+	// from such a pole by starting from it
+	if (chainb != nullptr && cb != ca && second_free(To))
 	{
 		secondto = true;
 		chainb = nullptr;
@@ -3209,6 +3211,27 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 			// hanging the wires on: the span from the last pole to this one
 			catenary_connect(static_cast<std::size_t>(Intent.index));
 			return;
+		}
+		// a chain being built (poles placed one after another) and a pole of another chain clicked whose cantilever has a free second
+		// network (102x, 117x/118x, 0120, 120x...): the chain goes on through that second network
+		if (tool.page == 0 && tool.chaining && tool.last >= 0 && tool.selected < 0 && tool.last != Intent.index && catenary_scene_get(static_cast<std::size_t>(tool.last)) != nullptr)
+		{
+			double wire[3], rope[3];
+			auto hasrope{false};
+			std::size_t position{0};
+			auto const own{catenary_chain_of(static_cast<std::size_t>(Intent.index), position)};
+			if (own >= 0 && catenary_scene_second_net(static_cast<std::size_t>(Intent.index), wire, rope, hasrope) && catenary_scene_second_net_chain(static_cast<std::size_t>(Intent.index)) < 0)
+			{
+				tool.connect_from = tool.last;
+				catenary_connect(static_cast<std::size_t>(Intent.index));
+				// the chain goes on from it: the next pole placed is its next one
+				tool.connect_from = -1;
+				tool.selected = -1;
+				tool.last = Intent.index;
+				tool.chain = tool.chain_selected;
+				tool.append = true;
+				return;
+			}
 		}
 		catenary_select(Intent.index);
 		// a pole selected on the gantries page: the cantilever on the gantry, its settings are shown there; on the wires page it's
