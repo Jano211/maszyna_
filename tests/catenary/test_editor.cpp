@@ -560,10 +560,36 @@ int main( int, char *argv[] ) {
         std::printf( "  druga siec: %d (lina %d), przewod B %.3f %.3f %.3f, na_1 konczy %.3f %.3f, nb_1 konczy %.3f %.3f, lancuch %d\n", net ? 1 : 0, hasrope ? 1 : 0,
             wire[ 0 ], wire[ 1 ], wire[ 2 ], wa[ 0 ], wa[ 1 ], wb[ 0 ], wb[ 1 ], catenary_scene_second_net_chain( s2 ) );
         for( auto const &e : errors ) { std::printf( "    blad: %s\n", e.c_str() ); }
-        good = good && net && hasrope && std::abs( wb[ 0 ] - wire[ 0 ] ) < 0.002 && std::abs( wb[ 1 ] - wire[ 1 ] ) < 0.002 && std::abs( wa[ 0 ] - wb[ 0 ] ) > 0.01
+        // 102x trzyma tylko drugą linę: przewód B idzie prosto od s4 do s5 (x 0,5), lina B przez drugi uchwyt liny
+        std::string line;
+        std::istringstream third { body( "nb_1" ) };
+        std::getline( third, skip );
+        double r[ 6 ];
+        third >> r[ 0 ] >> r[ 0 ] >> r[ 0 ] >> r[ 0 ] >> r[ 0 ] >> r[ 0 ] >> r[ 0 ] >> r[ 0 ] >> r[ 0 ] >> r[ 3 ] >> r[ 4 ] >> r[ 5 ];
+        std::printf( "  nb_1 lina konczy %.3f %.3f (uchwyt B %.3f %.3f)\n", r[ 3 ], r[ 4 ], rope[ 0 ], rope[ 1 ] );
+        good = good && net && hasrope && std::abs( wb[ 0 ] - 0.5 ) < 0.002 && std::abs( wa[ 0 ] - 0.687 ) < 0.002 && std::abs( r[ 3 ] - rope[ 0 ] ) < 0.002 && std::abs( r[ 4 ] - rope[ 1 ] ) < 0.002
             && catenary_scene_second_net_chain( s2 ) == 1;
+        check( good, "druga siec 102x: lina nb przez druga line wysiegnika, przewod nb prosto miedzy slupami B, zapis i odczyt" );
+        // sieci z jednym przewodem (C95-C): każda ma swój uchwyt przewodu na 102x (A - wire_a 0,04 od słupa, B - wire_b)
+        {
+            auto onea { one }, twob { two };
+            onea.type = twob.type = "C95-C";
+            std::string single;
+            for( auto const *item : { &a, &b, &c, &d, &f } ) { single += catenary::write_suspension( *item ) + "\n"; }
+            single += catenary::write_chain( onea ) + "\n" + catenary::write_chain( twob ) + "\n";
+            { std::ofstream out { "tests/catenary/td_druga_siec_test.scm", std::ios::binary }; out << single; }
+            catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear();
+            cParser again( "td_druga_siec_test.scm endcatenary" );
+            catenary_scene_load( again );
+            catenary_scene_resolve();
+            std::istringstream ia { body( "na_1" ) }, ib { body( "nb_1" ) };
+            std::getline( ia, skip ); std::getline( ib, skip );
+            ia >> ax >> ay >> az >> wa[ 0 ] >> wa[ 1 ] >> wa[ 2 ];
+            ib >> bx >> by >> bz >> wb[ 0 ] >> wb[ 1 ] >> wb[ 2 ];
+            std::printf( "  jeden przewod: na_1 konczy %.3f, nb_1 konczy %.3f\n", wa[ 0 ], wb[ 0 ] );
+            check( std::abs( wa[ 0 ] - 0.647 ) < 0.002 && std::abs( wb[ 0 ] - 0.727 ) < 0.002, "druga siec 102x przy sieciach z jednym przewodem: kazda w swoim uchwycie przewodu" );
+        }
         std::remove( "tests/catenary/td_druga_siec_test.scm" );
-        check( good, "druga siec 102x: lancuch nb przez drugi przewod i druga line, zapis i odczyt" );
     }
 
     // 6a3. izolator sekcyjny w połowie przęsła za i2: zapis i odczyt, przęsła za nim z jego zasilacza
