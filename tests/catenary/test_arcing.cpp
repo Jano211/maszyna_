@@ -41,6 +41,18 @@ int main() {
     }
     std::printf( "  10 s jazdy 30 m/s, 600 A, oblodzenie %.2f: lukow %d, iskier najwiecej %zu\n", foggy, started, sparksmax );
     check( started > 20 && sparksmax > 10, "oblodzony przewod: luki i iskry" );
+    // mocne oblodzenie: łuk świeci w każdym kroku (ciągły), a na nim błyski
+    {
+        int lit { 0 };
+        for( int step = 0; step < 100; ++step ) {
+            point.z += 30.0 * dt;
+            catenary_arcing::contact( &key, point, glm::dvec3 { 0.0, 0.0, 30.0 }, 600.0, &a, dt );
+            catenary_arcing::update( dt );
+            if( false == catenary_arcing::arcs().empty() ) { ++lit; }
+        }
+        std::printf( "  mocne oblodzenie: luk widoczny w %d z 100 krokow\n", lit );
+        check( lit == 100, "mocne oblodzenie: ciagly slaby luk" );
+    }
     // iskry spadają (niżej niż punkt styku) i lecą z pociągiem, ale zostają w tyle
     bool fall { false };
     for( auto const &spark : catenary_arcing::sparks() ) { if( spark.position.y < 5.5 ) { fall = true; } }

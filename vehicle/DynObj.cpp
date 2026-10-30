@@ -9349,8 +9349,7 @@ TDynamicObject::pantograph_arcing( TAnimPant &Pantograph, int const Index, doubl
         // pierwsze dotknięcie: przewód naładowuje to, co za pantografem (przy otwartym wyłączniku tylko odgromnik i woltomierz -
         // ledwo widoczny błysk; pojazd z falownikami ładuje filtr wejściowy - wyraźny); lód na przewodzie albo szron na ślizgu
         // (zimny start) - mocniej
-        auto const filter { MoverParameters->EngineType == TEngineType::ElectricInductionMotor ? 0.35 : 0.0 };
-        auto const strength { 0.08 + filter + 0.45 * catenary_arcing::icing() + std::min( 0.4, Current / 1500.0 ) };
+        auto const strength { catenary_arcing::touch_strength( MoverParameters->EngineType == TEngineType::ElectricInductionMotor, Current ) };
         started = catenary_arcing::touch( &Pantograph, point, strength );
     }
     if( touching ) {

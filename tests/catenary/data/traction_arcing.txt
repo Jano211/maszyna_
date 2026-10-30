@@ -1,0 +1,63 @@
+// Iskrzenie pantografu (luk i iskry). Plik opcjonalny: bez niego albo bez wpisu obowiazuja te same wartosci, wpisane w symulator.
+// Czytany raz, przy pierwszym uzyciu (zmiana - restart symulatora, bez kompilacji). Wylaczenie i mnoznik calosci: eu07.ini,
+// catenary.arcing yes|no i catenary.arcing.scale <0-10>. Komentarze od //.
+
+// --- oblodzenie przewodow z pogody (0-1) ---
+icing_start        1.0         // C, od tej temperatury w dol jest oblodzenie
+icing_peak        -3.0         // C, najwiecej
+icing_cold_span   20.0         // o tyle stopni ponizej szczytu spada do icing_cold_floor (silny mroz, suche powietrze)
+icing_cold_floor   0.25
+icing_fog       2000 300       // widzialnosc (m): od ktorej mgla sie liczy, przy ktorej w pelni
+icing_dry          0.25        // wilgoc bez mgly i opadow (sam mroz)
+icing_spread       0.4 1.6     // mnoznik oblodzenia przesel od - do (kazde przeslo stale)
+
+// --- blyski od lodu ---
+ice_rate          10           // blyskow na sekunde przy pelnym oblodzeniu, predkosci ice_speed i pradzie ice_current
+ice_speed         25           // m/s
+ice_current     1000           // A
+ice_min_speed      1           // m/s, wolniej nie iskrzy
+ice_duration       0.02 0.12   // s, krotko - dlugo
+
+// --- ciagly slaby luk przy mocnym oblodzeniu (na nim blyski) ---
+sustain_from       0.45        // od tego oblodzenia (0-1)
+sustain_level      0.3         // jasnosc przy pelnym oblodzeniu (0-1)
+sustain_sparks    60           // iskier na sekunde
+
+// --- przejscie na przeslo innego zasilacza pod pradem (izolator sekcyjny, izolowane przeslo naprezenia) ---
+section_current   20           // A, mniej - nic
+section_reference 1500         // A, pelna sila
+section_duration   0.05 0.15
+
+// --- oderwanie slizgu pod obciazeniem (opuszczenie, koniec przewodu) ---
+release_current   15
+release_reference 800
+release_duration   0.12 0.35   // s: stala + przyrost przy pelnej sile
+
+// --- pierwsze dotkniecie przewodu ---
+touch_base         0.08        // samo dotkniecie (odgromnik, woltomierz)
+touch_filter       0.35        // pojazd z falownikami (filtr wejsciowy)
+touch_ice          0.45        // przy pelnym oblodzeniu
+touch_current   1500           // A, prad przy dotknieciu dodaje do 0,4
+touch_duration     0.03 0.06
+
+// --- luk ---
+arc_color       #88A8FF #BACDFF  // kolor swiatla, odcien losowany co klatke z zakresu (sRGB)
+arc_flicker        0.35        // najmniejsza jasnosc w migotaniu (0-1)
+arc_light         10           // jasnosc swiatla (razy gfx.lights.freespot.intensity)
+arc_light_range   40           // m
+arc_core_size      0.05 0.25   // m, rdzen luku: stala + przyrost przy pelnej sile
+
+// --- iskry ---
+sparks_rate       40 400       // na sekunde w blysku: stala + przyrost przy pelnej sile
+sparks_spray       2 8         // m/s rozprysku: stala + przyrost
+sparks_carry       0.6 1.0     // czesc predkosci pojazdu, od - do
+sparks_life        0.2 0.5 0.7 // s: najkrocej, najdluzej + przyrost przy pelnej sile
+sparks_drag        3.5         // opor powietrza (1/s)
+sparks_max      1500
+
+// --- kolory smug (renderer 4.6): kolor sRGB, jasnosc (ponad 1 - jasniej niz biel, lapie bloom), alfa ---
+spark_color_1   #FFF1D7 1.9 0.9   // gorace, bialo-zolte
+spark_color_2   #FFB45A 1.7 0.85
+spark_color_3   #FF802D 1.4 0.75  // pomaranczowe
+spark_color_4   #FF591A 1.0 0.6   // gasnace, czerwone
+core_color      #6489FF 2.8 0.9   // rdzen luku

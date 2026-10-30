@@ -44,7 +44,9 @@ grawitacja, 0,2–1,2 s, stygną biało-żółte → czerwone. Wołane: `TDynami
 styku z przewodu w płaszczyźnie pantografu), `catenary_arcing::update` w drivermode obok cząsteczek, `clear` przy nowej scenerii.
 Renderer 4.6: `Render_catenary_arcing` po cząsteczkach – smugi linii, mieszanie addytywne, kolory > 1 (bloom), rdzeń łuku z
 zygzaków; światło łuku w `gfx::local_lights::gather` (niebiesko-białe, bez cieni, do 60 m; Vulkan dostaje światło, smug nie).
-Dźwięk: opcjonalny wpis `pantographarc: <plik>` w .mmd pojazdu (nie ma pliku – cisza). Ustawienia: `catenary.arcing yes|no`,
+Wszystkie liczby (oblodzenie, częstości, czasy, kolory w hex, światło) w `data/traction_arcing.txt` (opcjonalny, domyślne w kodzie,
+`catenary_arcing::parameters()`), strojenie bez kompilacji. Mocne oblodzenie (od `sustain_from`) = ciągły słaby łuk z iskrami +
+błyski na nim (Jan 30.10 21:41). Błysk przy pierwszym dotknięciu (`touch_strength`: falowniki, lód, prąd). Dźwięk: opcjonalny wpis `pantographarc: <plik>` w .mmd pojazdu (nie ma pliku – cisza). Ustawienia: `catenary.arcing yes|no`,
 `catenary.arcing.scale <0-10>` (Globals). Test: `ta`. W exe NIESPRAWDZONE.
 
 **Odpowiedzi Jana 30.10 09:04 (wprowadzone):** dźwigar 1901 „chyba” wzdłuż +X; Beam_out OD ŚCIANY słupa (offset 0,30 = W/2);
