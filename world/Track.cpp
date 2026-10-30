@@ -1668,7 +1668,16 @@ void TTrack::create_geometry( gfx::geometrybank_handle const &Bank ) {
                     if( jointcount > 0 ) {
                         create_rail_joints( jointvertices, jointindices );
                         if( false == jointindices.empty() ) {
-                            Geometry1.emplace_back( GfxRenderer->Insert( jointindices, jointvertices, empty_userdata, Bank, GL_TRIANGLES ) );
+                            // łubki, śruby i czoła szyn przy stykach: tą samą drogą co szyny (track_rails::insert_chunk), żeby renderer 4.6
+                            // dostał wagi mieszania tekstur toru w danych wierzchołków - bez nich materiał mieszany rysował je źle
+                            // (czarne / nieoświetlone). Lista trójkątów bez indeksów, jak reszta szyn
+                            gfx::vertex_array triangles;
+                            triangles.reserve( jointindices.size() );
+                            for( auto const index : jointindices ) {
+                                if( index < jointvertices.size() ) { triangles.emplace_back( jointvertices[ index ] ); }
+                            }
+                            gfx::userdata_array userdata;
+                            Geometry1.emplace_back( track_rails::insert_chunk( triangles, userdata, Bank, GL_TRIANGLES ) );
                         }
                     }
                     vertices.clear();
