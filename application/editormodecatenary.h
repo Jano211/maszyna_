@@ -109,6 +109,7 @@ struct catenary_editor
 		char file[128]{};
 		int selected{-1};
 		// chains: the poles placed one after another are joined by spans
+		bool checks{true}; // the remarks of Iet-107 and the spans over their limit in red (off: no checks, Jan 2026-10-30)
 		bool pole_insert{true}; // the Poles page: LMB by a track places a pole; off - the poles are only selected and changed
 		bool chaining{true};
 		int continue_pending{-1}; // the chain goes on from this pole, from the next frame of the panel (the button is in the middle of it)
