@@ -388,6 +388,10 @@ struct global_settings {
     float gfx_grass_density = 1.f;
     // (opengl 4.6) the smoke is simulated and drawn on the gpu (opengl46_gpu_particles), lit by the sun, the sky and the lamps
     // when gfx_smoke_lighting; false: simulated on the cpu and drawn as before
+    // sieć trakcyjna: iskrzenie pantografu (łuk, iskry) przy oblodzonym przewodzie, oderwaniu pod prądem i przejściu sekcji;
+    // mnożnik częstości i liczby iskier
+    bool CatenaryArcing { true };
+    float CatenaryArcingScale { 1.f };
     bool gfx_smoke_gpu = true;
     bool gfx_smoke_lighting = true;
     // (opengl 4.6) the particles of the gpu fade where they near what is behind them, over this share of their size (smoke) or of

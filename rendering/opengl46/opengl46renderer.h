@@ -458,6 +458,8 @@ class opengl46_renderer : public gfx_renderer, public gfx::scene_walk {
 	void Render_grass(glm::mat4 const &Future);
   void Render_vr_models();
 	void Render_editor_overlay();
+	// iskrzenie pantografów (catenary_arcing): smugi iskier i rdzeń łuku, dodawane do obrazu, jasne (HDR, łapie je bloom)
+	void Render_catenary_arcing();
 	// writes the lighting of the pass about to be drawn to the light buffer: the sun, the ambient light and the fog, and the headlights of Lights
 	// unless Headlights is false, as in the pass which draws the environment map, where lights of vehicles would only get baked into the map.
 	// Clustered tells the shading to take the headlights from the lists of the clusters (see Cull_Lights()) and not to go through the first few.
@@ -821,6 +823,9 @@ class opengl46_renderer : public gfx_renderer, public gfx::scene_walk {
 	gfx::geometrybank_handle m_editor_overlay_bank;
 	std::vector<gfx::geometry_handle> m_editor_overlay_geometry;
 	unsigned int m_editor_overlay_revision{0};
+	gfx::geometrybank_handle m_arcing_bank;
+	std::vector<gfx::geometry_handle> m_arcing_geometry; // smugi wg temperatury iskier, ostatnia: rdzenie łuków
+	std::size_t m_arcing_revision{0};
 	std::unique_ptr<gl::program> m_freespot_shader;
     std::unique_ptr<gl::program> m_billboard_shader;
     std::unique_ptr<gl::program> m_celestial_shader;

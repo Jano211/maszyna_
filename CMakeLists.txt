@@ -126,6 +126,7 @@ set(SOURCES
 "world/catenary_tensioner.cpp"
 "world/catenary_suspension.cpp"
 "world/catenary_scene.cpp"
+"world/catenary_arcing.cpp"
 "world/catenary_cantilever.cpp"
 "world/catenary_layout.cpp"
 "world/catenary_catalog.cpp"

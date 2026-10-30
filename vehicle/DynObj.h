@@ -103,6 +103,9 @@ class TAnimPant
     double fAngleU; // Ra: aktualny kąt ramienia górnego
     double NoVoltTime; // czas od utraty kontaktu z drutem
     TTraction *hvPowerWire; // aktualnie podczepione druty, na razie tu
+    // iskrzenie (catenary_arcing): ślizg był w styku pod prądem w poprzednim kroku, i ten prąd
+    bool ArcContact { false };
+    double ArcCurrent { 0.0 };
     float fWidthExtra; // dodatkowy rozmiar poziomy poza część roboczą (fWidth)
     float fHeightExtra[5]; //łamana symulująca kształt nabieżnika
     // double fHorizontal; //Ra 2015-01: położenie drutu względem osi pantografu
@@ -379,6 +382,7 @@ private:
         // TODO: split pantograph sound into one for contact of arm with the wire, and electric arc sound
         sound_source sPantUp { sound_placement::external };
         sound_source sPantDown { sound_placement::external };
+        sound_source arc { sound_placement::external }; // trzask łuku (iskrzenie), wpis "pantographarc:" w .mmd
     };
 
     struct door_sounds {
@@ -839,6 +843,8 @@ private:
 // TBD, TODO: make an object out of it
 public:
 // methods
+    // iskrzenie pantografu Index (łuk i iskry przy styku z przewodem), wołane z pętli pantografów
+    void pantograph_arcing( TAnimPant &Pantograph, int const Index, double const Difference, double const Current, double const Timedelta );
     void update_shake( double const Timedelta );
     std::pair<double, double> shake_angles() const;
 // members
