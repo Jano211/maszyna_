@@ -5531,7 +5531,17 @@ std::uint64_t catenary_editor::catenary_preview(std::string const &Name)
 	if (auto const *mast{catalog->mast(Name)}; mast != nullptr)
 		model = mast->model;
 	else if (auto const *beam{catalog->beam(Name)}; beam != nullptr)
-		model = beam->model;
+	{
+		// the beams have an image for each full metre of their kind (the folder of the model, single elements apart): the beam of the
+		// same kind nearest to the metre of this one, as the generator picks it (nodebank_previews_standalone.cpp)
+		auto const folder = [](std::string const &Model) { auto const slash{Model.rfind('/')}; return slash == std::string::npos ? std::string{} : Model.substr(0, slash); };
+		auto const metre{static_cast<double>(std::lround(beam->span))};
+		auto const *best{beam};
+		for (auto const &other : catalog->beams())
+			if (other.second.single == beam->single && folder(other.second.model) == folder(beam->model) && std::abs(other.second.span - metre) < std::abs(best->span - metre))
+				best = &other.second;
+		model = best->model;
+	}
 	else if (auto const *pole{catalog->pole(Name)}; pole != nullptr)
 	{
 		model = pole->model;
