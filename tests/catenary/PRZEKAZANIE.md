@@ -34,6 +34,17 @@ Bujanie na gl46: stuki i przysiad na przerwach szyn z jego `track_rails` (`TTrac
    Poprawka 30.10: jeden uchwyt na słup – wpisy z tym samym typem słupa w tym samym miejscu (parasol, para rozstawionych, trzeci
    w osi) to jeden słup; obrót z wpisu, który słup stawia (przy rozstawionych płaszczyzna przez punkt na konsoli). Edytor nie dodaje
    drugiego wpisu tego samego słupa (klik i „Wzdłuż łańcucha”); lina łączy kolejne słupy, nie kolejne nazwy.
+7. 30.10 wieczór (edytor, renderer):
+   - zakładki: Słupy (Wstawianie / Tylko edycja, Ins), Bramki (duży przycisk, Wstawianie / Wybrana bramka), Półbramki (nowa:
+     LPM słup + kierunek, bez mocowania), Druty (bez kotwień), Uszynienie, Kotwienia (nowa: końcowe 1 i 2, środkowe);
+   - mocowanie dźwigara domyślnie górne, wybór ukryty przy słupach z jedną wysokością (1901); półbramki 1901 `turn 180`;
+   - zygzak Iet-107 tylko wyrównuje odsuwy, strony (krótki/długi) zostają, pomija rozjazdy i przęsła naprężenia;
+   - strefa wiatrowa w trybie eksperta (wpływa tylko na rozpiętość nominalną);
+   - przęsła naprężenia wykrywane po przebiegu przewodów (0,8 m w poprzek, 1 m w pionie, ≥ 70 % obok siebie), panel pokazuje
+     najbliższe przęsło, gdy nic nie wykryto;
+   - druty i liny kotwień na 4.6: kolor × (otoczenie + ½ słońca), bez starych mnożników (były czarne / świeciły szaro);
+   - miniaturki: `eu07 -generate-nodebank-previews -catenary` (modele z traction_supports.txt, bramki z teksturą bramki_new1),
+     edytor pokazuje je przy słupach bramek / półbramkach i w podpowiedziach list.
 7. Przechył słupa w poprzek toru: `lean <°>` (do ±5), słup z mocowaniami obrócony wokół podstawy; suwak ±1,5° przy słupie i
    „Lekki przechył słupów łańcucha” (0,1–0,5°, stały dla nazwy). Parasole / rozstawione / bramki bez przechyłu.
 - G:\Maszyna2510\data\traction_supports.txt zapisany 30.10 00:50 (45830 B). Tłumaczenia w lang/editor_pl.po.
