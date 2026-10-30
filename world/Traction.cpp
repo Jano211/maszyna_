@@ -602,12 +602,10 @@ TTraction::wire_color() const {
             // stan przejściowy między nową a zaśniedziałą: ciemniejsza
             color *= 0.75f;
         }
-		color *= 0.2;
-        // w zaleźności od koloru swiatła
-        color.r *= Global.DayLight.ambient[ 0 ];
-        color.g *= Global.DayLight.ambient[ 1 ];
-        color.b *= Global.DayLight.ambient[ 2 ];
-        color *= 0.35f;
+        // w zaleźności od koloru swiatła. Renderer 4.6 (shader traction) bierze kolor jak sRGB (pow 2.2) i nie mnoży go przez nic;
+        // dawne mnożniki 0,2 i 0,35 (pod stary renderer) dawały tam czarne druty (Jan 2026-10-30)
+        // światło: otoczenie i połowa słońca (drut cienki, oświetlony z różnych stron)
+        color *= glm::vec3( Global.DayLight.ambient ) + 0.5f * glm::vec3( Global.DayLight.diffuse );
     }
     else {
         // tymczasowo pokazanie zasilanych odcinków

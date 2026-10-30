@@ -12024,3 +12024,6 @@ msgstr "Ten słup przechodzi na drugą stronę toru (krótki <-> długi wysięgn
 
 msgid "The staggers of the whole chain as set for the zigzag; every pole keeps its side, by switches and in tension overlaps nothing changes"
 msgstr "Odsuwy całego łańcucha jak dla zygzaka; każdy słup zostaje po swojej stronie, przy rozjazdach i w przęsłach naprężenia nic się nie zmienia"
+
+msgid "Only the nominal span: the recommended distance of the next pole and the limit in the remarks of Iet-107 (traction_layout.txt)"
+msgstr "Tylko rozpiętość nominalna: zalecana odległość następnego słupa i limit w uwagach Iet-107 (traction_layout.txt)"

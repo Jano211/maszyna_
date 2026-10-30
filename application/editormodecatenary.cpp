@@ -5069,9 +5069,15 @@ void catenary_editor::render_catenary_cantilever_ui()
 		}
 	}
 	changed |= ImGui::Checkbox(STR_C("25 kV insulators"), &tool.insulators25);
-	ImGui::RadioButton(STR_C("Wind zone I"), &tool.zone, 1);
-	ImGui::SameLine();
-	ImGui::RadioButton(STR_C("Wind zone II"), &tool.zone, 2);
+	// the wind zone needs the papers of the line (where which zone is): the expert mode only
+	if (tool.expert)
+	{
+		ImGui::RadioButton(STR_C("Wind zone I"), &tool.zone, 1);
+		ImGui::SameLine();
+		ImGui::RadioButton(STR_C("Wind zone II"), &tool.zone, 2);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("Only the nominal span: the recommended distance of the next pole and the limit in the remarks of Iet-107 (traction_layout.txt)"));
+	}
 	if (tool.networks.empty())
 		ImGui::TextDisabled("%s", STR_C("No data/traction_layout.txt: the spans aren't checked"));
 	ImGui::PopItemWidth();
