@@ -33,6 +33,7 @@ struct catalog_group {
     std::string title;
     std::string text;
     bool execution_user { true };       // wykonanie wybiera użytkownik (false: z pasma A, jak w teownikach)
+    double stagger { -1.0 };            // odsuw przewodów nowych słupów tej grupy (m, "stagger <m>"; Jan 2026-10-30: zerowe 120x - 0); ujemny - z panelu / zygzaka
     std::vector<std::pair<int, std::string>> executions; // opisy wykonań (exec <n> : <opis>)
 };
 

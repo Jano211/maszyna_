@@ -603,7 +603,10 @@ bool catenary_editor::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3
 		if (auto const proposed{zigzag_toward(Spot)}; proposed.has_value())
 			Spot.toward = *proposed;
 	}
-	auto const stagger{zigzag_stagger(Spot.curve)};
+	// a group of the catalogue with a stagger of its own (the "zero" cantilevers 120x of a tension span: 0) gives it to the new poles
+	auto stagger{zigzag_stagger(Spot.curve)};
+	if (auto const *group{Placing ? catenary_scene_structures().group(m_catenary.catalog_group) : nullptr}; group != nullptr && group->stagger >= 0.0)
+		stagger = group->stagger;
 	catenary_compose(Spot, m_catenary.clearance, stagger, Spot.toward);
 	// a gantry is selected: the cantilever hangs on a drop on its beam
 	glm::dvec3 from, to;

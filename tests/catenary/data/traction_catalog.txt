@@ -93,7 +93,7 @@ family 0163 t_tee5_fixed cards 0163 curve yes toward yes : 0163 - łuk, odsuw do
 family 0164 t_tee5_fixed cards 0164 curve yes toward no : 0164 - łuk, odsuw od słupa (?)
 
 // ---- przesla naprezenia, przerwy izolacyjne, dwie sieci -----------------------------------------------------------
-group n_tube_zero tension execution user : Rurowe nieprzechylne z przewodami wprost na wysięgu (120x) - "zerowe" (?)
+group n_tube_zero tension execution user stagger 0 : Rurowe nieprzechylne z przewodami wprost na wysięgu (120x) - "zerowe" (?)
 text Bez ramion: przewody na uchwytach 4120-3 wprost na wysięgu (wyk. 1, 2 dwa przewody 0,04 m od A, wyk. 3, 4 jeden w A).
 exec 1 : wyk. 1 - dwa przewody, hk 1,70
 exec 2 : wyk. 2 - dwa przewody, hk 1,70

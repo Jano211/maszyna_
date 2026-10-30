@@ -16,6 +16,7 @@ http://mozilla.org/MPL/2.0/.
 #include <cstdio>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 
 namespace catenary {
 
@@ -113,6 +114,10 @@ void structure_catalog::parse( std::vector<std::string> const &Lines, std::strin
             group.title = title;
             for( std::size_t k = 3; k + 1 < words.size(); k += 2 ) {
                 if( words[ k ] == "execution" ) { group.execution_user = ( words[ k + 1 ] != "reach" ); }
+                else if( words[ k ] == "stagger" ) {
+                    try { group.stagger = std::stod( words[ k + 1 ] ); }
+                    catch( std::exception const & ) { report( "group \"" + id + "\": stagger \"" + words[ k + 1 ] + "\" isn't a number" ); }
+                }
                 else { report( "group \"" + id + "\": unknown keyword \"" + words[ k ] + "\"" ); }
             }
             if( std::none_of( m_categories.begin(), m_categories.end(), [ & ]( catalog_category const &C ) { return C.id == group.category; } ) ) {
