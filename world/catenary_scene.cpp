@@ -65,10 +65,14 @@ struct scene_suspension {
     catenary::cantilever_placement saddle;
     double saddle_heading { 0.0 };
     glm::dvec3 saddle_origin { 0.0 };
-    // druga sieć wysięgnika z ostatniego złożenia (przęsła naprężenia, łańcuchy z "second_net"): drugi przewód, druga lina, a gdy
-    // wysięgnik ma dwa uchwyty przewodu wokół A - przewód pierwszej sieci (współrzędne scenerii)
-    bool has_net_b_wire { false }, has_net_b_rope { false }, has_net_a_wire { false };
-    double net_b_wire[ 3 ] { 0.0, 0.0, 0.0 }, net_b_rope[ 3 ] { 0.0, 0.0, 0.0 }, net_a_wire[ 3 ] { 0.0, 0.0, 0.0 };
+    // druga sieć wysięgnika z ostatniego złożenia (przęsła naprężenia, łańcuchy z "second_net"): drugi przewód (117x/118x, przerwy
+    // izolacyjne teowników), druga lina (102x); współrzędne scenerii
+    bool has_net_b_wire { false }, has_net_b_rope { false };
+    double net_b_wire[ 3 ] { 0.0, 0.0, 0.0 }, net_b_rope[ 3 ] { 0.0, 0.0, 0.0 };
+    // dwa uchwyty przewodu wokół A (102x, 0120, 120x wyk. 1-2): dla sieci z dwoma przewodami jezdnymi oba należą do niej, przy sieciach
+    // z jednym przewodem każda sieć ma swój (A - wire_a, B - wire_b; Jan 2026-10-31)
+    bool has_wire_pair { false };
+    double wire_pair[ 2 ][ 3 ] { { 0.0, 0.0, 0.0 }, { 0.0, 0.0, 0.0 } };
 };
 
 std::vector<scene_suspension> Suspensions;
@@ -466,9 +470,10 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             Target[ 2 ] = Wire.z + offset[ 2 ];
             return true;
         };
-        Suspension.has_net_b_wire = point( "wire_b", Suspension.net_b_wire ) || point( "second_wire", Suspension.net_b_wire );
+        // (wire_a / wire_b 102x, 0120, 120x to dwa przewody jednej sieci 2C, nie druga sieć)
+        Suspension.has_net_b_wire = point( "second_wire", Suspension.net_b_wire );
         Suspension.has_net_b_rope = point( "messenger_clamp_b", Suspension.net_b_rope );
-        Suspension.has_net_a_wire = Suspension.has_net_b_wire && point( "wire_a", Suspension.net_a_wire );
+        Suspension.has_wire_pair = point( "wire_a", Suspension.wire_pair[ 0 ] ) && point( "wire_b", Suspension.wire_pair[ 1 ] );
     }
     // uwagi solvera to informacja o dopasowaniu części, nie błąd scenerii; błędem jest dopiero wysięgnik, którego nie da się złożyć
     for( auto const &warning : result.warnings ) {
@@ -1213,13 +1218,55 @@ chain_points( scene_chain const &Chain ) {
 
 bool held_rope( scene_chain const &Chain, std::size_t Position, double *Rope );
 bool second_net( scene_chain const &Chain, std::size_t Point );
-bool second_net_used( scene_suspension const &Suspension );
-void free_rope( scene_chain const &Chain, std::size_t Point, double const *Wire, double *Rope );
+bool raw_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *Rope, bool &Anchored, bool &WireKnown, bool &RopeKnown );
+bool single_contact( scene_chain const &Chain );
 
 bool
 chain_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *Rope, bool &Anchored ) {
+    bool wireknown, ropeknown;
+    if( false == raw_point( Chain, Point, Wire, Rope, Anchored, wireknown, ropeknown ) ) { return false; }
+    if( wireknown && ropeknown ) { return true; }
+    // druga sieć bez uchwytu przewodu albo liny w tym miejscu: przewód / lina idą prosto między sąsiednimi punktami, które je mają
+    // (102x - wysięgnik trzyma tylko drugą linę, przewody sieci B przechodzą między słupami B; 117x/118x - tylko drugi przewód)
+    auto const neighbour = [ & ]( int const Step, bool const ForWire, glm::dvec3 &Found ) {
+        for( auto point { static_cast<long>( Point ) + Step }; point >= 0 && point < static_cast<long>( chain_points( Chain ) ); point += Step ) {
+            double w[ 3 ], r[ 3 ];
+            bool anchored, knownwire, knownrope;
+            if( false == raw_point( Chain, static_cast<std::size_t>( point ), w, r, anchored, knownwire, knownrope ) ) { return false; }
+            if( ForWire ? false == knownwire : false == knownrope ) { continue; }
+            Found = ForWire ? glm::dvec3 { w[ 0 ], w[ 1 ], w[ 2 ] } : glm::dvec3 { r[ 0 ], r[ 1 ], r[ 2 ] };
+            return true;
+        }
+        return false;
+    };
+    // punkt na prostej między sąsiadami, w miejscu Near (rzut w planie); bez jednego z sąsiadów - bez zmiany
+    auto const between = [ & ]( bool const ForWire, glm::dvec3 const &Near, double *Target ) {
+        glm::dvec3 a, b;
+        if( false == neighbour( -1, ForWire, a ) || false == neighbour( 1, ForWire, b ) ) { return false; }
+        auto const along { glm::dvec2 { b.x - a.x, b.z - a.z } };
+        auto const t { std::clamp( glm::dot( glm::dvec2 { Near.x - a.x, Near.z - a.z }, along ) / std::max( glm::dot( along, along ), 1e-9 ), 0.0, 1.0 ) };
+        auto const point { a + ( b - a ) * t };
+        Target[ 0 ] = point.x; Target[ 1 ] = point.y; Target[ 2 ] = point.z;
+        return true;
+    };
+    auto const height { Rope[ 1 ] - Wire[ 1 ] };
+    if( false == wireknown ) { between( true, glm::dvec3 { Wire[ 0 ], Wire[ 1 ], Wire[ 2 ] }, Wire ); }
+    if( false == ropeknown ) {
+        if( false == between( false, glm::dvec3 { Wire[ 0 ], Wire[ 1 ], Wire[ 2 ] }, Rope ) ) {
+            // bez sąsiada z liną z obu stron: nad przewodem, na wysokości konstrukcyjnej
+            Rope[ 0 ] = Wire[ 0 ]; Rope[ 1 ] = Wire[ 1 ] + ( height > 0.2 ? height : 1.70 ); Rope[ 2 ] = Wire[ 2 ];
+        }
+    }
+    return true;
+}
+
+// punkt łańcucha bez rozwiązywania przewodu i liny przechodzących swobodnie: WireKnown / RopeKnown - false, gdy w tym miejscu nic ich
+// nie trzyma (druga sieć wysięgnika bez tego uchwytu); Wire i Rope są wtedy przybliżone (w punkcie A wysięgnika)
+bool
+raw_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *Rope, bool &Anchored, bool &WireKnown, bool &RopeKnown ) {
     auto const &data { Chain.data };
     Anchored = false;
+    WireKnown = RopeKnown = true;
     auto const *anchor { static_cast<scene_anchor const *>( nullptr ) };
     if( false == data.anchor_start.empty() ) {
         if( Point == 0 ) { anchor = anchor_named( Chain.file, data.anchor_start ); Anchored = true; }
@@ -1244,18 +1291,38 @@ chain_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *
     auto const &suspension { Suspensions[ index ] };
     std::copy( std::begin( suspension.data.at ), std::end( suspension.data.at ), Wire );
     if( second_net( Chain, Point ) ) {
-        // druga sieć wysięgnika: drugi uchwyt przewodu; lina z wysięgnika samej liny, z drugiego uchwytu liny albo swobodnie
-        if( suspension.has_net_b_wire ) { std::copy( std::begin( suspension.net_b_wire ), std::end( suspension.net_b_wire ), Wire ); }
+        // druga sieć wysięgnika: drugi uchwyt przewodu (117x/118x, przerwy izolacyjne), drugi uchwyt liny (102x) albo lina z wysięgnika
+        // samej liny; czego wysięgnik nie trzyma, przechodzi swobodnie (chain_point)
+        WireKnown = suspension.has_net_b_wire;
+        if( WireKnown ) { std::copy( std::begin( suspension.net_b_wire ), std::end( suspension.net_b_wire ), Wire ); }
+        else if( suspension.has_wire_pair && single_contact( Chain ) ) {
+            // dwa uchwyty przewodu i sieć z jednym przewodem: drugi uchwyt jest jej
+            WireKnown = true;
+            std::copy( std::begin( suspension.wire_pair[ 1 ] ), std::end( suspension.wire_pair[ 1 ] ), Wire );
+        }
         if( held_rope( Chain, Point, Rope ) ) { return true; }
-        if( suspension.has_net_b_rope ) { std::copy( std::begin( suspension.net_b_rope ), std::end( suspension.net_b_rope ), Rope ); return true; }
-        free_rope( Chain, Point, Wire, Rope );
+        rope_of( suspension.data, Rope );
+        RopeKnown = suspension.has_net_b_rope;
+        if( RopeKnown ) { std::copy( std::begin( suspension.net_b_rope ), std::end( suspension.net_b_rope ), Rope ); }
         return true;
     }
-    // pierwsza sieć wysięgnika z dwoma uchwytami przewodu, którego drugą sieć ma inny łańcuch: przewód w swoim uchwycie
-    if( suspension.has_net_a_wire && second_net_used( suspension ) ) { std::copy( std::begin( suspension.net_a_wire ), std::end( suspension.net_a_wire ), Wire ); }
+    // pierwsza sieć z jednym przewodem na wysięgniku z dwoma uchwytami przewodu, którego drugą sieć (też z jednym przewodem) ma inny
+    // łańcuch: przewód w pierwszym uchwycie
+    if( suspension.has_wire_pair && single_contact( Chain ) ) {
+        auto const other { std::find_if( Chains.begin(), Chains.end(), [ & ]( scene_chain const &C ) {
+            return false == C.removed && C.file == suspension.file && std::find( C.data.second_net.begin(), C.data.second_net.end(), suspension.data.name ) != C.data.second_net.end(); } ) };
+        if( other != Chains.end() && single_contact( *other ) ) { std::copy( std::begin( suspension.wire_pair[ 0 ] ), std::end( suspension.wire_pair[ 0 ] ), Wire ); }
+    }
     // lina nośna z innego wysięgnika (rozstawione, sama lina): gdy go nie ma, z tego samego
     if( false == held_rope( Chain, Point, Rope ) ) { rope_of( suspension.data, Rope ); }
     return true;
+}
+
+// sieć łańcucha z jednym przewodem jezdnym (typ sieci znany)
+bool
+single_contact( scene_chain const &Chain ) {
+    auto const *type { Chain.data.type.empty() ? nullptr : catenary::types().find( Chain.data.type ) };
+    return type != nullptr && type->type.contact_count == 1;
 }
 
 // punkt Point łańcucha (miejsce na liście podwieszeń, bez kotwień) to druga sieć wysięgnika
@@ -1263,52 +1330,6 @@ bool
 second_net( scene_chain const &Chain, std::size_t const Point ) {
     auto const &names { Chain.data.suspensions };
     return Point < names.size() && std::find( Chain.data.second_net.begin(), Chain.data.second_net.end(), names[ Point ] ) != Chain.data.second_net.end();
-}
-
-// drugą sieć tego wysięgnika ma jakiś łańcuch
-bool
-second_net_used( scene_suspension const &Suspension ) {
-    if( Suspension.data.name.empty() ) { return false; }
-    return std::any_of( Chains.begin(), Chains.end(), [ & ]( scene_chain const &Chain ) {
-        return false == Chain.removed && Chain.file == Suspension.file
-            && std::find( Chain.data.second_net.begin(), Chain.data.second_net.end(), Suspension.data.name ) != Chain.data.second_net.end(); } );
-}
-
-// lina drugiej sieci przechodzi swobodnie przez punkt Point (wysięgnik trzyma tylko jej przewód): prosto między liną w sąsiednich
-// punktach, w miejscu przewodu; bez sąsiada z obu stron - nad przewodem na wysokości konstrukcyjnej sąsiada
-void
-free_rope( scene_chain const &Chain, std::size_t const Point, double const *Wire, double *Rope ) {
-    auto const offset { Chain.data.anchor_start.empty() ? 0u : 1u };
-    glm::dvec3 const wire { Wire[ 0 ], Wire[ 1 ], Wire[ 2 ] };
-    // sąsiedni punkt z liną (nie swobodną) w stronę Step; false - brak
-    auto const neighbour = [ & ]( int const Step, glm::dvec3 &NeighbourWire, glm::dvec3 &NeighbourRope ) {
-        for( auto point { static_cast<long>( Point + offset ) + Step }; point >= 0 && point < static_cast<long>( chain_points( Chain ) ); point += Step ) {
-            auto const listed { static_cast<std::size_t>( point ) - offset };
-            if( point >= static_cast<long>( offset ) && second_net( Chain, listed ) ) {
-                auto const index { suspension_named( Chain.file, Chain.data.suspensions[ listed ] ) };
-                double held[ 3 ];
-                if( index < Suspensions.size() && false == Suspensions[ index ].has_net_b_rope && false == held_rope( Chain, listed, held ) ) { continue; }
-            }
-            double w[ 3 ], r[ 3 ];
-            bool anchored;
-            if( false == chain_point( Chain, static_cast<std::size_t>( point ), w, r, anchored ) ) { return false; }
-            NeighbourWire = { w[ 0 ], w[ 1 ], w[ 2 ] };
-            NeighbourRope = { r[ 0 ], r[ 1 ], r[ 2 ] };
-            return true;
-        }
-        return false;
-    };
-    glm::dvec3 wa, ra, wb, rb;
-    auto const before { neighbour( -1, wa, ra ) }, after { neighbour( 1, wb, rb ) };
-    glm::dvec3 rope { wire + glm::dvec3 { 0.0, 1.70, 0.0 } };
-    if( before && after ) {
-        auto const along { glm::dvec2 { rb.x - ra.x, rb.z - ra.z } };
-        auto const t { std::clamp( glm::dot( glm::dvec2 { wire.x - ra.x, wire.z - ra.z }, along ) / std::max( glm::dot( along, along ), 1e-9 ), 0.0, 1.0 ) };
-        rope = ra + ( rb - ra ) * t;
-    }
-    else if( before ) { rope = wire + glm::dvec3 { 0.0, ra.y - wa.y, 0.0 }; }
-    else if( after ) { rope = wire + glm::dvec3 { 0.0, rb.y - wb.y, 0.0 }; }
-    Rope[ 0 ] = rope.x; Rope[ 1 ] = rope.y; Rope[ 2 ] = rope.z;
 }
 
 // lina nośna łańcucha w miejscu Position listy, gdy trzyma ją inny wysięgnik (messenger_from): punkt liny trzymającego,
@@ -3212,9 +3233,10 @@ catenary_chain_overlap_miss( std::size_t const Index, catenary_overlap_miss &Mis
 
 bool
 catenary_scene_second_net( std::size_t const Index, double *Wire, double *Rope, bool &HasRope ) {
-    if( Index >= Suspensions.size() || Suspensions[ Index ].removed || false == Suspensions[ Index ].has_net_b_wire ) { return false; }
+    if( Index >= Suspensions.size() || Suspensions[ Index ].removed || ( false == Suspensions[ Index ].has_net_b_wire && false == Suspensions[ Index ].has_net_b_rope ) ) { return false; }
     auto const &suspension { Suspensions[ Index ] };
-    std::copy( std::begin( suspension.net_b_wire ), std::end( suspension.net_b_wire ), Wire );
+    if( suspension.has_net_b_wire ) { std::copy( std::begin( suspension.net_b_wire ), std::end( suspension.net_b_wire ), Wire ); }
+    else { std::copy( std::begin( suspension.data.at ), std::end( suspension.data.at ), Wire ); }
     HasRope = suspension.has_net_b_rope;
     if( HasRope ) { std::copy( std::begin( suspension.net_b_rope ), std::end( suspension.net_b_rope ), Rope ); }
     return true;
