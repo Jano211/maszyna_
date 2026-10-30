@@ -47,6 +47,7 @@ struct catalog_family {
     std::vector<int> cards;             // karty w kolejności doboru
     int curve { -1 };                   // 1 łuk, 0 prosta, -1 bez znaczenia
     int toward { -1 };                  // 1 odsuw do słupa, 0 od słupa, -1 bez znaczenia, 2 z numeru karty (nieparzysta = do słupa)
+    double stagger { -1.0 };            // odsuw przewodów nowych słupów tej rodziny (m, "stagger <m>"; Jan 2026-10-30: 0120, 0160, 070x, 079x - 0); ujemny - z grupy
     bool fits( bool Curve, bool Toward, int Card ) const;
 };
 
