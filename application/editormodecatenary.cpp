@@ -2057,7 +2057,7 @@ catenary_editor::chain_report const &catenary_editor::catenary_chain_report(std:
 		for (auto const *name : {&chain->middle, &chain->anchor_start, &chain->anchor_end, &chain->type})
 			mix(text(*name));
 	}
-	mix(static_cast<std::size_t>(tool.zigzag) + 2 * static_cast<std::size_t>(tool.speed_class) + 4 * static_cast<std::size_t>(tool.zone));
+	mix(static_cast<std::size_t>(tool.zigzag) + 2 * static_cast<std::size_t>(tool.speed_class) + 4 * static_cast<std::size_t>(tool.zone) + 16 * static_cast<std::size_t>(tool.checks));
 	mix_length(tool.zigzag_curve);
 	mix_length(tool.zigzag_straight);
 	mix(std::hash<std::string>{}(panel_network()));
@@ -2069,7 +2069,8 @@ catenary_editor::chain_report const &catenary_editor::catenary_chain_report(std:
 	if (chain == nullptr || members.size() < 2)
 		return report;
 	auto const network{chain->type.empty() ? panel_network() : chain->type};
-	auto const add = [&](std::size_t const Pole, std::string const &Text, bool const Error) { report.issues.push_back({Pole, Text, Error}); };
+	// the checks off: no remarks at all
+	auto const add = [&](std::size_t const Pole, std::string const &Text, bool const Error) { if (tool.checks) report.issues.push_back({Pole, Text, Error}); };
 	auto const named = [](std::size_t const Index) {
 		auto const *data{catenary_scene_get(Index)};
 		return data != nullptr && false == data->name.empty() ? data->name : std::string{"-"};
@@ -4736,6 +4737,10 @@ static bool catenary_stagger_slider(Tool &tool)
 void catenary_editor::render_catenary_zigzag_ui()
 {
 	auto &tool{m_catenary};
+	ImGui::Checkbox(STR_C("Checks"), &tool.checks);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("The remarks of Iet-107 to the chains and the spans over their limit in red. Off: nothing is checked (unusual layouts, poles placed by the orthophoto)"));
+	ImGui::SameLine();
 	ImGui::Checkbox(STR_C("Zigzag by Iet-107 (PKP PLK)"), &tool.zigzag);
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%s", STR_C("The staggers of the next poles by the guidelines Iet-107: on a straight the wires on the other side of the track axis than at the pole before, the full cycle in two spans (4.6.4.3), on a curve to its outside so that in the middle of the span they're tangent to the track axis (3.4.4.4). The chains and their spans are checked by it too"));
@@ -6438,7 +6443,7 @@ void catenary_editor::draw_catenary_overlay() const
 	{
 		auto const a{wire_of(*catenary_scene_get(span.from))};
 		auto const b{wire_of(*catenary_scene_get(span.to))};
-		auto const over{span.limit > 0.0 && span.length > span.limit + 0.05};
+		auto const over{tool.checks && span.limit > 0.0 && span.length > span.limit + 0.05};
 		auto const chosen{span.chain >= 0 && (span.chain == tool.chain_selected || (is_intent(e.m_intent, intent_detail::chain) && e.m_intent.index == span.chain))};
 		auto const colour{over ? overlay_color::invalid : chosen ? overlay_color::selected : span.chain >= 0 ? IM_COL32(90, 230, 120, 200) : IM_COL32(90, 230, 120, 110)};
 		projection.line(drawlist, a, b, colour, over || chosen ? 2.5f : 1.2f);

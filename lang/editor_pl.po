@@ -12135,3 +12135,6 @@ msgstr "Chmury, mgła i komunikat pogodowy"
 
 msgid "Type: %s"
 msgstr "Typ: %s"
+
+msgid "The remarks of Iet-107 to the chains and the spans over their limit in red. Off: nothing is checked (unusual layouts, poles placed by the orthophoto)"
+msgstr "Uwagi Iet-107 do łańcuchów i przęsła ponad limit na czerwono. Wyłączona: nic nie jest sprawdzane (nietypowe układy, słupy stawiane z ortofotomapy)"
