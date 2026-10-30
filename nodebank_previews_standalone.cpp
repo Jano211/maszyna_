@@ -10,7 +10,9 @@
 #include "editor/editorPreviews.hpp"
 #include <png.h>
 #include <cstring>
+#include <cmath>
 #include <fstream>
+#include <map>
 #include <set>
 #include <sstream>
 
@@ -129,6 +131,14 @@ std::vector<std::string> catenary_entries()
 	std::vector<std::string> entries;
 	std::ifstream file("data/traction_supports.txt", std::ios_base::in | std::ios_base::binary);
 	std::set<std::string> models;
+	// the beams go every 0.1 m: one image for each full metre of a kind (the folder of the model, single elements apart), the
+	// beam nearest to that metre; the editor shows it for all beams around it (editormodecatenary.cpp, catenary_preview)
+	struct beam
+	{
+		std::string model;
+		double span{0.0};
+	};
+	std::map<std::string, std::vector<beam>> beams;
 	std::string line;
 	while (std::getline(file, line))
 	{
@@ -139,21 +149,47 @@ std::vector<std::string> catenary_entries()
 		words >> kind >> name;
 		if (kind != "pole" && kind != "mast" && kind != "beam")
 			continue;
-		auto drop{false};
+		auto drop{false}, single{false};
+		double span{0.0};
 		while (words >> token)
 		{
 			if (token == "model")
 				words >> model;
 			else if (token == "drop")
 				drop = true;
+			else if (token == "single")
+				single = true;
+			else if (token == "span")
+				words >> span;
 		}
 		if (model.empty())
 			continue;
+		if (kind == "beam")
+		{
+			auto const slash{model.rfind('/')};
+			beams[(slash == std::string::npos ? std::string{} : model.substr(0, slash)) + (single ? "|single" : "")].push_back({model, span});
+			continue;
+		}
 		auto const gantry{kind != "pole" || drop};
 		auto const skin{gantry ? std::string{"siec_trakcyjna/bramki_new1"} : std::string{"none"}};
 		if (false == models.emplace(model + "|" + skin).second)
 			continue;
 		entries.emplace_back("node -1 0 none model 0 0 0 0 " + model + ".t3d " + skin + " endmodel");
+	}
+	for (auto const &kind : beams)
+	{
+		std::set<long> metres;
+		for (auto const &item : kind.second)
+			metres.insert(std::lround(item.span));
+		for (auto const metre : metres)
+		{
+			auto const *best{&kind.second.front()};
+			for (auto const &item : kind.second)
+				if (std::abs(item.span - metre) < std::abs(best->span - metre))
+					best = &item;
+			if (models.emplace(best->model + "|beam").second)
+				entries.emplace_back("node -1 0 none model 0 0 0 0 " + best->model + ".t3d siec_trakcyjna/bramki_new1 endmodel");
+		}
 	}
 	return entries;
 }
