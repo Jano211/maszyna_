@@ -12150,3 +12150,6 @@ msgstr "Ten łańcuch idzie przez drugi uchwyt przewodu i drugi uchwyt liny wysi
 
 msgid "This chain goes through the second contact wire clamp of the cantilever; its messenger: from a messenger only cantilever on this pole, otherwise freely past it"
 msgstr "Ten łańcuch idzie przez drugi uchwyt przewodu wysięgnika; jego lina nośna: z wysięgnika samej liny na tym słupie, a bez niego swobodnie obok"
+
+msgid "A pole placed under the span of a chain (its wire point within 1.5 m of the span, not at its ends) goes into that chain between the two poles; not while a chain is being built (the pole goes on with it)"
+msgstr "Słup postawiony pod przęsłem łańcucha (punkt przewodu do 1,5 m od przęsła, nie przy jego końcach) wchodzi do tego łańcucha między dwa słupy; nie w czasie budowania łańcucha (słup idzie dalej z nim)"
