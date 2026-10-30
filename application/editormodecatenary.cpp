@@ -5368,6 +5368,7 @@ void catenary_editor::render_catenary_insulator(std::size_t const Chain)
 	auto has{existing != chain->insulators.end()};
 	auto changed{*chain};
 	auto update{false};
+	auto slid{false}; // moved with the slider: the undo is taken already
 	ImGui::PushID("insulator");
 	if (ImGui::Checkbox(format(STR_C("Section insulator in the span to %s"), (found + 1)->c_str()).c_str(), &has))
 	{
@@ -5378,7 +5379,7 @@ void catenary_editor::render_catenary_insulator(std::size_t const Chain)
 		update = true;
 	}
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("%s", STR_C("A section insulator in the middle of the span after this pole: the spans after it can take another power source (another section). Placeholder shapes until the models are made"));
+		ImGui::SetTooltip("%s", STR_C("A section insulator in the span after this pole, in its middle or where set below: the spans after it can take another power source (another section). Placeholder shapes until the models are made"));
 	if (has && existing != chain->insulators.end())
 	{
 		auto &own{*std::find_if(changed.insulators.begin(), changed.insulators.end(), [&](auto const &Insulator) { return Insulator.after == data->name; })};
@@ -5401,6 +5402,38 @@ void catenary_editor::render_catenary_insulator(std::size_t const Chain)
 			update = true;
 		}
 		ImGui::PopItemWidth();
+		// where in the span: from this pole, by default in the middle
+		{
+			double length{0.0};
+			for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+				if (auto const *other{catenary_scene_get(index)}; other != nullptr && other->name == *(found + 1) && other->has_at && data->has_at && catenary_scene_file_of(index) == catenary_chain_file(Chain))
+					length = glm::length(glm::dvec3{other->at[0] - data->at[0], other->at[1] - data->at[1], other->at[2] - data->at[2]});
+			if (length > 2.0)
+			{
+				auto at{static_cast<float>(own.at < 0.0 ? 0.5 * length : std::min(own.at, length))};
+				ImGui::PushItemWidth(140.0f);
+				auto const moved{ImGui::SliderFloat(format(STR_C("From %s (m)"), data->name.c_str()).c_str(), &at, 1.0f, static_cast<float>(length - 1.0), "%.2f")};
+				// one step of the undo for the whole drag: taken when the slider is grabbed
+				if (ImGui::IsItemActivated())
+					tool.undo.push_back({++tool.group, true, Chain, std::nullopt, *chain, false});
+				if (moved)
+				{
+					own.at = at;
+					slid = true;
+				}
+				ImGui::PopItemWidth();
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("Where the section insulator is in the span, from this pole along the wires. Ctrl+click types a value"));
+				ImGui::SameLine();
+				ImGui::BeginDisabled(own.at < 0.0);
+				if (ImGui::SmallButton(STR_C("in the middle")))
+				{
+					own.at = -1.0;
+					update = true;
+				}
+				ImGui::EndDisabled();
+			}
+		}
 	}
 	ImGui::PopID();
 	if (update)
@@ -5408,6 +5441,8 @@ void catenary_editor::render_catenary_insulator(std::size_t const Chain)
 		tool.undo.push_back({++tool.group, true, Chain, std::nullopt, *chain, false});
 		catenary_chain_update(Chain, changed);
 	}
+	else if (slid)
+		catenary_chain_update(Chain, changed);
 }
 
 void catenary_editor::render_catenary_messenger_from(std::size_t const Chain)
