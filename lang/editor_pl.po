@@ -11964,3 +11964,30 @@ msgstr "Lekki przechył słupów łańcucha (losowo 0,1–0,5°)"
 
 msgid "%zu poles of the chain lean a little towards the track (Ctrl+Z takes it back)"
 msgstr "%zu słupów łańcucha lekko pochylonych w stronę toru (Ctrl+Z cofa)"
+
+msgid "Placing poles"
+msgstr "Wstawianie słupów"
+
+msgid "LMB by a track places a new pole, LMB on a pole selects it (Ins switches)"
+msgstr "LPM przy torze wstawia nowy słup, LPM na słupie go wybiera (Ins przełącza)"
+
+msgid "Editing only"
+msgstr "Tylko edycja"
+
+msgid "LMB only selects the poles standing, a drag moves them; no new pole by a track (Ins switches)"
+msgstr "LPM tylko wybiera stojące słupy, przeciąganie je przesuwa; przy torze nic nowego się nie wstawia (Ins przełącza)"
+
+msgid "Placing poles: LMB by a track places a new pole"
+msgstr "Wstawianie słupów: LPM przy torze wstawia nowy słup"
+
+msgid "Editing only: LMB selects the poles standing, no new ones"
+msgstr "Tylko edycja: LPM wybiera stojące słupy, nowych nie wstawia"
+
+msgid "Catenary, editing only: LMB on a pole selects it, a drag moves it; Ins - placing"
+msgstr "Sieć, tylko edycja: LPM na słupie go wybiera, przeciąganie przesuwa; Ins – wstawianie"
+
+msgid "editing only: no new poles by a click"
+msgstr "tylko edycja: kliknięcie nie wstawia słupów"
+
+msgid "placing new poles by the tracks"
+msgstr "wstawianie nowych słupów przy torach"
