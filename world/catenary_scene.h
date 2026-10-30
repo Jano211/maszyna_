@@ -127,6 +127,13 @@ struct catenary_overlap {
     bool connected { false };               // ten sam zasilacz: przęsło zwarte; inaczej izolowane
 };
 std::vector<catenary_overlap> catenary_chain_overlaps( std::size_t Index );
+// najbliższe przęsło innego łańcucha, gdy wykrycie nie wyszło (do edytora): w poprzek / w pionie (m), zachodzenie wzdłuż (0-1)
+struct catenary_overlap_miss {
+    std::size_t other { 0 };
+    std::size_t span { 0 };     // przęsło tego łańcucha
+    double across { 0.0 }, height { 0.0 }, along { 0.0 };
+};
+bool catenary_chain_overlap_miss( std::size_t Index, catenary_overlap_miss &Miss );
 
 // ---- uszynienie grupowe (wpisy "earthing" w pliku sieci): uchwyty 6120 na słupach, lina rysowana przez przęsła łańcuchów -------
 std::size_t catenary_earthing_size();

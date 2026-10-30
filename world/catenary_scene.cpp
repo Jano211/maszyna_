@@ -1358,14 +1358,49 @@ span_name( scene_chain const &Chain, std::size_t const Span ) {
     return ( Chain.data.name.empty() ? std::string( "none" ) : Chain.data.name + "_" + std::to_string( Span + 1 ) );
 }
 
-// przęsła naprężenia: przęsło innego łańcucha biegnące przy tym (oba końce przewodów do kOverlapReach od siebie, w dowolnej
-// kolejności) to część wspólna - bieżnia wspólna ("parallel"). Szukane wśród gotowych przęseł (TTraction) łańcuchów
+// przęsła naprężenia: przęsło innego łańcucha biegnące przy tym to część wspólna - bieżnia wspólna ("parallel"). Szukane wśród gotowych
+// przęseł (TTraction) łańcuchów. Oba końce przewodu tego przęsła do kOverlapReach w poprzek od przewodu tamtego (w planie) i do 1 m
+// w pionie, a przęsła zachodzą na siebie wzdłuż co najmniej w kOverlapAlong krótszego. Końce nie muszą być naprzeciw siebie: przy
+// wysięgnikach rozstawionych (konsola 4890) punkty zawieszenia obu łańcuchów są przesunięte wzdłuż toru (Jan 2026-10-30: przęsło
+// naprężenia się nie wykrywało)
 double constexpr kOverlapReach { 0.8 };
+double constexpr kOverlapAlong { 0.7 };
+
+struct overlap_fit {
+    double across { 1e9 };      // większa z odległości w poprzek obu końców, m
+    double height { 1e9 };      // większa z różnic wysokości, m
+    double along { 0.0 };       // część krótszego przęsła, na której zachodzą na siebie
+};
+
+overlap_fit
+overlap_measure( glm::dvec3 const &A1, glm::dvec3 const &A2, glm::dvec3 const &B1, glm::dvec3 const &B2 ) {
+    overlap_fit fit;
+    glm::dvec2 const b1 { B1.x, B1.z }, b2 { B2.x, B2.z }, a1 { A1.x, A1.z }, a2 { A2.x, A2.z };
+    auto const db { b2 - b1 };
+    auto const lengthb { glm::length( db ) }, lengtha { glm::length( a2 - a1 ) };
+    if( lengthb < 1.0 || lengtha < 1.0 ) { return fit; }
+    auto const dir { db / lengthb };
+    fit.across = 0.0; fit.height = 0.0;
+    double t[ 2 ];
+    int k { 0 };
+    for( auto const *point : { &A1, &A2 } ) {
+        glm::dvec2 const p { point->x, point->z };
+        auto const along { glm::dot( p - b1, dir ) };
+        auto const across { std::abs( dir.x * ( p.y - b1.y ) - dir.y * ( p.x - b1.x ) ) };
+        auto const u { std::clamp( along / lengthb, 0.0, 1.0 ) };
+        fit.across = std::max( fit.across, across );
+        fit.height = std::max( fit.height, std::abs( point->y - ( B1.y + ( B2.y - B1.y ) * u ) ) );
+        t[ k++ ] = along;
+    }
+    auto const shared { std::min( std::max( t[ 0 ], t[ 1 ] ), lengthb ) - std::max( std::min( t[ 0 ], t[ 1 ] ), 0.0 ) };
+    fit.along = std::max( shared, 0.0 ) / std::min( lengtha, lengthb );
+    return fit;
+}
 
 bool
 overlap_ends( glm::dvec3 const &A1, glm::dvec3 const &A2, glm::dvec3 const &B1, glm::dvec3 const &B2 ) {
-    auto const nearby = []( glm::dvec3 const &P, glm::dvec3 const &Q ) { return std::hypot( P.x - Q.x, P.z - Q.z ) < kOverlapReach && std::abs( P.y - Q.y ) < 1.0; };
-    return ( nearby( A1, B1 ) && nearby( A2, B2 ) ) || ( nearby( A1, B2 ) && nearby( A2, B1 ) );
+    auto const fit { overlap_measure( A1, A2, B1, B2 ) };
+    return fit.across < kOverlapReach && fit.height < 1.0 && fit.along >= kOverlapAlong;
 }
 
 // przęsło innego łańcucha biegnące przy przewodzie od A do B; nullptr gdy żadne. Except: łańcuch, którego się nie bierze
@@ -3012,6 +3047,35 @@ catenary_chain_overlaps( std::size_t const Index ) {
         }
     }
     return result;
+}
+
+// gdy łańcuch nie ma przęseł naprężenia: przęsło innego łańcucha, które biegnie przy nim najbliżej (zachodzi wzdłuż co najmniej na
+// połowie, w poprzek do 5 m) - dla edytora, żeby było widać, czego brakuje do wykrycia. false - żadnego takiego
+bool
+catenary_chain_overlap_miss( std::size_t const Index, catenary_overlap_miss &Miss ) {
+    if( Index >= Chains.size() || Chains[ Index ].removed ) { return false; }
+    auto found { false };
+    for( std::size_t span = 0; span < Chains[ Index ].spans.size(); ++span ) {
+        auto const *own { Chains[ Index ].spans[ span ] };
+        if( own == nullptr ) { continue; }
+        for( std::size_t chain = 0; chain < Chains.size(); ++chain ) {
+            if( chain == Index || Chains[ chain ].removed ) { continue; }
+            for( auto const *other : Chains[ chain ].spans ) {
+                if( other == nullptr ) { continue; }
+                auto const fit { overlap_measure( own->pPoint1, own->pPoint2, other->pPoint1, other->pPoint2 ) };
+                if( fit.along < 0.5 || fit.across > 5.0 ) { continue; }
+                auto const score { fit.across + fit.height };
+                if( found && score >= Miss.across + Miss.height ) { continue; }
+                found = true;
+                Miss.other = chain;
+                Miss.span = span;
+                Miss.across = fit.across;
+                Miss.height = fit.height;
+                Miss.along = fit.along;
+            }
+        }
+    }
+    return found;
 }
 
 // ---- uszynienie grupowe ---------------------------------------------------------------------------------------------------
