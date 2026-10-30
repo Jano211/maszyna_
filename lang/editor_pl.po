@@ -12111,3 +12111,6 @@ msgstr "Półbramki: LPM przy torze wiesza wysięgnik na wybranej, przeciąganie
 
 msgid "Semi-gantries: LMB on one selects it, or place a new one"
 msgstr "Półbramki: LPM na półbramce ją wybiera, albo postaw nową"
+
+msgid "no image (eu07 -generate-nodebank-previews -catenary)"
+msgstr "brak obrazka (eu07 -generate-nodebank-previews -catenary)"
