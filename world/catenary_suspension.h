@@ -100,6 +100,9 @@ struct chain {
     // samej liny (messenger_from) albo swobodnie (prosto między sąsiednimi punktami liny). Wysięgnik składa łańcuch, który ma to
     // podwieszenie jako zwykłe. Wpis "second_net <z listy>", przed "suspensions"
     std::vector<std::string> second_net;
+    // izolowane przęsło naprężenia (karty 0060/0062/0078: „w przęśle izolowanym - izolatory”): izolatory w przewodach i linie
+    // schodzących do kotwienia na początku / końcu łańcucha, przy słupie krzyżowym. Wpis "isolated start|end", przed "suspensions"
+    bool isolated[ 2 ] { false, false };
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
 };
 

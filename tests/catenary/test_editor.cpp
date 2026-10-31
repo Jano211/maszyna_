@@ -2,6 +2,7 @@
 // podwieszeń, dodawanie / zmiana / usuwanie podwieszeń na żywo z atrapą klas symulatora
 #include "stdafx.h"
 #include "world/catenary_scene.h"
+#include "world/catenary_overlap.h"
 #include "world/catenary_network.h"
 #include "world/catenary_layout.h"
 #include "world/catenary_suspension.h"
@@ -954,6 +955,29 @@ int main( int, char *argv[] ) {
         }
         Global.AirTemperature = 15.f;
         std::remove( "tests/catenary/td_kotwa_test.scm" );
+    }
+    // szablony przęseł naprężenia (traction_overlaps.txt) i znacznik izolowanego końca łańcucha
+    {
+        auto const &cards { catenary_scene_overlaps() };
+        catenary::overlap_card const *four { nullptr }, *six { nullptr };
+        for( auto const &card : cards ) {
+            if( card.name == "33-0060-3" ) { four = &card; }
+            if( card.name == "13-0060-30" ) { six = &card; }
+        }
+        auto good { cards.size() == 19 && four != nullptr && six != nullptr };
+        good = good && std::abs( four->offset( 0 ) + 22.0 ) < 1e-9 && std::abs( four->offset( 3 ) - 54.0 ) < 1e-9 && std::abs( four->length() - 76.0 ) < 1e-9 && four->fits( 3 ) && false == four->fits( 4 );
+        good = good && six->poles[ six->first_crossing() ].name == "K1" && std::abs( six->length() - 183.0 ) < 1e-9 && std::abs( six->anchor_rope - 7.0 ) < 1e-9;
+        catenary::chain line;
+        line.name = "li"; line.power = "p1"; line.isolated[ 1 ] = true; line.suspensions = { "a", "b" };
+        auto const written { catenary::write_chain( line ) };
+        catenary::suspension a { entry }, b { entry };
+        a.name = "a"; b.name = "b"; b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] += 60.0;
+        std::istringstream words { catenary::write_suspension( a ) + " " + catenary::write_suspension( b ) + " " + written };
+        std::vector<std::string> tokens; for( std::string word; words >> word; ) { tokens.push_back( word ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( tokens, "element", parsed, problems );
+        good = good && written.find( " isolated end" ) != std::string::npos && problems.empty() && parsed.chains.size() == 1 && parsed.chains[ 0 ].isolated[ 1 ] && false == parsed.chains[ 0 ].isolated[ 0 ];
+        check( good, "szablony przesel naprezenia: 19 kart, 0060-3 K1 w zerze, kotwowe -22 / +54 m; lancuch \"isolated end\" zapis i odczyt" );
     }
     // dyrektywa "catenary" w bloku origin: punkty pliku względem niego, zapis z edytora z powrotem względny
     {

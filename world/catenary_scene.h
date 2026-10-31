@@ -49,6 +49,9 @@ void catenary_scene_data( std::string const &Directory );
 catenary::cantilever_catalog const *catenary_scene_catalog();
 // zasady rozstawiania konstrukcji (data/traction_layout.txt); pusta tablica, gdy pliku nie ma
 catenary::layout_tables const &catenary_scene_layout();
+// szablony przęseł naprężenia dla edytora (data/traction_overlaps.txt)
+namespace catenary { struct overlap_card; }
+std::vector<catenary::overlap_card> const &catenary_scene_overlaps();
 // opisany katalog konstrukcji dla edytora (traction_catalog.txt): kategorie, grupy, rodziny kart, grupy słupów; pusty gdy brak pliku
 catenary::structure_catalog const &catenary_scene_structures();
 // do czego należy model wstawiony przez sieć (część wysięgnika, słupa, bramki, kotwienia): 1 podwieszenie, 2 bramka, 3 kotwienie,

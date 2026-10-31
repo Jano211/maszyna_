@@ -17,6 +17,7 @@ http://mozilla.org/MPL/2.0/.
 #include "world/catenary_layout.h"
 #include "world/catenary_network.h"
 #include "world/catenary_tensioner.h"
+#include "world/catenary_overlap.h"
 #include "world/Traction.h"
 #include "model/AnimModel.h"
 #include <set>
@@ -2437,6 +2438,31 @@ section_insulator( scene_chain const &Chain, std::size_t const Span, std::vector
     }
 }
 
+// izolowane przęsło naprężenia (wpis "isolated start|end"): w przęśle do kotwienia na tym końcu łańcucha izolatory w przewodzie i w linie
+// nośnej, 2 m od słupa krzyżowego (bryły zastępcze do czasu modeli; ZAŁOŻENIE odległości)
+void
+overlap_insulators( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
+    auto const &data { Chain.data };
+    auto const points { chain_points( Chain ) };
+    for( auto const end : { 0, 1 } ) {
+        if( false == data.isolated[ end ] ) { continue; }
+        auto const &anchor { end == 0 ? data.anchor_start : data.anchor_end };
+        if( anchor.empty() || points < 2 || Span != ( end == 0 ? 0 : points - 2 ) ) { continue; }
+        double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ];
+        bool anchoreda, anchoredb;
+        if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) ) { continue; }
+        // od słupa krzyżowego (koniec przęsła przy podwieszeniu) w stronę kotwienia
+        glm::dvec3 const wfrom { end == 0 ? wb[ 0 ] : wa[ 0 ], end == 0 ? wb[ 1 ] : wa[ 1 ], end == 0 ? wb[ 2 ] : wa[ 2 ] };
+        glm::dvec3 const wto { end == 0 ? wa[ 0 ] : wb[ 0 ], end == 0 ? wa[ 1 ] : wb[ 1 ], end == 0 ? wa[ 2 ] : wb[ 2 ] };
+        glm::dvec3 const rfrom { end == 0 ? rb[ 0 ] : ra[ 0 ], end == 0 ? rb[ 1 ] : ra[ 1 ], end == 0 ? rb[ 2 ] : ra[ 2 ] };
+        glm::dvec3 const rto { end == 0 ? ra[ 0 ] : rb[ 0 ], end == 0 ? ra[ 1 ] : rb[ 1 ], end == 0 ? ra[ 2 ] : rb[ 2 ] };
+        auto const length { std::max( glm::length( wto - wfrom ), 1e-3 ) };
+        auto const t { std::min( 2.0 / length, 0.5 ) };
+        add_box( Solid, wfrom + ( wto - wfrom ) * t, wto - wfrom, 0.6, 0.07 );
+        add_box( Solid, rfrom + ( rto - rfrom ) * t, rto - rfrom, 0.6, 0.07 );
+    }
+}
+
 // robi od nowa przęsło k łańcucha (przy podwieszeniu przesuniętym w edytorze tylko dwa przęsła przy nim)
 void
 rebuild_span( scene_chain &Chain, std::size_t const Span ) {
@@ -2468,6 +2494,8 @@ rebuild_span( scene_chain &Chain, std::size_t const Span ) {
         overlap_connector( Chain, Span, rope );
         // izolator sekcyjny w połowie przęsła (bryła zastępcza do czasu modeli)
         section_insulator( Chain, Span, rope );
+        // izolowane przęsło naprężenia: izolatory w przewodzie i linie schodzących do kotwienia, przy słupie krzyżowym
+        overlap_insulators( Chain, Span, rope );
         // lina uszynienia grupowego między słupami przęsła
         earthing_rope( Chain, Span, rope );
         if( false == rope.empty() ) { catenary_span_attach( *span, rope ); }
@@ -2935,6 +2963,23 @@ catenary_scene_catalog() {
 catenary::layout_tables const &
 catenary_scene_layout() {
     return layout();
+}
+
+// szablony przęseł naprężenia (traction_overlaps.txt); czytane przy pierwszym użyciu, brak pliku = pusta lista
+std::vector<catenary::overlap_card> const &
+catenary_scene_overlaps() {
+    static std::vector<catenary::overlap_card> cards;
+    static bool loaded { false };
+    if( false == loaded ) {
+        loaded = true;
+        std::vector<std::string> errors;
+        auto const filename { Datadirectory + "traction_overlaps.txt" };
+        if( false == catenary::load_overlaps( filename, cards, errors ) ) {
+            WriteLog( ( "Catenary: file \"" + filename + "\" is missing, no tension overlap templates in the editor" ).c_str() );
+        }
+        for( auto const &error : errors ) { ErrorLog( error ); }
+    }
+    return cards;
 }
 
 catenary::structure_catalog const &
