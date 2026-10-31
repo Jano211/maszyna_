@@ -847,6 +847,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     auto poletype { data.pole_type };
     double polepoint[ 3 ] { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
     double cantilever[ 2 ] { 0.0, 0.0 };   // na istniejącym słupie: kierunek jego wysięgnika w planie
+    double lean { 0.0 };                    // na istniejącym słupie: jego przechył w stronę toru [rad] (Jan 2026-10-31)
     if( false == data.on.empty() ) {
         auto const index { suspension_named( Anchor.file, data.on ) };
         if( index >= Suspensions.size() || false == Suspensions[ index ].data.has_pole ) {
@@ -859,6 +860,12 @@ assemble_anchor( scene_anchor &Anchor ) {
         if( Suspensions[ index ].data.has_at ) {
             cantilever[ 0 ] = Suspensions[ index ].data.at[ 0 ] - polepoint[ 0 ];
             cantilever[ 1 ] = Suspensions[ index ].data.at[ 2 ] - polepoint[ 2 ];
+        }
+        // przechył słupa: jak w solve_cantilever_on_pole (bez parasoli, słupów dzielonych i słupów bramek)
+        auto const &owner { Suspensions[ index ].data };
+        auto const *ownerpole { catalog->pole( owner.pole_type ) };
+        if( owner.lean != 0.0 && owner.umbrella.empty() && false == owner.shared_pole && ownerpole != nullptr && false == ownerpole->gantry ) {
+            lean = owner.lean * 3.14159265358979323846 / 180.0;
         }
     }
     auto const *pole { catalog->pole( poletype ) };
@@ -998,11 +1005,30 @@ assemble_anchor( scene_anchor &Anchor ) {
         if( reach > 0.5 ) { dx = ex / reach; dz = ez / reach; }
     }
     auto const heading { std::atan2( dz, -dx ) };
-    auto const toscene = [ & ]( double const *Point ) {
+    auto const flat = [ & ]( double const *Point ) {
         catenary::cantilever_placement placement;
         std::copy( Point, Point + 3, placement.position );
         auto const part { catenary::cantilever_to_scene( placement, heading ) };
         return glm::dvec3 { origin.x + part.offset[ 0 ], origin.y + part.offset[ 1 ], origin.z + part.offset[ 2 ] };
+    };
+    // przechylony słup: urządzenie obraca się z nim wokół jego podstawy (oś wzdłuż toru), góra w stronę wysięgnika
+    // macierz obrotu wierszami (Rodrigues wokół osi u przez podstawę słupa)
+    double tilt[ 3 ][ 3 ] { { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 }, { 0.0, 0.0, 1.0 } };
+    if( lean != 0.0 ) {
+        auto const reach { std::hypot( cantilever[ 0 ], cantilever[ 1 ] ) };
+        double const u[ 3 ] { cantilever[ 1 ] / reach, 0.0, -cantilever[ 0 ] / reach };   // u x góra = kierunek wysięgnika
+        auto const c { std::cos( lean ) }, s { std::sin( lean ) };
+        double const cross[ 3 ][ 3 ] { { 0.0, -u[ 2 ], u[ 1 ] }, { u[ 2 ], 0.0, -u[ 0 ] }, { -u[ 1 ], u[ 0 ], 0.0 } };
+        for( int i = 0; i < 3; ++i ) {
+            for( int j = 0; j < 3; ++j ) { tilt[ i ][ j ] = ( i == j ? c : 0.0 ) + s * cross[ i ][ j ] + ( 1.0 - c ) * u[ i ] * u[ j ]; }
+        }
+    }
+    auto const turn = [ & ]( double const ( &M )[ 3 ][ 3 ], glm::dvec3 const &V ) {
+        return glm::dvec3 { M[ 0 ][ 0 ] * V.x + M[ 0 ][ 1 ] * V.y + M[ 0 ][ 2 ] * V.z, M[ 1 ][ 0 ] * V.x + M[ 1 ][ 1 ] * V.y + M[ 1 ][ 2 ] * V.z, M[ 2 ][ 0 ] * V.x + M[ 2 ][ 1 ] * V.y + M[ 2 ][ 2 ] * V.z };
+    };
+    auto const toscene = [ & ]( double const *Point ) {
+        auto const at { flat( Point ) };
+        return lean == 0.0 ? at : axis + turn( tilt, at - axis );
     };
     // łańcuchy do drutów wycelowane w ostatnie podwieszenie przed kotwieniem (przewody podchodzą pod kątem)
     {
@@ -1161,11 +1187,42 @@ assemble_anchor( scene_anchor &Anchor ) {
         place( pole->model, placement, poleheading, axis );
         if( false == pole->foundation.empty() ) { place( pole->foundation, placement, poleheading, axis ); }
     }
+    // przechył w układzie urządzenia (osie urządzenia w scenie bez przechyłu), punkt obrotu - podstawa słupa
+    double tiltdevice[ 3 ][ 3 ] { { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 }, { 0.0, 0.0, 1.0 } };
+    glm::dvec3 pivot { 0.0 };
+    if( lean != 0.0 ) {
+        double const zero[ 3 ] { 0.0, 0.0, 0.0 };
+        auto const base { flat( zero ) };
+        glm::dvec3 axes[ 3 ];
+        for( int a = 0; a < 3; ++a ) {
+            double unit[ 3 ] { 0.0, 0.0, 0.0 };
+            unit[ a ] = 1.0;
+            axes[ a ] = flat( unit ) - base;
+        }
+        for( int i = 0; i < 3; ++i ) {
+            for( int j = 0; j < 3; ++j ) { tiltdevice[ i ][ j ] = glm::dot( axes[ i ], turn( tilt, axes[ j ] ) ); }
+            ( i == 0 ? pivot.x : i == 1 ? pivot.y : pivot.z ) = glm::dot( axis - base, axes[ i ] );
+        }
+    }
     for( auto const &item : result.parts ) {
         catenary::cantilever_placement placement;
         std::copy( std::begin( item.position ), std::end( item.position ), placement.position );
         std::copy( std::begin( item.rotation ), std::end( item.rotation ), placement.rotation );
         std::copy( std::begin( item.scale ), std::end( item.scale ), placement.scale );
+        if( lean != 0.0 ) {
+            auto const moved { pivot + turn( tiltdevice, glm::dvec3 { placement.position[ 0 ], placement.position[ 1 ], placement.position[ 2 ] } - pivot ) };
+            placement.position[ 0 ] = moved.x; placement.position[ 1 ] = moved.y; placement.position[ 2 ] = moved.z;
+            // obrót części: wierszami, kolumny to osie części w układzie urządzenia
+            double rotated[ 9 ];
+            for( int row = 0; row < 3; ++row ) {
+                for( int column = 0; column < 3; ++column ) {
+                    double sum { 0.0 };
+                    for( int k = 0; k < 3; ++k ) { sum += tiltdevice[ row ][ k ] * placement.rotation[ k * 3 + column ]; }
+                    rotated[ row * 3 + column ] = sum;
+                }
+            }
+            std::copy( std::begin( rotated ), std::end( rotated ), placement.rotation );
+        }
         auto const *part { catalog->part( item.part ) };
         auto const model { catalog->models() + ( part != nullptr && false == part->model.empty() ? part->model : item.part ) };
         place( model, placement, heading, origin );

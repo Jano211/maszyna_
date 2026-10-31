@@ -921,6 +921,17 @@ int main( int, char *argv[] ) {
             auto const written { catenary::write_anchor( *catenary_anchor_get( index ) ) };
             check( partson > 0 && partson + 2 == partsown && mock_deleted_parts >= before + static_cast<int>( partson ) && written.find( " on s0003 " ) != std::string::npos,
                 ( "kotwienie na istniejacym slupie: bez slupa i fundamentu (" + std::to_string( partson ) + " czesci), idzie za slupem, zapis z \"on\"" ).c_str() );
+            // przechylony słup (lean 3° w stronę toru): urządzenie z nim, czoło na wysokości rolek o h sin 3° w stronę drutów
+            double flat[ 4 ][ 3 ], leaning[ 4 ][ 3 ];
+            catenary_anchor_shape( index, flat );
+            auto tilted { *catenary_scene_get( carrier ) };
+            tilted.lean = 3.0;
+            catenary_scene_update( carrier, tilted );
+            catenary_anchor_shape( index, leaning );
+            auto const h { flat[ 0 ][ 1 ] - tilted.pole[ 1 ] };
+            auto const expected { h * std::sin( 3.0 * 3.14159265358979323846 / 180.0 ) };
+            std::printf( "  kotwienie na przechylonym slupie: czolo x %.3f -> %.3f (oczekiwane +%.3f), y %.3f -> %.3f\n", flat[ 0 ][ 0 ], leaning[ 0 ][ 0 ], expected, flat[ 0 ][ 1 ], leaning[ 0 ][ 1 ] );
+            check( std::abs( ( leaning[ 0 ][ 0 ] - flat[ 0 ][ 0 ] ) - expected ) < 0.02 && leaning[ 0 ][ 1 ] < flat[ 0 ][ 1 ], "kotwienie na istniejacym slupie idzie za jego przechylem" );
         }
         Global.AirTemperature = 15.f;
         std::remove( "tests/catenary/td_kotwa_test.scm" );
