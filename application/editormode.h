@@ -560,6 +560,10 @@ class editor_mode : public application_mode, private editor_track::observer
 	int m_terrain_add_count{4};       // chunks along a side added around the camera
 	float m_terrain_brush_radius{12.0f};
 	float m_terrain_brush_strength{4.0f}; // metres per second while held; for the paint, how fast it covers
+	// each tool has its brush of its own: the radius and the strength above are those of the tool they were last synced for
+	terrain_tool m_terrain_brush_of{terrain_tool::none};
+	// takes the brush of the tool chosen now, keeping the one of the tool left; Store: the settings are written to the disk
+	void terrain_brush_sync(bool const Store = false);
 	// the level brush
 	float m_terrain_target{0.0f}; // height the ground is led to
 	int m_terrain_level_mode{0}; // 0: up and down, 1: only raises, 2: only lowers

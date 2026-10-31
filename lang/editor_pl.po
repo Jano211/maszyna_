@@ -12354,3 +12354,12 @@ msgstr "Przechyłka, jakiej wymaga łuk w każdym zaznaczonym punkcie przy dozwo
 
 msgid "A road is led into a junction level across: there's no roll where it meets one"
 msgstr "Droga wchodzi na skrzyżowanie poziomo: tam, gdzie się z nim łączy, nie ma przechyłki"
+
+msgid "[ and ]: smaller and larger. Each tool keeps a brush of its own"
+msgstr "[ i ]: mniejszy i większy. Każde narzędzie ma swój własny pędzel"
+
+msgid "Sculpting: metres per second at the middle of the brush; smoothing, levelling, painting and restoring: how fast they work.\nShift+[ and Shift+]: weaker and stronger. Each tool keeps a brush of its own"
+msgstr "Rzeźbienie: metry na sekundę w środku pędzla; wygładzanie, poziomowanie, malowanie i przywracanie: jak szybko działają.\nShift+[ i Shift+]: słabszy i mocniejszy. Każde narzędzie ma swój własny pędzel"
+
+msgid "Brush: radius %.1f m, strength %.2f"
+msgstr "Pędzel: promień %.1f m, siła %.2f"
