@@ -125,10 +125,10 @@ device 0461 table 0011-1 pulley 4460-01 lever 6406-01 rod 6402-01 rope 4490-01 r
   // slup betonowy 1701: wyk. 3 - 4520-3 (Jan 2026-10-24), sruby 0,257; dol prowadnicy wg 0455 4530-3, tyl 4530-4 (Jan 2026-10-31)
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   holder ~4440-01 0.27
@@ -169,10 +169,10 @@ device 0461-2x2 table 0011-1 pulley 4460-01 lever 6403-01 lever2 6403-01 rod 640
   // slup betonowy 1701: wyk. 3 - 4520-3 (Jan 2026-10-24), sruby 0,257; dol prowadnicy wg 0455 4530-3, tyl 4530-4 (Jan 2026-10-31)
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   holder ~4440-01 0.27
@@ -214,10 +214,10 @@ device 0403 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -240,10 +240,10 @@ device 0403-10 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -264,10 +264,10 @@ device 0403-20 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -291,10 +291,10 @@ device 0403-32 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -320,10 +320,10 @@ device 0404 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   contact_clamp 5120-01 0.058
@@ -344,10 +344,10 @@ device 0404-10 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   contact_clamp 5120-01 0.058
@@ -365,10 +365,10 @@ device 0404-20 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   contact_clamp 5120-01 0.058
@@ -389,10 +389,10 @@ device 0404-32 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   contact_clamp 5120-01 0.058
@@ -413,10 +413,10 @@ device 0405 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -439,10 +439,10 @@ device 0405-32 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -462,10 +462,10 @@ device 0413 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -491,10 +491,10 @@ device 0413-10 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -514,10 +514,10 @@ device 0413-32 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -541,10 +541,10 @@ device 0423 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -567,10 +567,10 @@ device 0423-10 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -590,10 +590,10 @@ device 0423-20 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -616,10 +616,10 @@ device 0423-32 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -650,10 +650,10 @@ device 0471 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 r
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   holder 4440-05 0.703                       // od malej ruchomej: duza w hole_1 (0,336), dzwignia w hole_2 (0,703)
@@ -689,10 +689,10 @@ device 0480 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 r
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   holder 4440-05 0.703                       // od malej ruchomej: duza w hole_1 (0,336), dzwignia w hole_2 (0,703)
@@ -742,10 +742,10 @@ device 0482-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490-01
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   holder 4440-05 0.703
@@ -774,10 +774,10 @@ device 0482-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   holder 4440-05 0.703
@@ -805,10 +805,10 @@ device 0482-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6402-02 rope 4490
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   holder 4440-05 0.703
@@ -836,10 +836,10 @@ device 0482-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   holder 4440-05 0.703
@@ -882,10 +882,10 @@ device 0486-m table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490-01
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   holder 4440-05 0.703
@@ -914,10 +914,10 @@ device 0486-m-32 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   holder 4440-05 0.703
@@ -945,10 +945,10 @@ device 0486-m-35 table 0011-6 pulley 4460-03 lever 6406-01 rod 6401-01 rope 4490
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   holder 4440-05 0.703
@@ -976,10 +976,10 @@ device 0486-c table 0011-7 pulley 4460-03 lever 6406-01 rod 6401-03 rope 4490-01
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   holder 4440-05 0.703
@@ -1016,10 +1016,10 @@ device 0406 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -1044,10 +1044,10 @@ device 0406-2 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -1072,10 +1072,10 @@ device 0408 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -1100,10 +1100,10 @@ device 0408-2 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -1131,10 +1131,10 @@ device 0418 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
@@ -1159,10 +1159,10 @@ device 0418-2 kind fixed
   brackets 1665 1666 1667 hole 0.04 0.04 bolt 0.237 top 4520-06 4520-08 bottom 4520-06 4520-08
   brackets 1701 hole 0.04 0.04 bolt 0.257 top 4520-03 4520-08 bottom 4530-03 4530-04
   // nogi bramek (karta 0455, Jan 2026-10-31): wyk. 4 - ceowniki 160-200, wyk. 5 - C240; uchwyt chwyta jeden ceownik. Dol 4560
-  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); tyl dolu 4520-8 (ZALOZENIE). 3111-3123 C200, 3032-3038 C140
-  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 4520-08
-  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 4520-08
-  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 4520-08
+  // (regulowany 10 cm; 01 C240 ... 05 C160, C140 - niekatalogowy - jak C160); dol bez tylu - sruby hakowe (Jan). 3111-3123 C200, 3032-3038 C140
+  brackets 3111 3112 3113 3121 3122 3123 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-03 -
+  brackets 3032-1 3032-2 3032-3 3032-4 3034-1 3034-2 3034-3 3034-4 3036-1 3036-2 3036-3 3036-4 3038-1 3038-2 3038-3 3038-4 hole 0.04 0.04 bolt 0.107 top 4520-04 4520-08 bottom 4560-05 -
+  brackets 3031-1 3031-2 3031-3 3031-4 3033-1 3033-2 3033-3 3033-4 3035-1 3035-2 3035-3 3035-4 3037-1 3037-2 3037-3 3037-4 hole 0.04 0.04 bolt 0.127 top 4520-05 4520-08 bottom 4560-01 -
   // slupy przestrzenne (polbramki 1901; nowe 190x po opisaniu): 4570-1 jedno wykonanie, bez tylu
   brackets polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m hole 0.04 0.04 bolt 0.095 top 4570-01 - bottom 4570-01 -
   messenger_clamp 5120-01 0.058
