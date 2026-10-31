@@ -12,7 +12,9 @@
 //   pole <nazwa> <od poprzedniego, m> <sieć A> <sieć B> [same]
 //                    rola sieci na słupie: anchor - kotwienie, work - przewód roboczy, lift - poderwany, - - nie ma jej tu;
 //                    "same" - na tej samej konstrukcji co poprzedni wpis (wysięgniki rozstawione na konsoli 4890).
-//                    Słup z dwiema sieciami (obie role work/lift) dostaje wysięgnik dwóch sieci (102x); kotwowy - sam słup
+//                    Słup krzyżowy z dwiema sieciami: jeden wysięgnik „z” (120x) sieci pracującej, poderwana przechodzi obok swobodnie
+//                    (Jan 2026-10-31); obie pracujące (13-0062-35, słup środkowy): dwa 120x, lina drugiego nad pierwszym. Sam „lift”
+//                    na słupie (słupy K kart K+P): zwykły wysięgnik podniesiony o lift. Kotwowy - sam słup (albo istniejący do 6 m)
 // endoverlap
 // ZAŁOŻENIA (do sprawdzenia z kartami): odległość K-P 3,0 m; na łukach (0078) z 0,20; 0060-37 jak 0060-36; poderwania 0060-35
 // i 0060-37 jak sąsiednich kart; lina sieci poderwanej zostaje na wysokości liny roboczej (hk mniejsze o poderwanie).
@@ -53,8 +55,8 @@ overlap 23-0060-20 networks 20 : sześciosłupowe na prostej (YC120-2C150)
     z 0.15 lift 0.27 common 3.0 hk 1.70 anchor 6.70 6.70
     pole A0 0.0  -    anchor
     pole K1 23.0 work lift
-    pole K2 23.0 work work
-    pole K3 3.0  work work
+    pole K2 23.0 work lift
+    pole K3 3.0  lift work
     pole K4 23.0 lift work
     pole A5 23.0 anchor -
 endoverlap
