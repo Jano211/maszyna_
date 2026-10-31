@@ -75,7 +75,7 @@ Odczytane 2026-10-23 (skany bez tekstu; numery stron PDF). Typy sieci w tabelach
    (słup), 4 żyły między rolkami podwójnymi, wolny koniec z rolki stałej pionowo w dół do pręta ciężarów.
 3. Temperatura: `Global.AirTemperature` przy wczytaniu i przy zmianie; poza −25…+40 °C przycięcie do tabeli.
 4. Wpis kotwienia w scenerii, przycisk „Zakotwij” (strona Druty), ostatnie przęsło bez wieszaków do dźwigni.
-Później: obrót wysięgników od temperatury i odległości od kotwienia środkowego (max 12°); dobowy przebieg temperatury
+Obrót wysięgników od temperatury i odległości od kotwienia środkowego – zrobiony 31.10 (PRZEKAZANIE.md); później: dobowy przebieg temperatury
 w scenariuszu; parametry „stanu”: brakujące krążki (stos krótszy, naciąg mniejszy o 4·27 daN na krążek), wydłużenie
 sieci od ostatniej regulacji (ciężary niżej o 4×; oparte o grunt = utrata naciągu), zerwanie kotwienia (przęsła liczone
 z zadanej długości drutu → naciąg).

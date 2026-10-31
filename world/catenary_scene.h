@@ -183,6 +183,8 @@ void catenary_anchor_remove( std::size_t Index );
 std::string catenary_scene_new_anchor_name( std::string const &File );
 // po zmianie temperatury powietrza: kotwienia złożone przy innej (różnica od 0,5 °C) składa od nowa, z przęsłami do nich
 void catenary_scene_temperature();
+// obrót wysięgnika podwieszenia na zawiasach od temperatury [stopnie, ze znakiem]; 0 poza łańcuchem z kotwieniem środkowym
+double catenary_scene_swing( std::size_t Index );
 
 // ---- bramki (wpisy "gantry" w pliku sieci): słupy i dźwigar; zwisy z wysięgnikami to zwykłe podwieszenia -----------------
 std::size_t catenary_gantry_size();

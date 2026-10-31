@@ -380,6 +380,23 @@ int main( int, char *argv[] ) {
         auto const *cold { catenary_anchor_result( 0 ) };
         if( cold != nullptr ) { std::printf( "  przy -20 °C: b %.3f, uwagi %d\n", cold->b, static_cast<int>( cold->warnings.size() ) ); for( auto const &w : cold->warnings ) { std::printf( "    %s\n", w.c_str() ); } }
         check( cold != nullptr && cold->b > 1.75 && cold->b < 1.75 + 84.0 * 17e-6 * 30.0 + 0.01, "kotwienie ciezarowe liczy odleglosc od kotwienia srodkowego (84 m, nie 700)" );
+        // obrót wysięgników od temperatury: przy -20 °C lina 60 m od środkowego przesuwa się 60·17e-6·30 = 3,06 cm do niego,
+        // m1 i m3 obracają się w przeciwne strony, m2 (środkowe) stoi; przy +10 °C wszystkie w swojej płaszczyźnie
+        {
+            auto const s1 { catenary_scene_swing( 0 ) }, s2 { catenary_scene_swing( 1 ) }, s3 { catenary_scene_swing( 2 ) };
+            std::printf( "  obrot wysiegnikow przy -20 C: m1 %.3f, m2 %.3f, m3 %.3f st.\n", s1, s2, s3 );
+            auto const spans { mock_span_bodies.size() };
+            Global.AirTemperature = 40.f;
+            catenary_scene_temperature();
+            auto const w1 { catenary_scene_swing( 0 ) }, w3 { catenary_scene_swing( 2 ) };
+            std::printf( "  przy +40 C: m1 %.3f, m3 %.3f st., przesla przebudowane %d\n", w1, w3, static_cast<int>( mock_span_bodies.size() - spans ) );
+            Global.AirTemperature = 10.f;
+            catenary_scene_temperature();
+            auto const z1 { catenary_scene_swing( 0 ) }, z3 { catenary_scene_swing( 2 ) };
+            check( s1 * s3 < 0.0 && std::abs( s2 ) < 1e-9 && std::abs( std::abs( s1 ) - std::abs( s3 ) ) < 0.05 && std::abs( s1 ) > 0.3 && std::abs( s1 ) < 1.5
+                && w1 * s1 < 0.0 && w3 * s3 < 0.0 && std::abs( z1 ) < 1e-9 && std::abs( z3 ) < 1e-9 && mock_span_bodies.size() > spans,
+                "obrot wysiegnikow od temperatury: od kotwienia srodkowego, przeciwnie po obu stronach, zero przy +10 C, przesla od nowa" );
+        }
         Global.AirTemperature = 10.f;
     }
 
