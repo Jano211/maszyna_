@@ -15,7 +15,7 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-10-31
 
-### Edytor sieci: wysięgniki na nogach bramki idą za nogami — (ten commit)
+### Edytor sieci: wysięgniki na nogach bramki idą za nogami — `e695949`
 - Zmiana dźwigara (czyli szerokości bramki), słupów, obrót i „prostopadle do toru” przesuwają nogi bramki; wysięgniki
   przyczepione do nóg zostawały w starym miejscu. Teraz idą z nogą i składają się od nowa: karta z nowej odległości
   nogi od toru, odsuw przewodów (zygzak) bez zmian. Gdy żadna karta nie sięga – wysięgnik zostaje, jak był, a status
