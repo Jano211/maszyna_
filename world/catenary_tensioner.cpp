@@ -1012,7 +1012,9 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         upward = vec { -pull.z, 0.0, pull.x };
     };
     auto const holepoint = [ & ]( std::pair<double, double> const &Hole ) {
-        return axispoint + across * ( sign * ( Hole.second - axishole->second ) ) + upward * ( sign * ( Hole.first - axishole->first ) );
+        // odwrócona dźwignia obraca się o 180 stopni wokół osi uchwytu (across): otwory zamieniają się góra-dół, a odsunięcie
+        // otworów w stronę drutów zostaje w stronę drutów
+        return axispoint + across * ( Hole.second - axishole->second ) + upward * ( sign * ( Hole.first - axishole->first ) );
     };
     lever_frame();
     // druga dźwignia (szeregowo): oś na końcu łańcucha "cascade" z otworu przewodów pierwszej, wzdłuż wypadkowej drugiej
@@ -1022,7 +1024,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     vec secondpull { out }, secondaxispoint;
     auto const secondhole = [ & ]( std::pair<double, double> const &Hole ) {
         vec const up { -secondpull.z, 0.0, secondpull.x };
-        return secondaxispoint + secondpull * ( secondsign * ( Hole.second - secondaxis->second ) ) + up * ( secondsign * ( Hole.first - secondaxis->first ) );
+        return secondaxispoint + secondpull * ( Hole.second - secondaxis->second ) + up * ( secondsign * ( Hole.first - secondaxis->first ) );
     };
     auto const second_frame = [ & ]() { if( cascade ) { secondaxispoint = holepoint( *contacthole ) + secondpull * cascadelength; } };
     second_frame();
@@ -1105,13 +1107,15 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     // przechylona razem z układem across/upward
     if( false == only ) {
         auto placement { placed( "lever", lever->name, holepoint( { 0.0, 0.0 } ) ) };
-        set_rotation( placement, across * -sign, vec { 0.0, -1.0, 0.0 }, upward * sign );
+        // odwrócona (otwór liny niżej niż otwór przewodów): obrót o 180 stopni wokół osi uchwytu, nie wokół pionu - -X modelu
+        // dalej w stronę drutów (Jan 2026-10-31: w YpC120-2C, YpC95-2C, YwsC120-2C była tyłem na przód)
+        set_rotation( placement, across * -1.0, vec { 0.0, -sign, 0.0 }, upward * sign );
         Result.parts.push_back( placement );
     }
     if( cascade ) {
         place_chain( Device.cascade, "cascade", holepoint( *contacthole ), secondpull, Result );
         auto placement { placed( "lever2", secondlever->name, secondhole( { 0.0, 0.0 } ) ) };
-        set_rotation( placement, secondpull * -secondsign, vec { 0.0, -1.0, 0.0 }, vec { -secondpull.z, 0.0, secondpull.x } * secondsign );
+        set_rotation( placement, secondpull * -1.0, vec { 0.0, -secondsign, 0.0 }, vec { -secondpull.z, 0.0, secondpull.x } * secondsign );
         Result.parts.push_back( placement );
     }
 
