@@ -9,6 +9,7 @@ http://mozilla.org/MPL/2.0/.
 
 #include "stdafx.h"
 #include "world/catenary_scene.h"
+#include <cstring>
 
 #include "world/catenary_suspension.h"
 #include "world/catenary_cantilever.h"
@@ -73,6 +74,10 @@ struct scene_suspension {
     // z jednym przewodem każda sieć ma swój (A - wire_a, B - wire_b; Jan 2026-10-31)
     bool has_wire_pair { false };
     double wire_pair[ 2 ][ 3 ] { { 0.0, 0.0, 0.0 }, { 0.0, 0.0, 0.0 } };
+    // obrót wysięgnika na zawiasach od temperatury (łańcuch z kotwieniem środkowym): kąt [stopnie] i o ile przesunęły się z nim
+    // uchwyt przewodów i lina nośna (współrzędne scenerii) - końce przęseł idą za nimi
+    double swing { 0.0 };
+    double swing_wire[ 3 ] { 0.0, 0.0, 0.0 }, swing_rope[ 3 ] { 0.0, 0.0, 0.0 };
 };
 
 std::vector<scene_suspension> Suspensions;
@@ -101,6 +106,7 @@ struct scene_chain {
     std::vector<TAnimModel *> middle_parts;
     std::vector<catenary::solid_vertex> middle_solid[ 2 ];
     std::size_t middle_span { static_cast<std::size_t>( -1 ) };   // przęsło przed podwieszeniem środkowym (za nim: +1)
+    double swing_temperature { 10.0 };  // temperatura, przy której ostatnio obracano wysięgniki łańcucha (kotwienie środkowe)
 };
 std::vector<scene_chain> Chains;
 
@@ -267,6 +273,57 @@ text_number( double const Value, int const Precision = 4 ) {
 // a przy wpisie ze słupem oś słupa na wysokości główki szyny. Umbrella: ustawienia strony parasola (tylko przy słupie);
 // obrót zwisu na dźwigarze bramki względem płaszczyzny wysięgnika (stopnie; 0 do ok. 2° skosu - zwis idzie za wysięgnikiem)
 double drop_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Pole, double Heading );
+std::size_t suspension_named( std::string const &File, std::string const &Name );
+bool second_net( scene_chain const &Chain, std::size_t Point );
+
+// przesuw wysięgnika wzdłuż sieci od temperatury (Głowacki s. 110: sieć skompensowana, wysięgniki obrotowe): w łańcuchu z kotwieniem
+// środkowym lina nośna przy podwieszeniu przesuwa się o α·L·(t - 10 °C) od kotwienia środkowego (L - odległość od niego wzdłuż
+// łańcucha, +10 °C - stan zerowy montażu). Bez kotwienia środkowego nie liczymy (Jan 2026-10-31: wtedy sieć i tak jest źle
+// powieszona). Shift - przesunięcie poziome w scenerii; false, gdy podwieszenie nie leży w takim łańcuchu (jako pierwsza sieć)
+bool
+swing_shift( scene_suspension const &Suspension, glm::dvec3 &Shift ) {
+    Shift = glm::dvec3 { 0.0 };
+    auto const &name { Suspension.data.name };
+    if( name.empty() ) { return false; }
+    for( auto const &chain : Chains ) {
+        if( chain.removed || chain.file != Suspension.file || chain.data.middle.empty() ) { continue; }
+        auto const &names { chain.data.suspensions };
+        auto const found { std::find( names.begin(), names.end(), name ) };
+        auto const middle { std::find( names.begin(), names.end(), chain.data.middle ) };
+        if( found == names.end() || middle == names.end() ) { continue; }
+        auto const position { static_cast<std::size_t>( found - names.begin() ) };
+        if( second_net( chain, position ) ) { continue; }
+        auto const from { static_cast<std::size_t>( middle - names.begin() ) };
+        if( position == from ) { return true; }
+        auto const at = [ & ]( std::size_t const K, glm::dvec2 &Point ) {
+            auto const index { suspension_named( chain.file, names[ K ] ) };
+            if( index >= Suspensions.size() || false == Suspensions[ index ].data.has_at ) { return false; }
+            Point = { Suspensions[ index ].data.at[ 0 ], Suspensions[ index ].data.at[ 2 ] };
+            return true;
+        };
+        // odległość wzdłuż łańcucha od podwieszenia środkowego i kierunek ostatniego przęsła (od środkowego)
+        auto const step { position > from ? std::ptrdiff_t { 1 } : std::ptrdiff_t { -1 } };
+        double along { 0.0 };
+        glm::dvec2 previous, current;
+        if( false == at( from, previous ) ) { return false; }
+        for( auto k { static_cast<std::ptrdiff_t>( from ) + step }; ; k += step ) {
+            if( false == at( static_cast<std::size_t>( k ), current ) ) { return false; }
+            along += glm::length( current - previous );
+            if( k == static_cast<std::ptrdiff_t>( position ) ) { break; }
+            previous = current;
+        }
+        auto const direction { current - previous };
+        if( glm::length( direction ) < 1e-3 ) { return true; }
+        // rozszerzalność liny nośnej: miedź (brąz) 17e-6, aluminium 23e-6 [1/K]
+        auto const alpha { chain.data.material == "al" ? 23e-6 : 17e-6 };
+        auto const shift { alpha * along * ( Global.AirTemperature - 10.0 ) };
+        auto const unit { glm::normalize( direction ) * shift };
+        Shift = { unit.x, 0.0, unit.y };
+        return true;
+    }
+    return false;
+}
+
 // Probe: tylko złożenie bez wstawiania części, wynik solvera trafia tam (zwraca 1, gdy się złożył)
 std::size_t
 assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Catalog, glm::dvec3 const &Wire, glm::dvec3 const *Rope, glm::dvec3 const &Attach,
@@ -454,6 +511,72 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         }
         if( false == solved ) { solved = solve( input.overrides, 0.0, result ); }
     }
+    // obrót wysięgnika na zawiasach od temperatury (łańcuch z kotwieniem środkowym): cały wysięgnik razem z głowicami zawiasów
+    // obraca się wokół pionu przez oś zawiasu ukośnika tak, żeby uchwyt liny nośnej przesunął się wzdłuż toru o przesuw liny;
+    // słup, fundament, mocowania, tyły, konsole i pręty odciągu zostają. Bez zawiasu (wpis bez słupa, mocowanie sztywne) - bez obrotu
+    double swing[ 4 ] { 0.0, 1.0, 0.0, 0.0 };     // sin, cos, oś x, oś y (układ wysięgnika)
+    auto const swung = [ & ]( double const X, double const Y, double &OutX, double &OutY ) {
+        auto const dx { X - swing[ 2 ] }, dy { Y - swing[ 3 ] };
+        OutX = swing[ 2 ] + swing[ 1 ] * dx - swing[ 0 ] * dy;
+        OutY = swing[ 3 ] + swing[ 0 ] * dx + swing[ 1 ] * dy;
+    };
+    if( Probe == nullptr ) {
+        Suspension.swing = 0.0;
+        std::fill( std::begin( Suspension.swing_wire ), std::end( Suspension.swing_wire ), 0.0 );
+        std::fill( std::begin( Suspension.swing_rope ), std::end( Suspension.swing_rope ), 0.0 );
+    }
+    glm::dvec3 shift;
+    auto const *hinge { solved && pole != nullptr ? result.find( "strut_hinge" ) : nullptr };
+    if( hinge != nullptr && swing_shift( Suspension, shift ) && glm::length( shift ) > 1e-4 ) {
+        // oś X wysięgnika w scenerii (wzdłuż toru)
+        catenary::cantilever_placement unit;
+        unit.position[ 0 ] = 1.0;
+        auto const axis { catenary::cantilever_to_scene( unit, heading ) };
+        auto const along { shift.x * axis.offset[ 0 ] + shift.z * axis.offset[ 2 ] };
+        auto const *clamp { result.find( "messenger_clamp" ) };
+        auto const radius { hinge->position[ 1 ] - ( clamp != nullptr ? clamp->position[ 1 ] : input.messenger.y ) };
+        if( radius > 0.3 ) {
+            swing[ 0 ] = std::clamp( along / radius, -0.5, 0.5 );
+            swing[ 1 ] = std::sqrt( 1.0 - swing[ 0 ] * swing[ 0 ] );
+            swing[ 2 ] = hinge->position[ 0 ];
+            swing[ 3 ] = hinge->position[ 1 ];
+            auto const fixed = []( std::string const &Role ) {
+                auto const ends = [ & ]( char const *Tail ) { auto const n { std::strlen( Tail ) }; return Role.size() >= n && Role.compare( Role.size() - n, n, Tail ) == 0; };
+                return Role == "pole" || Role == "foundation" || ends( "_mount" ) || ends( "_back" ) || ends( "_console" ) || ends( "_rod" );
+            };
+            for( auto &placement : result.parts ) {
+                if( fixed( placement.role ) ) { continue; }
+                swung( placement.position[ 0 ], placement.position[ 1 ], placement.position[ 0 ], placement.position[ 1 ] );
+                double rotated[ 9 ];
+                auto const &r { placement.rotation };
+                for( int column = 0; column < 3; ++column ) {
+                    rotated[ 0 + column ] = swing[ 1 ] * r[ 0 + column ] - swing[ 0 ] * r[ 3 + column ];
+                    rotated[ 3 + column ] = swing[ 0 ] * r[ 0 + column ] + swing[ 1 ] * r[ 3 + column ];
+                    rotated[ 6 + column ] = r[ 6 + column ];
+                }
+                std::copy( std::begin( rotated ), std::end( rotated ), placement.rotation );
+            }
+            auto const degrees { std::asin( swing[ 0 ] ) * 180.0 / 3.14159265358979323846 };
+            // kontrola obrotu wysięgnika (Głowacki: najwyżej 12° na skrajnych słupach odcinka)
+            if( std::abs( degrees ) > 12.0 ) {
+                result.warnings.push_back( "cantilever of suspension "" + data.name + "" swings " + text_number( std::abs( degrees ), 1 ) + " deg at " + text_number( Global.AirTemperature, 1 )
+                    + " C, more than 12 deg allowed; the middle anchor is too far away" );
+            }
+            if( Probe == nullptr ) {
+                Suspension.swing = degrees;
+                // przesunięcie przewodu (zero układu) i liny nośnej z wysięgnikiem, do końców przęseł
+                auto const moved = [ & ]( double const Y, double *Target ) {
+                    catenary::cantilever_placement at;
+                    swung( 0.0, Y, at.position[ 0 ], at.position[ 1 ] );
+                    at.position[ 1 ] -= Y;
+                    auto const part { catenary::cantilever_to_scene( at, heading ) };
+                    std::copy( std::begin( part.offset ), std::end( part.offset ), Target );
+                };
+                moved( 0.0, Suspension.swing_wire );
+                moved( input.messenger.y, Suspension.swing_rope );
+            }
+        }
+    }
     if( Probe != nullptr ) { *Probe = result; return ( solved ? 1 : 0 ); }
     // druga sieć: punkty eksportowane przez klocki (y, z w układzie wysięgnika, zero w przewodzie A) do scenerii
     {
@@ -461,7 +584,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             auto const y { result.values.find( Name + ".y" ) }, z { result.values.find( Name + ".z" ) };
             if( false == solved || y == result.values.end() || z == result.values.end() ) { return false; }
             catenary::cantilever_placement at;
-            at.position[ 1 ] = y->second;
+            swung( 0.0, y->second, at.position[ 0 ], at.position[ 1 ] );
             at.position[ 2 ] = z->second;
             auto const part { catenary::cantilever_to_scene( at, heading ) };
             auto const &offset { part.offset };
@@ -1347,6 +1470,8 @@ raw_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *Ro
     if( index >= Suspensions.size() || false == Suspensions[ index ].data.has_at ) { return false; }
     auto const &suspension { Suspensions[ index ] };
     std::copy( std::begin( suspension.data.at ), std::end( suspension.data.at ), Wire );
+    // wysięgnik obrócony od temperatury: uchwyt przewodów poszedł z nim
+    for( int i = 0; i < 3; ++i ) { Wire[ i ] += suspension.swing_wire[ i ]; }
     if( second_net( Chain, Point ) ) {
         // druga sieć wysięgnika: drugi uchwyt przewodu (117x/118x, przerwy izolacyjne), drugi uchwyt liny (102x) albo lina z wysięgnika
         // samej liny; czego wysięgnik nie trzyma, przechodzi swobodnie (chain_point)
@@ -1370,8 +1495,11 @@ raw_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *Ro
             return false == C.removed && C.file == suspension.file && std::find( C.data.second_net.begin(), C.data.second_net.end(), suspension.data.name ) != C.data.second_net.end(); } ) };
         if( other != Chains.end() && single_contact( *other ) ) { std::copy( std::begin( suspension.wire_pair[ 0 ] ), std::end( suspension.wire_pair[ 0 ] ), Wire ); }
     }
-    // lina nośna z innego wysięgnika (rozstawione, sama lina): gdy go nie ma, z tego samego
-    if( false == held_rope( Chain, Point, Rope ) ) { rope_of( suspension.data, Rope ); }
+    // lina nośna z innego wysięgnika (rozstawione, sama lina): gdy go nie ma, z tego samego (obróconego z temperaturą)
+    if( false == held_rope( Chain, Point, Rope ) ) {
+        rope_of( suspension.data, Rope );
+        for( int i = 0; i < 3; ++i ) { Rope[ i ] += suspension.swing_rope[ i ]; }
+    }
     return true;
 }
 
@@ -2639,6 +2767,15 @@ catenary_scene_resolve() {
             for( auto const span : { chain.middle_span, chain.middle_span + 1 } ) { rebuild_span( chain, span ); }
         }
     }
+    // wysięgniki obrócone od temperatury (kotwienie środkowe): końce przęseł poszły za nimi, a łańcuchy powstały przy wczytaniu
+    for( auto &chain : Chains ) {
+        if( chain.removed || chain.data.middle.empty() ) { continue; }
+        chain.swing_temperature = Global.AirTemperature;
+        auto const swung { std::any_of( chain.data.suspensions.begin(), chain.data.suspensions.end(), [ & ]( std::string const &Name ) {
+            auto const index { suspension_named( chain.file, Name ) };
+            return index >= first && index < Suspensions.size() && Suspensions[ index ].swing != 0.0; } ) };
+        if( swung ) { for( std::size_t span = 0; span < chain.spans.size(); ++span ) { rebuild_span( chain, span ); } }
+    }
     // drugie sieci wysięgników: punkty są dopiero z ich złożenia, a łańcuchy powstały przy wczytaniu - przęsła przy nich od nowa
     {
         std::vector<std::string> nets;
@@ -3162,8 +3299,14 @@ catenary_chain_update( std::size_t const Index, catenary::chain const &Data ) {
     for( auto const *pairs : { &static_cast<catenary::chain const &>( chain.data ).messenger_from, &Data.messenger_from } ) {
         for( auto const &pair : *pairs ) { if( pair.first != pair.second ) { held.insert( pair.first ); } }
     }
+    // kotwienie środkowe przed albo po zmianie: wysięgniki łańcucha obracają się od temperatury inaczej (albo przestają)
+    if( false == chain.data.middle.empty() || false == Data.middle.empty() ) {
+        held.insert( chain.data.suspensions.begin(), chain.data.suspensions.end() );
+        held.insert( Data.suspensions.begin(), Data.suspensions.end() );
+    }
     chain.data = Data;
     chain.removed = Data.suspensions.size() < 2;
+    chain.swing_temperature = Global.AirTemperature;
     for( auto const &name : held ) {
         if( auto const index { suspension_named( chain.file, name ) }; index < Suspensions.size() ) { reassemble( index ); }
     }
@@ -3176,6 +3319,12 @@ void
 catenary_chain_remove( std::size_t const Index ) {
     if( Index >= Chains.size() || Chains[ Index ].removed ) { return; }
     Chains[ Index ].removed = true;
+    // wysięgniki obrócone od temperatury (kotwienie środkowe tego łańcucha) wracają do swojej płaszczyzny
+    if( false == Chains[ Index ].data.middle.empty() ) {
+        for( auto const &name : Chains[ Index ].data.suspensions ) {
+            if( auto const index { suspension_named( Chains[ Index ].file, name ) }; index < Suspensions.size() && Suspensions[ index ].swing != 0.0 ) { reassemble( index ); }
+        }
+    }
     rebuild_chain( Chains[ Index ] );
     mark_changed( Chains[ Index ].file );
 }
@@ -3612,8 +3761,22 @@ catenary_scene_new_anchor_name( std::string const &File ) {
     }
 }
 
+double
+catenary_scene_swing( std::size_t const Index ) {
+    return ( Index < Suspensions.size() ? Suspensions[ Index ].swing : 0.0 );
+}
+
 void
 catenary_scene_temperature() {
+    // łańcuchy z kotwieniem środkowym: wysięgniki obracają się od temperatury, przęsła i kotwienia idą za nimi
+    for( auto &chain : Chains ) {
+        if( chain.removed || chain.data.middle.empty() || std::abs( chain.swing_temperature - Global.AirTemperature ) < 0.5 ) { continue; }
+        chain.swing_temperature = Global.AirTemperature;
+        for( auto const &name : chain.data.suspensions ) {
+            if( auto const index { suspension_named( chain.file, name ) }; index < Suspensions.size() ) { reassemble( index ); }
+        }
+        rebuild_chain( chain );
+    }
     for( auto &anchor : Anchors ) {
         if( anchor.removed || std::abs( anchor.temperature - Global.AirTemperature ) < 0.5 ) { continue; }
         assemble_anchor( anchor );

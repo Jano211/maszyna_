@@ -4,6 +4,16 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 
 ## START TUTAJ – 2026-10-30 01:00 (najpierw to)
 
+**31.10: obrót wysięgników od temperatury (Jan: „punkt zerowy na kotwie środkowej”, bez niej nie liczymy; „ma być fajnie, nie przekombinować”).**
+W łańcuchu z `middle` lina przy podwieszeniu przesuwa się o α·L·(t − 10 °C) od kotwienia środkowego (L wzdłuż łańcucha, α Cu 17e-6,
+Al 23e-6; `swing_shift` w catenary_scene.cpp). Wysięgnik (wszystkie części poza słupem, fundamentem, `*_mount`, `*_back`, `*_console`,
+`*_rod`) obraca się wokół pionu przez `strut_hinge` tak, żeby uchwyt liny przesunął się o ten przesuw wzdłuż toru; bez zawiasu (wpis
+bez słupa) – bez obrotu. Końce przęseł idą za nim (`swing_wire` / `swing_rope` w `raw_point`). > 12° – uwaga w logu. Przebudowa:
+`catenary_scene_temperature` (suwak pogody, `settemperature`), zmiana / usunięcie łańcucha, po wczytaniu. `catenary_scene_swing(i)` – kąt.
+Test `te` (−20 °C: ±0,64° na 60 m). ZAŁOŻENIA: obracają się wszystkie wysięgniki na zawiasie, także „nieprzechylne” 12xx i teowniki
+(do potwierdzenia z Janem); oś pionowa, nie przez ucho odciągu; wysięgnik idzie za liną nośną (przewody stalowe/Cu – różnicę biorą wieszaki).
+W exe NIESPRAWDZONE.
+
 **GAŁĘZIE (od 29.10): pracujemy na gl46.** `siec-gl46` (= `feat/gl46-migration` kolegi + sieć), `bujanie-gl46`, wspólna
 `wszystko-gl46` (Jan ją buduje, VS 2026: `cmake .. -G "Visual Studio 18 2026" -A x64` w `build-gl46`, submoduły Vulkana).
 Każda zmiana sieci: commit na `siec-gl46` → push → merge do `wszystko-gl46` → push. Stare `siec-trakcyjna` / `wszystko` (GL 3.3)

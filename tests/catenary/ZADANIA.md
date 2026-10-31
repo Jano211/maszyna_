@@ -1,6 +1,6 @@
 # Sieć trakcyjna w exe – lista zadań
 
-Stan na 2026-10-30 01:00 (bieżący stan i kolejność prac: PRZEKAZANIE.md, sekcja START TUTAJ). Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
+Stan na 2026-10-31 (bieżący stan i kolejność prac: PRZEKAZANIE.md, sekcja START TUTAJ). Kopia dokumentu Claude Docs „Sieć trakcyjna w exe – lista zadań”
 (https://claude.ai/artifact/LboXDQjty15vbb7ieh8AUn) – Jan może odhaczać tam; przy zmianach przenosić tutaj.
 Zestawienie z notatek w `tests/catenary/*.md` (PRZEKAZANIE, KONCEPCJA, KONCEPCJA_EDYTOR, BRAMKI, KOTWIENIA, GLOWACKI,
 ROZSZERZANIE) i z pracy nad kotwieniami 23–24.10.
@@ -145,7 +145,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [x] Rolki szeregowe (0011-5…-8, 4460-2 + 4460-3, 4440-4/-5/-6, cięgło 4490-2, 4600 wyk. 2: 4600-03/-04/-05) i przebieg liny przez 4 rolki; Kolprojekt 2010 dla sieci 36/37
 - [x] Kotwienia stałe (0403/0413/0423, 0404 przewodów, 0405 lin nośnych; sieci Y 36/37)
 - [x] Kotwienie środkowe 0406/0408 (lina 9831-5, zaciski 1,00 m, V w połowie przęsła na linie liczonej jak przęsło; teowniki: obejma 4160 obok siodła) – 25/26.10
-- [ ] Kontrola 12° wysięgnika na skrajnych słupach kotwienia środkowego
+- [x] Kontrola 12° wysięgnika na skrajnych słupach kotwienia środkowego (31.10: uwaga w logu przy złożeniu)
 - [x] Sieci bez danych w urządzeniach: `network <symbol> as <kod>` (YC95-2C, YC120-2C, SKB70-C, Yp) – 25.10, „na oko”
 - [x] Kotwienie środkowe do dźwigara bramki (0416) i z jednostronną izolacją (0418)
 - [x] Podniesienie drutu o 0,30 m na słupie, gdzie krzyżują się przęsła naprężenia (przycisk w panelu łańcucha, 30.10)
@@ -155,7 +155,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 **Wizualizacja i czas**
 
 - [x] Zaznaczanie i rysowanie kotwienia w oknie edytora (24.10, odcinek 2138): LPM na urządzeniu (od czoła słupa do rolki ruchomej albo kolumna ciężarów) zaznacza kotwienie i jego łańcuch (strona Druty, panel przewija do kotwienia), Del usuwa; obrys niebieski, z uwagami czerwony, niezłożone – czerwony słup z napisem (`catenary_anchor_shape`, `catenary_anchor_chain`, test `te`)
-- [ ] Obrót wysięgników od temperatury i odległości od kotwienia środkowego (do 12°)
+- [x] Obrót wysięgników od temperatury i odległości od kotwienia środkowego (31.10: obrót na zawiasie, końce przęseł za nim; bez kotwienia środkowego nic)
 - [ ] Dobowy przebieg temperatury w scenariuszu
 - [ ] Zerwanie kotwienia (przęsła liczone z zadanej długości drutu)
 
