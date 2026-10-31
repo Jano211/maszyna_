@@ -851,6 +851,10 @@ tests/catenary/tc tests/catenary/data                                           
 - Etap zero wysięgników: `tests/catenary/etap0/` (`zlozenia.json` z 300 zespołami złożonymi z części katalogowych, `zlozenia_czesci.csv`, `zlozenia_przeglad.csv`, `zestawienie_czesci.csv`, `uwagi.txt`). To dane wejściowe do solvera wysięgnika; zacząć od `uwagi.txt`.
 - Scenerie testowe `td*.scn` (124 przęsła z typami i nazwami) i paczka `siec_exe_paczka3.zip`: Jan ma je z poprzedniego czatu.
 - Źródła faktów: katalog sieci (karta 0002 naciągi, karty 0570–0579 wieszaki), artykuł Koroblowskiego z TTS 10/2004 (2C120-2C-3, przęsło 70 m).
+- Źródła typów sieci i ich wiek: stary katalog Kolprojektu `kolprojekt1.pdf` (karta 13-0002 wyd. 1978: YpC120-2C 1, YpC95-2C 2,
+  C120-2C 3, C95-2C 4, SKB70-C 5, YC120-2C i YC95-2C – uelastycznione 3 i 4); Katalog ESN `z- KATALOG 1..6` – ok. 2003 (Jan
+  2026-10-31: „chyba”; C120-2C 3, C95-C 10, YC120-2C150 20, YwsC120-2C 26, YwsC120-2C-M 30, 2C120-2C-3 32, 2C120-2C-4 35);
+  Kolprojekt 2010 (YC150-2CS150 36, YC120-2CS150 37). Głowacki – podręcznik (2C120-2C na CMK od 1976), nie źródło typów.
 - Katalogi PDF: `E:\SYF\INNE\PDF\Katalog ESN` (`z- KATALOG 1..6 -z.pdf`; karty 1100–1199 w tomie 3 od strony 55, części 4000–7999 w tomie 5; skany bez warstwy tekstu, czytać jako obrazy).
 
 - 2026-10-23: słupy betonowe przy rozjazdach. `polegroup ... no_switch` w traction_catalog.txt (p_concrete: 1701 1711): słup takiej grupy przy rozjeździe (tor słupa jest rozjazdem albo ścieżka rozjazdu < 8 m od stopy, kSwitchRange) – podgląd i postawiony słup na czerwono, podpowiedź „BŁĄD: słup … nie może stać przy rozjeździe”, napis „… przy rozjeździe!”. Stawiać wolno (Jan sam zmienia typ – zamienników stalowych za dużo, decyzja Jana). Wynik dla postawionych słupów w pamięci (m_switch_checks), lista rozjazdów odświeżana przy zmianie liczby torów. 1711 nie ma jeszcze w traction_supports.txt.
