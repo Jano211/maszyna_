@@ -129,6 +129,7 @@ set(SOURCES
 "world/catenary_arcing.cpp"
 "world/catenary_cantilever.cpp"
 "world/catenary_layout.cpp"
+"world/catenary_overlap.cpp"
 "world/catenary_catalog.cpp"
 "world/catenary_scene_objects.cpp"
 "world/TractionPower.cpp"

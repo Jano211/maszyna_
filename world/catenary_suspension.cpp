@@ -105,6 +105,10 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else if( key == "anchor_start_contact" ) { one( line.anchor_start_contact ); }
                 else if( key == "anchor_end_contact" ) { one( line.anchor_end_contact ); }
                 else if( key == "middle" ) { one( line.middle ); }
+                else if( key == "isolated" ) {
+                    std::string end;
+                    if( one( end ) ) { line.isolated[ end == "end" ? 1 : 0 ] = true; }
+                }
                 else if( key == "middle_device" ) { one( line.middle_device ); }
                 else if( key == "middle_height" ) { number( line.middle_heights[ 0 ] ); number( line.middle_heights[ 1 ] ); }
                 else if( key == "second_net" ) {
@@ -433,6 +437,8 @@ std::string write_chain( chain const &Entry ) {
     }
     for( auto const &pair : Entry.messenger_from ) { text += " messenger_from " + pair.first + " " + pair.second; }
     for( auto const &listed : Entry.second_net ) { text += " second_net " + listed; }
+    if( Entry.isolated[ 0 ] ) { text += " isolated start"; }
+    if( Entry.isolated[ 1 ] ) { text += " isolated end"; }
     for( auto const &insulator : Entry.insulators ) {
         text += " insulator " + insulator.after + " " + insulator.kind + " " + ( insulator.power.empty() ? std::string( "-" ) : insulator.power );
         if( insulator.at >= 0.0 ) { text += " at " + number( std::round( insulator.at * 100.0 ) / 100.0 ); }

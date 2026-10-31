@@ -91,6 +91,14 @@ struct catenary_editor
 		bool toward{true};
 		bool alternate{true}; // on a straight the next one goes the other way
 		float rope_lift{0.60f}; // how much higher a new messenger holder is than the messenger here (m)
+		// a tension overlap from a template (data/traction_overlaps.txt, the Wires page): the next LMB by a track puts the whole
+		// overlap, its first crossing pole (K1, P1) at the click; the chain being built comes in (network A), a new one goes out (B)
+		bool overlap_placing{false};
+		int overlap_card{-1};
+		bool overlap_all{false};      // all the cards, not only the ones of the network type of the chain
+		bool overlap_isolated{false}; // an insulated overlap: insulators in the wires leaving to the anchors, another power source after it
+		bool overlap_swap{false};     // network A away from the pole on the crossing poles (B towards it)
+		bool overlap_reverse{false};  // the overlap goes the other way along the track
 		// expert mode: the advanced settings shown (+-0.5 stagger, own hk, the top mount, spread cantilevers, messenger held by
 		// another cantilever, single beam elements, turning a gantry); off: only what a usual line needs. What's set stays shown
 		bool expert{false};
@@ -342,6 +350,14 @@ struct catenary_editor
 	void catenary_third_create(std::size_t Index);
 	// a messenger only cantilever higher on the same pole, holding the messenger of the chain at Index (and where it held it)
 	void catenary_rope_lift_create(std::size_t Index, std::size_t Chain);
+	// a whole tension overlap from the template picked (data/traction_overlaps.txt) with its first crossing pole at the click
+	void catenary_overlap_place(TTrack &Track, int Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor);
+	// the place on the tracks joined to Track at the chord Distance from From in the direction Forward (plan); false when none
+	bool catenary_track_ahead(TTrack *&Track, int &Path, double &Parameter, glm::dvec3 const &From, glm::dvec2 const &Forward, double Distance) const;
+	// the template panel of the Wires page
+	void render_catenary_overlap_template();
+	// an overlap of two chains insulated or connected: insulators at the ends leaving to the anchors, the power source of the outgoing chain
+	void catenary_overlap_isolate(std::size_t Chain, bool ChainEnd, std::size_t Other, bool OtherEnd, bool Isolated);
 	// the span of a chain the spot falls in (in the plan: the wire point near the line of the span, between its ends)
 	struct chain_insert
 	{

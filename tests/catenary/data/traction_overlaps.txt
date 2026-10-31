@@ -1,0 +1,195 @@
+// Szablony przęseł naprężenia dla edytora sieci (karty Katalogu ESN tom 1: 0060, 0062, 0068, 0078; Kolprojekt 2010: 0060-36/37).
+// Edytor stawia z nich całe przęsło jednym kliknięciem: słupy w odległościach z karty, wysięgniki obu sieci, poderwanie przewodu
+// schodzącego do kotwienia, kotwienia na obu końcach i dwa łańcuchy. Sieć A dochodzi do przęsła (łańcuch, który się ciągnęło),
+// sieć B z niego wychodzi (nowy łańcuch, ciągnie się go dalej).
+//
+// overlap <karta> networks <kody typów sieci> [curve] : <opis>
+//   z <m>            odsuw każdej sieci od osi toru na słupach krzyżowych (przewody 2z od siebie); na łuku z tablic 0027 - tu na oko
+//   lift <m>         poderwanie przewodu schodzącego do kotwienia na słupie krzyżowym
+//   common <m>       wspólna bieżnia (c z karty) - tylko do opisu
+//   hk <m>           wysokość konstrukcyjna sieci pracującej (lina nad przewodem)
+//   anchor <lina> <przewody>   wysokość kotwienia liny i przewodów nad główką szyny (rozdzielone: 7,00 / 6,30)
+//   pole <nazwa> <od poprzedniego, m> <sieć A> <sieć B> [same]
+//                    rola sieci na słupie: anchor - kotwienie, work - przewód roboczy, lift - poderwany, - - nie ma jej tu;
+//                    "same" - na tej samej konstrukcji co poprzedni wpis (wysięgniki rozstawione na konsoli 4890).
+//                    Słup z dwiema sieciami (obie role work/lift) dostaje wysięgnik dwóch sieci (102x); kotwowy - sam słup
+// endoverlap
+// ZAŁOŻENIA (do sprawdzenia z kartami): odległość K-P 3,0 m; na łukach (0078) z 0,20; 0060-37 jak 0060-36; poderwania 0060-35
+// i 0060-37 jak sąsiednich kart; lina sieci poderwanej zostaje na wysokości liny roboczej (hk mniejsze o poderwanie).
+
+overlap 33-0060-3 networks 3 : czterosłupowe na prostej (C120-2C)
+    z 0.19 lift 0.15 common 1.0 hk 1.70 anchor 6.70 6.70
+    pole A0 0.0  -    anchor
+    pole K1 22.0 work lift
+    pole K2 32.0 lift work
+    pole A3 22.0 anchor -
+endoverlap
+
+overlap 33-0060-4 networks 4 : czterosłupowe na prostej (C95-2C)
+    z 0.21 lift 0.15 common 2.4 hk 1.70 anchor 6.70 6.70
+    pole A0 0.0  -    anchor
+    pole K1 22.0 work lift
+    pole K2 32.0 lift work
+    pole A3 22.0 anchor -
+endoverlap
+
+overlap 33-0060-10 networks 10 : czterosłupowe na prostej (C95-C, stacyjna)
+    z 0.17 lift 0.15 common 1.8 hk 1.30 anchor 6.70 6.70
+    pole A0 0.0  -    anchor
+    pole K1 22.0 work lift
+    pole K2 38.0 lift work
+    pole A3 22.0 anchor -
+endoverlap
+
+overlap 13-0060-26 networks 26 : czterosłupowe na prostej (YwsC120-2C)
+    z 0.20 lift 0.15 common 1.7 hk 1.70 anchor 6.70 6.70
+    pole A0 0.0  -    anchor
+    pole K1 23.0 work lift
+    pole K2 38.0 lift work
+    pole A3 23.0 anchor -
+endoverlap
+
+overlap 23-0060-20 networks 20 : sześciosłupowe na prostej (YC120-2C150)
+    z 0.15 lift 0.27 common 3.0 hk 1.70 anchor 6.70 6.70
+    pole A0 0.0  -    anchor
+    pole K1 23.0 work lift
+    pole K2 23.0 work work
+    pole K3 3.0  work work
+    pole K4 23.0 lift work
+    pole A5 23.0 anchor -
+endoverlap
+
+overlap 13-0060-30 networks 30 : sześciosłupowe na prostej, słupy K i P osobno (YwsC120-2C-M)
+    z 0.20 lift 0.20 common 7.5 hk 1.70 anchor 7.00 6.30
+    pole A0 0.0  -    anchor
+    pole K1 59.0 -    lift
+    pole P1 3.0  work -
+    pole P2 59.0 -    work
+    pole K2 3.0  lift -
+    pole A5 59.0 anchor -
+endoverlap
+
+overlap 13-0060-32 networks 32 : sześciosłupowe na prostej, słupy K i P osobno (2C120-2C-3)
+    z 0.20 lift 0.30 common 7.5 hk 1.70 anchor 7.00 6.30
+    pole A0 0.0  -    anchor
+    pole K1 62.0 -    lift
+    pole P1 3.0  work -
+    pole P2 59.0 -    work
+    pole K2 3.0  lift -
+    pole A5 62.0 anchor -
+endoverlap
+
+overlap 13-0060-35 networks 35 : sześciosłupowe na prostej, słupy K i P osobno (2C120-2C-4)
+    z 0.16 lift 0.30 common 7.0 hk 1.70 anchor 7.00 6.30
+    pole A0 0.0  -    anchor
+    pole K1 59.0 -    lift
+    pole P1 3.0  work -
+    pole P2 59.0 -    work
+    pole K2 3.0  lift -
+    pole A5 59.0 anchor -
+endoverlap
+
+overlap 13-0060-36 networks 36 : sześciosłupowe na prostej, słupy K i P osobno (YC150-2CS150, Kolprojekt 2010)
+    z 0.20 lift 0.25 common 6.0 hk 1.40 anchor 7.00 6.30
+    pole A0 0.0  -    anchor
+    pole K1 59.0 -    lift
+    pole P1 3.0  work -
+    pole P2 59.0 -    work
+    pole K2 3.0  lift -
+    pole A5 59.0 anchor -
+endoverlap
+
+overlap 13-0060-37 networks 37 : sześciosłupowe na prostej, słupy K i P osobno (YC120-2CS150, Kolprojekt 2010)
+    z 0.20 lift 0.25 common 6.0 hk 1.40 anchor 7.00 6.30
+    pole A0 0.0  -    anchor
+    pole K1 59.0 -    lift
+    pole P1 3.0  work -
+    pole P2 59.0 -    work
+    pole K2 3.0  lift -
+    pole A5 59.0 anchor -
+endoverlap
+
+overlap 13-0062-30 networks 30 : czterosłupowe na prostej (YwsC120-2C-M)
+    z 0.20 lift 0.17 common 7.0 hk 1.70 anchor 7.00 6.30
+    pole A0 0.0  -    anchor
+    pole K1 23.0 work lift
+    pole K2 32.0 lift work
+    pole A3 23.0 anchor -
+endoverlap
+
+overlap 13-0062-32 networks 32 : czterosłupowe na prostej, wysięgniki K i P rozstawione na jednym słupie (2C120-2C-3)
+    z 0.20 lift 0.30 common 7.0 hk 1.50 anchor 7.00 6.30
+    pole A0 0.0  -    anchor
+    pole K1 65.0 -    lift
+    pole P1 0.0  work -    same
+    pole P2 59.0 -    work
+    pole K2 0.0  lift -    same
+    pole A3 65.0 anchor -
+endoverlap
+
+overlap 13-0062-35 networks 35 : pięciosłupowe na prostej, ze słupem środkowym (2C120-2C-4)
+    z 0.19 lift 0.22 common 1.0 hk 1.70 anchor 7.00 6.30
+    pole A0 0.0  -    anchor
+    pole K1 22.0 work lift
+    pole SK 22.0 work work
+    pole K2 22.0 lift work
+    pole A4 22.0 anchor -
+endoverlap
+
+overlap 33-0068 networks 3 4 10 : czterosłupowe kombinowane, sieć 3 lub 4 z siecią 10
+    z 0.21 lift 0.15 common 1.2 hk 1.70 anchor 6.70 6.70
+    pole A0 0.0  -    anchor
+    pole K1 22.0 work lift
+    pole K2 35.0 lift work
+    pole A3 22.0 anchor -
+endoverlap
+
+overlap 33-0078-3 networks 3 curve : sześciosłupowe na łuku, słupy K i P osobno (C120-2C)
+    z 0.20 lift 0.15 common 1.0 hk 1.70 anchor 6.70 6.70
+    pole A0 0.0  -    anchor
+    pole P1 22.0 work -
+    pole K1 3.0  -    lift
+    pole P2 29.0 -    work
+    pole K2 3.0  lift -
+    pole A5 19.0 anchor -
+endoverlap
+
+overlap 33-0078-4 networks 4 curve : sześciosłupowe na łuku, słupy K i P osobno (C95-2C)
+    z 0.20 lift 0.15 common 2.4 hk 1.70 anchor 6.70 6.70
+    pole A0 0.0  -    anchor
+    pole P1 22.0 work -
+    pole K1 3.0  -    lift
+    pole P2 29.0 -    work
+    pole K2 3.0  lift -
+    pole A5 19.0 anchor -
+endoverlap
+
+overlap 23-0078-10 networks 10 curve : sześciosłupowe na łuku, słupy K i P osobno (C95-C)
+    z 0.20 lift 0.15 common 1.8 hk 1.30 anchor 6.70 6.70
+    pole A0 0.0  -    anchor
+    pole P1 22.0 work -
+    pole K1 3.0  -    lift
+    pole P2 35.0 -    work
+    pole K2 3.0  lift -
+    pole A5 19.0 anchor -
+endoverlap
+
+overlap 13-0078-30 networks 30 curve : sześciosłupowe na łuku, słupy K i P osobno (YwsC120-2C-M)
+    z 0.20 lift 0.20 common 7.0 hk 1.70 anchor 7.00 6.30
+    pole A0 0.0  -    anchor
+    pole P1 62.0 work -
+    pole K1 3.0  -    lift
+    pole P2 51.0 -    work
+    pole K2 3.0  lift -
+    pole A5 59.0 anchor -
+endoverlap
+
+overlap 13-0078-35 networks 35 curve : sześciosłupowe na łuku, słupy K i P osobno (2C120-2C-4)
+    z 0.20 lift 0.30 common 7.0 hk 1.70 anchor 7.00 6.30
+    pole A0 0.0  -    anchor
+    pole P1 62.0 work -
+    pole K1 3.0  -    lift
+    pole P2 51.0 -    work
+    pole K2 3.0  lift -
+    pole A5 59.0 anchor -
+endoverlap

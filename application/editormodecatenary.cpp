@@ -26,6 +26,8 @@ http://mozilla.org/MPL/2.0/.
 #include "world/Track.h"
 #include "world/catenary_scene.h"
 #include "world/catenary_layout.h"
+#include "world/catenary_overlap.h"
+#include "world/catenary_network.h"
 #include "scene/scenelayers.h"
 
 #include "imgui/imgui.h"
@@ -2341,6 +2343,7 @@ bool catenary_editor::catenary_chain_continue(std::size_t const Pole)
 	tool.last = static_cast<int>(Pole);
 	tool.chaining = true;
 	tool.connect_from = -1;
+	tool.overlap_placing = false;
 	tool.anchor_pick = -1;
 	tool.anchor_selected = -1;
 	tool.selected = -1;
@@ -2845,6 +2848,463 @@ void catenary_editor::catenary_rope_lift_create(std::size_t const Index, std::si
 	if (catenary_scene_parts(added) == 0)
 		tool.status += STR(" - the cantilever didn't assemble, see the log");
 }
+
+bool catenary_editor::catenary_track_ahead(TTrack *&Track, int &Path, double &Parameter, glm::dvec3 const &From, glm::dvec2 const &Forward, double const Distance) const
+{
+	if (Distance < 1e-3)
+		return true;
+	auto const from{plan_of(From)};
+	auto const target{from + Forward * Distance};
+	// the track and the ones joined to it, far enough for the whole overlap (up to about 190 m each way)
+	std::vector<TTrack *> tracks{Track};
+	for (int way = 0; way < 2; ++way)
+	{
+		auto *came{Track};
+		auto *next{way == 0 ? Track->trNext : Track->trPrev};
+		for (int hop = 0; hop < 24 && next != nullptr && std::find(tracks.begin(), tracks.end(), next) == tracks.end(); ++hop)
+		{
+			tracks.push_back(next);
+			auto *const onward{next->trNext != came ? next->trNext : next->trPrev};
+			came = next;
+			next = onward;
+		}
+	}
+	auto best{std::numeric_limits<double>::max()};
+	auto found{false};
+	for (auto *track : tracks)
+	{
+		if (track == nullptr || track->m_editorremoved)
+			continue;
+		for (int path = 0; path < static_cast<int>(track->m_paths.size()); ++path)
+		{
+			bezier const curve{track->m_paths[path]};
+			auto const length{curve.plan_length()};
+			if (geometry::plan_distance(curve.point(0.5), glm::dvec3{from.x, 0.0, from.y}) > 0.5 * length + Distance + 1.0)
+				continue;
+			auto const gap = [&](double const At) { return glm::length(plan_of(curve.point(At)) - from) - Distance; };
+			auto const samples{std::clamp(static_cast<int>(length / 2.0), 16, 512)};
+			auto previous{gap(0.0)};
+			for (int k = 1; k <= samples; ++k)
+			{
+				auto const t{static_cast<double>(k) / samples};
+				auto const current{gap(t)};
+				if ((previous <= 0.0) != (current <= 0.0))
+				{
+					auto low{static_cast<double>(k - 1) / samples}, high{t};
+					for (int i = 0; i < 40; ++i)
+					{
+						auto const middle{0.5 * (low + high)};
+						if ((gap(middle) <= 0.0) == (previous <= 0.0))
+							low = middle;
+						else
+							high = middle;
+					}
+					auto const root{0.5 * (low + high)};
+					auto const point{plan_of(curve.point(root))};
+					// ahead only, the nearest to the straight line on
+					if (glm::dot(point - from, Forward) > 0.0)
+						if (auto const miss{glm::length(point - target)}; miss < best)
+						{
+							best = miss;
+							Track = track;
+							Path = path;
+							Parameter = root;
+							found = true;
+						}
+				}
+				previous = current;
+			}
+		}
+	}
+	return found;
+}
+
+void catenary_editor::catenary_overlap_place(TTrack &Track, int const Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor)
+{
+	auto &tool{m_catenary};
+	auto const &cards{catenary_scene_overlaps()};
+	auto const *catalog{catenary_scene_catalog()};
+	if (tool.overlap_card < 0 || tool.overlap_card >= static_cast<int>(cards.size()) || catalog == nullptr)
+	{
+		tool.status = STR("Pick a tension overlap card first");
+		return;
+	}
+	auto const card{cards[static_cast<std::size_t>(tool.overlap_card)]};
+	// the click: the first crossing pole; the side of the poles from the cursor
+	catenary_spot first;
+	{
+		without_gantry const plain{tool.gantry_selected};
+		if (false == catenary_spot_at(Track, Path, Point, Cursor, 0, first))
+			return;
+	}
+	auto forward{first.forward};
+	// on from the chain being built: away from its last pole
+	if (auto const *last{tool.chaining && tool.last >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.last)) : nullptr}; last != nullptr && last->has_at)
+		if (glm::dot(plan_of(first.axis) - plan_of(wire_of(*last)), forward) < 0.0)
+			forward = -forward;
+	if (tool.overlap_reverse)
+		forward = -forward;
+	auto const side{first.side};
+	auto const file{std::string{tool.file}};
+	// the network A towards the pole on the crossing poles, B away from it (swapped: the other way round)
+	bool const towardnet[2]{false == tool.overlap_swap, tool.overlap_swap};
+	auto const saved_group{tool.catalog_group};
+	auto const saved_family{tool.catalog_family};
+	auto const saved_card{tool.catalog_card};
+	auto const saved_own{tool.stagger_own};
+	auto const restore = [&]() {
+		tool.catalog_group = saved_group;
+		tool.catalog_family = saved_family;
+		tool.catalog_card = saved_card;
+		tool.stagger_own = saved_own;
+	};
+	auto const &structures{catenary_scene_structures()};
+	auto const group = [&](char const *Id) {
+		tool.catalog_group = structures.group(Id) != nullptr ? std::string{Id} : saved_group;
+		tool.catalog_family.clear();
+		tool.catalog_card = 0;
+	};
+	struct planned_pole
+	{
+		bool used{false};
+		catenary_spot spot;
+		int index{-1}; // the suspension placed, -1: none (an anchor pole only)
+		int second{-1}; // the second cantilever of a spread pair
+	};
+	std::vector<planned_pole> plan(card.poles.size());
+	// first all the places and cantilevers, nothing put yet: a template that doesn't fit leaves the scenery as it was
+	for (std::size_t k = 0; k < card.poles.size(); ++k)
+	{
+		auto const &pole{card.poles[k]};
+		auto const offset{card.offset(k)};
+		auto *track{&Track};
+		auto path{Path};
+		auto parameter{first.parameter};
+		if (std::abs(offset) > 1e-3 && false == catenary_track_ahead(track, path, parameter, first.axis, offset > 0.0 ? forward : -forward, std::abs(offset)))
+		{
+			restore();
+			tool.status = format(STR_C("Pole %s of %s doesn't fit on the track (%.1f m from the click)"), pole.name.c_str(), card.name.c_str(), offset);
+			return;
+		}
+		bezier const curve{track->m_paths[path]};
+		auto const axis{curve.point(parameter)};
+		auto &place{plan[k]};
+		{
+			without_gantry const plain{tool.gantry_selected};
+			if (false == catenary_spot_at(*track, path, axis, axis, side, place.spot))
+			{
+				restore();
+				return;
+			}
+		}
+		auto const a{pole.net[0]}, b{pole.net[1]};
+		auto const on = [](catenary::overlap_role const Role) { return Role == catenary::overlap_role::work || Role == catenary::overlap_role::lift; };
+		auto const both{on(a) && on(b)};
+		auto const net{on(a) ? 0 : 1}; // the network of a cantilever with one network
+		auto const working{both ? (a == catenary::overlap_role::work ? 0 : 1) : net};
+		if (both && a == catenary::overlap_role::work && b == catenary::overlap_role::work)
+			group("n_tube_double"); // 102x: two networks working
+		else if (both)
+			group("n_tube_second"); // 117x/118x: the working network on the arms, the lifted wire on the second clamp
+		else
+			group("t_tube_swing");
+		tool.stagger_own = true;
+		auto const stagger{both && a == b ? 0.0 : card.stagger};
+		catenary_compose(place.spot, tool.clearance, stagger, towardnet[working]);
+		if (false == on(a) && false == on(b))
+			continue; // an anchor pole: its place only
+		if (place.spot.card == 0)
+		{
+			restore();
+			tool.status = format(STR_C("Pole %s of %s: %s"), pole.name.c_str(), card.name.c_str(), place.spot.problem.c_str());
+			return;
+		}
+		// a lifted wire by itself: the cantilever composed for it that much higher
+		if (false == both && pole.net[net] == catenary::overlap_role::lift)
+		{
+			place.spot.data.at[1] += card.lift;
+			place.spot.data.rope[1] += card.lift;
+		}
+		place.used = true;
+	}
+	restore();
+	// now into the scenery, one step of the undo
+	++tool.group;
+	auto const group_id{tool.group};
+	std::vector<std::string> members[2], second[2];
+	int anchorpole[2]{-1, -1};
+	int lastindex{-1};
+	for (std::size_t k = 0; k < card.poles.size(); ++k)
+	{
+		auto const &pole{card.poles[k]};
+		auto &place{plan[k]};
+		for (int net = 0; net < 2; ++net)
+			if (pole.net[net] == catenary::overlap_role::anchor)
+				anchorpole[net] = static_cast<int>(k);
+		if (false == place.used)
+			continue;
+		auto const on = [](catenary::overlap_role const Role) { return Role == catenary::overlap_role::work || Role == catenary::overlap_role::lift; };
+		auto const both{on(pole.net[0]) && on(pole.net[1])};
+		auto const net{on(pole.net[0]) ? 0 : 1};
+		if (pole.same && lastindex >= 0)
+		{
+			// on the console of the pole before (spread cantilevers 4890): the pair made of the cantilever before, this network on the second
+			auto const before{catenary_scene_size()};
+			catenary_spread_create(static_cast<std::size_t>(lastindex));
+			tool.group = group_id;
+			if (catenary_scene_size() == before + 1)
+			{
+				auto const added{catenary_scene_size() - 1};
+				if (auto const *data{catenary_scene_get(added)}; data != nullptr)
+				{
+					auto changed{*data};
+					if (pole.net[net] == catenary::overlap_role::lift)
+					{
+						changed.at[1] += card.lift;
+						changed.rope[1] += card.lift;
+						catenary_scene_update(added, changed);
+					}
+					members[net].push_back(changed.name);
+					place.index = static_cast<int>(added);
+				}
+				for (auto &change : tool.undo)
+					if (change.group > group_id)
+						change.group = group_id;
+				continue;
+			}
+		}
+		auto data{place.spot.data};
+		data.name = catenary_scene_new_name(file);
+		auto const index{catenary_scene_add(file, data)};
+		tool.spots[index] = place.spot;
+		tool.spots[index].data = data;
+		tool.undo.push_back({group_id, false, index, std::nullopt, std::nullopt, false});
+		place.index = static_cast<int>(index);
+		lastindex = static_cast<int>(index);
+		if (both)
+		{
+			// the working network has it as its own cantilever, the other one goes through its second network
+			auto const working{pole.net[0] == catenary::overlap_role::work ? 0 : 1};
+			members[working].push_back(data.name);
+			members[1 - working].push_back(data.name);
+			second[1 - working].push_back(data.name);
+		}
+		else
+			members[net].push_back(data.name);
+	}
+	// the chains: A - the chain being built goes on (or a new one), B - a new one
+	std::size_t chainindex[2]{catenary_chain_size(), catenary_chain_size()};
+	{
+		auto const *current{tool.chaining && tool.chain >= 0 && tool.append ? catenary_chain_get(static_cast<std::size_t>(tool.chain)) : nullptr};
+		if (current != nullptr && catenary_chain_file(static_cast<std::size_t>(tool.chain)) == file && false == members[0].empty())
+		{
+			auto changed{*current};
+			tool.undo.push_back({group_id, true, static_cast<std::size_t>(tool.chain), std::nullopt, *current, false});
+			changed.suspensions.insert(changed.suspensions.end(), members[0].begin(), members[0].end());
+			changed.second_net.insert(changed.second_net.end(), second[0].begin(), second[0].end());
+			changed.isolated[1] = tool.overlap_isolated;
+			catenary_chain_update(static_cast<std::size_t>(tool.chain), changed);
+			chainindex[0] = static_cast<std::size_t>(tool.chain);
+		}
+	}
+	auto const newchain = [&](std::vector<std::string> const &Members, std::vector<std::string> const &Second, std::string const &Power, std::string const &Type, bool const Start) {
+		catenary::chain created;
+		created.name = catenary_scene_new_chain_name(file);
+		created.power = Power;
+		created.voltage = tool.voltage;
+		created.material = kMaterials[std::clamp(tool.material, 0, 1)];
+		created.state = kStateValues[std::clamp(tool.state, 0, 2)];
+		created.type = false == Type.empty() ? Type : tool.networks.empty() ? std::string{} : tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
+		created.suspensions = Members;
+		created.second_net = Second;
+		created.isolated[Start ? 0 : 1] = tool.overlap_isolated;
+		auto const index{catenary_chain_add(file, created)};
+		tool.undo.push_back({group_id, true, index, std::nullopt, std::nullopt, false});
+		return index;
+	};
+	std::string powera{tool.power};
+	std::string typea;
+	if (chainindex[0] < catenary_chain_size())
+		if (auto const *chain{catenary_chain_get(chainindex[0])}; chain != nullptr)
+		{
+			powera = chain->power;
+			typea = chain->type;
+		}
+	if (chainindex[0] >= catenary_chain_size() && members[0].size() >= 2)
+		chainindex[0] = newchain(members[0], second[0], powera, typea, false);
+	if (members[1].size() >= 2)
+		chainindex[1] = newchain(members[1], second[1], tool.overlap_isolated ? powera + "_2" : powera, typea, true);
+	// the anchors on the anchor poles of the card: A at its end, B at its start
+	for (int net = 0; net < 2; ++net)
+	{
+		auto const *chain{chainindex[net] < catenary_chain_size() ? catenary_chain_get(chainindex[net]) : nullptr};
+		if (chain == nullptr || anchorpole[net] < 0)
+			continue;
+		auto const start{net == 1};
+		auto const &list{chain->suspensions};
+		auto const *nearest{list.empty() ? nullptr : &(start ? list.front() : list.back())};
+		catenary::suspension const *toward{nullptr};
+		for (std::size_t index = 0; index < catenary_scene_size() && nearest != nullptr; ++index)
+			if (auto const *other{catenary_scene_get(index)}; other != nullptr && other->name == *nearest && catenary_scene_file_of(index) == file)
+				toward = other;
+		if (toward == nullptr)
+			continue;
+		auto const &spot{plan[static_cast<std::size_t>(anchorpole[net])].spot};
+		catenary::anchor data;
+		data.name = catenary_scene_new_anchor_name(file);
+		data.network = chain->type;
+		data.pole_type = spot.data.pole_type;
+		std::copy(std::begin(spot.data.pole), std::end(spot.data.pole), data.pole);
+		std::copy(std::begin(toward->at), std::end(toward->at), data.toward);
+		data.distance = 700.0;
+		data.color = "szary";
+		data.top_color = "zolty";
+		// the rollers at the height of the card (the wires; split anchors of the messenger above them - ASSUMPTION: one device)
+		if (std::abs(card.anchor_wire - 6.70) > 1e-3)
+			data.height = card.anchor_wire;
+		catenary_change added;
+		added.group = group_id;
+		added.anchor = true;
+		added.index = catenary_anchor_add(file, data);
+		tool.undo.push_back(added);
+		auto changed{*chain};
+		tool.undo.push_back({group_id, true, chainindex[net], std::nullopt, *chain, false});
+		(start ? changed.anchor_start : changed.anchor_end) = data.name;
+		catenary_chain_update(chainindex[net], changed);
+	}
+	// the messenger of the lifted network on the crossing poles with 117x/118x: a messenger only cantilever on the same pole
+	for (std::size_t k = 0; k < card.poles.size(); ++k)
+	{
+		auto const &pole{card.poles[k]};
+		auto const lifted{pole.net[0] == catenary::overlap_role::lift && pole.net[1] == catenary::overlap_role::work ? 0
+		                  : pole.net[1] == catenary::overlap_role::lift && pole.net[0] == catenary::overlap_role::work ? 1 : -1};
+		if (lifted < 0 || plan[k].index < 0 || chainindex[lifted] >= catenary_chain_size() || pole.same)
+			continue;
+		catenary_rope_lift_create(static_cast<std::size_t>(plan[k].index), chainindex[lifted]);
+		for (auto &change : tool.undo)
+			if (change.group > group_id)
+				change.group = group_id;
+	}
+	tool.group = group_id;
+	// the chain going on: B from its last pole
+	if (chainindex[1] < catenary_chain_size())
+	{
+		tool.chain = static_cast<int>(chainindex[1]);
+		tool.chain_selected = tool.chain;
+		tool.append = true;
+		tool.chaining = true;
+		if (auto const *chain{catenary_chain_get(chainindex[1])}; chain != nullptr && false == chain->suspensions.empty())
+			for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+				if (auto const *other{catenary_scene_get(index)}; other != nullptr && other->name == chain->suspensions.back() && catenary_scene_file_of(index) == file)
+					tool.last = static_cast<int>(index);
+	}
+	tool.overlap_placing = false;
+	tool.selected = -1;
+	tool.status = format(STR_C("Tension overlap %s placed: %zu poles over %.1f m, %s; the chain goes on from its last pole"), card.name.c_str(), card.poles.size(), card.length(),
+	                     tool.overlap_isolated ? STR_C("insulated") : STR_C("connected"));
+}
+
+void catenary_editor::catenary_overlap_isolate(std::size_t const Chain, bool const ChainEnd, std::size_t const Other, bool const OtherEnd, bool const Isolated)
+{
+	auto &tool{m_catenary};
+	auto const *one{catenary_chain_get(Chain)};
+	auto const *two{catenary_chain_get(Other)};
+	if (one == nullptr || two == nullptr)
+		return;
+	++tool.group;
+	auto first{*one}, second{*two};
+	tool.undo.push_back({tool.group, true, Chain, std::nullopt, *one, false});
+	tool.undo.push_back({tool.group, true, Other, std::nullopt, *two, false});
+	first.isolated[ChainEnd ? 1 : 0] = Isolated;
+	second.isolated[OtherEnd ? 1 : 0] = Isolated;
+	// the outgoing chain (anchored at its start here) gets another power source, or the one of the incoming chain back
+	auto &incoming{ChainEnd ? first : second};
+	auto &outgoing{ChainEnd ? second : first};
+	if (Isolated && incoming.power == outgoing.power)
+	{
+		std::string other;
+		for (auto const *source : simulation::Powergrid.sequence())
+			if (source != nullptr && false == source->name().empty() && source->name() != incoming.power)
+			{
+				other = source->name();
+				break;
+			}
+		outgoing.power = other.empty() ? incoming.power + "_2" : other;
+	}
+	else if (false == Isolated)
+		outgoing.power = incoming.power;
+	catenary_chain_update(Chain, first);
+	catenary_chain_update(Other, second);
+	tool.status = Isolated ? format(STR_C("Insulated overlap: insulators by the crossing poles, %s fed from %s"), outgoing.name.c_str(), outgoing.power.c_str())
+	                       : format(STR_C("Connected overlap: one power source, connectors 33-0640 at the crossing poles"));
+}
+
+void catenary_editor::render_catenary_overlap_template()
+{
+	auto &tool{m_catenary};
+	auto const &cards{catenary_scene_overlaps()};
+	if (cards.empty())
+		return;
+	ImGui::Separator();
+	ImGui::TextUnformatted(STR_C("Tension overlap from a template"));
+	// the network type of the chain being built (or of the panel): its cards, unless all are asked for
+	std::string symbol{tool.networks.empty() ? std::string{} : tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)]};
+	if (auto const *chain{tool.chain >= 0 ? catenary_chain_get(static_cast<std::size_t>(tool.chain)) : nullptr}; chain != nullptr && false == chain->type.empty())
+		symbol = chain->type;
+	auto const *definition{symbol.empty() ? nullptr : catenary::types().find(symbol)};
+	auto const code{definition != nullptr ? definition->type.code : -1};
+	std::vector<int> shown;
+	for (std::size_t index = 0; index < cards.size(); ++index)
+		if (tool.overlap_all || code < 0 || cards[index].fits(code))
+			shown.push_back(static_cast<int>(index));
+	if (tool.overlap_card >= 0 && std::find(shown.begin(), shown.end(), tool.overlap_card) == shown.end())
+		tool.overlap_card = -1;
+	if (tool.overlap_card < 0 && false == shown.empty())
+		tool.overlap_card = shown.front();
+	auto const label = [&](int const Index) { return cards[static_cast<std::size_t>(Index)].name + " - " + cards[static_cast<std::size_t>(Index)].title; };
+	ImGui::PushItemWidth(-1.0f);
+	if (ImGui::BeginCombo("##overlapcard", tool.overlap_card >= 0 ? label(tool.overlap_card).c_str() : STR_C("no card for this network type")))
+	{
+		for (auto const index : shown)
+			if (ImGui::Selectable(label(index).c_str(), index == tool.overlap_card))
+				tool.overlap_card = index;
+		ImGui::EndCombo();
+	}
+	ImGui::PopItemWidth();
+	ImGui::Checkbox(STR_C("all cards"), &tool.overlap_all);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", format(STR_C("Off: only the cards of the network type %s"), symbol.empty() ? "-" : symbol.c_str()).c_str());
+	if (tool.overlap_card >= 0)
+	{
+		auto const &card{cards[static_cast<std::size_t>(tool.overlap_card)]};
+		std::string poles;
+		for (std::size_t k = 0; k < card.poles.size(); ++k)
+			poles += (k == 0 ? "" : card.poles[k].same ? " + " : format(" -%.0f- ", card.poles[k].distance)) + card.poles[k].name;
+		ImGui::TextDisabled("%s", poles.c_str());
+		ImGui::TextDisabled("%s", format(STR_C("L %.1f m, z %.2f m, lift %.2f m, common run %.1f m, hk %.2f m, anchors %.2f / %.2f m"), card.length(), card.stagger, card.lift, card.common, card.height, card.anchor_rope, card.anchor_wire).c_str());
+	}
+	ImGui::Checkbox(STR_C("insulated"), &tool.overlap_isolated);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("Insulators in the wires and the messenger leaving to the anchors by the crossing poles, the outgoing chain from another power source. Can be changed after it's placed (the chain panel, tension overlaps)"));
+	ImGui::SameLine();
+	ImGui::Checkbox(STR_C("swap the networks"), &tool.overlap_swap);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("Off: the incoming network towards the pole on the crossing poles, the outgoing one away from it; on: the other way round"));
+	ImGui::SameLine();
+	ImGui::Checkbox(STR_C("the other way"), &tool.overlap_reverse);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("The overlap goes the other way along the track than from the last pole of the chain"));
+	ImGui::BeginDisabled(tool.overlap_card < 0);
+	if (ImGui::Button(tool.overlap_placing ? STR_C("Cancel placing the overlap") : STR_C("Place the overlap (LMB at the first crossing pole)")))
+	{
+		tool.overlap_placing = false == tool.overlap_placing;
+		tool.status = tool.overlap_placing ? STR("LMB by the track where the first crossing pole (K1, P1) stands, on the side of the poles; Esc cancels") : std::string{};
+	}
+	ImGui::EndDisabled();
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+		ImGui::SetTooltip("%s", STR_C("All the poles of the card at its distances along the track, the cantilevers of both networks (117x/118x with the lifted wire, 102x where both work), the messenger of the lifted network on a messenger only cantilever, the anchors at both ends; the chain being built comes in and ends at the far anchor, a new chain starts at the near anchor and goes on"));
+}
+
 
 void catenary_editor::catenary_pair_move(std::size_t const Selected, glm::dvec3 const &Foot, bool const Panel)
 {
@@ -3379,6 +3839,13 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 	if (Intent.track == nullptr)
 		return;
 	catenary_spot spot;
+	if (tool.overlap_placing)
+	{
+		// a whole tension overlap from the template, its first crossing pole at the click
+		if (m_target.track == Intent.track)
+			catenary_overlap_place(*Intent.track, Intent.path, m_target.point, m_target.cursor);
+		return;
+	}
 	if (tool.anchor_cantilever >= 0)
 	{
 		// a cantilever on the anchor pole
@@ -3952,6 +4419,19 @@ void catenary_editor::render_catenary_overlaps(std::size_t const Chain)
 		                          other->name.c_str(), overlap.spans.size()).c_str());
 		if (false == crossing.empty())
 			ImGui::TextUnformatted(format(STR_C("crossing poles: %s"), crossing.c_str()).c_str());
+		// insulated or connected, also after it's placed: this chain leaves to its anchor at the end of the overlap (tail) or at its start
+		{
+			auto const leavesend{overlap.spans.front() + overlap.spans.size() + 1 >= chain->suspensions.size() + (chain->anchor_start.empty() ? 0u : 1u)};
+			auto isolated{chain->isolated[leavesend ? 1 : 0] || other->isolated[leavesend ? 0 : 1]};
+			if (ImGui::Checkbox(STR_C("insulated overlap"), &isolated))
+			{
+				catenary_overlap_isolate(Chain, leavesend, overlap.other, false == leavesend, isolated);
+				ImGui::PopID();
+				return;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Insulators in the wires and the messenger leaving to the anchors by the crossing poles (placeholder shapes), the outgoing chain from another power source; off: connected, one power source and connectors 33-0640"));
+		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("The shared spans take the running line of both chains (parallel). A connected overlap gets connectors 33-0640 at its crossing poles (procedural cords, placeholder clamps)"));
 		// the wire of this chain leaving the overlap to its anchor goes up at the last shared pole
@@ -4844,6 +5324,7 @@ void catenary_editor::render_catenary_wires_ui()
 			ImGui::SetTooltip("%s", STR_C("Joins this pole with the poles clicked after it: it goes on the chain at its end, a new chain of the two, or two chains become one"));
 		render_catenary_chain_state();
 	}
+	render_catenary_overlap_template();
 	render_catenary_chain_ui();
 }
 
@@ -7328,6 +7809,12 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 		if (tool.earthing_building)
 		{
 			catenary_earthing_finish();
+			return true;
+		}
+		if (tool.overlap_placing)
+		{
+			tool.overlap_placing = false;
+			tool.status.clear();
 			return true;
 		}
 		if (tool.anchor_pick >= 0 || tool.connect_from >= 0 || tool.umbrella_from >= 0 || tool.anchor_cantilever >= 0)

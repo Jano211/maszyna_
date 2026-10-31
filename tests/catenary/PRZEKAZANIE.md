@@ -4,6 +4,20 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 
 ## START TUTAJ – 2026-10-30 01:00 (najpierw to)
 
+**31.10 wieczór: SZABLONY PRZĘSEŁ NAPRĘŻENIA (w exe NIESPRAWDZONE, nowy plik `world/catenary_overlap.cpp` w CMakeLists – odświeżyć projekt).**
+Karty z Katalogu ESN tom 1 (s. 36–52 PDF „z- KATALOG 1 -z.pdf”: 0060-3/-4/-10/-20/-26/-30/-32/-35, 0062-30/-32/-35, 0068, 0078-3/-4/-10/-30/-35)
+i Kolprojekt_2010-1.PDF s. 19–20 (0060-36/37) w `data/traction_overlaps.txt` (19 kart; G: zapisany 31.10, 7694 B): słupy z odległościami
+i rolami sieci A (dochodzi, kończy się kotwieniem) i B (zaczyna się kotwieniem, idzie dalej): anchor / work / lift / -, `same` = rozstawione
+na konsoli. Odczyt kart: 0060 na prostej, 0062 na prostej (K+P na jednym słupie albo 4/5 słupów), 0068 kombinowane, 0078 na łuku (P i K
+osobno, odsuwy z tablic 0027 – tu z 0,20, ZAŁOŻENIE); K–P 3,0 m ZAŁOŻENIE; 0060-37 = 0060-36 ZAŁOŻENIE. Edytor (strona Druty, „Przęsło
+naprężenia z szablonu”): lista kart typu sieci łańcucha (albo wszystkie), „izolowane”, „zamień sieci”, „w drugą stronę”, przycisk i LPM
+w miejscu pierwszego słupa krzyżowego. Słup z dwiema sieciami: work+lift → 117x/118x (grupa n_tube_second) + wysięgnik samej liny dla sieci
+poderwanej (`catenary_rope_lift_create`), work+work → 102x; sam lift → zwykły wysięgnik podniesiony o `lift`; kotwienia na słupach
+kotwowych karty (`data.height` = kotwienie przewodów, gdy ≠ 6,70; rozdzielone kotwienia jeszcze nie). Łańcuch A = ciągnięty (dopisane
+słupy), B = nowy (ten sam typ, przy izolowanym zasilacz „<A>_2”), dalej ciągnie się B. Izolowane: wpis łańcucha `isolated start|end`
+(bryły zastępcze izolatorów 2 m od słupa krzyżowego w przęśle do kotwienia), w panelu przęseł naprężenia checkbox „przęsło izolowane”
+(`catenary_overlap_isolate`: flagi obu łańcuchów + zasilacz łańcucha wychodzącego). Test `te`.
+
 **31.10 po południu (drobnica, w exe NIESPRAWDZONE):** `origin` dla dyrektywy `catenary` i wpisów sieci (`shift_suspensions`, zapis
 z edytora względny; convert.py już bez dodawania originu – plik Częstochowy z pierwszej konwersji do powtórzenia albo dyrektywa poza
 blokiem origin); głowica 4170 obracana w kierunek liny (`rope_direction`); ramiona 6207/6208 → dopisek przęsła `spread start|end 0.10`

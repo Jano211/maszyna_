@@ -12171,3 +12171,75 @@ msgstr "Lina B przez wysięgnik samej liny"
 
 msgid "The cantilever has no clamp for the messenger of this network: a messenger only cantilever (129x, 1002-1015) on this pole, that much higher than the messenger here, holds it (messenger_from)"
 msgstr "Wysięgnik nie ma uchwytu liny tej sieci: trzyma ją wysięgnik samej liny (129x, 1002-1015) na tym słupie, o tyle wyżej od liny tutaj (messenger_from)"
+
+msgid "Pick a tension overlap card first"
+msgstr "Najpierw wybierz kartę przęsła naprężenia"
+
+msgid "Pole %s of %s doesn't fit on the track (%.1f m from the click)"
+msgstr "Słup %s karty %s nie mieści się na torze (%.1f m od kliknięcia)"
+
+msgid "Pole %s of %s: %s"
+msgstr "Słup %s karty %s: %s"
+
+msgid "Tension overlap %s placed: %zu poles over %.1f m, %s; the chain goes on from its last pole"
+msgstr "Przęsło naprężenia %s wstawione: %zu słupów na %.1f m, %s; łańcuch ciągnie się dalej od jego ostatniego słupa"
+
+msgid "insulated"
+msgstr "izolowane"
+
+msgid "connected"
+msgstr "zwarte"
+
+msgid "Insulated overlap: insulators by the crossing poles, %s fed from %s"
+msgstr "Przęsło izolowane: izolatory przy słupach krzyżowych, %s zasilany z %s"
+
+msgid "Connected overlap: one power source, connectors 33-0640 at the crossing poles"
+msgstr "Przęsło zwarte: jeden zasilacz, łączniki 33-0640 przy słupach krzyżowych"
+
+msgid "Tension overlap from a template"
+msgstr "Przęsło naprężenia z szablonu"
+
+msgid "no card for this network type"
+msgstr "brak karty dla tego typu sieci"
+
+msgid "all cards"
+msgstr "wszystkie karty"
+
+msgid "Off: only the cards of the network type %s"
+msgstr "Wyłączone: tylko karty typu sieci %s"
+
+msgid "L %.1f m, z %.2f m, lift %.2f m, common run %.1f m, hk %.2f m, anchors %.2f / %.2f m"
+msgstr "L %.1f m, z %.2f m, poderwanie %.2f m, wspólna bieżnia %.1f m, hk %.2f m, kotwienia %.2f / %.2f m"
+
+msgid "Insulators in the wires and the messenger leaving to the anchors by the crossing poles, the outgoing chain from another power source. Can be changed after it's placed (the chain panel, tension overlaps)"
+msgstr "Izolatory w przewodach i linie schodzących do kotwień przy słupach krzyżowych, łańcuch wychodzący z innego zasilacza. Można zmienić po wstawieniu (panel łańcucha, przęsła naprężenia)"
+
+msgid "swap the networks"
+msgstr "zamień sieci"
+
+msgid "Off: the incoming network towards the pole on the crossing poles, the outgoing one away from it; on: the other way round"
+msgstr "Wyłączone: na słupach krzyżowych sieć dochodząca od strony słupa, wychodząca od toru; włączone: na odwrót"
+
+msgid "the other way"
+msgstr "w drugą stronę"
+
+msgid "The overlap goes the other way along the track than from the last pole of the chain"
+msgstr "Przęsło idzie wzdłuż toru w drugą stronę niż od ostatniego słupa łańcucha"
+
+msgid "Cancel placing the overlap"
+msgstr "Anuluj wstawianie przęsła"
+
+msgid "Place the overlap (LMB at the first crossing pole)"
+msgstr "Wstaw przęsło (LPM w miejscu pierwszego słupa krzyżowego)"
+
+msgid "LMB by the track where the first crossing pole (K1, P1) stands, on the side of the poles; Esc cancels"
+msgstr "LPM przy torze w miejscu pierwszego słupa krzyżowego (K1, P1), po stronie słupów; Esc anuluje"
+
+msgid "All the poles of the card at its distances along the track, the cantilevers of both networks (117x/118x with the lifted wire, 102x where both work), the messenger of the lifted network on a messenger only cantilever, the anchors at both ends; the chain being built comes in and ends at the far anchor, a new chain starts at the near anchor and goes on"
+msgstr "Wszystkie słupy karty w jej odległościach wzdłuż toru, wysięgniki obu sieci (117x/118x z poderwanym przewodem, 102x gdzie obie pracują), lina sieci poderwanej na wysięgniku samej liny, kotwienia na obu końcach; ciągnięty łańcuch wchodzi i kończy się na dalszym kotwieniu, nowy zaczyna się na bliższym i ciągnie się dalej"
+
+msgid "insulated overlap"
+msgstr "przęsło izolowane"
+
+msgid "Insulators in the wires and the messenger leaving to the anchors by the crossing poles (placeholder shapes), the outgoing chain from another power source; off: connected, one power source and connectors 33-0640"
+msgstr "Izolatory w przewodach i linie schodzących do kotwień przy słupach krzyżowych (bryły zastępcze), łańcuch wychodzący z innego zasilacza; wyłączone: zwarte, jeden zasilacz i łączniki 33-0640"
