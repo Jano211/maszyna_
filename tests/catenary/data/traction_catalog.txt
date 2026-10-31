@@ -43,7 +43,7 @@ family 113x t_tube_swing cards 1130-1139 curve yes toward yes : 113x - łuk, ods
 family 114x t_tube_swing cards 1140-1149 curve yes toward no : 114x - łuk, odsuw od słupa
 
 group t_tube_fixed through execution user : Rurowe nieprzechylne (12xx, nowy katalog, tom 3)
-text Wysięgnik rurowy nieprzechylny (sztywny względem słupa). Ostatnia cyfra karty = pasmo A.
+text Wysięgnik rurowy nieprzechylny (obraca się na zawiasie jak przechylne). Ostatnia cyfra karty = pasmo A.
 exec 1 : wyk. 1 - dwa przewody jezdne, ramiona lekkie, hk 1,70
 exec 2 : wyk. 2 - dwa przewody jezdne, ramiona ciężkie, hk 1,70
 exec 3 : wyk. 3 - jeden przewód jezdny, ramiona ciężkie, hk 1,70

@@ -171,6 +171,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [ ] Zygzak przy słupach po różnych stronach toru (liczyć po stronie drutu, nie do/od słupa) – niski priorytet
 - [ ] Wyciąganie liny nośnej na zewnątrz łuku
 - [ ] Typ wieszaka (pojedynczy / podwójny, karty 0570–0579) w pliku typu sieci
+- [ ] Sieć górska C120-2Cg (zmniejszone naciągi, Głowacki s. 360: tabela 11.46) – plik `traction_C120-2Cg.txt` z C120-2C po zmianie naciągów i `network … as` w kotwieniach; czeka na dokumentację z liczbami (OCR książki bez rezultatu, 31.10)
 - [ ] Głowica 4170 obracana w kierunek liny w przęsłach naprężenia
 - [x] „Rozwieś druty”: kończy też Esc (24.10)
 
