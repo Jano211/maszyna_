@@ -123,6 +123,10 @@ struct scene_gantry {
 };
 std::vector<scene_gantry> Gantries;
 
+// tekstura części sieci (osprzęt, wysięgniki, urządzenia) z mapą -1, gdy wpis i plik nie podają własnej: ta sama, którą modele
+// miały na sztywno (Jan 2026-11-01: modele przerobione na wymienną teksturę, warianty brudu jako tekstury)
+std::string const kFittingSkin { "siec_trakcyjna/siec" };
+
 // kotwienie ciężarowe z pliku: słup kotwowy i urządzenie naprężające; końce drutów dla łańcuchów
 struct scene_anchor {
     catenary::anchor data;
@@ -684,7 +688,13 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     }
     // każda część to zwykły egzemplarz modelu, taki sam jak z wpisu node model
     std::size_t count { 0 };
-    auto const skin { Suspension.skin.empty() ? std::string( "none" ) : Suspension.skin };
+    // jedna tekstura na cały wysięgnik (żeby nie wymienić jednej rurki na nową); słup swoją, fundament - stałą z modelu
+    auto const fittingskin { Suspension.skin.empty() ? kFittingSkin : Suspension.skin };
+    auto const poleskin = [ & ]( std::string const &Pole ) -> std::string {
+        if( false == data.pole_skin.empty() ) { return data.pole_skin; }
+        auto const *pole { Catalog.pole( Pole ) };
+        return pole != nullptr && false == pole->skin.empty() ? pole->skin : std::string( "none" );
+    };
     Suspension.has_saddle = false;
     for( auto const &placement : result.parts ) {
         if( false == Suspension.has_saddle && placement.role == "messenger_clamp" ) {
@@ -697,7 +707,8 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         auto const part { catenary::cantilever_to_scene( placement, heading ) };
         auto entry {
             "node " + text_number( data.range_max, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 "
-            + ( placement.model.empty() ? Catalog.models() + placement.part : placement.model ) + ".t3d " + skin
+            + ( placement.model.empty() ? Catalog.models() + placement.part : placement.model ) + ".t3d "
+            + ( placement.role == "pole" ? poleskin( placement.part ) : placement.role == "foundation" ? std::string( "none" ) : fittingskin )
             + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) };
         if( part.scale[ 0 ] != 1.0 || part.scale[ 1 ] != 1.0 || part.scale[ 2 ] != 1.0 ) {
             entry += " scale " + text_number( part.scale[ 0 ], 5 ) + " " + text_number( part.scale[ 1 ], 5 ) + " " + text_number( part.scale[ 2 ], 5 );
@@ -1371,12 +1382,12 @@ assemble_anchor( scene_anchor &Anchor ) {
     }
     Anchor.solved = true;
 
-    auto const skin { data.skin.empty() ? std::string( "none" ) : data.skin };
+    auto const fittingskin { data.skin.empty() ? kFittingSkin : data.skin };
     std::size_t count { 0 };
-    auto const place = [ & ]( std::string const &Model, catenary::cantilever_placement const &Placement, double const Heading, glm::dvec3 const &Origin ) {
+    auto const place = [ & ]( std::string const &Model, catenary::cantilever_placement const &Placement, double const Heading, glm::dvec3 const &Origin, std::string const &Skin = std::string() ) {
         auto const part { catenary::cantilever_to_scene( Placement, Heading ) };
         auto entry {
-            "node " + text_number( data.range_max, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 " + Model + ".t3d " + skin
+            "node " + text_number( data.range_max, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 " + Model + ".t3d " + ( Skin.empty() ? fittingskin : Skin )
             + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) };
         if( part.scale[ 0 ] != 1.0 || part.scale[ 1 ] != 1.0 || part.scale[ 2 ] != 1.0 ) {
             entry += " scale " + text_number( part.scale[ 0 ], 5 ) + " " + text_number( part.scale[ 1 ], 5 ) + " " + text_number( part.scale[ 2 ], 5 );
@@ -1402,8 +1413,8 @@ assemble_anchor( scene_anchor &Anchor ) {
             double const turned[ 9 ] { c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0 };
             std::copy( std::begin( turned ), std::end( turned ), placement.rotation );
         }
-        place( pole->model, placement, poleheading, axis );
-        if( false == pole->foundation.empty() ) { place( pole->foundation, placement, poleheading, axis ); }
+        place( pole->model, placement, poleheading, axis, pole->skin.empty() ? std::string( "none" ) : pole->skin );
+        if( false == pole->foundation.empty() ) { place( pole->foundation, placement, poleheading, axis, "none" ); }
     }
     // przechył w układzie urządzenia (osie urządzenia w scenie bez przechyłu), punkt obrotu - podstawa słupa
     double tiltdevice[ 3 ][ 3 ] { { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 }, { 0.0, 0.0, 1.0 } };
@@ -1974,7 +1985,7 @@ assemble_middle( scene_chain &Chain ) {
                 placement.position[ 1 ] += beside;
                 auto const scened { catenary::cantilever_to_scene( placement, own.saddle_heading ) };
                 auto const entry {
-                    "node " + text_number( data.range_max > 0.0 ? data.range_max : 1000.0, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 " + own.saddle_model + ".t3d none"
+                    "node " + text_number( data.range_max > 0.0 ? data.range_max : 1000.0, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 " + own.saddle_model + ".t3d " + kFittingSkin
                     + " angles " + text_number( scened.angles[ 0 ] ) + " " + text_number( scened.angles[ 1 ] ) + " " + text_number( scened.angles[ 2 ] ) + " endmodel" };
                 glm::dvec3 const at { own.saddle_origin.x + scened.offset[ 0 ], own.saddle_origin.y + scened.offset[ 1 ], own.saddle_origin.z + scened.offset[ 2 ] };
                 if( auto *model3d { simulation::State.create_model( entry, "none", at ) }; model3d != nullptr ) {
@@ -2103,7 +2114,7 @@ assemble_middle( scene_chain &Chain ) {
                 catenary::tensioner_result result;
                 if( catenary::solve_tensioner( *devices, *device, input, result ) ) {
                     ropeend = toscene( result.messenger_end );
-                    auto const skin { std::string( "none" ) };
+                    auto const skin { kFittingSkin };
                     for( auto const &item : result.parts ) {
                         catenary::cantilever_placement placement;
                         std::copy( std::begin( item.position ), std::end( item.position ), placement.position );
@@ -2368,7 +2379,7 @@ assemble_earthing( scene_earthing &Earthing ) {
     if( Earthing.removed ) { return 0; }
     auto const *catalog { cantilevers() };
     if( catalog == nullptr ) { return 0; }
-    auto const skin { Earthing.data.skin.empty() ? std::string( "none" ) : Earthing.data.skin };
+    auto const skin { Earthing.data.skin.empty() ? kFittingSkin : Earthing.data.skin };
     std::size_t count { 0 };
     std::vector<std::size_t> done;     // słupy z uchwytem (kilka wpisów listy na jednym słupie - jeden uchwyt)
     for( auto const &name : Earthing.data.poles ) {

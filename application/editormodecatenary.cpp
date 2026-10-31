@@ -436,9 +436,41 @@ bool grouped_items(std::vector<std::string> const &Names, int &Chosen, std::func
 	return changed;
 }
 
+// textures of the catenary (textures/siec_trakcyjna) whose name starts with Prefix: the variants of a skin (new, used, old...), as the
+// skin of an entry names them (folder/stem, without the extension); read once a second at most
+std::vector<std::string> catenary_skins(std::string const &Prefix)
+{
+	static std::vector<std::string> names;
+	static double read{-10.0};
+	if (ImGui::GetTime() - read > 1.0)
+	{
+		read = ImGui::GetTime();
+		names.clear();
+		std::error_code error;
+		for (std::filesystem::directory_iterator file{"textures/siec_trakcyjna", error}, end; file != end; file.increment(error))
+		{
+			if (error)
+				break;
+			auto const extension{file->path().extension().string()};
+			if (extension != ".mat" && extension != ".dds" && extension != ".tga" && extension != ".png")
+				continue;
+			auto const name{"siec_trakcyjna/" + file->path().stem().string()};
+			if (std::find(names.begin(), names.end(), name) == names.end())
+				names.push_back(name);
+		}
+		std::sort(names.begin(), names.end());
+	}
+	std::vector<std::string> result;
+	for (auto const &name : names)
+		if (name.compare(15, Prefix.size(), Prefix) == 0)
+			result.push_back(name);
+	return result;
+}
+
 // the states of the wires in the panel, and as they're written in the entries
-char const *const kStates[] = {"new", "worn", "tarnished"};
-int const kStateValues[] = {0, 2, 1};
+// "black": czarne matowe druty, brudny osprzęt - między przejściowymi a zaśniedziałymi (Jan 2026-11-01: stare rurowe, świeże teowniki)
+char const *const kStates[] = {"new", "worn", "black", "tarnished"};
+int const kStateValues[] = {0, 2, 4, 1};
 
 } // namespace
 
@@ -2433,7 +2465,7 @@ void catenary_editor::catenary_place(catenary_spot const &Spot)
 			created.power = tool.power;
 			created.voltage = tool.voltage;
 			created.material = kMaterials[std::clamp(tool.material, 0, 1)];
-			created.state = kStateValues[std::clamp(tool.state, 0, 2)];
+			created.state = kStateValues[std::clamp(tool.state, 0, 3)];
 			created.type = tool.networks.empty() ? std::string{} : tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
 			created.suspensions = {previousdata.name, data.name};
 			tool.chain = static_cast<int>(catenary_chain_add(file, created));
@@ -3149,7 +3181,7 @@ void catenary_editor::catenary_overlap_place(TTrack &Track, int const Path, glm:
 		created.power = Power;
 		created.voltage = tool.voltage;
 		created.material = kMaterials[std::clamp(tool.material, 0, 1)];
-		created.state = kStateValues[std::clamp(tool.state, 0, 2)];
+		created.state = kStateValues[std::clamp(tool.state, 0, 3)];
 		created.type = false == Type.empty() ? Type : tool.networks.empty() ? std::string{} : tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
 		created.suspensions = Members;
 		created.second_net = Second;
@@ -3600,7 +3632,7 @@ void catenary_editor::catenary_connect(std::size_t const To)
 		created.power = tool.power;
 		created.voltage = tool.voltage;
 		created.material = kMaterials[std::clamp(tool.material, 0, 1)];
-		created.state = kStateValues[std::clamp(tool.state, 0, 2)];
+		created.state = kStateValues[std::clamp(tool.state, 0, 3)];
 		created.type = tool.networks.empty() ? std::string{} : tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
 		created.suspensions = {namea, nameb};
 		result = static_cast<int>(catenary_chain_add(file, created));
@@ -4006,7 +4038,7 @@ void catenary_editor::catenary_chain_show(int const Chain)
 		std::snprintf(tool.power, sizeof(tool.power), "%s", chain->power.c_str());
 		tool.voltage = static_cast<float>(chain->voltage);
 		tool.material = chain->material == "al" ? 1 : 0;
-		tool.state = chain->state == 2 ? 1 : chain->state == 1 ? 2 : 0;
+		tool.state = chain->state == 2 ? 1 : chain->state == 4 ? 2 : chain->state == 1 ? 3 : 0;
 		if (auto const found{std::find(tool.networks.begin(), tool.networks.end(), chain->type)}; found != tool.networks.end())
 			tool.network = static_cast<int>(found - tool.networks.begin());
 	}
@@ -4085,7 +4117,7 @@ void catenary_editor::catenary_chain_apply()
 	changed.power = tool.power;
 	changed.voltage = tool.voltage;
 	changed.material = kMaterials[std::clamp(tool.material, 0, 1)];
-	changed.state = kStateValues[std::clamp(tool.state, 0, 2)];
+	changed.state = kStateValues[std::clamp(tool.state, 0, 3)];
 	if (false == tool.networks.empty())
 		changed.type = tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
 	auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
@@ -4420,9 +4452,9 @@ void catenary_editor::render_catenary_chain_ui()
 	}
 	if (ImGui::Combo(STR_C("Material"), &tool.material, kMaterials, 2))
 		changed = true;
-	std::string const statenames[] = {STR(kStates[0]), STR(kStates[1]), STR(kStates[2])};
-	char const *const states[] = {statenames[0].c_str(), statenames[1].c_str(), statenames[2].c_str()};
-	if (ImGui::Combo(STR_C("Wires"), &tool.state, states, 3))
+	std::string const statenames[] = {STR(kStates[0]), STR(kStates[1]), STR(kStates[2]), STR(kStates[3])};
+	char const *const states[] = {statenames[0].c_str(), statenames[1].c_str(), statenames[2].c_str(), statenames[3].c_str()};
+	if (ImGui::Combo(STR_C("Wires"), &tool.state, states, 4))
 		changed = true;
 	if (catenary_power_combo(STR_C("Power source"), tool.power, sizeof(tool.power)))
 		changed = true;
@@ -5852,6 +5884,82 @@ void catenary_editor::render_catenary_cantilever_ui()
 				ImGui::PopItemWidth();
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("%s", STR_C("A pole is seldom quite upright: it leans a little, the mounts with it, the cantilever is assembled to them. + towards the track. Ctrl+click types a value"));
+			}
+		}
+		// the skins: one for the whole cantilever (all its parts - no new tube on an old cantilever), one for the pole
+		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr)
+		{
+			auto const *catalog{catenary_scene_catalog()};
+			auto const *own{catalog != nullptr && data->has_pole ? catalog->pole(data->pole_type) : nullptr};
+			auto const index{static_cast<std::size_t>(tool.selected)};
+			auto const skin_combo = [&](char const *Label, std::string const &Current, std::string const &Default, std::vector<std::string> const &Choices, std::string &Chosen) {
+				auto picked{false};
+				if (ImGui::BeginCombo(Label, (Current.empty() ? format(STR_C("default (%s)"), Default.c_str()) : Current).c_str()))
+				{
+					if (ImGui::Selectable(format(STR_C("default (%s)"), Default.c_str()).c_str(), Current.empty()))
+					{
+						Chosen.clear();
+						picked = true;
+					}
+					for (auto const &choice : Choices)
+						if (ImGui::Selectable(choice.c_str(), choice == Current))
+						{
+							Chosen = choice;
+							picked = true;
+						}
+					ImGui::EndCombo();
+				}
+				return picked;
+			};
+			ImGui::PushItemWidth(220.0f);
+			std::string chosen;
+			if (skin_combo(STR_C("Cantilever skin"), data->skin, "siec_trakcyjna/siec", catenary_skins("siec"), chosen))
+			{
+				auto changed{*data};
+				changed.skin = chosen;
+				tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+				catenary_scene_update(index, changed);
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("All the parts of the cantilever, the mounts and the insulators take this one texture (textures/siec_trakcyjna/siec*)"));
+			if (own != nullptr && false == own->gantry && own->drop.empty() && false == data->shared_pole)
+			{
+				// the variants of the pole's family: 161x_new_gray... for 1611-11
+				auto const family{data->pole_type.size() >= 3 ? data->pole_type.substr(0, 3) + "x" : data->pole_type};
+				auto choices{catenary_skins(family)};
+				for (auto const &extra : catenary_skins(data->pole_type.substr(0, 4)))
+					if (std::find(choices.begin(), choices.end(), extra) == choices.end())
+						choices.push_back(extra);
+				if (skin_combo(STR_C("Pole skin"), data->pole_skin, own->skin.empty() ? std::string("none") : own->skin, choices, chosen))
+				{
+					auto changed{*data};
+					changed.pole_skin = chosen;
+					tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+					catenary_scene_update(index, changed);
+				}
+			}
+			ImGui::PopItemWidth();
+			// the whole chain alike: its poles, cantilevers and anchors
+			std::size_t position{0};
+			if (auto const chain{catenary_chain_of(index, position)}; chain >= 0 && ImGui::SmallButton(STR_C("These skins on the whole chain")))
+			{
+				++tool.group;
+				std::size_t count{0};
+				for (auto const member : catenary_chain_members(static_cast<std::size_t>(chain)))
+				{
+					auto const *other{catenary_scene_get(member)};
+					if (other == nullptr || member == index || (other->skin == data->skin && other->pole_skin == data->pole_skin))
+						continue;
+					auto changed{*other};
+					changed.skin = data->skin;
+					// a pole of another family keeps its own
+					if (other->pole_type.substr(0, 3) == data->pole_type.substr(0, 3))
+						changed.pole_skin = data->pole_skin;
+					tool.undo.push_back({tool.group, false, member, *other, std::nullopt, false});
+					catenary_scene_update(member, changed);
+					++count;
+				}
+				tool.status = format(STR_C("Skins of %d poles of the chain changed (Ctrl+Z takes it back)"), static_cast<int>(count));
 			}
 		}
 	}

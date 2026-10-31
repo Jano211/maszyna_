@@ -110,6 +110,7 @@ struct cantilever_pole {
     std::string name;
     std::string model;                  // ścieżka modelu względem katalogu modeli symulatora, bez rozszerzenia
     std::string foundation;             // model fundamentu (ścieżka jak wyżej) stawiany w tym samym zerze co słup; puste = bez fundamentu
+    std::string skin;                   // domyślna tekstura słupa z mapą -1 (np. siec_trakcyjna/161x_old_gray); pusta = żadna
     double top { 0.0 };                 // góra słupa nad główką szyny
     double length { 0.0 };              // długość, na której biegnie zbieżność, liczona od góry
     double depth_top { 0.0 };           // wymiar od toru w głąb (prostopadle do toru) u góry

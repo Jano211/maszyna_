@@ -47,7 +47,7 @@ class TTraction : public scene::basic_node
     float fResistivity { 0.0f }; //[om/m], przeliczone z [om/km]
     unsigned int Material { 0 }; // 1: Cu, 2: Al
     float WireThickness { 0.0f };
-    unsigned int DamageFlag { 0 }; // 1: zasniedziale, 128: zerwana
+    unsigned int DamageFlag { 0 }; // 1: zasniedziale, 2: przejsciowe, 4: czarne, 128: zerwana
     int Wires { 2 };
     float WireOffset { 0.0f };
     std::string asPowerSupplyName; // McZapkie: nazwa podstacji trakcyjnej

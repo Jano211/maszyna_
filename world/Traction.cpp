@@ -605,7 +605,11 @@ TTraction::wire_color() const {
             }
             default: {break; }
         }
-        if( TestFlag( DamageFlag, 2 ) && false == TestFlag( DamageFlag, 1 ) ) {
+        if( TestFlag( DamageFlag, 4 ) && false == TestFlag( DamageFlag, 1 ) ) {
+            // czarna (Jan 2026-11-01): matowa, prawie czarna - między przejściową a zaśniedziałą
+            color = glm::vec3 { 0.06f, 0.055f, 0.05f };
+        }
+        else if( TestFlag( DamageFlag, 2 ) && false == TestFlag( DamageFlag, 1 ) ) {
             // stan przejściowy między nową a zaśniedziałą: ciemniejsza
             color *= 0.75f;
         }

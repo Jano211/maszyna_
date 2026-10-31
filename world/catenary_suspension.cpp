@@ -34,7 +34,7 @@ std::string normalize_path( std::string Path ) {
 
 // słowa kluczowe wewnątrz wpisu podwieszenia
 bool is_keyword( std::string const &Token ) {
-    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "lean", "endsuspension" };
+    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "lean", "endsuspension" };
     return keywords.find( Token ) != keywords.end();
 }
 
@@ -307,6 +307,10 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 if( list.size() == 1 ) { entry.skin = list.front(); }
                 else { report( entry.name, "\"skin\" needs exactly one texture name" ); good = false; }
             }
+            else if( key == "pole_skin" ) {
+                if( list.size() == 1 ) { entry.pole_skin = list.front(); }
+                else { report( entry.name, "\"pole_skin\" needs exactly one texture name" ); good = false; }
+            }
             else if( key == "at" || key == "attach" || key == "rope" ) {
                 auto *point { key == "at" ? entry.at : key == "attach" ? entry.attach : entry.rope };
                 if( list.size() == 3 && to_number( list[ 0 ], point[ 0 ] ) && to_number( list[ 1 ], point[ 1 ] ) && to_number( list[ 2 ], point[ 2 ] ) ) {
@@ -399,6 +403,7 @@ std::string write_suspension( suspension const &Entry ) {
     if( false == Entry.insulators.empty() ) { text += " insulators " + Entry.insulators; }
     for( auto const &replacement : Entry.overrides ) { text += " override " + replacement.first + " " + replacement.second; }
     if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
+    if( false == Entry.pole_skin.empty() ) { text += " pole_skin " + Entry.pole_skin; }
     if( Entry.has_at ) { text += " at " + point( Entry.at ); }
     if( Entry.has_rope ) { text += " rope " + point( Entry.rope ); }
     if( Entry.has_attach ) { text += " attach " + point( Entry.attach ); }
