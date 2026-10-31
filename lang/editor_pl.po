@@ -12333,3 +12333,24 @@ msgstr[2] "Torowisko %zu torów ukształtowane"
 
 msgid "The formation and the slopes of all the tracks made anew with the settings above, over the terrain there is; the chunks aren't made anew"
 msgstr "Torowisko i skarpy wszystkich torów zrobione od nowa z powyższymi ustawieniami, na istniejącym terenie; kafli nie robi od nowa"
+
+msgid "Drag the points"
+msgstr "Przeciąganie punktów"
+
+msgid "On: a point where the pieces meet or end is moved by dragging it with LMB.\nOff: a click only selects, so the settings of the road can be clicked through without moving anything by chance"
+msgstr "Włączone: punkt, w którym schodzą się albo kończą odcinki, przesuwa się, przeciągając go LPM.\nWyłączone: kliknięcie tylko zaznacza, więc można przeklikać ustawienia drogi bez przypadkowego przesuwania"
+
+msgid "Roll [%]"
+msgstr "Przechyłka [%]"
+
+msgid "How much the road leans across at the point, in % of its width: positive lowers the inside of the bend,\nnegative the outside; on a straight positive lowers the right side going the way the first piece there goes.\nThe pieces lean over from the roll at one of their ends to the one at the other; a junction stays level"
+msgstr "Pochylenie poprzeczne drogi w punkcie, w % szerokości: dodatnia obniża wewnętrzną stronę łuku,\nujemna zewnętrzną; na prostej dodatnia obniża prawą stronę patrząc w kierunku pierwszego odcinka w tym punkcie.\nOdcinki przechodzą od przechyłki na jednym końcu do tej na drugim; skrzyżowanie zostaje poziome"
+
+msgid "By the bend"
+msgstr "Według łuku"
+
+msgid "The roll the bend at each selected point calls for at the speed limit of the road (60 km/h where it has none):\nv² / 127 R less what the tyres hold, at least 2 % on a bend and at most 7 %; none on a straight"
+msgstr "Przechyłka, jakiej wymaga łuk w każdym zaznaczonym punkcie przy dozwolonej prędkości drogi (60 km/h, gdy jej nie ma):\nv² / 127 R minus przyczepność opon, na łuku co najmniej 2 %, najwyżej 7 %; na prostej zero"
+
+msgid "A road is led into a junction level across: there's no roll where it meets one"
+msgstr "Droga wchodzi na skrzyżowanie poziomo: tam, gdzie się z nim łączy, nie ma przechyłki"
