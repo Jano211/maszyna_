@@ -228,6 +228,32 @@ std::vector<std::pair<road_node *, road_node::state>> drag_changes(glm::dvec3 co
 	});
 }
 
+// how the axis of a piece bends at an end: radius, m (0 on a straight) and the side it bends to, +1 right, -1 left, going along it
+std::pair<double, int> axis_bend(segment_data const &Path, double const T)
+{
+	auto const &p0 = Path.points[segment_data::point::start];
+	auto const &p3 = Path.points[segment_data::point::end];
+	auto const &cp1 = Path.points[segment_data::point::control1];
+	auto const &cp2 = Path.points[segment_data::point::control2];
+	if (cp1 == glm::dvec3{0.0} && cp2 == glm::dvec3{0.0})
+		return {0.0, 0};
+	auto const p1 = p0 + cp1;
+	auto const p2 = p3 + cp2;
+	double const u = 1.0 - T;
+	auto const d1{3.0 * u * u * (p1 - p0) + 6.0 * u * T * (p2 - p1) + 3.0 * T * T * (p3 - p2)};
+	auto const d2{6.0 * u * (p2 - 2.0 * p1 + p0) + 6.0 * T * (p3 - 2.0 * p2 + p1)};
+	auto const speed{std::hypot(d1.x, d1.z)};
+	auto const cross{d1.x * d2.z - d1.z * d2.x};
+	if (speed < 1e-6 || std::abs(cross) < 1e-9)
+		return {0.0, 0};
+	auto const radius{speed * speed * speed / std::abs(cross)};
+	if (radius > 20000.0)
+		return {0.0, 0};
+	// the right side, as the roads have it: the left one is (z, 0, -x) of the direction
+	glm::dvec2 const right{-d1.z, d1.x};
+	return {radius, glm::dot(right, glm::dvec2{d2.x, d2.z}) > 0.0 ? 1 : -1};
+}
+
 // direction of a path for specified value of its curve parameter. like path_point() it's cheap enough to be asked for a lot each frame
 glm::dvec3 path_direction(segment_data const &Path, double const T)
 {
@@ -1215,7 +1241,7 @@ void editor_mode::road_click()
 			{
 				tool.points.assign(1, joint);
 				// held down it's dragged to another place; an arm of a junction stays where the junction has it
-				if (tool.held)
+				if (tool.held && tool.dragpoints)
 				{
 					if (editor_road::arms_at(joint).empty())
 					{
@@ -1895,6 +1921,61 @@ void editor_mode::road_point_heights(std::vector<double> const &Heights)
 		tool.points[index].y = Heights[index];
 }
 
+void editor_mode::road_point_roll(double const Percent, bool const Auto)
+{
+	auto &tool{m_roadtool};
+	std::vector<std::pair<road_node *, road_node::state>> changes;
+	std::size_t refused{0};
+	for (auto const &point : tool.points)
+	{
+		// a junction is level across: the roads are led into it level
+		if (false == editor_road::arms_at(point).empty())
+		{
+			++refused;
+			continue;
+		}
+		auto const ends{editor_road::ends_at(point)};
+		if (ends.empty())
+			continue;
+		// the first piece at the point says which way is along, and which side the bend goes to
+		auto const &first{ends.front().road->definition()};
+		auto const t0{ends.front().atend ? 1.0 : 0.0};
+		auto const along{path_direction(first.axis, t0)};
+		auto const [radius, side]{axis_bend(first.axis, t0)};
+		double percent{Percent};
+		if (Auto)
+		{
+			// what the bend calls for at the speed of the road, less what the tyres hold by themselves; one way at least 2 % on
+			// a bend, as for the water to run off, at most 7 %; on a straight none
+			auto const speed{first.velocity > 0.f ? static_cast<double>(first.velocity) : 60.0};
+			auto const grip{std::clamp(0.19 - 0.0008 * speed, 0.08, 0.16)};
+			percent = side == 0 || radius > 5000.0 ? 0.0 : std::clamp(100.0 * (speed * speed / (127.0 * radius) - grip), 2.0, 7.0);
+		}
+		// positive roll lowers the right side going along the axis
+		auto const roll{glm::degrees(std::atan(percent / 100.0)) * (side < 0 ? -1.0 : 1.0)};
+		for (auto const &end : ends)
+		{
+			auto entry{std::find_if(changes.begin(), changes.end(), [&end](std::pair<road_node *, road_node::state> const &Listed) { return Listed.first == end.road; })};
+			if (entry == changes.end())
+			{
+				changes.emplace_back(end.road, end.road->definition());
+				entry = std::prev(changes.end());
+			}
+			// a piece laid the other way round has the sides swapped
+			auto const direction{path_direction(end.road->definition().axis, end.atend ? 1.0 : 0.0)};
+			auto const same{glm::dot(glm::dvec2{direction.x, direction.z}, glm::dvec2{along.x, along.z}) >= 0.0};
+			entry->second.axis.rolls[end.atend ? 1 : 0] = static_cast<float>(same ? roll : -roll);
+		}
+	}
+	if (changes.empty())
+	{
+		tool.status = refused > 0 ? STR_C("A road is led into a junction level across: there's no roll where it meets one") : STR_C("There's nothing to change at the selected points");
+		return;
+	}
+	if (road_points_apply(changes, {}) && refused > 0)
+		tool.status += std::string{". "} + STR_C("A road is led into a junction level across: there's no roll where it meets one");
+}
+
 void editor_mode::push_road_snapshot(editor_road::record Record)
 {
 	if (Record.empty())
@@ -2467,7 +2548,11 @@ void editor_mode::render_road_tool_options()
 		render_roadpoint_layout(placing, nullptr);
 	}
 	else
+	{
 		ImGui::TextDisabled("%s", STR_C("The selected road is set up in the inspector"));
+		ImGui::Checkbox(STR_C("Drag the points"), &tool.dragpoints);
+		item_tooltip("On: a point where the pieces meet or end is moved by dragging it with LMB.\nOff: a click only selects, so the settings of the road can be clicked through without moving anything by chance");
+	}
 	if (false == tool.status.empty())
 	{
 		ImGui::Separator();
@@ -2501,6 +2586,7 @@ void editor_mode::render_road_selection()
 		// the road at the selected points
 		ImGui::Text(STR_C("Points selected: %d"), static_cast<int>(tool.points.size()));
 		gesture_rows({{"Shift+LMB", "adds a point, or takes it out"}, {"K", "on a selected piece: a point at the cursor"}});
+		ImGui::Checkbox(STR_C("Drag the points"), &tool.dragpoints);
 		auto const ends{editor_road::ends_at(tool.points.front())};
 		if (false == ends.empty())
 		{
@@ -2542,6 +2628,20 @@ void editor_mode::render_road_selection()
 			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip(STR_C("Puts each point %.2f m over the ground under it; the height above the ground is set in the Build tool"), tool.offset);
+			// the roll: shown as the first piece has it, in % of the width, positive toward the inside of the bend
+			{
+				auto const &front{ends.front()};
+				auto const t0{front.atend ? 1.0 : 0.0};
+				auto const side{axis_bend(layout.axis, t0).second};
+				auto roll{static_cast<float>(std::tan(glm::radians(static_cast<double>(layout.axis.rolls[front.atend ? 1 : 0]))) * 100.0 * (side < 0 ? -1.0 : 1.0))};
+				if (number(STR_C("Roll [%]"), roll, 0.5f, "%.1f"))
+					road_point_roll(std::clamp(static_cast<double>(roll), -12.0, 12.0), false);
+				item_tooltip("How much the road leans across at the point, in % of its width: positive lowers the inside of the bend,\nnegative the outside; on a straight positive lowers the right side going the way the first piece there goes.\nThe pieces lean over from the roll at one of their ends to the one at the other; a junction stays level");
+				ImGui::SameLine();
+				if (ImGui::Button(STR_C("By the bend")))
+					road_point_roll(0.0, true);
+				item_tooltip("The roll the bend at each selected point calls for at the speed limit of the road (60 km/h where it has none):\nv² / 127 R less what the tyres hold, at least 2 % on a bend and at most 7 %; none on a straight");
+			}
 		}
 		if (ImGui::Button(tool.points.size() == 1 ? STR_C("Delete the point (Del)") : STR_C("Delete the points (Del)")))
 			road_points_delete();
@@ -2937,11 +3037,12 @@ void editor_mode::draw_road_overlay() const
 			drawpoint(point, kSelectedColor, 11.0f, false);
 		}
 		hint = tool.marker != nullptr       ? STR_C("LMB: select a piece, a junction, a point or a marker   Del: delete   Ctrl+Z: undo") :
-		       false == tool.points.empty() ? tool.dragging ? STR_C("Let go of LMB to put the point here, the pieces keep leaving it in their directions") :
-		                                      STR_C("LMB: select a point, drag it to move it   Shift+LMB: add a point or take it out   Del: delete the points   Ctrl+Z: undo") :
+		       false == tool.points.empty() ? tool.dragging    ? STR_C("Let go of LMB to put the point here, the pieces keep leaving it in their directions") :
+		       tool.dragpoints  ? STR_C("LMB: select a point, drag it to move it   Shift+LMB: add a point or take it out   Del: delete the points   Ctrl+Z: undo") :
+		                          STR_C("LMB: select a point   Shift+LMB: add a point or take it out   Del: delete the points   Ctrl+Z: undo") :
 		       tool.selected != nullptr     ? STR_C("LMB: select a piece, a junction or a point (white dot)   K: split at the cursor   Del: delete   Ctrl+Z: undo") :
 		       tool.junction != nullptr     ? STR_C("LMB: select a piece, a junction or a point (white dot)   Del: delete   Ctrl+Z: undo") :
-		                                      STR_C("LMB: select a piece, a junction, a point (white dot) or a marker; drag a point to move it");
+		                                      (tool.dragpoints ? STR_C("LMB: select a piece, a junction, a point (white dot) or a marker; drag a point to move it") : STR_C("LMB: select a piece, a junction, a point (white dot) or a marker"));
 	}
 	// shown above the place the track tools put their hints at
 	ImVec2 const position{editor_ui::view_min().x + 12.0f, editor_ui::view_max().y - 56.0f};

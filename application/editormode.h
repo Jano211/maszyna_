@@ -2702,6 +2702,7 @@ class editor_mode : public application_mode, private editor_track::observer
 		junction_node *junction{nullptr}; // selected junction
 		roadpoint_node *marker{nullptr}; // selected level crossing or traffic point
 		std::vector<glm::dvec3> points; // selected points where the pieces meet or end
+		bool dragpoints{false}; // the points where the pieces meet or end can be dragged; off they're only selected
 		bool held{false}; // the left mouse button is down over the view
 		bool dragging{false}; // a point where the pieces meet or end is dragged to another place
 		glm::dvec3 dragfrom{0.0}; // where the dragged point was
@@ -2778,6 +2779,9 @@ class editor_mode : public application_mode, private editor_track::observer
 	void road_point_width(float const Width);
 	void road_point_heights(std::vector<double> const &Heights);
 	void road_drag_end();
+	// the roll of the road at the selected points, % of the width: positive lowers the inside of the bend there (on a straight
+	// the right side, going the way the first piece at the point goes); Auto: the roll the bend calls for at the speed of the road
+	void road_point_roll(double const Percent, bool const Auto);
 	bool road_points_apply(std::vector<std::pair<road_node *, road_node::state>> const &Changes, std::vector<std::pair<junction_node *, junction_node::state>> const &Junctions);
 	// takes the selected points out of their roads
 	bool road_points_delete();
