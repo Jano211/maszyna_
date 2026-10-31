@@ -2952,19 +2952,18 @@ void catenary_editor::catenary_overlap_place(TTrack &Track, int const Path, glm:
 	auto const file{std::string{tool.file}};
 	// the network A towards the pole on the crossing poles, B away from it (swapped: the other way round)
 	bool const towardnet[2]{false == tool.overlap_swap, tool.overlap_swap};
-	auto const saved_group{tool.catalog_group};
-	auto const saved_family{tool.catalog_family};
-	auto const saved_card{tool.catalog_card};
+	// the settings of the panel stay as they were after the overlap (nothing of the template leaks into the next poles)
+	auto const saved_panel{panel_save()};
 	auto const saved_own{tool.stagger_own};
 	auto const restore = [&]() {
-		tool.catalog_group = saved_group;
-		tool.catalog_family = saved_family;
-		tool.catalog_card = saved_card;
+		panel_restore(saved_panel);
 		tool.stagger_own = saved_own;
 	};
+	// the system height of the card (hk of the working network), not the one set in the panel
+	tool.system_height = static_cast<float>(card.height);
 	auto const &structures{catenary_scene_structures()};
 	auto const group = [&](char const *Id) {
-		tool.catalog_group = structures.group(Id) != nullptr ? std::string{Id} : saved_group;
+		tool.catalog_group = structures.group(Id) != nullptr ? std::string{Id} : saved_panel.catalog_group;
 		tool.catalog_family.clear();
 		tool.catalog_card = 0;
 	};
@@ -3228,6 +3227,8 @@ void catenary_editor::catenary_overlap_place(TTrack &Track, int const Path, glm:
 				if (auto const *other{catenary_scene_get(index)}; other != nullptr && other->name == chain->suspensions.back() && catenary_scene_file_of(index) == file)
 					tool.last = static_cast<int>(index);
 	}
+	panel_restore(saved_panel);
+	tool.stagger_own = saved_own;
 	tool.overlap_placing = false;
 	tool.selected = -1;
 	tool.status = format(STR_C("Tension overlap %s placed: %zu poles over %.1f m, %s; the chain goes on from its last pole"), card.name.c_str(), card.poles.size(), card.length(),
