@@ -7700,9 +7700,67 @@ void catenary_editor::catenary_gantry_reshape(std::string const &Beam, double co
 			tool.undo.push_back(change);
 		}
 	}
+	// the cantilevers on the masts (not the drops on the beam) of the spans moved: where each stands, and its stagger, before
+	struct on_mast
+	{
+		std::size_t index;
+		catenary::suspension before;
+		glm::dvec3 mast; // the new place of its mast
+		double stagger;
+		bool toward;
+		bool curve;
+	};
+	std::vector<on_mast> masted;
+	for (auto const &[span, after] : moves)
+	{
+		std::vector<std::pair<std::size_t, catenary::suspension>> hangers;
+		catenary_gantry_hangers(span, hangers);
+		auto const *old{catenary_gantry_get(span)};
+		for (auto const &[index, data] : hangers)
+		{
+			auto const *pole{catalog->pole(data.pole_type)};
+			if (old == nullptr || pole == nullptr || false == pole->gantry || std::any_of(masted.begin(), masted.end(), [index](on_mast const &Item) { return Item.index == index; }))
+				continue;
+			for (int k = 0; k < 2; ++k)
+			{
+				if (old->masts[k] != data.pole_type || glm::length(plan_of(glm::dvec3{data.pole[0], 0.0, data.pole[2]}) - plan_of(glm::dvec3{old->points[k][0], 0.0, old->points[k][2]})) >= 0.1)
+					continue;
+				glm::dvec3 const now{after.points[k][0], after.points[k][1], after.points[k][2]};
+				if (glm::length(plan_of(now) - plan_of(glm::dvec3{old->points[k][0], 0.0, old->points[k][2]})) < 1e-4)
+					break; // this mast stays: so does its cantilever
+				auto const *spot{catenary_spot_of(index)};
+				double offset{0.0};
+				if (spot != nullptr && stagger_of(index, offset))
+					masted.push_back({index, data, now, std::abs(offset), std::abs(offset) < 0.01 ? spot->toward : offset > 0.0, spot->curve});
+				break;
+			}
+		}
+	}
 	for (auto const &move : moves)
 		catenary_gantry_update(move.first, move.second);
 	tool.status = format(STR_C("Gantry %s: beam %s, masts %.3f m apart"), changed.name.c_str(), changed.beam.c_str(), spacing);
+	// the cantilevers go with their masts and reach the wires from there again: the card from the new distance to the track,
+	// the stagger as it was
+	std::size_t refused{0};
+	for (auto const &item : masted)
+	{
+		tool.undo.push_back({tool.group, false, item.index, item.before, std::nullopt, false});
+		auto moved{item.before};
+		moved.pole[0] = item.mast.x;
+		moved.pole[1] = item.mast.y;
+		moved.pole[2] = item.mast.z;
+		catenary_scene_update(item.index, moved);
+		tool.spots.erase(item.index);
+		if (false == catenary_restagger(item.index, item.stagger, item.toward, item.curve, tool.group))
+		{
+			// no card reaches from there: the cantilever stays whole where it was, to be seen to
+			catenary_scene_update(item.index, item.before);
+			tool.spots.erase(item.index);
+			++refused;
+		}
+	}
+	if (refused > 0)
+		tool.status += ". " + format(STR_C("Cantilevers on the masts with no card for the new distance from the track, left where they were: %d"), static_cast<int>(refused));
 }
 
 // the hooks of editor_mode (editormode.h), and what they did in the editor before the tool got a file of its own
