@@ -12261,3 +12261,9 @@ msgstr "Urządzenie naprężające schodzi z własnego słupa na słup kliknięt
 
 msgid "All the poles of the card at its distances along the track: on a crossing pole one cantilever \"z\" (120x) for the network working there, the lifted one goes past it freely; the anchors at both ends; the chain being built comes in and ends at the far anchor, a new chain starts at the near anchor and goes on"
 msgstr "Wszystkie słupy karty w jej odległościach wzdłuż toru: na słupie krzyżowym jeden wysięgnik „z” (120x) sieci, która tam pracuje, poderwana przechodzi obok swobodnie; kotwienia na obu końcach; ciągnięty łańcuch wchodzi i kończy się na dalszym kotwieniu, nowy zaczyna się na bliższym i ciągnie się dalej"
+
+msgid "a gentle arc as it is, not straightened"
+msgstr "łagodny łuk zostaje łukiem, bez prostowania"
+
+msgid "LMB: build up to the cursor   Ctrl: straight ahead   Alt: a gentle arc, not straightened   Esc: finish   Ctrl+Z: undo the last piece"
+msgstr "LPM: buduj do kursora   Ctrl: prosto przed siebie   Alt: łagodny łuk bez prostowania   Esc: zakończ   Ctrl+Z: cofnij ostatni odcinek"

@@ -1092,7 +1092,8 @@ editor_mode::road_plan editor_mode::road_preview(bool const Fresh)
 		plan.error = STR_C("Too far from the last point");
 		return plan;
 	}
-	plan.pieces = editor_road::plan(start, hasdirection ? &direction : nullptr, target, tied ? &enddirection : nullptr, Global.ctrlState, plan.error);
+	// Alt: the gentle arc where the cursor is, not straightened (Jan 2026-10-31: subtle bends got made straight)
+	plan.pieces = editor_road::plan(start, hasdirection ? &direction : nullptr, target, tied ? &enddirection : nullptr, Global.ctrlState, plan.error, Global.altState && false == Global.ctrlState);
 	road_profile(plan.pieces, hasgrade ? &startgrade : nullptr, tied ? &endgrade : nullptr, Fresh);
 	return plan;
 }
@@ -2360,6 +2361,7 @@ void editor_mode::render_road_tool_options()
 		{
 			gesture_rows({{"LMB", "the start, then each next point"},
 			              {"Ctrl", "straight ahead"},
+			              {"Alt", "a gentle arc as it is, not straightened"},
 			              {"Esc", "finish the road"},
 			              {"LMB on a road or a junction", "the new road is joined to it there"}});
 		}
@@ -2802,7 +2804,7 @@ void editor_mode::draw_road_overlay() const
 				drawpoint(plan.snap.position, kSnapColor, 14.0f, false);
 			hint += (tool.branchroad != nullptr ? STR_C("LMB: lead the road out to the cursor, with a junction where it leaves   Esc: give up") :
 			         tool.branchjunction != nullptr ? STR_C("LMB: lead the road out to the cursor, as another road of the junction   Esc: give up") :
-			                                          STR_C("LMB: build up to the cursor   Ctrl: straight ahead   Esc: finish   Ctrl+Z: undo the last piece"));
+			                                          STR_C("LMB: build up to the cursor   Ctrl: straight ahead   Alt: a gentle arc, not straightened   Esc: finish   Ctrl+Z: undo the last piece"));
 		}
 		else
 		{

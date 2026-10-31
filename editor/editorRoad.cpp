@@ -1365,7 +1365,7 @@ editor_road::loose_end editor_road::find_end(glm::dvec3 const &Point, double con
 	return result;
 }
 
-std::vector<segment_data> editor_road::plan(glm::dvec3 const &Start, glm::dvec2 const *Direction, glm::dvec3 const &Target, glm::dvec2 const *Enddirection, bool const Straight, std::string &Error)
+std::vector<segment_data> editor_road::plan(glm::dvec3 const &Start, glm::dvec2 const *Direction, glm::dvec3 const &Target, glm::dvec2 const *Enddirection, bool const Straight, std::string &Error, bool const Exact)
 {
 	std::vector<segment_data> pieces;
 	glm::dvec2 const chord{Target.x - Start.x, Target.z - Start.z};
@@ -1421,7 +1421,7 @@ std::vector<segment_data> editor_road::plan(glm::dvec3 const &Start, glm::dvec2 
 	{
 		// only the far end is tied: the same road as the one leading back from there, turned around
 		glm::dvec2 const back{-*Enddirection};
-		auto reversed{plan(Target, &back, Start, nullptr, Straight, Error)};
+		auto reversed{plan(Target, &back, Start, nullptr, Straight, Error, Exact)};
 		for (auto &piece : reversed)
 		{
 			std::swap(piece.points[segment_data::point::start], piece.points[segment_data::point::end]);
@@ -1441,7 +1441,8 @@ std::vector<segment_data> editor_road::plan(glm::dvec3 const &Start, glm::dvec2 
 	glm::dvec2 const left{forward.y, -forward.x};
 	auto const along{glm::dot(chord, forward)};
 	auto const side{glm::dot(chord, left)};
-	if (Straight || std::abs(side) < 0.02 * span)
+	// a road just off straight ahead is made straight, unless it's asked for as it is (Alt): then only one practically on the line
+	if (Straight || std::abs(side) < (Exact ? 1e-4 : 0.02) * span)
 	{
 		if (along < kShortestRoad)
 		{
