@@ -15,7 +15,7 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-10-31
 
-### Sieć trakcyjna: uchwyty kotwień 4530, 4560, 4570 — (ten commit)
+### Sieć trakcyjna: uchwyty kotwień 4530, 4560, 4570 — `7318b3c`
 - Nowe modele Jana w danych: dół prowadnicy na słupie betonowym 1701 – 4530-3 z tyłem 4530-4 (było 4520-3); dół prowadnicy na
   nogach bramek – 4560 wg ceownika (01 C240, 03 C200, 05 C160 i niekatalogowy C140), tył 4520-8 – ZAŁOŻENIE; kotwienie na
   półbramce 1901 (słup przestrzenny) – 4570-1, bez tyłu (w danych „-” zamiast części).
