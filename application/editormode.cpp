@@ -6802,6 +6802,12 @@ void editor_mode::on_mouse_button(int const Button, int const Action, int const 
                 if (viewport_click())
                     road_click();
             });
+            m_roadtool.held = true;
+        }
+        else if (is_release(Action))
+        {
+            m_roadtool.held = false;
+            road_drag_end();
         }
         m_input.mouse.button(Button, Action);
         return;
