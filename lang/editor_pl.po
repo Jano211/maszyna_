@@ -12243,3 +12243,9 @@ msgstr "przęsło izolowane"
 
 msgid "Insulators in the wires and the messenger leaving to the anchors by the crossing poles (placeholder shapes), the outgoing chain from another power source; off: connected, one power source and connectors 33-0640"
 msgstr "Izolatory w przewodach i linie schodzących do kotwień przy słupach krzyżowych (bryły zastępcze), łańcuch wychodzący z innego zasilacza; wyłączone: zwarte, jeden zasilacz i łączniki 33-0640"
+
+msgid "Click: tension overlap %s, its first crossing pole here (Esc cancels)"
+msgstr "Klik: przęsło naprężenia %s, pierwszy słup krzyżowy tutaj (Esc anuluje)"
+
+msgid "Tension overlap: LMB by the track at the first crossing pole, Esc cancels"
+msgstr "Przęsło naprężenia: LPM przy torze w miejscu pierwszego słupa krzyżowego, Esc anuluje"
