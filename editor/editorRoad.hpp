@@ -155,7 +155,8 @@ class editor_road
 	// lays out axes of the pieces for a road leading from a point to another. the directions are optional requirements
 	// for the road at its ends; without them it starts straight at the target, with them it bends to meet them.
 	// returns: the axes in order, or nothing if there's no reasonable road to make, with the reason in Error
-	static std::vector<segment_data> plan(glm::dvec3 const &Start, glm::dvec2 const *Direction, glm::dvec3 const &Target, glm::dvec2 const *Enddirection, bool const Straight, std::string &Error);
+	// Exact: a road off the start a little to the side of straight ahead stays a gentle arc (otherwise under 2% of the span it's made straight)
+	static std::vector<segment_data> plan(glm::dvec3 const &Start, glm::dvec2 const *Direction, glm::dvec3 const &Target, glm::dvec2 const *Enddirection, bool const Straight, std::string &Error, bool const Exact = false);
 	// cuts the pieces so none is longer than specified
 	static std::vector<segment_data> refine(std::vector<segment_data> const &Pieces, double const Length);
 	// gives a string of pieces a smooth profile running through provided heights.
