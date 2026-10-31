@@ -11968,6 +11968,24 @@ msgstr "Przechył słupa w stronę toru (°)"
 msgid "A pole is seldom quite upright: it leans a little, the mounts with it, the cantilever is assembled to them. + towards the track. Ctrl+click types a value"
 msgstr "Słup rzadko stoi idealnie pionowo: jest lekko pochylony, mocowania razem z nim, wysięgnik składa się do nich. + w stronę toru. Ctrl+klik i wpisz"
 
+msgid "default (%s)"
+msgstr "domyślna (%s)"
+
+msgid "Cantilever skin"
+msgstr "Tekstura wysięgnika"
+
+msgid "All the parts of the cantilever, the mounts and the insulators take this one texture (textures/siec_trakcyjna/siec*)"
+msgstr "Wszystkie części wysięgnika, zamocowania i izolatory biorą tę jedną teksturę (textures/siec_trakcyjna/siec*)"
+
+msgid "Pole skin"
+msgstr "Tekstura słupa"
+
+msgid "These skins on the whole chain"
+msgstr "Te tekstury na całym ciągu"
+
+msgid "Skins of %d poles of the chain changed (Ctrl+Z takes it back)"
+msgstr "Zmieniono tekstury %d słupów ciągu (Ctrl+Z cofa)"
+
 msgid "Poles of the chain leaning a little (random 0.1-0.5 deg)"
 msgstr "Lekki przechył słupów łańcucha (losowo 0,1–0,5°)"
 

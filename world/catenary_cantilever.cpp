@@ -277,6 +277,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 if( ispole ) {
                     if( key == "model" ) { text( pole.model ); std::replace( pole.model.begin(), pole.model.end(), '\\', '/' ); }
                     else if( key == "foundation" ) { text( pole.foundation ); std::replace( pole.foundation.begin(), pole.foundation.end(), '\\', '/' ); }
+                    else if( key == "skin" ) { text( pole.skin ); std::replace( pole.skin.begin(), pole.skin.end(), '\\', '/' ); }
                     else if( key == "top" ) { number( pole.top, good ); }
                     else if( key == "length" ) { number( pole.length, good ); }
                     else if( key == "depth" ) { number( pole.depth_top, good ); number( pole.depth_base, good ); }

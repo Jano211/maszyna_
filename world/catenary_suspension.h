@@ -20,7 +20,8 @@ struct suspension {
     std::vector<std::string> contact;       // przęsła, których przewód jezdny trzyma (dowolna liczba)
     std::string insulators;                 // zestaw podmian izolatorów; pusty = domyślny
     std::vector<std::pair<std::string, std::string>> overrides; // nadpisania pojedynczych ról: rola, część
-    std::string skin;                       // wymienna tekstura całego podwieszenia; pusta = domyślna z pliku
+    std::string skin;                       // wymienna tekstura całego wysięgnika (wszystkie jego części); pusta = domyślna z pliku
+    std::string pole_skin;                  // wymienna tekstura słupa; pusta = domyślna typu słupa (traction_supports.txt)
     // punkty podane wprost, we współrzędnych scenerii: wpis bez konstrukcji wsporczej i bez przęseł.
     // "at" to oś przewodów jezdnych przy podwieszeniu, "attach" to pion przez zaczepy izolatorów (wysokość bez znaczenia),
     // "rope" to oś liny nośnej; bez niej lina jest nad przewodami na wysokości konstrukcyjnej schematu
