@@ -4,6 +4,9 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 
 ## START TUTAJ – 2026-10-30 01:00 (najpierw to)
 
+**31.10 15:50 (Jan):** nowe słupy przy ciągnięciu łańcucha (i przęsło z szablonu) idą do pliku tego łańcucha, dopóki jego ciągnięty
+koniec nie ma kotwienia (`catenary_continue_file`); bez łańcucha – plik z panelu. Łańcuch nie łączy słupów z różnych plików.
+
 **31.10 14:40 (Jan):** na żadnej karcie przęseł naprężenia nie ma wysięgników samej liny ani drugich uchwytów przewodów. Słup krzyżowy:
 JEDEN wysięgnik „z” (120x, grupa n_tube_zero, przewody wprost na rurze) sieci pracującej, sieć poderwana przechodzi obok swobodnie (nie
 ma jej na liście łańcucha); wyjątek 13-0062-35, słup środkowy: dwa podwieszenia jedno nad drugim (dwa 120x, drugi `shared_pole`, lina

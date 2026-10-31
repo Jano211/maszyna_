@@ -2364,7 +2364,7 @@ void catenary_editor::catenary_place(catenary_spot const &Spot)
 	// in a span of a chain: the pole goes into the chain between the two, in the file of the chain
 	chain_insert insert;
 	auto const inserting{catenary_insert_at(Spot, insert)};
-	std::string const file{inserting ? catenary_chain_file(static_cast<std::size_t>(insert.chain)) : std::string{tool.file}};
+	std::string const file{inserting ? catenary_chain_file(static_cast<std::size_t>(insert.chain)) : catenary_continue_file()};
 	data.name = catenary_scene_new_name(file);
 	// a drop on a gantry takes the texture of the gantry
 	if (auto const *gantry{tool.gantry_selected >= 0 ? catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected)) : nullptr}; gantry != nullptr && data.pole_type != tool.poles[std::clamp(tool.pole, 0, static_cast<int>(tool.poles.size()) - 1)])
@@ -2850,6 +2850,21 @@ void catenary_editor::catenary_rope_lift_create(std::size_t const Index, std::si
 		tool.status += STR(" - the cantilever didn't assemble, see the log");
 }
 
+// the file the next poles go to: the one of the chain being built while its end the poles go on from has no anchor yet (Jan 2026-10-31:
+// all that's hung on an unanchored chain stays in its file, up to the anchor), otherwise the file of the panel
+std::string catenary_editor::catenary_continue_file() const
+{
+	auto const &tool{m_catenary};
+	if (tool.chaining && tool.chain >= 0 && tool.last >= 0)
+		if (auto const *chain{catenary_chain_get(static_cast<std::size_t>(tool.chain))}; chain != nullptr)
+		{
+			auto const &anchor{tool.append ? chain->anchor_end : chain->anchor_start};
+			if (anchor.empty() && catenary_scene_file_of(static_cast<std::size_t>(tool.last)) == catenary_chain_file(static_cast<std::size_t>(tool.chain)))
+				return catenary_chain_file(static_cast<std::size_t>(tool.chain));
+		}
+	return std::string{tool.file};
+}
+
 bool catenary_editor::catenary_track_ahead(TTrack *&Track, int &Path, double &Parameter, glm::dvec3 const &From, glm::dvec2 const &Forward, double const Distance) const
 {
 	if (Distance < 1e-3)
@@ -2949,7 +2964,7 @@ void catenary_editor::catenary_overlap_place(TTrack &Track, int const Path, glm:
 	if (tool.overlap_reverse)
 		forward = -forward;
 	auto const side{first.side};
-	auto const file{std::string{tool.file}};
+	auto const file{catenary_continue_file()};
 	// the network A towards the pole on the crossing poles, B away from it (swapped: the other way round)
 	bool const towardnet[2]{false == tool.overlap_swap, tool.overlap_swap};
 	// the settings of the panel stay as they were after the overlap (nothing of the template leaks into the next poles)
