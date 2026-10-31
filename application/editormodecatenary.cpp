@@ -7632,6 +7632,24 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 		Intent.detail = static_cast<int>(intent_detail::mast);
 		return true;
 	}
+	// a tension overlap from a template: by any track, on any page, before the poles and the spans under the cursor
+	if (m_catenary.overlap_placing)
+	{
+		if (false == catenary_find_target(m_target))
+		{
+			m_target = place_target{};
+			return false;
+		}
+		Intent.track = m_target.track;
+		Intent.path = m_target.path;
+		Intent.position = m_target.point;
+		auto const &cards{catenary_scene_overlaps()};
+		auto const card{m_catenary.overlap_card >= 0 && m_catenary.overlap_card < static_cast<int>(cards.size()) ? cards[static_cast<std::size_t>(m_catenary.overlap_card)].name : std::string{"-"}};
+		Intent.action = format(STR_C("Click: tension overlap %s, its first crossing pole here (Esc cancels)"), card.c_str());
+		Intent.what = kind::catenary;
+		Intent.detail = static_cast<int>(intent_detail::place);
+		return true;
+	}
 	// the tensioning device of an anchor (not while a pole is being picked for an anchor or a span)
 	if (m_catenary.anchor_pick < 0 && m_catenary.connect_from < 0)
 		if (auto const hit{catenary_anchor_hit()}; hit >= 0)
@@ -7725,6 +7743,8 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 
 std::string catenary_editor::catenary_mode_name() const
 {
+	if (m_catenary.overlap_placing)
+		return STR_C("Tension overlap: LMB by the track at the first crossing pole, Esc cancels");
 	if (m_catenary.page == 2)
 		return m_catenary.anchor_pick >= 0 ? STR_C("Wires: LMB on the pole the tensioning device goes on") : m_catenary.connect_from >= 0 ? STR_C("Wires: LMB on the next pole hangs the span to it") : STR_C("Wires: LMB on a span selects its chain, LMB on a pole selects it");
 	if (m_catenary.anchor_cantilever >= 0)
