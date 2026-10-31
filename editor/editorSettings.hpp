@@ -47,6 +47,9 @@ public:
 		double correction{0.0};
 	};
 	nmt_sheets sheets(std::string const &Scenery) const;
+	// the brush of each tool of the terrain: radius and strength; false when none was stored for it
+	bool terrain_brush_stored(int const Tool, float &Radius, float &Strength) const;
+	void terrain_brush(int const Tool, float const Radius, float const Strength);
 	// m the formation the terrain is dug to under the tracks lies above the foot of their ballast
 	double nmt_shallower() const { return m_nmt_shallower; }
 	void nmt_shallower(double Height) { m_nmt_shallower = Height; }
@@ -84,6 +87,7 @@ private:
 	std::map<std::string, std::pair<double, double>> m_orthophoto_origins;
 	std::map<std::string, nmt_sheets> m_sheets;
 	double m_nmt_shallower{0.0};
+	std::map<int, std::pair<float, float>> m_terrain_brushes;
 	double m_platform_edge{1.725};
 	double m_signal_offset{2.25};
 	bool m_nodebank_previews{true};

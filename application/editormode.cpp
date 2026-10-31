@@ -1693,16 +1693,23 @@ void editor_mode::render_terrain_ui()
         }
     }
 
+    terrain_brush_sync();
     if (terrain_brush() && ImGui::CollapsingHeader(STR_C("Brush"), ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::SetNextItemWidth(120.0f);
         ImGui::DragFloat(STR_C("Radius (m)"), &m_terrain_brush_radius, 0.25f, 0.5f, 500.0f, "%.1f");
         m_terrain_brush_radius = std::max(0.5f, m_terrain_brush_radius);
+        bool edited{ImGui::IsItemDeactivatedAfterEdit()};
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("%s", STR_C("[ and ]: smaller and larger. Each tool keeps a brush of its own"));
         ImGui::SetNextItemWidth(120.0f);
         ImGui::DragFloat(STR_C("Strength"), &m_terrain_brush_strength, 0.05f, 0.05f, 50.0f, "%.2f");
         m_terrain_brush_strength = std::max(0.05f, m_terrain_brush_strength);
+        edited |= ImGui::IsItemDeactivatedAfterEdit();
+        if (edited)
+            terrain_brush_sync(true);
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("%s", STR_C("Sculpting: metres per second at the middle of the brush; smoothing, levelling, painting and restoring: how fast they work"));
+            ImGui::SetTooltip("%s", STR_C("Sculpting: metres per second at the middle of the brush; smoothing, levelling, painting and restoring: how fast they work.\nShift+[ and Shift+]: weaker and stronger. Each tool keeps a brush of its own"));
         if (m_terrain_tool == terrain_tool::sculpt || m_terrain_tool == terrain_tool::smooth || m_terrain_tool == terrain_tool::level)
         {
             auto touchup = m_streamer.touch_up();
@@ -3330,8 +3337,35 @@ void editor_mode::export_scenery()
         scene::Layers.visible(layer, false);
 }
 
+void editor_mode::terrain_brush_sync(bool const Store)
+{
+    auto const index = [](terrain_tool const Tool) { return static_cast<int>(Tool); };
+    if (m_terrain_tool != m_terrain_brush_of)
+    {
+        // the brush of the tool left is kept, the one of the tool chosen is taken; a tool not set up yet takes over the brush as it is
+        if (m_terrain_brush_of != terrain_tool::none)
+            EditorSettings.terrain_brush(index(m_terrain_brush_of), m_terrain_brush_radius, m_terrain_brush_strength);
+        float radius, strength;
+        if (m_terrain_tool != terrain_tool::none && EditorSettings.terrain_brush_stored(index(m_terrain_tool), radius, strength))
+        {
+            m_terrain_brush_radius = std::clamp(radius, 0.5f, 500.0f);
+            m_terrain_brush_strength = std::clamp(strength, 0.05f, 50.0f);
+        }
+        if (m_terrain_brush_of != terrain_tool::none)
+            EditorSettings.save();
+        m_terrain_brush_of = m_terrain_tool;
+        return;
+    }
+    if (Store && m_terrain_tool != terrain_tool::none)
+    {
+        EditorSettings.terrain_brush(index(m_terrain_tool), m_terrain_brush_radius, m_terrain_brush_strength);
+        EditorSettings.save();
+    }
+}
+
 void editor_mode::handle_terrain_brush(double Deltatime)
 {
+    terrain_brush_sync();
     // world point under the cursor (Mouse_Position is camera-relative, like the brush placement uses)
     glm::dvec3 const offset = GfxRenderer->Mouse_Position();
     glm::dvec3 world = Camera.Pos + offset;
@@ -6504,6 +6538,22 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
 
     if (ui()->mode() == nodebank_panel::TRACK && is_press(Action) && (Mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0 && typed_key(Key))
         return;
+
+    // the brush of the terrain: [ ] the radius, Shift+[ ] the strength, a tenth at a time
+    if (m_terrain_open && terrain_brush() && (Key == GLFW_KEY_LEFT_BRACKET || Key == GLFW_KEY_RIGHT_BRACKET) && (Action == GLFW_PRESS || Action == GLFW_REPEAT) &&
+        (Mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0 && false == ImGui::GetIO().WantTextInput)
+    {
+        terrain_brush_sync();
+        auto const factor{Key == GLFW_KEY_RIGHT_BRACKET ? 1.1f : 1.f / 1.1f};
+        if (Mods & GLFW_MOD_SHIFT)
+            m_terrain_brush_strength = std::clamp(m_terrain_brush_strength * factor, 0.05f, 50.0f);
+        else
+            m_terrain_brush_radius = std::clamp(m_terrain_brush_radius * factor, 0.5f, 500.0f);
+        m_terrain_status = format(STR_C("Brush: radius %.1f m, strength %.2f"), m_terrain_brush_radius, m_terrain_brush_strength);
+        if (Action == GLFW_PRESS)
+            terrain_brush_sync(true);
+        return;
+    }
 
     // the catenary tool may have keys of its own
     if (ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::catenary && catenary_on_key(Key, Action, Mods))

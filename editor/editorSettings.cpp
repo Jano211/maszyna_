@@ -114,6 +114,19 @@ bool editorSettings::load()
 			m_top_ballast = (value == "1");
 		else if (key == "nmt_shallower")
 			parse(value, m_nmt_shallower);
+		else if (key.rfind("terrain_brush_", 0) == 0)
+		{
+			// radius;strength
+			int tool{-1};
+			parse(key.substr(14), tool);
+			auto const separator = value.find(';');
+			if (tool < 0 || separator == std::string::npos)
+				continue;
+			float radius{12.f}, strength{4.f};
+			parse(value.substr(0, separator), radius);
+			parse(value.substr(separator + 1), strength);
+			m_terrain_brushes[tool] = {radius, strength};
+		}
 		else if (key.rfind(sheets_prefix, 0) == 0)
 		{
 			// on;correction;folder, the spaces of the folder written as |
@@ -176,6 +189,8 @@ bool editorSettings::save()
 	stream << "track_tools_all " << (m_track_tools_more ? 1 : 0) << "\n";
 	stream << "top_ballast " << (m_top_ballast ? 1 : 0) << "\n";
 	stream << "nmt_shallower " << m_nmt_shallower << "\n";
+	for (auto const &brush : m_terrain_brushes)
+		stream << "terrain_brush_" << brush.first << " " << brush.second.first << ";" << brush.second.second << "\n";
 	stream << std::fixed << std::setprecision(3);
 	for (auto const &origin : m_orthophoto_origins)
 		stream << origin.first << " " << origin.second.first << ";" << origin.second.second << "\n";
@@ -220,4 +235,19 @@ void editorSettings::sheets(std::string const &Scenery, nmt_sheets const &Sheets
 		if (std::isspace(static_cast<unsigned char>(c)))
 			c = '_';
 	m_sheets[key] = Sheets;
+}
+
+bool editorSettings::terrain_brush_stored(int const Tool, float &Radius, float &Strength) const
+{
+	auto const lookup = m_terrain_brushes.find(Tool);
+	if (lookup == m_terrain_brushes.end())
+		return false;
+	Radius = lookup->second.first;
+	Strength = lookup->second.second;
+	return true;
+}
+
+void editorSettings::terrain_brush(int const Tool, float const Radius, float const Strength)
+{
+	m_terrain_brushes[Tool] = {Radius, Strength};
 }
