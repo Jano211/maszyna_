@@ -96,7 +96,7 @@ family 0164 t_tee5_fixed cards 0164 curve yes toward no : 0164 - łuk, odsuw od 
 group n_tube_zero tension execution user stagger 0 : Rurowe nieprzechylne z przewodami wprost na wysięgu (120x) - "zerowe" (?)
 text Bez ramion: przewody na uchwytach 4120-3 wprost na wysięgu (wyk. 1, 2 dwa przewody 0,04 m od A, wyk. 3, 4 jeden w A).
 exec 1 : wyk. 1 - dwa przewody, hk 1,70
-exec 2 : wyk. 2 - dwa przewody, hk 1,70
+exec 2 : wyk. 2 - dwa przewody, hk 1,30
 exec 3 : wyk. 3 - jeden przewód, hk 1,70
 exec 4 : wyk. 4 - jeden przewód, hk 1,30
 family 120x n_tube_zero cards 1201-1206 stagger 0 : 120x
