@@ -164,6 +164,7 @@ std::vector<editor_mode::nmt_place> editor_mode::nmt_track_places(double const S
 	std::nth_element(depths.begin(), depths.begin() + depths.size() / 2, depths.end());
 	auto const usual{depths.empty() ? 0.0 : depths[depths.size() / 2]};
 	auto const shallower{std::max(0.0, EditorSettings.nmt_shallower())};
+	auto const shoulder{std::max(0.5, static_cast<double>(m_terrain_spacing))};
 	for (auto *track : simulation::Paths.sequence())
 	{
 		if (track == nullptr || false == rail(*track))
@@ -191,7 +192,10 @@ std::vector<editor_mode::nmt_place> editor_mode::nmt_track_places(double const S
 				auto const at{curve.point(static_cast<double>(i) / count)};
 				// the formation may be set shallower: the foot of the ballast whose texture doesn't reach down to it stays under the terrain
 				auto const formation{std::min(at.y - ballast.first + shallower, at.y - rails)};
-				result.push_back({at, formation, at.y - rails, ballast.second, track, static_cast<int>(path), shapes_ground(*track)});
+				// the formation goes on past the foot of the ballast as a shoulder of a cell of the terrain at least: the foot falls
+				// between the points of the grid, and with the slope starting right at it the point beyond is down the slope already
+				// and the ground between them sinks under the foot by a few centimetres up to a dozen
+				result.push_back({at, formation, at.y - rails, ballast.second + shoulder, track, static_cast<int>(path), shapes_ground(*track)});
 			}
 		}
 	}
