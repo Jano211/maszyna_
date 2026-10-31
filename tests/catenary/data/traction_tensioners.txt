@@ -532,6 +532,10 @@ device 0471 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 r
   type 4 stack 6322-1 24 lever VI I III rod 6401-03
   type 10 stack 6322-1 20 lever V I III rod 6401-02
   type 26 stack 6322-1 33 lever I V III rod 6401-01
+  // YC120-2C150 na jednym stosie (Jan 2026-10-31: siec z 2013 na luku, kotwienie na rolkach szeregowych wspolne, z Y) - ZALOZENIE
+  // na oko: 40 x 27 kg x 1:4 = 4238 daN (lina 1588 + przewody 2648 = 4236); dzwignia I/IV wokol III: lina 0,365, przewody 0,207 ->
+  // lina ~1534 daN (-3,4 %), przewody ~2704 daN; stos 2,32 m - pret 6402-02 (2,50)
+  type 20 stack 6322-1 40 lever I IV III rod 6402-02
 enddevice
 
 // 23-0480 to samo z ciezarami Ø306 i zeliwnymi (stos jak 0461), przy slupie 4440-4; pierscien 5080-1 jak 0461 - ZALOZENIE
@@ -560,6 +564,8 @@ device 0480 table 0011-5 pulley 4460-03 lever 6406-01 rod 6402-01 rope 4490-01 r
   type 4 stack 6321-1 4 6323-1 20 lever VI I III
   type 10 stack 6323-1 20 lever V I III
   type 26 stack 6321-1 14 6323-1 19 lever I V III rod 6402-03
+  // YC120-2C150 na jednym stosie - jak w 0471 (ZALOZENIE): 31 zeliwnych + 9 polimerobetonowych = 40 x 27 kg, stos 2,65 m (pret 2,80)
+  type 20 stack 6321-1 31 6323-1 9 lever I IV III rod 6402-03
 enddevice
 
 // ---- kotwienie rozdzielone (dwa stosy: lina nosna i przewody osobno) -------------------------------------------------------
