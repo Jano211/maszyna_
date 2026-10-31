@@ -15,7 +15,7 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-10-31
 
-### Edytor sieci: kotwienie na nodze bramki — (ten commit)
+### Edytor sieci: kotwienie na nodze bramki — `c9b6761`
 - Kotwienie (ciężarowe albo stałe) można przepiąć na nogę bramki: w panelu kotwienia „Przepnij na istniejący słup”, potem
   klik w bramkę – urządzenie idzie na nogę bliższą kotwieniu, jego własny słup znika (Ctrl+Z cofa). W panelu „Na nodze N bramki X”.
   Przesunięcie, obrót i zmiana szerokości bramki przenoszą kotwienie razem z nogą.
