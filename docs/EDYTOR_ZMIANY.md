@@ -15,7 +15,7 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-10-31
 
-### Sieć trakcyjna: YC120-2C150 na rolkach szeregowych, jeden stos — (ten commit)
+### Sieć trakcyjna: YC120-2C150 na rolkach szeregowych, jeden stos — `d88c33a`
 - Kotwienie „ciężary, rolki szeregowe” (karty 0471 Ø400 i 0480 Ø306) działa teraz także dla YC120-2C150 (typ 20) –
   wcześniej ta sieć miała tylko kotwienie rozdzielone (0482/0486: osobne stosy liny i przewodów). Wybór w panelu kotwienia,
   pole „Rodzaj”. Do sieci z lat 2010+ z Y na łukach (np. przęsła 40 m – YC120-2C150 daje Y od 35 m 14 m, krótsze 7 m).
