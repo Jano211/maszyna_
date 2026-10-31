@@ -4,6 +4,10 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 
 ## START TUTAJ – 2026-10-30 01:00 (najpierw to)
 
+**31.10 14:30:** wstawianie szablonu przęsła LPM przy torze na każdej stronie (`catenary_intent` celuje w tory przy `overlap_placing`);
+kotwienie z szablonu staje na istniejącym słupie do 6 m od miejsca z karty (`on`); w panelu kotwienia z własnym słupem przycisk
+„Przepnij na istniejący słup” (`anchor_move`, LPM na słup, Esc anuluje, Ctrl+Z cofa).
+
 **31.10 14:20 (Jan: przęsło zwarte wykryte, łączników nie ma):** `overlap_connector` rysował łącznik 33-0640 tylko, gdy wspólne było też
 przęsło PRZED – w czterosłupowym jest jedno wspólne. Teraz: przy każdym słupie krzyżowym, czyli na końcu części wspólnej (przęsło przed /
 za nie jest wspólne), 1,5 m od słupa, w obu końcach. Zwarte = ten sam zasilacz (nie none) i bez `isolated` (tak samo w panelu). Test `te`

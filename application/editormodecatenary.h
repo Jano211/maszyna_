@@ -133,6 +133,7 @@ struct catenary_editor
 		int anchor_pick{-1}; // anchoring this chain to an existing pole: the next pole clicked carries the tensioning device
 		bool anchor_pick_start{false}; // ... at the start of the chain, otherwise at its end
 		bool anchor_pick_contact{false}; // ... the contact wires only (anchored apart from the messenger)
+		int anchor_move{-1}; // this anchor with a pole of its own goes onto the pole clicked next (one already standing)
 		int span_selected{-1}; // the span of the chain shown clicked in the view (from its pole k to k + 1 of the list)
 		int anchor_selected{-1}; // the anchor picked in the view: its chain is shown, the panel marks it, Del removes it
 		bool anchor_scroll{false}; // the panel scrolls to the anchor picked in the view, once
