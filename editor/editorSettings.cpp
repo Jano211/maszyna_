@@ -112,6 +112,8 @@ bool editorSettings::load()
 			m_track_tools_more = (value == "1");
 		else if (key == "top_ballast")
 			m_top_ballast = (value == "1");
+		else if (key == "nmt_shallower")
+			parse(value, m_nmt_shallower);
 		else if (key.rfind(sheets_prefix, 0) == 0)
 		{
 			// on;correction;folder, the spaces of the folder written as |
@@ -173,6 +175,7 @@ bool editorSettings::save()
 	stream << "terrain_offer " << (m_terrain_offer ? 1 : 0) << "\n";
 	stream << "track_tools_all " << (m_track_tools_more ? 1 : 0) << "\n";
 	stream << "top_ballast " << (m_top_ballast ? 1 : 0) << "\n";
+	stream << "nmt_shallower " << m_nmt_shallower << "\n";
 	stream << std::fixed << std::setprecision(3);
 	for (auto const &origin : m_orthophoto_origins)
 		stream << origin.first << " " << origin.second.first << ";" << origin.second.second << "\n";

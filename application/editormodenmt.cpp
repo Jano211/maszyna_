@@ -163,6 +163,7 @@ std::vector<editor_mode::nmt_place> editor_mode::nmt_track_places(double const S
 			depths.push_back(profile_ballast(*track).first);
 	std::nth_element(depths.begin(), depths.begin() + depths.size() / 2, depths.end());
 	auto const usual{depths.empty() ? 0.0 : depths[depths.size() / 2]};
+	auto const shallower{std::max(0.0, EditorSettings.nmt_shallower())};
 	for (auto *track : simulation::Paths.sequence())
 	{
 		if (track == nullptr || false == rail(*track))
@@ -188,7 +189,9 @@ std::vector<editor_mode::nmt_place> editor_mode::nmt_track_places(double const S
 			for (int i = 0; i <= count; ++i)
 			{
 				auto const at{curve.point(static_cast<double>(i) / count)};
-				result.push_back({at, at.y - ballast.first, at.y - rails, ballast.second, track, static_cast<int>(path), shapes_ground(*track)});
+				// the formation may be set shallower: the foot of the ballast whose texture doesn't reach down to it stays under the terrain
+				auto const formation{std::min(at.y - ballast.first + shallower, at.y - rails)};
+				result.push_back({at, formation, at.y - rails, ballast.second, track, static_cast<int>(path), shapes_ground(*track)});
 			}
 		}
 	}
@@ -936,8 +939,25 @@ void editor_mode::render_nmt_ui()
 			field_row("Band along the tracks (m)");
 			ImGui::InputDouble("##nmtbandwidth", &state.band, 50.0, 250.0, "%.0f");
 			item_tooltip("How far from the tracks, on both sides, the terrain model is loaded");
+			field_row("Formation shallower by (m)");
+			if (double shallower{EditorSettings.nmt_shallower()}; ImGui::InputDouble("##nmtshallower", &shallower, 0.05, 0.1, "%.2f"))
+			{
+				EditorSettings.nmt_shallower(std::clamp(shallower, 0.0, 2.0));
+				EditorSettings.save();
+			}
+			item_tooltip("The terrain under the tracks is dug this much less deep than the foot of their ballast: where the texture of the ballast doesn't reach down to its foot, the terrain covers the part of it left bare");
 			ImGui::EndTable();
 		}
+		ImGui::BeginDisabled(busy || m_streamer.resident() == 0);
+		if (ImGui::Button(STR_C("Shape the formation anew"), ImVec2(-FLT_MIN, 0.0f)))
+		{
+			// the modifiers aren't baked into the chunks: made anew they replace the old ones over the heights of the chunks
+			m_streamer.drop_modifiers("nmt ");
+			auto const shaped{nmt_shape_tracks()};
+			state.status = format(STR_P("The formation of %zu path shaped", "The formation of %zu paths shaped", shaped), shaped);
+		}
+		ImGui::EndDisabled();
+		item_tooltip("The formation and the slopes of all the tracks made anew with the settings above, over the terrain there is; the chunks aren't made anew");
 		toggle_chips("nmtshape", {{STR_C("Formation and slopes along the tracks"), &state.shape,
 		                           "Each track gets its formation with slopes 1:1.5 down or up to the terrain, as a modifier of the terrain; bridges and tunnels keep the model under them"}});
 		ImGui::TreePop();
