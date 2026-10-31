@@ -15,7 +15,7 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-10-31
 
-### Sieć trakcyjna: dźwignia naprężacza w YpC120-2C, YpC95-2C, YwsC120-2C — (ten commit)
+### Sieć trakcyjna: dźwignia naprężacza w YpC120-2C, YpC95-2C, YwsC120-2C — `62c4b97`
 - Dźwignia 6406 (ta ze śrubami rzymskimi i izolatorami) w sieciach, gdzie lina nośna idzie do dolnego otworu dźwigni
   (dźwignia odwrócona), stała tyłem na przód wzdłuż osi naprężacza. Teraz odwraca się o 180° wokół osi uchwytu, tak jak
   w rzeczywistości: otwory zamieniają się góra–dół, a strona z otworami dalej patrzy w stronę drutów. YC95-2C i inne
