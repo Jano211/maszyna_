@@ -443,6 +443,18 @@ int main( int, char *argv[] ) {
         auto const index { std::find( mock_span_names.begin(), mock_span_names.end(), std::string( "nb_1" ) ) };
         good = good && index != mock_span_names.end() && mock_span_bodies[ static_cast<std::size_t>( index - mock_span_names.begin() ) ].find( " parallel na_2" ) != std::string::npos
             && catenary_chain_overlaps( 1 ).size() == 1 && catenary_chain_overlaps( 1 ).front().connected;
+        // jedno wspólne przęsło (czterosłupowe): łączniki przy obu słupach krzyżowych, rysuje łańcuch o wyższym numerze
+        auto const connectors { catenary_chain_connectors( 1 ) }, connectorsother { catenary_chain_connectors( 0 ) };
+        std::printf( "  laczniki 0640 przy jednym wspolnym przesle: %zu trojkatow (drugi lancuch %zu)\n", connectors, connectorsother );
+        good = good && connectors > 0 && connectorsother == 0;
+        {
+            auto isolated { *catenary_chain_get( 1 ) };
+            isolated.isolated[ 0 ] = true;
+            catenary_chain_update( 1, isolated );
+            good = good && catenary_chain_connectors( 1 ) == 0 && false == catenary_chain_overlaps( 1 ).front().connected;
+            isolated.isolated[ 0 ] = false;
+            catenary_chain_update( 1, isolated );
+        }
         // dwa wspólne przęsła (słup krzyżowy na z = 120): łańcuch nb przedłużony wstecz, zwarte - łącznik 0640 bez błędów
         auto g { entry }; g.name = "o7"; place( g, 0.0, 0.3 );
         catenary_scene_add( "td_naprezenie_test.scm", g );

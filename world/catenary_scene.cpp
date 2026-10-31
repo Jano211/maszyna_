@@ -2186,54 +2186,68 @@ overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector
     auto const index { static_cast<std::size_t>( &Chain - Chains.data() ) };
     auto const lerp = []( glm::dvec3 const &A, glm::dvec3 const &B, double const T ) { return A + ( B - A ) * T; };
     auto const points { chain_points( Chain ) };
-    if( index >= Chains.size() || Span == 0 || Span + 1 >= points ) { return; }
-    double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ], wp[ 3 ], rp[ 3 ];
-    bool anchoreda, anchoredb, anchoredp;
-    if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) || false == chain_point( Chain, Span - 1, wp, rp, anchoredp ) ) { return; }
-    if( anchoreda || anchoredb || anchoredp ) { return; }
-    glm::dvec3 const a { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, b { wb[ 0 ], wb[ 1 ], wb[ 2 ] }, p { wp[ 0 ], wp[ 1 ], wp[ 2 ] };
-    // przęsło i to przed nim wspólne z tym samym łańcuchem: początek przęsła to słup krzyżowy
+    if( index >= Chains.size() || Span + 1 >= points ) { return; }
+    double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ];
+    bool anchoreda, anchoredb;
+    if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) ) { return; }
+    if( anchoreda || anchoredb ) { return; }
+    glm::dvec3 const a { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, b { wb[ 0 ], wb[ 1 ], wb[ 2 ] };
+    // przęsło wspólne z innym łańcuchem
     auto const *other { overlap_span( a, b, index ) };
-    auto const *before { overlap_span( p, a, index ) };
-    if( other == nullptr || before == nullptr ) { return; }
+    if( other == nullptr ) { return; }
     std::size_t otherchain { Chains.size() };
     for( std::size_t c = 0; c < Chains.size() && otherchain == Chains.size(); ++c ) {
         if( std::find( Chains[ c ].spans.begin(), Chains[ c ].spans.end(), other ) != Chains[ c ].spans.end() ) { otherchain = c; }
     }
     if( otherchain >= Chains.size() || otherchain > index ) { return; }   // rysuje łańcuch o wyższym numerze (przy wczytaniu ten drugi już jest)
-    if( std::find( Chains[ otherchain ].spans.begin(), Chains[ otherchain ].spans.end(), before ) == Chains[ otherchain ].spans.end() ) { return; }
+    // zwarte = ten sam zasilacz obu łańcuchów (jak w panelu przęseł naprężenia) i żaden koniec nie izolowany; izolowane - bez łączników
     auto const &power { Chain.data.power };
-    if( power.empty() || power == "none" || power != Chains[ otherchain ].data.power ) { return; }   // przęsło izolowane: bez łączników
+    auto const &otherdata { Chains[ otherchain ].data };
+    if( power.empty() || power == "none" || power != otherdata.power || Chain.data.isolated[ 0 ] || Chain.data.isolated[ 1 ] || otherdata.isolated[ 0 ] || otherdata.isolated[ 1 ] ) { return; }
     auto const length { glm::length( b - a ) };
     if( length < 2.0 * kConnectorFromPole ) { return; }
-    auto const t { kConnectorFromPole / length };
-    glm::dvec3 const rope { lerp( glm::dvec3 { ra[ 0 ], ra[ 1 ], ra[ 2 ] }, glm::dvec3 { rb[ 0 ], rb[ 1 ], rb[ 2 ] }, t ) };
-    glm::dvec3 const wire { lerp( a, b, t ) };
-    // lina nośna drugiego łańcucha w tym miejscu: rzut na jego linę (końce pPoint3, pPoint4)
-    auto const along { other->pPoint4 - other->pPoint3 };
-    auto const u { std::clamp( glm::dot( rope - other->pPoint3, along ) / std::max( glm::dot( along, along ), 1e-9 ), 0.0, 1.0 ) };
-    auto const otherrope { other->pPoint3 + along * u };
-    // linka łukiem w dół między linami (luz), potem "S" z liny tego łańcucha w dół do jego przewodu
-    std::vector<glm::dvec3> arc;
-    auto const sag { 0.25 };
-    for( int step = 0; step <= 12; ++step ) {
-        auto const s { step / 12.0 };
-        arc.push_back( lerp( rope, otherrope, s ) - glm::dvec3 { 0.0, sag * 4.0 * s * ( 1.0 - s ), 0.0 } );
-    }
-    add_tube( Solid, arc, kConnectorRadius );
-    auto const across { glm::length( glm::dvec3 { otherrope.x - rope.x, 0.0, otherrope.z - rope.z } ) > 1e-3 ? glm::normalize( glm::dvec3 { otherrope.x - rope.x, 0.0, otherrope.z - rope.z } ) : glm::dvec3 { 1.0, 0.0, 0.0 } };
-    std::vector<glm::dvec3> drop;
-    for( int step = 0; step <= 16; ++step ) {
-        auto const s { step / 16.0 };
-        // wydłużone S: wychylenie w bok o 0,15 m w jedną i drugą stronę
-        auto const swing { 0.15 * std::sin( s * 2.0 * 3.14159265358979323846 ) };
-        drop.push_back( lerp( rope, wire, s ) + across * swing );
-    }
-    add_tube( Solid, drop, kConnectorRadius );
-    auto const alongspan { b - a };
-    add_box( Solid, rope, alongspan, 0.08, 0.04 );          // zaciski 6605 na linach
-    add_box( Solid, otherrope, alongspan, 0.08, 0.04 );
-    add_box( Solid, wire, alongspan, 0.08, 0.035 );         // zacisk 6601 na przewodzie
+    // słup krzyżowy to koniec części wspólnej: przęsło przed (za) nim nie jest już wspólne z tym łańcuchem albo go nie ma.
+    // Łącznik po stronie części wspólnej, 1,5 m od słupa krzyżowego
+    auto const shared = [ & ]( std::size_t const From ) {
+        double w0[ 3 ], r0[ 3 ], w1[ 3 ], r1[ 3 ];
+        bool anchored0, anchored1;
+        if( From + 1 >= points || false == chain_point( Chain, From, w0, r0, anchored0 ) || false == chain_point( Chain, From + 1, w1, r1, anchored1 ) ) { return false; }
+        auto const *span { overlap_span( glm::dvec3 { w0[ 0 ], w0[ 1 ], w0[ 2 ] }, glm::dvec3 { w1[ 0 ], w1[ 1 ], w1[ 2 ] }, index ) };
+        return span != nullptr && std::find( Chains[ otherchain ].spans.begin(), Chains[ otherchain ].spans.end(), span ) != Chains[ otherchain ].spans.end();
+    };
+    auto const crossstart { Span == 0 || false == shared( Span - 1 ) };
+    auto const crossend { false == shared( Span + 1 ) };
+    auto const draw = [ & ]( double const T ) {
+        glm::dvec3 const rope { lerp( glm::dvec3 { ra[ 0 ], ra[ 1 ], ra[ 2 ] }, glm::dvec3 { rb[ 0 ], rb[ 1 ], rb[ 2 ] }, T ) };
+        glm::dvec3 const wire { lerp( a, b, T ) };
+        // lina nośna drugiego łańcucha w tym miejscu: rzut na jego linę (końce pPoint3, pPoint4)
+        auto const along { other->pPoint4 - other->pPoint3 };
+        auto const u { std::clamp( glm::dot( rope - other->pPoint3, along ) / std::max( glm::dot( along, along ), 1e-9 ), 0.0, 1.0 ) };
+        auto const otherrope { other->pPoint3 + along * u };
+        // linka łukiem w dół między linami (luz), potem "S" z liny tego łańcucha w dół do jego przewodu
+        std::vector<glm::dvec3> arc;
+        auto const sag { 0.25 };
+        for( int step = 0; step <= 12; ++step ) {
+            auto const s { step / 12.0 };
+            arc.push_back( lerp( rope, otherrope, s ) - glm::dvec3 { 0.0, sag * 4.0 * s * ( 1.0 - s ), 0.0 } );
+        }
+        add_tube( Solid, arc, kConnectorRadius );
+        auto const across { glm::length( glm::dvec3 { otherrope.x - rope.x, 0.0, otherrope.z - rope.z } ) > 1e-3 ? glm::normalize( glm::dvec3 { otherrope.x - rope.x, 0.0, otherrope.z - rope.z } ) : glm::dvec3 { 1.0, 0.0, 0.0 } };
+        std::vector<glm::dvec3> drop;
+        for( int step = 0; step <= 16; ++step ) {
+            auto const s { step / 16.0 };
+            // wydłużone S: wychylenie w bok o 0,15 m w jedną i drugą stronę
+            auto const swing { 0.15 * std::sin( s * 2.0 * 3.14159265358979323846 ) };
+            drop.push_back( lerp( rope, wire, s ) + across * swing );
+        }
+        add_tube( Solid, drop, kConnectorRadius );
+        auto const alongspan { b - a };
+        add_box( Solid, rope, alongspan, 0.08, 0.04 );          // zaciski 6605 na linach
+        add_box( Solid, otherrope, alongspan, 0.08, 0.04 );
+        add_box( Solid, wire, alongspan, 0.08, 0.035 );         // zacisk 6601 na przewodzie
+    };
+    if( crossstart ) { draw( kConnectorFromPole / length ); }
+    if( crossend ) { draw( 1.0 - kConnectorFromPole / length ); }
 }
 
 // uszynienie grupowe: uchwyt 6120 (karta 0805) na górze słupa podwieszenia, przodem do toru (X wzdłuż toru, słup w +Y, zero na
@@ -3541,7 +3555,8 @@ catenary_chain_overlaps( std::size_t const Index ) {
             result.emplace_back();
             entry = std::prev( result.end() );
             entry->other = otherchain;
-            entry->connected = false == chain.data.power.empty() && chain.data.power != "none" && chain.data.power == Chains[ otherchain ].data.power;
+            entry->connected = false == chain.data.power.empty() && chain.data.power != "none" && chain.data.power == Chains[ otherchain ].data.power
+                && false == chain.data.isolated[ 0 ] && false == chain.data.isolated[ 1 ] && false == Chains[ otherchain ].data.isolated[ 0 ] && false == Chains[ otherchain ].data.isolated[ 1 ];
         }
         entry->spans.push_back( span );
         entry->other_spans.push_back( otherspan );
@@ -3909,6 +3924,14 @@ catenary_scene_new_anchor_name( std::string const &File ) {
         for( auto const &anchor : Anchors ) { if( false == anchor.removed && anchor.file == File && anchor.data.name == name ) { used = true; break; } }
         if( false == used ) { return name; }
     }
+}
+
+std::size_t
+catenary_chain_connectors( std::size_t const Index ) {
+    if( Index >= Chains.size() ) { return 0; }
+    std::vector<catenary::solid_vertex> solid;
+    for( std::size_t span = 0; span < Chains[ Index ].spans.size(); ++span ) { overlap_connector( Chains[ Index ], span, solid ); }
+    return solid.size() / 3;
 }
 
 double

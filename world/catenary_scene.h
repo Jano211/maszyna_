@@ -189,6 +189,8 @@ std::string catenary_scene_new_anchor_name( std::string const &File );
 void catenary_scene_temperature();
 // obrót wysięgnika podwieszenia na zawiasach od temperatury [stopnie, ze znakiem]; 0 poza łańcuchem z kotwieniem środkowym
 double catenary_scene_swing( std::size_t Index );
+// trójkąty łączników 33-0640, które rysuje łańcuch (przęsła naprężenia zwarte; do testów)
+std::size_t catenary_chain_connectors( std::size_t Index );
 
 // ---- bramki (wpisy "gantry" w pliku sieci): słupy i dźwigar; zwisy z wysięgnikami to zwykłe podwieszenia -----------------
 std::size_t catenary_gantry_size();
