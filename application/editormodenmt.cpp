@@ -47,6 +47,11 @@ std::pair<int, int> anchor_cell_of(double const X, double const Z)
 	return {static_cast<int>(std::floor(X / anchor_cell)), static_cast<int>(std::floor(Z / anchor_cell))};
 }
 
+// a place of a track lying this much over or under the model, beyond the offset of the scenery, is an error of the scenery
+// (a track left at height zero, a point typed wrong) or a structure the model doesn't know: the terrain neither follows it
+// nor is dug or heaped to it, it stays as the model has it there (Jan 2026-10-31)
+double constexpr off_model{10.0};
+
 // a path whose ends lie this far apart is an error of the scenery, as a point typed wrong: no grade line, no formation and no
 // terrain along it
 double constexpr broken_path{5000.0};
@@ -303,9 +308,19 @@ void editor_mode::nmt_under_anchors()
 		int path;
 	};
 	std::vector<found> places;
+	std::size_t off{0};
 	for (auto const &place : state.fit)
 		if (double height; m_nmt.height(place.position.x, place.position.z, height))
+		{
+			if (std::abs(place.crown - height - state.offset) > off_model)
+			{
+				++off;
+				continue;
+			}
 			places.push_back({{place.position.x, place.position.z}, place.crown - height, place.track, place.path});
+		}
+	if (off > 0)
+		WriteLog(format("Editor: NMT - %zu places of the tracks lie more than %.0f m against the model, the terrain doesn't follow them", off, off_model), logtype::generic);
 	state.anchors.clear();
 	state.anchor_cells.clear();
 	for (std::size_t i = 0; i < places.size(); ++i)
@@ -384,7 +399,9 @@ void editor_mode::nmt_finish_fit()
 	// the terrain under the tracks: drawn to them place by place, then made along them
 	nmt_under_anchors();
 	auto const status{state.status};
-	nmt_make(nmt_keys_along_tracks(), true);
+	auto const keys{state.local ? nmt_keys_around() : nmt_keys_along_tracks()};
+	state.local = false;
+	nmt_make(keys, true);
 	state.status = status + "\n" + state.status;
 }
 
@@ -525,6 +542,8 @@ std::size_t editor_mode::nmt_shape_tracks(std::vector<TTrack *> const *Only)
 	double constexpr step{5.0};
 	std::pair<TTrack *, int> previous{nullptr, -1};
 	bool broken{false};
+	std::size_t off{0};
+	std::set<std::string> offnames;
 	for (auto const &place : nmt_track_places(step))
 	{
 		if (false == wanted(place.track))
@@ -535,6 +554,14 @@ std::size_t editor_mode::nmt_shape_tracks(std::vector<TTrack *> const *Only)
 		previous = path;
 		if (false == place.shapes)
 		{
+			broken = true;
+			continue;
+		}
+		// far over or under the model the track gets no formation: it would dig a pit or heap a mound of the whole difference
+		if (double height; m_nmt.height(place.position.x, place.position.z, height) && std::abs(place.crown - height - nmt_offset_at(place.position.x, place.position.z)) > off_model)
+		{
+			++off;
+			offnames.insert(place.track->name().empty() ? std::string{"(no name)"} : place.track->name());
 			broken = true;
 			continue;
 		}
@@ -552,6 +579,22 @@ std::size_t editor_mode::nmt_shape_tracks(std::vector<TTrack *> const *Only)
 			modifier.reach = state.reach;
 		}
 		modifier.points.push_back({{place.position.x, place.position.z}, place.formation, place.half_width});
+	}
+	if (off > 0)
+	{
+		// the tracks to look at: likely left at height zero or typed wrong
+		std::string names;
+		std::size_t listed{0};
+		for (auto const &name : offnames)
+		{
+			if (++listed > 30)
+			{
+				names += ", ...";
+				break;
+			}
+			names += (names.empty() ? "" : ", ") + name;
+		}
+		WriteLog(format("Editor: NMT - %zu places of the tracks lie more than %.0f m against the model, no formation there; tracks: %s", off, off_model, names.c_str()), logtype::generic);
 	}
 	std::vector<heightmap::modifier> laid;
 	for (auto &[path, modifier] : modifiers)
@@ -788,6 +831,19 @@ void editor_mode::render_nmt_ui()
 		                                             STR_C("The tracks aren't touched: the terrain model is loaded along them and drawn to them, at each place by as much as the tracks lie above or below it there, fading out away from them, so its relief stays and the tracks don't end up in deep cuttings; then the formation and the slopes along them. For a scenery built level or at its own heights")) :
 		                           STR_C("Loads the terrain model, the real relief of the ground, around the camera")};
 		ImGui::SetTooltip("%s\n%s", text, STR_C("Terrain model: GUGiK, geoportal.gov.pl"));
+	}
+	if (tracks && m_streamer.resident() > 0)
+	{
+		ImGui::BeginDisabled(busy);
+		if (ImGui::Button(STR_C("Make the terrain under the tracks anew around the camera"), ImVec2(-1.0f, 0.0f)))
+		{
+			nmt_under_start();
+			state.local = state.under;
+		}
+		ImGui::EndDisabled();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", format(STR_C("Only the chunks around the camera (%d along a side, as set on the Chunks page) are made anew from the model and drawn to the tracks, their painting too; the rest of the terrain stays as it is.\n"
+			                                     "Places where a track lies more than 10 m over or under the model, as a track left at height zero, don't pull the terrain"), m_terrain_add_count).c_str());
 	}
 	toggle_chips("nmtgrow", {{STR_C("Make the terrain ahead while laying"), &state.grow, "Where a track is laid past the edge of the terrain, the terrain model is made around the cursor as it goes"}});
 	// how far it got
