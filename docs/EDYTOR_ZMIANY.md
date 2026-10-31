@@ -15,7 +15,7 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-10-31
 
-### Edytor sieci: opis wykonania 2 wysięgników 120x — (ten commit)
+### Edytor sieci: opis wykonania 2 wysięgników 120x — `5f9d936`
 - Lista wykonań 120x pokazywała przy wyk. 2 „hk 1,70”, a karta (i dane złożenia) to hk 1,30. Poprawiony sam opis
   w `traction_catalog.txt` (na dysk do `data/`), geometria bez zmian. Wymaga: nic.
 
