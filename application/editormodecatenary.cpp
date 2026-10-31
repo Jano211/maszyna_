@@ -5013,7 +5013,8 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 		}
 		ImGui::PushItemWidth(180.0f);
 		auto edited{false};
-		if (ImGui::BeginCombo(STR_C("Middle anchor"), labels[chosen].c_str()))
+		// the same text as the header above: told apart by the id after ##, or ImGui takes them for one item
+		if (ImGui::BeginCombo((std::string(STR_C("Middle anchor")) + "##middlepole").c_str(), labels[chosen].c_str()))
 		{
 			for (std::size_t k = 0; k < labels.size(); ++k)
 				if (ImGui::Selectable(labels[k].c_str(), static_cast<int>(k) == chosen))

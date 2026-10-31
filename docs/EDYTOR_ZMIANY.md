@@ -15,6 +15,10 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-10-31
 
+### Edytor sieci: konflikt ID ImGui w kotwieniu środkowym — (ten commit)
+- Nagłówek sekcji „Kotwienie środkowe” i lista wyboru słupa miały ten sam napis, więc ImGui brał je za jeden element
+  (ostrzeżenie o konflikcie ID, lista mogła nie reagować). Lista ma teraz własne ID. Wymaga: nic.
+
 ### Sieć trakcyjna: YC120-2C150 na rolkach szeregowych, jeden stos — `d88c33a`
 - Kotwienie „ciężary, rolki szeregowe” (karty 0471 Ø400 i 0480 Ø306) działa teraz także dla YC120-2C150 (typ 20) –
   wcześniej ta sieć miała tylko kotwienie rozdzielone (0482/0486: osobne stosy liny i przewodów). Wybór w panelu kotwienia,
