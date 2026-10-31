@@ -15,6 +15,15 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-10-31
 
+### Sieć trakcyjna: YC120-2C150 na rolkach szeregowych, jeden stos — `d88c33a`
+- Kotwienie „ciężary, rolki szeregowe” (karty 0471 Ø400 i 0480 Ø306) działa teraz także dla YC120-2C150 (typ 20) –
+  wcześniej ta sieć miała tylko kotwienie rozdzielone (0482/0486: osobne stosy liny i przewodów). Wybór w panelu kotwienia,
+  pole „Rodzaj”. Do sieci z lat 2010+ z Y na łukach (np. przęsła 40 m – YC120-2C150 daje Y od 35 m 14 m, krótsze 7 m).
+- ZAŁOŻENIE (brak karty): 40 ciężarów × 27 kg × 1:4 = 4238 daN, dźwignia 6406 otwory I/IV wokół III (lina ~1534 daN,
+  -3,4 % od 1588; przewody ~2704); 0471: 40 × 6322-1, pręt 2,50; 0480: 31 żeliwnych + 9 polimerobetonowych, pręt 2,80.
+- Zmienia tylko dane (`tests/catenary/data/traction_tensioners.txt`, na dysk do `data/`) i test. Wymaga: `62c4b97`
+  (dźwignia odwrócona – w typie 20 lina idzie do dolnego otworu).
+
 ### Sieć trakcyjna: dźwignia naprężacza w YpC120-2C, YpC95-2C, YwsC120-2C — `62c4b97`
 - Dźwignia 6406 (ta ze śrubami rzymskimi i izolatorami) w sieciach, gdzie lina nośna idzie do dolnego otworu dźwigni
   (dźwignia odwrócona), stała tyłem na przód wzdłuż osi naprężacza. Teraz odwraca się o 180° wokół osi uchwytu, tak jak

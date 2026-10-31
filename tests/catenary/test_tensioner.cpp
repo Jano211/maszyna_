@@ -621,6 +621,30 @@ int main( int argc, char **argv ) {
         check( good, std::string( "rolki szeregowe " ) + name + ": 4 rolki, zabezpieczenie 4600-3/-4/-5 (2 komplety), lina stalej dlugosci (karta 4490-2: 10,00 m), ciezary 4 razy b, tablica 0011-5 bn 2,50" );
     }
 
+    // YC120-2C150 (typ 20) na jednym stosie rolek szeregowych (Jan 2026-10-31): bez ostrzezen, naciag ~4236 daN, lina ~1588 daN
+    for( auto const *name : { "0471", "0480" } ) {
+        auto const *series { catalog.device( name ) };
+        if( series == nullptr ) { check( false, std::string( "urzadzenie " ) + name + " typ 20" ); continue; }
+        auto good { true };
+        double tension { 0.0 }, messenger { 0.0 };
+        for( auto const temperature : { -25.0, 10.0, 40.0 } ) {
+            catenary::tensioner_input input;
+            input.type = 20;
+            input.temperature = temperature;
+            input.pole = "1611-11";
+            input.depth = []( double ) { return 0.12; };
+            catenary::tensioner_result result;
+            auto const solved { catenary::solve_tensioner( catalog, *series, input, result ) };
+            if( false == result.warnings.empty() ) { std::printf( "      %s typ 20 %+.0f: %s\n", name, temperature, result.warnings.front().c_str() ); }
+            good = good && solved && result.warnings.empty();
+            tension = result.tension;
+            messenger = result.messenger_tension;
+        }
+        good = good && std::abs( tension - 4236.0 ) < 0.02 * 4236.0 && std::abs( messenger - 1588.0 ) < 0.05 * 1588.0;
+        std::printf( "    %s typ 20: %.0f daN, lina %.0f, przewody %.0f\n", name, tension, messenger, tension - messenger );
+        check( good, std::string( "rolki szeregowe " ) + name + " z siecia YC120-2C150 (typ 20) na jednym stosie" );
+    }
+
     // kotwienie rozdzielone 0482 (Ø306) i 0486 (Ø400): dwa urzadzenia (7,00 i 6,30), dwa stosy, naciagi jak w typach sieci
     for( auto const *name : { "0482", "0486" } ) {
         auto const *split { catalog.device( name ) };
