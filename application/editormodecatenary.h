@@ -353,6 +353,8 @@ struct catenary_editor
 	void catenary_rope_lift_create(std::size_t Index, std::size_t Chain);
 	// a whole tension overlap from the template picked (data/traction_overlaps.txt) with its first crossing pole at the click
 	void catenary_overlap_place(TTrack &Track, int Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor);
+	// the file the next poles go to: the one of the chain being built while its end has no anchor, otherwise the one of the panel
+	std::string catenary_continue_file() const;
 	// the place on the tracks joined to Track at the chord Distance from From in the direction Forward (plan); false when none
 	bool catenary_track_ahead(TTrack *&Track, int &Path, double &Parameter, glm::dvec3 const &From, glm::dvec2 const &Forward, double Distance) const;
 	// the template panel of the Wires page
