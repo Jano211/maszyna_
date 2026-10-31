@@ -575,6 +575,7 @@ Model `6207-01.t3d` (eksport 2026-10-17 15:14, LOD0–3): model wyk. 1 (jedno ra
 - Źródła exe: od 2026-10-17 gałąź `siec-trakcyjna` w `Jano211/maszyna_`, u Jana `C:\MaszynaGit\maszyna_` (patrz START TUTAJ). Stare `C:\Maszyna` bez commitów. Jan nie zna Gita – prowadzić krok po kroku przez GitHub Desktop.
 - Podpięte foldery: `C:\Maszyna`, `E:\maszyna-sim` (symulator), `C:\Users\jan_c\Desktop\scenery`, `E:\MaszynaProjekty\Siec\Nowe`.
 - Nie ma powłoki na komputerze Jana: nie da się u niego uruchomić gita ani kompilacji. Kompiluje Jan w Visual Studio; wynik czytać z `build\eu07.dir\Release\eu07.log`. Podpięte foldery mogą się zmieniać – sprawdzić `get_device_info`.
+- Tłumaczenia: po każdej zmianie `lang/editor_pl.po` wgrać go też do `G:\Maszyna2510\lang\editor_pl.po` (CRLF; symulator czyta stamtąd, Jan 31.10: „co rusz po angielsku nowe ficzery”).
 - Zapis plików: zawsze z NOWEGO folderu w `/mnt/user-data/outputs/` (np. `exe_v16/...`). Ponowne użycie tej samej ścieżki raz dostarczyło starą treść, a Jan kompilował 30 minut na darmo. Po każdym zapisie sprawdzić rozmiar lub treść pliku na dysku.
 - `world/Traction.h`, `utilities/Globals.h`, `application/editormode.h` ruszać tylko, gdy naprawdę trzeba (przebudowa ok. 30 minut); od 2026-10-22 narzędzie sieci siedzi w `application/editormodecatenary.h/.cpp`. Stan przęsła siedzi za `std::shared_ptr<catenary_span>`, ustawienia w `world/catenary_span.h`.
 - Nowy plik `.cpp` trzeba dopisać do `CMakeLists.txt` i Jan musi odświeżyć projekt.
