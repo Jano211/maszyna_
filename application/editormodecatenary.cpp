@@ -5218,7 +5218,9 @@ void catenary_editor::render_catenary_cantilever_ui()
 				auto const index{static_cast<std::size_t>(tool.selected)};
 				auto lean{static_cast<float>(data->lean)};
 				ImGui::PushItemWidth(160.0f);
-				if (ImGui::SliderFloat(STR_C("Lean of the pole towards the track (deg)"), &lean, -1.5f, 1.5f, "%+.2f"))
+				// the expert mode: up to +-10 deg (lines in a bad state, the wires barely hang; Jan 2026-10-31), otherwise +-1.5
+				auto const limit{tool.expert || std::abs(lean) > 1.5f ? 10.0f : 1.5f};
+				if (ImGui::SliderFloat(STR_C("Lean of the pole towards the track (deg)"), &lean, -limit, limit, "%+.2f"))
 				{
 					lean = std::round(lean * 20.0f) / 20.0f;
 					auto changed{*data};

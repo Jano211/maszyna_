@@ -313,8 +313,8 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else { report( entry.name, "\"above_pole\" takes no values" ); good = false; }
             }
             else if( key == "lean" ) {
-                if( list.size() == 1 && to_number( list[ 0 ], entry.lean ) && std::abs( entry.lean ) <= 5.0 ) {}
-                else { report( entry.name, "\"lean\" needs one number of degrees, up to 5" ); entry.lean = 0.0; good = false; }
+                if( list.size() == 1 && to_number( list[ 0 ], entry.lean ) && std::abs( entry.lean ) <= 10.0 ) {}
+                else { report( entry.name, "\"lean\" needs one number of degrees, up to 10" ); entry.lean = 0.0; good = false; }
             }
             else if( key == "stay_shift" ) {
                 if( list.size() == 1 && to_number( list[ 0 ], entry.stay_shift ) && std::abs( entry.stay_shift ) <= 0.5 + 1e-9 ) {}
