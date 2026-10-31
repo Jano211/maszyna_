@@ -15,6 +15,12 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-10-31
 
+### Sieć trakcyjna: uchwyty kotwień 4530, 4560, 4570 — (ten commit)
+- Nowe modele Jana w danych: dół prowadnicy na słupie betonowym 1701 – 4530-3 z tyłem 4530-4 (było 4520-3); dół prowadnicy na
+  nogach bramek – 4560 wg ceownika (01 C240, 03 C200, 05 C160 i niekatalogowy C140), tył 4520-8 – ZAŁOŻENIE; kotwienie na
+  półbramce 1901 (słup przestrzenny) – 4570-1, bez tyłu (w danych „-” zamiast części).
+- Zmienia: `traction_tensioners.txt` (do `data/`), `world/catenary_tensioner.cpp` („-” w `brackets`), test. Wymaga: `c9b6761`.
+
 ### Edytor sieci: kotwienie na nodze bramki — `c9b6761`
 - Kotwienie (ciężarowe albo stałe) można przepiąć na nogę bramki: w panelu kotwienia „Przepnij na istniejący słup”, potem
   klik w bramkę – urządzenie idzie na nogę bliższą kotwieniu, jego własny słup znika (Ctrl+Z cofa). W panelu „Na nodze N bramki X”.

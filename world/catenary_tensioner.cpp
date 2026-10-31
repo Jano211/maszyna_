@@ -309,8 +309,9 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 for( ; k < words.size(); ) {
                     auto const &key { words[ k ] };
                     if( ( key == "top" || key == "bottom" ) && k + 2 < words.size() ) {
-                        ( key == "top" ? set.top_front : set.bottom_front ) = words[ k + 1 ];
-                        ( key == "top" ? set.top_back : set.bottom_back ) = words[ k + 2 ];
+                        // "-": bez tej części (uchwyt bez tyłu, np. 4570 na słupach przestrzennych)
+                        ( key == "top" ? set.top_front : set.bottom_front ) = words[ k + 1 ] == "-" ? std::string{} : words[ k + 1 ];
+                        ( key == "top" ? set.top_back : set.bottom_back ) = words[ k + 2 ] == "-" ? std::string{} : words[ k + 2 ];
                         k += 3;
                     }
                     else if( key == "hole" && k + 2 < words.size() ) { number_of( words[ k + 1 ], set.hole_out ); number_of( words[ k + 2 ], set.hole_drop ); k += 3; }
