@@ -184,7 +184,12 @@ state_serializer::deserialize_continue(std::shared_ptr<deserializer_state> state
         }
         else if( token == "catenary" ) {
             // sieć trakcyjna: plik z podwieszeniami, "catenary <plik> endcatenary"
-            catenary_scene_load( Input );
+            {
+                // punkty pliku względem bloku "origin", w którym stoi dyrektywa
+                auto const offset { Scratchpad.location.offset.empty() ? glm::dvec3 { 0.0 } : glm::dvec3 { Scratchpad.location.offset.top() } };
+                double const shift[ 3 ] { offset.x, offset.y, offset.z };
+                catenary_scene_load( Input, shift );
+            }
         }
         else if( token == "skin" ) {
             // domyślna tekstura podwieszeń sieci z tego pliku: plik sieci z dyrektywy "catenary" dołączony jako warstwa
@@ -621,7 +626,9 @@ state_serializer::deserialize_node( cParser &Input, scene::scratch_data &Scratch
                 name = words[ 2 ];
             }
         }
-        catenary_scene_node( Input, nodedata.type, nodedata.range_max, nodedata.range_min, name, catenary_file( Input ) );
+        auto const offset { Scratchpad.location.offset.empty() ? glm::dvec3 { 0.0 } : glm::dvec3 { Scratchpad.location.offset.top() } };
+        double const shift[ 3 ] { offset.x, offset.y, offset.z };
+        catenary_scene_node( Input, nodedata.type, nodedata.range_max, nodedata.range_min, name, catenary_file( Input ), shift );
     }
     else if( nodedata.type == "sweep" ) {
 

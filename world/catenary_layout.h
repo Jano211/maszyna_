@@ -20,12 +20,18 @@ public:
     double nominal_span( std::string const &Symbol, int Zone ) const;
     // odsuw sieci na łuku przyjmowany do rozstawienia konstrukcji (karta 0008), m
     double curve_stagger() const { return m_curvestagger; }
+    // o ile lina nośna przy podwieszeniu na łuku stoi na zewnątrz łuku względem przewodów (m), z tablicy "curve_messenger"
+    // (promień - przesunięcie, liniowo między wierszami; ciaśniej niż pierwszy wiersz - jego wartość, łagodniej niż ostatni - 0).
+    // Radius <= 0 (prosta) - 0. Wartości na oko (Jan 2026-10-31: „parę centymetrów zależnie od promienia”)
+    double messenger_outward( double Radius ) const;
     // symbole sieci z tablicy, w kolejności alfabetycznej
     std::vector<std::string> symbols() const;
 
 private:
     std::map<std::string, std::pair<double, double>> m_spans;
     double m_curvestagger { 0.40 };
+    std::vector<std::pair<double, double>> m_messengeroutward { { 300.0, 0.10 }, { 600.0, 0.07 }, { 1000.0, 0.05 }, { 2000.0, 0.02 }, { 4000.0, 0.0 } };
+    bool m_messengeroutwardread { false };   // pierwszy wiersz z pliku zastępuje tablicę domyślną
 };
 
 // największa rozpiętość przęsła na łuku o promieniu Radius przy odsuwie Stagger: a = 2·√(2·R·z) (karta 0008)

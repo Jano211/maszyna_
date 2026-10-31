@@ -375,7 +375,26 @@ void build_geometry( network_definition const &Definition, span_solution const &
     vec3 const along { ( c1.x - c0.x ) / length, 0.0, ( c1.z - c0.z ) / length };
     vec3 const side { along.z, 0.0, -along.x };
     auto const offset { type.contact_count > 1 ? ( Definition.contact_spacing > 0.0 ? 0.5 * Definition.contact_spacing : Fallbackoffset ) : 0.0 };
-    // punkt przewodu jezdnego w odległości X od początku, przesunięty w bok o Shift
+    // inny rozstaw przewodów w uchwytach na końcach (ramiona 6207/6208): od uchwytu do pierwszego wieszaka przechodzi w rozstaw typu
+    double firsthanger { 0.0 }, lasthanger { length };
+    if( false == result.hangers.empty() ) {
+        firsthanger = length; lasthanger = 0.0;
+        for( auto const &hanger : result.hangers ) { firsthanger = std::min( firsthanger, hanger.x ); lasthanger = std::max( lasthanger, hanger.x ); }
+    }
+    auto const spread = [ & ]( double const X ) {
+        auto half { offset };
+        if( Points.contact_spread[ 0 ] > 0.0 && X < firsthanger ) {
+            auto const t { firsthanger > 1e-6 ? X / firsthanger : 1.0 };
+            half = 0.5 * Points.contact_spread[ 0 ] * ( 1.0 - t ) + offset * t;
+        }
+        if( Points.contact_spread[ 1 ] > 0.0 && X > lasthanger ) {
+            auto const t { length - lasthanger > 1e-6 ? ( length - X ) / ( length - lasthanger ) : 1.0 };
+            half = 0.5 * Points.contact_spread[ 1 ] * ( 1.0 - t ) + offset * t;
+        }
+        return half;
+    };
+    // punkt przewodu jezdnego w odległości X od początku, przesunięty w bok o Shift (przewód -1 / +1 razy połowę rozstawu w tym miejscu,
+    // gdy Shift to znak; inaczej wprost)
     auto const contact = [ & ]( double const X, double const Shift ) {
         auto const t { X / length };
         return vec3 { c0.x + ( c1.x - c0.x ) * t + side.x * Shift, c0.y + ( c1.y - c0.y ) * t, c0.z + ( c1.z - c0.z ) * t + side.z * Shift };
@@ -419,17 +438,17 @@ void build_geometry( network_definition const &Definition, span_solution const &
 
     // przewody jezdne; w przęśle bez wieszaków ze zwisem, o ile typ podaje ich naciąg
     for( int wire = 0; wire < type.contact_count; ++wire ) {
-        auto const shift { type.contact_count > 1 ? ( wire == 0 ? -offset : offset ) : 0.0 };
+        auto const sign { type.contact_count > 1 ? ( wire == 0 ? -1.0 : 1.0 ) : 0.0 };
         std::vector<vec3> line;
         if( result.contact.size() > 1 ) {
             for( auto const &point : result.contact ) {
-                auto position { contact( point.x, shift ) };
+                auto position { contact( point.x, sign * spread( point.x ) ) };
                 position.y += point.y;
                 line.push_back( position );
             }
         }
         else {
-            line = { contact( 0.0, shift ), contact( length, shift ) };
+            line = { contact( 0.0, sign * spread( 0.0 ) ), contact( length, sign * spread( length ) ) };
         }
         polyline( line, element_kind::contact );
     }

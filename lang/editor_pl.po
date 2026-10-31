@@ -12165,3 +12165,9 @@ msgstr "Druty między tymi dwoma słupami znikają, słupy zostają: łańcuch d
 
 msgid "The wires between %s and %s removed, the poles stay (Ctrl+Z takes it back)"
 msgstr "Druty między %s a %s usunięte, słupy zostają (Ctrl+Z cofa)"
+
+msgid "Messenger B through a messenger only cantilever"
+msgstr "Lina B przez wysięgnik samej liny"
+
+msgid "The cantilever has no clamp for the messenger of this network: a messenger only cantilever (129x, 1002-1015) on this pole, that much higher than the messenger here, holds it (messenger_from)"
+msgstr "Wysięgnik nie ma uchwytu liny tej sieci: trzyma ją wysięgnik samej liny (129x, 1002-1015) na tym słupie, o tyle wyżej od liny tutaj (messenger_from)"

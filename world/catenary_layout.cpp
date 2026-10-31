@@ -54,6 +54,20 @@ void layout_tables::parse( std::vector<std::string> const &Tokens, std::string c
                 index = std::min( index + 3, count );
             }
         }
+        else if( key == "curve_messenger" ) {
+            // curve_messenger <promień> <przesunięcie liny na zewnątrz łuku>
+            double radius { 0.0 }, outward { 0.0 };
+            if( index + 2 <= count && to_number( Tokens[ index ], radius ) && to_number( Tokens[ index + 1 ], outward ) && radius > 0.0 ) {
+                if( false == m_messengeroutwardread ) { m_messengeroutward.clear(); m_messengeroutwardread = true; }
+                m_messengeroutward.emplace_back( radius, outward );
+                std::sort( m_messengeroutward.begin(), m_messengeroutward.end() );
+                index += 2;
+            }
+            else {
+                Errors.push_back( "Bad layout file \"" + Source + "\": \"curve_messenger\" needs a radius and a shift" );
+                index = std::min( index + 2, count );
+            }
+        }
         else if( key == "curve_stagger" ) {
             double value { 0.0 };
             if( index < count && to_number( Tokens[ index ], value ) && value > 0.0 ) { m_curvestagger = value; }
@@ -64,6 +78,20 @@ void layout_tables::parse( std::vector<std::string> const &Tokens, std::string c
             Errors.push_back( "Bad layout file \"" + Source + "\": unexpected token \"" + key + "\"" );
         }
     }
+}
+
+double layout_tables::messenger_outward( double const Radius ) const {
+
+    if( Radius <= 0.0 || m_messengeroutward.empty() ) { return 0.0; }
+    if( Radius <= m_messengeroutward.front().first ) { return m_messengeroutward.front().second; }
+    if( Radius >= m_messengeroutward.back().first ) { return 0.0; }
+    for( std::size_t row = 1; row < m_messengeroutward.size(); ++row ) {
+        auto const &a { m_messengeroutward[ row - 1 ] }, &b { m_messengeroutward[ row ] };
+        if( Radius > b.first ) { continue; }
+        auto const t { ( Radius - a.first ) / ( b.first - a.first ) };
+        return a.second + ( b.second - a.second ) * t;
+    }
+    return 0.0;
 }
 
 double layout_tables::nominal_span( std::string const &Symbol, int const Zone ) const {

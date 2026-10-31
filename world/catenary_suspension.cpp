@@ -570,4 +570,15 @@ support_data const *support_registry::find( std::string const &Model ) const {
     return ( lookup != m_supports.end() ? &lookup->second : nullptr );
 }
 
+void
+shift_suspensions( suspension_file &File, double const *Offset, double const Sign ) {
+    if( Offset == nullptr ) { return; }
+    auto const shift = [ & ]( double *Point ) { for( int i = 0; i < 3; ++i ) { Point[ i ] += Sign * Offset[ i ]; } };
+    for( auto &entry : File.entries ) {
+        shift( entry.at ); shift( entry.attach ); shift( entry.rope ); shift( entry.pole ); shift( entry.spread );
+    }
+    for( auto &anchor : File.anchors ) { shift( anchor.pole ); shift( anchor.toward ); }
+    for( auto &gantry : File.gantries ) { shift( gantry.points[ 0 ] ); shift( gantry.points[ 1 ] ); }
+}
+
 } // namespace catenary

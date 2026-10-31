@@ -72,6 +72,9 @@ struct span_points {
     // druga (dolna) lina nośna kończy się gdzie indziej niż o odstęp lin pod pierwszą (uchwyt krańcowy w kotwieniu z dwiema liniami)
     bool messenger2_start_set { false }, messenger2_end_set { false };
     vec3 messenger2_start, messenger2_end;
+    // rozstaw przewodów jezdnych w uchwytach na początku i końcu przęsła, inny niż w typie (ramiona 6207/6208: 0,10 m); przechodzi
+    // w rozstaw typu do pierwszego wieszaka. 0 = jak w typie
+    double contact_spread[ 2 ] { 0.0, 0.0 };
 };
 
 // policzone przęsło

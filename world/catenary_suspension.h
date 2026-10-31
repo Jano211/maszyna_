@@ -181,6 +181,10 @@ struct suspension_file {
 // Błędne wpisy są pomijane, a opis każdego błędu trafia do Errors
 void parse_suspensions( std::vector<std::string> const &Tokens, std::string const &Source, suspension_file &Output, std::vector<std::string> &Errors );
 
+// przesuwa wszystkie punkty pliku (podwieszenia, kotwienia, bramki) o Offset - blok "origin" scenerii, w którym stoi dyrektywa
+// "catenary" albo wpis sieci; przy zapisie pliku z edytora przesunięcie odejmowane (Sign -1)
+void shift_suspensions( suspension_file &File, double const *Offset, double Sign = 1.0 );
+
 // wpis podwieszenia w postaci tekstu do pliku (jedna linia, bez znaku końca linii), w tej samej składni, którą czyta parse_suspensions.
 // punkty z dokładnością do milimetra
 std::string write_suspension( suspension const &Entry );

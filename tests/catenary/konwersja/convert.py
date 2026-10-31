@@ -3,7 +3,7 @@ import sys,math,re,collections,subprocess
 sys.path.insert(0,__import__('os').path.dirname(__file__))
 from parse_siec import *; from tracks import *
 SRC,TRK,INC,OUT,NETFILE,NETREF,REPO=sys.argv[1:8]
-OFF=tuple(map(float,sys.argv[8].split(','))) if len(sys.argv)>8 else (0.0,0.0,0.0)  # origin pliku sceny: plik sieci ma wspolrzedne bezwzgledne
+OFF=(0.0,0.0,0.0)  # od 2026-10-31 dyrektywa catenary bierze origin, wiec plik sieci ma wspolrzedne jak sceneria (8. argument niepotrzebny)
 lines,incs,spans,head=load_siec(SRC,INC)
 TI=TrackIndex(load_tracks(TRK))
 POLES={'sts2':'1613-11','sts1':'1613-11','stb1':'1701'}
