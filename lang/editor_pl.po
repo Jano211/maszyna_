@@ -11062,6 +11062,9 @@ msgstr "Urządzenie naprężające na słupie, który już stoi (z wysięgnikiem
 msgid "On the pole of %s"
 msgstr "Na słupie %s"
 
+msgid "On leg %d of gantry %s"
+msgstr "Na nodze %d bramki %s"
+
 msgid "This pole can't carry the anchor: it has to be a pole (not a drop or a point) from the file of the chain"
 msgstr "Na tym słupie nie da się zakotwić: musi to być słup (nie zwis ani punkt) z pliku łańcucha"
 
@@ -12256,11 +12259,23 @@ msgstr "Przęsło naprężenia: LPM przy torze w miejscu pierwszego słupa krzy�
 msgid "Anchor %s is on the pole of %s now; its own pole is gone (Ctrl+Z takes it back)"
 msgstr "Kotwienie %s jest teraz na słupie %s; jego własny słup zniknął (Ctrl+Z cofa)"
 
+msgid "This gantry can't carry the anchor: it has to be in the file of the chain"
+msgstr "Ta bramka nie utrzyma kotwienia: musi być w pliku łańcucha"
+
+msgid "Anchor %s is on leg %d of gantry %s now; its own pole is gone (Ctrl+Z takes it back)"
+msgstr "Kotwienie %s jest teraz na nodze %d bramki %s; jego własny słup zniknął (Ctrl+Z cofa)"
+
+msgid "Click: the tensioning device on the leg of this gantry nearer to it"
+msgstr "Klik: urządzenie naprężające na bliższej nodze tej bramki"
+
 msgid "Move onto an existing pole"
 msgstr "Przepnij na istniejący słup"
 
 msgid "The tensioning device leaves its own pole and goes on the pole clicked (one already standing, with its cantilever)"
 msgstr "Urządzenie naprężające schodzi z własnego słupa na słup kliknięty (już stojący, z wysięgnikiem)"
+
+msgid "The tensioning device leaves its own pole and goes on the pole clicked (one already standing, with its cantilever), or on the leg of the gantry clicked (the one nearer to the device)"
+msgstr "Urządzenie naprężające schodzi ze swojego słupa na kliknięty słup (już stojący, z wysięgnikiem) albo na nogę klikniętej bramki (bliższą urządzeniu)"
 
 msgid "All the poles of the card at its distances along the track: on a crossing pole one cantilever \"z\" (120x) for the network working there, the lifted one goes past it freely; the anchors at both ends; the chain being built comes in and ends at the far anchor, a new chain starts at the near anchor and goes on"
 msgstr "Wszystkie słupy karty w jej odległościach wzdłuż toru: na słupie krzyżowym jeden wysięgnik „z” (120x) sieci, która tam pracuje, poderwana przechodzi obok swobodnie; kotwienia na obu końcach; ciągnięty łańcuch wchodzi i kończy się na dalszym kotwieniu, nowy zaczyna się na bliższym i ciągnie się dalej"

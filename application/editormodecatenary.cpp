@@ -1589,8 +1589,8 @@ int catenary_editor::catenary_anchor_hit() const
 		if (anchor == nullptr)
 			continue;
 		auto distance{std::numeric_limits<float>::max()};
-		// its own anchor pole (one standing on the pole of a suspension is picked with that pole)
-		if (anchor->on.empty())
+		// its own anchor pole (one standing on the pole of a suspension is picked with that pole, on a gantry leg - by its device)
+		if (anchor->on.empty() && anchor->gantry.empty())
 		{
 			glm::dvec3 const foot{anchor->pole[0], anchor->pole[1], anchor->pole[2]};
 			if (glm::distance(foot, camera) > kCatenaryRange)
@@ -2491,7 +2491,7 @@ bool catenary_editor::catenary_anchor_cantilever_spot(TTrack &Track, int const P
 	auto const *anchor{tool.anchor_cantilever >= 0 ? catenary_anchor_get(static_cast<std::size_t>(tool.anchor_cantilever)) : nullptr};
 	auto const *catalog{catenary_scene_catalog()};
 	auto const *pole{anchor != nullptr && catalog != nullptr ? catalog->pole(anchor->pole_type) : nullptr};
-	if (anchor == nullptr || false == anchor->on.empty())
+	if (anchor == nullptr || false == anchor->on.empty() || false == anchor->gantry.empty())
 		return false;
 	glm::dvec3 const foot{anchor->pole[0], anchor->pole[1], anchor->pole[2]};
 	// square to the anchor pole on this track, on the side of the pole; not onto a drop of the selected gantry
@@ -3773,6 +3773,45 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 	}
 	if (is_intent(Intent, intent_detail::gantry))
 	{
+		if (tool.anchor_move >= 0)
+		{
+			// the anchor off its own pole onto a leg of this gantry: the one nearer to the anchor (Jan 2026-10-31, card 0455 ex. 4/5)
+			auto const *gantry{catenary_gantry_get(static_cast<std::size_t>(Intent.index))};
+			auto const *anchor{catenary_anchor_get(static_cast<std::size_t>(tool.anchor_move))};
+			if (anchor == nullptr || gantry == nullptr || catenary_gantry_file(static_cast<std::size_t>(Intent.index)) != catenary_anchor_file(static_cast<std::size_t>(tool.anchor_move)))
+			{
+				tool.status = STR("This gantry can't carry the anchor: it has to be in the file of the chain");
+				return;
+			}
+			glm::dvec2 const own{anchor->pole[0], anchor->pole[2]};
+			int mast{-1};
+			auto best{std::numeric_limits<double>::max()};
+			for (int k = 0; k < 2; ++k)
+				if (false == gantry->masts[k].empty())
+					if (auto const distance{glm::distance(own, glm::dvec2{gantry->points[k][0], gantry->points[k][2]})}; distance < best)
+					{
+						best = distance;
+						mast = k;
+					}
+			if (mast < 0)
+				return;
+			auto data{*anchor};
+			data.on.clear();
+			data.gantry = gantry->name;
+			data.mast = mast;
+			data.pole_type = gantry->masts[mast];
+			std::copy(std::begin(gantry->points[mast]), std::end(gantry->points[mast]), data.pole);
+			catenary_change before;
+			before.group = ++tool.group;
+			before.anchor = true;
+			before.index = static_cast<std::size_t>(tool.anchor_move);
+			before.anchor_before = *anchor;
+			tool.undo.push_back(before);
+			catenary_anchor_update(static_cast<std::size_t>(tool.anchor_move), data);
+			tool.status = format(STR_C("Anchor %s is on leg %d of gantry %s now; its own pole is gone (Ctrl+Z takes it back)"), data.name.c_str(), mast + 1, gantry->name.c_str());
+			tool.anchor_move = -1;
+			return;
+		}
 		tool.gantry_selected = Intent.index;
 		tool.selected = -1;
 		tool.anchor_selected = -1;
@@ -3895,7 +3934,7 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 			                         : format(STR_C("Anchor %s isn't at the end of any chain"), anchor->name.c_str());
 			// held and dragged: its pole goes along the track, at the distance from the track axis it has now (an anchor on the
 			// pole of a suspension goes with that pole)
-			if (anchor->on.empty())
+			if (anchor->on.empty() && anchor->gantry.empty())
 			{
 				tool.dragging = 3;
 				tool.drag_start = e.cursor_ground();
@@ -4800,6 +4839,8 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 		}
 		if (false == data.on.empty())
 			ImGui::TextDisabled("%s", format(STR_C("On the pole of %s"), data.on.c_str()).c_str());
+		else if (false == data.gantry.empty())
+			ImGui::TextDisabled("%s", format(STR_C("On leg %d of gantry %s"), data.mast + 1, data.gantry.c_str()).c_str());
 		else
 		{
 			// onto a pole already standing (the one of the catalogue next to it, say), the own pole goes
@@ -4813,7 +4854,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 					tool.status = moving ? std::string{} : STR("LMB on the pole the tensioning device goes on");
 				}
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("The tensioning device leaves its own pole and goes on the pole clicked (one already standing, with its cantilever)"));
+					ImGui::SetTooltip("%s", STR_C("The tensioning device leaves its own pole and goes on the pole clicked (one already standing, with its cantilever), or on the leg of the gantry clicked (the one nearer to the device)"));
 			}
 			// the anchor pole along the line of the last two poles; how far it's to the side of that line stays
 			glm::dvec2 const pole{data.pole[0], data.pole[2]};
@@ -4855,7 +4896,7 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("The anchor pole gets a cantilever to a track by it (the same or the neighbouring one); the pole is then stood by that cantilever and the anchor stays on it. The cantilever can start or go on with a chain like any other pole"));
 		}
-		if (data.on.empty() && ImGui::BeginCombo(STR_C("Anchor pole"), data.pole_type.c_str()))
+		if (data.on.empty() && data.gantry.empty() && ImGui::BeginCombo(STR_C("Anchor pole"), data.pole_type.c_str()))
 		{
 			auto chosen{static_cast<int>(std::find(tool.poles.begin(), tool.poles.end(), data.pole_type) - tool.poles.begin())};
 			if (grouped_items(tool.poles, chosen) && chosen >= 0 && chosen < static_cast<int>(tool.poles.size()))
@@ -7196,8 +7237,8 @@ void catenary_editor::draw_catenary_overlay() const
 		ImVec2 head;
 		if (false == catenary_anchor_shape(index, shape))
 		{
-			if (false == anchor->on.empty())
-				continue; // on the pole of a suspension: that one shows what's wrong with it
+			if (false == anchor->on.empty() || false == anchor->gantry.empty())
+				continue; // on the pole of a suspension or a gantry leg: that one shows what's wrong with it
 			glm::dvec3 const foot{anchor->pole[0], anchor->pole[1], anchor->pole[2]};
 			if (glm::distance(foot, camera) > kCatenaryRange)
 				continue;
@@ -7216,7 +7257,7 @@ void catenary_editor::draw_catenary_overlay() const
 		auto const width{selected || hovered ? 3.0f : 1.5f};
 		projection.line(drawlist, face, lever, colour, width);
 		projection.line(drawlist, top, bottom, colour, width);
-		if (anchor->on.empty())
+		if (anchor->on.empty() && anchor->gantry.empty())
 		{
 			// its own anchor pole: it's picked and dragged too
 			glm::dvec3 const foot{anchor->pole[0], anchor->pole[1], anchor->pole[2]};
@@ -7508,7 +7549,7 @@ void catenary_editor::catenary_anchor_drag()
 	auto &tool{m_catenary};
 	auto const index{static_cast<std::size_t>(std::max(tool.anchor_selected, 0))};
 	auto const *anchor{tool.anchor_selected >= 0 ? catenary_anchor_get(index) : nullptr};
-	if (anchor == nullptr || false == anchor->on.empty())
+	if (anchor == nullptr || false == anchor->on.empty() || false == anchor->gantry.empty())
 		return;
 	auto const now{e.cursor_ground()};
 	auto target{tool.drag_anchor + glm::dvec3{now.x - tool.drag_start.x, 0.0, now.z - tool.drag_start.z}};
@@ -7815,7 +7856,9 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 	if (auto const hit{catenary_gantry_hit()}; hit >= 0)
 	{
 		Intent.index = hit;
-		Intent.action = hit == m_catenary.gantry_selected ? STR("Drag: move the gantry") : STR("Click: put the cantilevers on drops on this gantry, drag: move it");
+		Intent.action = m_catenary.anchor_move >= 0     ? STR("Click: the tensioning device on the leg of this gantry nearer to it")
+		                : hit == m_catenary.gantry_selected ? STR("Drag: move the gantry")
+		                                                    : STR("Click: put the cantilevers on drops on this gantry, drag: move it");
 		Intent.what = kind::catenary;
 		Intent.detail = static_cast<int>(intent_detail::gantry);
 		return true;

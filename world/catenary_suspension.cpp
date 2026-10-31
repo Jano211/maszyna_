@@ -227,6 +227,12 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else if( key == "pole" ) { line.pole_type = one(); point( line.pole ); haspole = true; }
                 else if( key == "toward" ) { point( line.toward ); hastoward = true; }
                 else if( key == "on" ) { line.on = one(); }
+                else if( key == "gantry" ) {
+                    line.gantry = one();
+                    double value { 1.0 };
+                    number( value );
+                    line.mast = value > 1.5 ? 1 : 0;
+                }
                 else if( key == "distance" ) { number( line.distance ); }
                 else if( key == "color" ) { line.color = one(); }
                 else if( key == "top_color" ) { line.top_color = one(); }
@@ -501,6 +507,7 @@ std::string write_anchor( anchor const &Entry ) {
     if( false == Entry.network.empty() ) { text += " network " + Entry.network; }
     text += " pole " + Entry.pole_type + " " + point( Entry.pole );
     if( false == Entry.on.empty() ) { text += " on " + Entry.on; }
+    if( false == Entry.gantry.empty() ) { text += " gantry " + Entry.gantry + " " + std::to_string( Entry.mast + 1 ); }
     text += " toward " + point( Entry.toward ) + " distance " + number( Entry.distance, 1 );
     if( false == Entry.color.empty() ) { text += " color " + Entry.color; }
     if( false == Entry.top_color.empty() ) { text += " top_color " + Entry.top_color; }

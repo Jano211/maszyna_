@@ -15,6 +15,17 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-10-31
 
+### Edytor sieci: kotwienie na nodze bramki — (ten commit)
+- Kotwienie (ciężarowe albo stałe) można przepiąć na nogę bramki: w panelu kotwienia „Przepnij na istniejący słup”, potem
+  klik w bramkę – urządzenie idzie na nogę bliższą kotwieniu, jego własny słup znika (Ctrl+Z cofa). W panelu „Na nodze N bramki X”.
+  Przesunięcie, obrót i zmiana szerokości bramki przenoszą kotwienie razem z nogą.
+- Uchwyty wg karty 0455: wyk. 4 – nogi z ceowników 160–200 (3111–3123, a także 3032–3038 – ZAŁOŻENIE), 4520-4, śruby 0,107;
+  wyk. 5 – C240 (3031–3037), 4520-5, śruby 0,127; tyły 4520-8. Dół (4560-1) do czasu modelu jak góra. Uchwyty obejmują półkę
+  jednego ceownika (75 / 85 mm – ZAŁOŻENIE).
+- W pliku sieci wpis kotwienia dostaje `gantry <bramka> <1|2>` (stare exe go nie zna – takie kotwienie pominie).
+- Zmienia: `world/catenary_suspension.*`, `world/catenary_scene.cpp`, `application/editormodecatenary.cpp`, `lang/editor_pl.po`,
+  dane `traction_tensioners.txt` (do `data/`). Wymaga: nic.
+
 ### Edytor sieci: wysięgniki na nogach bramki idą za nogami — `e695949`
 - Zmiana dźwigara (czyli szerokości bramki), słupów, obrót i „prostopadle do toru” przesuwają nogi bramki; wysięgniki
   przyczepione do nóg zostawały w starym miejscu. Teraz idą z nogą i składają się od nowa: karta z nowej odległości
