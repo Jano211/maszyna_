@@ -1066,6 +1066,20 @@ assemble_anchor( scene_anchor &Anchor ) {
             lean = owner.lean * 3.14159265358979323846 / 180.0;
         }
     }
+    // na nodze bramki: typ i punkt jej słupa, płaszczyzna jak wysięgnika na nim - wzdłuż dźwigara (Jan 2026-10-31; karta 0455 wyk. 4/5)
+    if( data.on.empty() && false == data.gantry.empty() ) {
+        auto const found { std::find_if( Gantries.begin(), Gantries.end(), [ & ]( scene_gantry const &Gantry ) {
+            return false == Gantry.removed && Gantry.file == Anchor.file && Gantry.data.name == data.gantry; } ) };
+        if( found == Gantries.end() || found->data.masts[ data.mast ].empty() ) {
+            ErrorLog( label + "is on mast " + std::to_string( data.mast + 1 ) + " of gantry \"" + data.gantry + "\", which isn't in the file or has no such mast" );
+            return 0;
+        }
+        poletype = found->data.masts[ data.mast ];
+        std::copy( std::begin( found->data.points[ data.mast ] ), std::end( found->data.points[ data.mast ] ), polepoint );
+        auto const &other { found->data.points[ 1 - data.mast ] };
+        cantilever[ 0 ] = other[ 0 ] - polepoint[ 0 ];
+        cantilever[ 1 ] = other[ 2 ] - polepoint[ 2 ];
+    }
     auto const *pole { catalog->pole( poletype ) };
     if( pole == nullptr ) { ErrorLog( label + "uses pole \"" + poletype + "\" which isn't in the supports catalogue" ); return 0; }
     catenary::tensioner_input input;
@@ -1121,6 +1135,12 @@ assemble_anchor( scene_anchor &Anchor ) {
         auto const rollers { data.height > 0.0 ? data.height : devicetable != nullptr ? devicetable->height : 6.7 };
         // słup z szerokością wzdłuż toru (161x): urządzenie i uchwyty na ścianach wzdłuż drutów, śruby przez szerokość
         input.depth = [ pole, rollers ]( double const Height ) { return pole->width > 0.0 ? pole->width : 0.5 * pole->depth( rollers ) + 0.5 * pole->depth( Height ); };
+    }
+    if( data.on.empty() && false == data.gantry.empty() ) {
+        // noga bramki z dwóch ceowników: uchwyty 4520-4/-5 obejmują półkę jednego ceownika (śruby 0,107 / 0,127) - ZAŁOŻENIE: półka
+        // 75 mm (C160-200, wyk. 4), 85 mm (C240, wyk. 5)
+        auto const flange { pole->width >= 0.235 ? 0.085 : 0.075 };
+        input.depth = [ flange ]( double ) { return flange; };
     }
     input.color = data.color;
     input.top_color = data.top_color;
@@ -1371,7 +1391,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     };
     // słup: Y wysięgnika od toru do słupa (słup po tej stronie drutów, po której stoi względem punktu "toward");
     // istniejący słup stawia jego podwieszenie
-    if( data.on.empty() ) {
+    if( data.on.empty() && data.gantry.empty() ) {
         double sidex { dz }, sidez { -dx };
         if( ( axis.x - data.toward[ 0 ] ) * sidex + ( axis.z - data.toward[ 2 ] ) * sidez < 0.0 ) { sidex = -sidex; sidez = -sidez; }
         auto const poleheading { std::atan2( sidex, sidez ) };
@@ -3753,6 +3773,12 @@ catenary_gantry_update( std::size_t const Index, catenary::gantry const &Data ) 
     assemble_gantry( gantry );
     mark_changed( gantry.file );
     reassemble_gantry_neighbours( Index, before );
+    // kotwienia na jej nogach idą za nimi
+    for( auto &anchor : Anchors ) {
+        if( anchor.removed || anchor.file != gantry.file || anchor.data.gantry.empty() || ( anchor.data.gantry != Data.name && anchor.data.gantry != before.name ) ) { continue; }
+        assemble_anchor( anchor );
+        follow_anchor( anchor );
+    }
     // wysięgniki na słupach tej bramki: mocowania pod dźwigarem na jej (może zmienionym) poziomie
     if( auto const *catalog { cantilevers() }; catalog != nullptr ) {
         for( std::size_t index = 0; index < Suspensions.size(); ++index ) {

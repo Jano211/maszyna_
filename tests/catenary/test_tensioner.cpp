@@ -621,6 +621,30 @@ int main( int argc, char **argv ) {
         check( good, std::string( "rolki szeregowe " ) + name + ": 4 rolki, zabezpieczenie 4600-3/-4/-5 (2 komplety), lina stalej dlugosci (karta 4490-2: 10,00 m), ciezary 4 razy b, tablica 0011-5 bn 2,50" );
     }
 
+    // kotwienie na nodze bramki (karta 0455 wyk. 4 i 5): uchwyty 4520-4 / 4520-5 z tylami 4520-8
+    if( auto const *device { catalog.device( "0461" ) }; device != nullptr ) {
+        auto good { true };
+        for( auto const *mast : { "3111", "3032-1", "3031-1" } ) {
+            catenary::tensioner_input input;
+            input.type = 3;
+            input.pole = mast;
+            // jak w scenie: polka ceownika (75 mm wyk. 4, 85 mm wyk. 5)
+            auto const flange { std::string( mast ) == "3031-1" ? 0.085 : 0.075 };
+            input.depth = [ flange ]( double ) { return flange; };
+            catenary::tensioner_result result;
+            auto const solved { catenary::solve_tensioner( catalog, *device, input, result ) };
+            int brackets { 0 };
+            std::string const wanted { std::string( mast ) == "3031-1" ? "4520-05" : "4520-04" };
+            for( auto const &part : result.parts ) { brackets += part.part == wanted || part.part == "4520-08"; }
+            if( false == result.warnings.empty() ) { std::printf( "      %s: %s\n", mast, result.warnings.front().c_str() ); }
+            if( false == solved ) { std::printf( "      %s: nie zlozone\n", mast ); }
+            good = good && solved && result.warnings.empty() && brackets >= 4;
+            std::printf( "    noga bramki %s: %d czesci uchwytow (%s + 4520-08)\n", mast, brackets, wanted.c_str() );
+        }
+        check( good, "0461 na nodze bramki: uchwyty karty 0455 wyk. 4 (C160-200) i wyk. 5 (C240)" );
+    }
+    else { check( false, "urzadzenie 0461 dla nogi bramki" ); }
+
     // YC120-2C150 (typ 20) na jednym stosie rolek szeregowych (Jan 2026-10-31): bez ostrzezen, naciag ~4236 daN, lina ~1588 daN
     for( auto const *name : { "0471", "0480" } ) {
         auto const *series { catalog.device( name ) };

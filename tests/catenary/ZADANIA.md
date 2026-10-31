@@ -227,6 +227,11 @@ Te rzeczy są w danych jako ZAŁOŻENIE albo czekają na obejrzenie w grze. Odha
 - [x] 0738/0748: odciąg 6002-09 nie sięga głowicy przy wysięgu ze środka pasma
 - [x] 1012–1015 wyk. 1 nie składają się na niskich słupach (1666/1667/1701) – tak ma być?
 
+**Modele do zrobienia (Jan 2026-10-31)**
+
+- [ ] Uchwyty kotwień do konstrukcji (karty 0450–0458): **4530, 4550, 4560, 4570, 4580** – brakuje. Dziś w ich miejscu 4520
+  (np. dół uchwytów na nogach bramek: 4560-1 → 4520-4/-5)
+
 **Poprawki w modelach (Jan)**
 
 - [ ] 4330-05: drugi pusty `eye` w miejscu `hole_1`; 4340-01: dwa `slide_horizontal_min`

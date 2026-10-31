@@ -126,6 +126,8 @@ struct anchor {
     double      pole[ 3 ] { 0.0, 0.0, 0.0 };
     std::string on;                         // kotwienie na istniejącym słupie: nazwa podwieszenia (z tego pliku), którego słup to
                                             // jest; słupa nie stawia, typ i punkt bierze z tamtego wpisu (pole tylko zapasowo)
+    std::string gantry;                     // kotwienie na nodze bramki (wpis "gantry <bramka> <1|2>"): bramka z tego pliku i jej słup
+    int         mast { 0 };                 // (0, 1); słupa nie stawia, typ i punkt z bramki (pole tylko zapasowo)
     double      toward[ 3 ] { 0.0, 0.0, 0.0 };
     double      distance { 700.0 };
     std::string color, top_color;
