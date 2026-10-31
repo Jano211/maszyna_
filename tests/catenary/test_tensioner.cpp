@@ -638,10 +638,33 @@ int main( int argc, char **argv ) {
             for( auto const &part : result.parts ) { brackets += part.part == wanted || part.part == "4520-08"; }
             if( false == result.warnings.empty() ) { std::printf( "      %s: %s\n", mast, result.warnings.front().c_str() ); }
             if( false == solved ) { std::printf( "      %s: nie zlozone\n", mast ); }
+            // dol prowadnicy: 4560 wg ceownika (01 C240, 03 C200, 05 C160/C140)
+            std::string const low { std::string( mast ) == "3031-1" ? "4560-01" : std::string( mast ) == "3111" ? "4560-03" : "4560-05" };
+            auto const lows { std::count_if( result.parts.begin(), result.parts.end(), [ & ]( auto const &Part ) { return Part.part == low; } ) };
+            good = good && lows == 1;
             good = good && solved && result.warnings.empty() && brackets >= 4;
             std::printf( "    noga bramki %s: %d czesci uchwytow (%s + 4520-08)\n", mast, brackets, wanted.c_str() );
         }
-        check( good, "0461 na nodze bramki: uchwyty karty 0455 wyk. 4 (C160-200) i wyk. 5 (C240)" );
+        check( good, "0461 na nodze bramki: uchwyty karty 0455 wyk. 4 (C160-200) i wyk. 5 (C240), dol 4560-01/-03/-05" );
+        // polbramka 1901 (slup przestrzenny): 4570-1 bez tylu; slup 1701: dol prowadnicy 4530-3 z tylem 4530-4
+        {
+            catenary::tensioner_input input;
+            input.type = 3;
+            input.pole = "polbramka_1901_10m";
+            input.depth = []( double ) { return 0.085; };
+            catenary::tensioner_result result;
+            auto const solved { catenary::solve_tensioner( catalog, *device, input, result ) };
+            auto const fronts { std::count_if( result.parts.begin(), result.parts.end(), []( auto const &Part ) { return Part.part == "4570-01"; } ) };
+            auto const backs { std::count_if( result.parts.begin(), result.parts.end(), []( auto const &Part ) { return Part.role.find( ".back" ) != std::string::npos; } ) };
+            input.pole = "1701";
+            input.depth = []( double ) { return 0.25; };
+            catenary::tensioner_result concrete;
+            auto const solved2 { catenary::solve_tensioner( catalog, *device, input, concrete ) };
+            auto const c3 { std::count_if( concrete.parts.begin(), concrete.parts.end(), []( auto const &Part ) { return Part.part == "4530-03"; } ) };
+            auto const c4 { std::count_if( concrete.parts.begin(), concrete.parts.end(), []( auto const &Part ) { return Part.part == "4530-04"; } ) };
+            std::printf( "    polbramka: 4570-01 x%d, tylow %d; 1701: 4530-03 x%d, 4530-04 x%d\n", static_cast<int>( fronts ), static_cast<int>( backs ), static_cast<int>( c3 ), static_cast<int>( c4 ) );
+            check( solved && solved2 && fronts == 4 && backs == 0 && c3 == 1 && c4 == 1, "uchwyty 4570 (polbramki, bez tylu) i 4530-3/-4 (dol prowadnicy na 1701)" );
+        }
     }
     else { check( false, "urzadzenie 0461 dla nogi bramki" ); }
 
