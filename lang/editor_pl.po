@@ -12282,3 +12282,9 @@ msgstr "LPM: zaznacz punkt, przeciągnij, żeby go przesunąć   Shift+LPM: doda
 
 msgid "LMB: select a piece, a junction, a point (white dot) or a marker; drag a point to move it"
 msgstr "LPM: zaznacz odcinek, skrzyżowanie, punkt (biała kropka) albo znacznik; przeciągnij punkt, żeby go przesunąć"
+
+msgid "Make the terrain under the tracks anew around the camera"
+msgstr "Zrób od nowa teren pod torami wokół kamery"
+
+msgid "Only the chunks around the camera (%d along a side, as set on the Chunks page) are made anew from the model and drawn to the tracks, their painting too; the rest of the terrain stays as it is.\nPlaces where a track lies more than 10 m over or under the model, as a track left at height zero, don't pull the terrain"
+msgstr "Od nowa z modelu i dociągnięte do torów są tylko kafle wokół kamery (%d na bok, jak ustawione w sekcji Kafle), razem z malowaniem; reszta terenu zostaje jak jest.\nMiejsca, gdzie tor leży ponad 10 m nad albo pod modelem, jak tor zostawiony na wysokości zero, nie ciągną terenu"
