@@ -10,8 +10,8 @@ Al 23e-6; `swing_shift` w catenary_scene.cpp). Wysięgnik (wszystkie części po
 `*_rod`) obraca się wokół pionu przez `strut_hinge` tak, żeby uchwyt liny przesunął się o ten przesuw wzdłuż toru; bez zawiasu (wpis
 bez słupa) – bez obrotu. Końce przęseł idą za nim (`swing_wire` / `swing_rope` w `raw_point`). > 12° – uwaga w logu. Przebudowa:
 `catenary_scene_temperature` (suwak pogody, `settemperature`), zmiana / usunięcie łańcucha, po wczytaniu. `catenary_scene_swing(i)` – kąt.
-Test `te` (−20 °C: ±0,64° na 60 m). ZAŁOŻENIA: obracają się wszystkie wysięgniki na zawiasie, także „nieprzechylne” 12xx i teowniki
-(do potwierdzenia z Janem); oś pionowa, nie przez ucho odciągu; wysięgnik idzie za liną nośną (przewody stalowe/Cu – różnicę biorą wieszaki).
+Test `te` (−20 °C: ±0,64° na 60 m). Obracają się wszystkie wysięgniki na zawiasie, także „nieprzechylne” 12xx i teowniki (Jan: „po to jest
+zawias”), na łukach też (Głowacki s. 357: korygować ukośniki wg temperatury i odległości od kotwienia). ZAŁOŻENIA: oś pionowa, nie przez ucho odciągu; wysięgnik idzie za liną nośną (przewody stalowe/Cu – różnicę biorą wieszaki).
 W exe NIESPRAWDZONE.
 
 **GAŁĘZIE (od 29.10): pracujemy na gl46.** `siec-gl46` (= `feat/gl46-migration` kolegi + sieć), `bujanie-gl46`, wspólna
