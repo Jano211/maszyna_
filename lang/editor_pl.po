@@ -11421,8 +11421,8 @@ msgstr "Ponad 160 km/h: odsuw na prostej do 0,20 m, przęsło normalne 62 ±4 m,
 msgid "Stagger on a straight, either side (m)"
 msgstr "Odsuw na prostej, na przemian (m)"
 
-msgid "From the track axis, in turn to its two sides: up to 0.30 m, over 160 km/h up to 0.20 m (Iet-107 3.4.4.3, 7.4.2.1)"
-msgstr "Od osi toru, na przemian w obie strony: do 0,30 m, ponad 160 km/h do 0,20 m (Iet-107 3.4.4.3, 7.4.2.1)"
+msgid "From the track axis, in turn to its two sides: up to 0.30 m, over 160 km/h up to 0.20 m (Iet-107 3.3.4.3, 7.4.2.1)"
+msgstr "Od osi toru, na przemian w obie strony: do 0,30 m, ponad 160 km/h do 0,20 m (Iet-107 3.3.4.3, 7.4.2.1)"
 
 msgid "Stagger on a curve, outwards (m)"
 msgstr "Odsuw na łuku, na zewnątrz (m)"
@@ -11541,8 +11541,8 @@ msgstr "Kliknij: zaznacz słup i przeleć do niego"
 msgid "%s: stagger %.2f m, more than the %.2f m allowed (Iet-107 %s)"
 msgstr "%s: odsuw %.2f m, więcej niż dopuszczalne %.2f m (Iet-107 %s)"
 
-msgid "%s: on a curve the wires go to its outside (Iet-107 3.4.4.4)"
-msgstr "%s: na łuku przewody idą na zewnątrz łuku (Iet-107 3.4.4.4)"
+msgid "%s: on a curve the wires go to its outside (Iet-107 3.3.4.4)"
+msgstr "%s: na łuku przewody idą na zewnątrz łuku (Iet-107 3.3.4.4)"
 
 msgid "Span %s - %s: %.1f m, longer than the %.1f m allowed there"
 msgstr "Przęsło %s - %s: %.1f m, dłuższe niż dopuszczalne tam %.1f m"
@@ -11553,8 +11553,8 @@ msgstr "Przęsło %s - %s: %.1f m, poza 62 ±4 m (Iet-107 7.4.3.1)"
 msgid "Span %s - %s: no zigzag, the wires on the same side of the track axis at both poles (Iet-107 4.6.4.3)"
 msgstr "Przęsło %s - %s: brak zygzaka, przewody przy obu słupach po tej samej stronie osi toru (Iet-107 4.6.4.3)"
 
-msgid "Span %s - %s: in its middle the wires are %.2f m inside the track axis of the curve, the span is too long for the stagger (Iet-107 3.4.4.4)"
-msgstr "Przęsło %s - %s: w jego środku przewody są %.2f m po wewnętrznej stronie osi toru na łuku, przęsło za długie na ten odsuw (Iet-107 3.4.4.4)"
+msgid "Span %s - %s: in its middle the wires are %.2f m inside the track axis of the curve, the span is too long for the stagger (Iet-107 3.3.4.4)"
+msgstr "Przęsło %s - %s: w jego środku przewody są %.2f m po wewnętrznej stronie osi toru na łuku, przęsło za długie na ten odsuw (Iet-107 3.3.4.4)"
 
 msgid "%s: the spans %.1f and %.1f m on both sides differ by %.0f %% (Iet-107 4.6.1.2: up to 10 %%)"
 msgstr "%s: przęsła %.1f i %.1f m po obu stronach różnią się o %.0f %% (Iet-107 4.6.1.2: najwyżej 10 %%)"
@@ -11565,8 +11565,8 @@ msgstr "Kotwienie środkowe przy %s: przęsła po obu stronach %.1f i %.1f m, r�
 msgid "Tension section %.0f m, longer than %.0f m (Iet-107 %s)"
 msgstr "Odcinek naprężenia %.0f m, dłuższy niż %.0f m (Iet-107 %s)"
 
-msgid "Weight anchors at both ends and no middle anchor (Iet-107 3.4.6.1, 4.6.3.2)"
-msgstr "Kotwienia ciężarowe na obu końcach bez kotwienia środkowego (Iet-107 3.4.6.1, 4.6.3.2)"
+msgid "Weight anchors at both ends and no middle anchor (Iet-107 3.3.6.1, 4.6.3.2)"
+msgstr "Kotwienia ciężarowe na obu końcach bez kotwienia środkowego (Iet-107 3.3.6.1, 4.6.3.2)"
 
 msgid "Zigzag of Iet-107: %zu poles changed, the others had it already"
 msgstr "Zygzak wg Iet-107: zmienione słupy: %zu, pozostałe już go miały"
@@ -11580,8 +11580,8 @@ msgstr "Przełożone: odsuw %.2f m do słupa (wysięgnik krótki)"
 msgid "Swapped: stagger %.2f m away from the pole (long cantilever)"
 msgstr "Przełożone: odsuw %.2f m od słupa (wysięgnik długi)"
 
-msgid "- on a curve the wires go to its outside (Iet-107 3.4.4.4)"
-msgstr "- na łuku przewody idą na zewnątrz łuku (Iet-107 3.4.4.4)"
+msgid "- on a curve the wires go to its outside (Iet-107 3.3.4.4)"
+msgstr "- na łuku przewody idą na zewnątrz łuku (Iet-107 3.3.4.4)"
 
 msgid "No card of the catalogue for the cantilever swapped: it stays as it was"
 msgstr "Brak w katalogu karty dla przełożonego wysięgnika: zostaje tak jak był"
