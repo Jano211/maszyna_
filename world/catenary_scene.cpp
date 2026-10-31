@@ -1137,7 +1137,7 @@ assemble_anchor( scene_anchor &Anchor ) {
         input.depth = [ pole, rollers ]( double const Height ) { return pole->width > 0.0 ? pole->width : 0.5 * pole->depth( rollers ) + 0.5 * pole->depth( Height ); };
     }
     if( data.on.empty() && false == data.gantry.empty() ) {
-        // noga bramki z dwóch ceowników: uchwyty 4520-4/-5 obejmują półkę jednego ceownika (śruby 0,107 / 0,127) - ZAŁOŻENIE: półka
+        // noga bramki z dwóch ceowników: uchwyty 4520-4/-5 chwytają jeden ceownik (Jan 2026-10-31), jego półkę (śruby 0,107 / 0,127); ZAŁOŻENIE: półka
         // 75 mm (C160-200, wyk. 4), 85 mm (C240, wyk. 5)
         auto const flange { pole->width >= 0.235 ? 0.085 : 0.075 };
         input.depth = [ flange ]( double ) { return flange; };
