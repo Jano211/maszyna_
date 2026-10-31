@@ -666,7 +666,11 @@ std::optional<modifier_shape::effect> modifier_shape::evaluate(double const X, d
 	auto const slope{std::max(0.1, m_modifier.slope)};
 	auto const rounding{std::max(0.0, m_modifier.rounding)};
 	auto const ground{Ground};
-	auto const beyond{soft_max(0.0, distance - halfwidth, rounding)};
+	// how far out of the formation, eased in over the rounding so the slope starts at the very edge of the formation: the foot
+	// of the ballast stands on the formation, not on the ground already going down (a soft maximum of 0 and the distance reached
+	// up to a quarter of the rounding into the formation, a quarter of a metre down by the foot of the ballast of an embankment)
+	auto const out{distance - halfwidth};
+	auto const beyond{out <= 0.0 ? 0.0 : rounding <= 1e-6 ? out : out < rounding ? out * out / (2.0 * rounding) : out - 0.5 * rounding};
 	// the bends of the slopes round off only away from the formation: under it the ground is the formation itself, a cut or a
 	// fill as shallow as the bend isn't let to sink or rise it
 	auto const bend{rounding / slope * std::clamp(beyond / std::max(rounding, 1e-6), 0.0, 1.0)};
