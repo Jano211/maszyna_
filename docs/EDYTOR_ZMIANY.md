@@ -63,3 +63,4 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
   Ramion skrzyżowań się nie przeciąga. Zmienia `editormode.h`.
 
 ### Edytor dróg: Alt – łagodny łuk bez prostowania — `18636b8`
+- Przy budowie drogi z Alt łagodny łuk zostaje łukiem (bez Alt prawie prosty odcinek, poniżej 2 % rozpiętości, jest prostowany). Wymaga: nic.
