@@ -13,6 +13,25 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
   pliku rozwiązuje się, biorąc obie strony. Nowe wpisy idą przy pokrewnych tekstach, więc konfliktów będzie mniej.
 - Zmiana pól w `application/editormode.h` oznacza przebudowę prawie całego edytora (ok. 30 min).
 
+## 2026-11-01
+
+Branch `funkcja/tekstury-sieci` (od `f02b7d2`).
+
+### Sieć trakcyjna: wymienne tekstury wysięgników i słupów — `45fb061`
+- Panel słupa: „Tekstura wysięgnika” (textures/siec_trakcyjna/siec*) i „Tekstura słupa” (wg rodziny, np. 161x_*), przycisk
+  „Te tekstury na całym ciągu” (Ctrl+Z cofa). Cały wysięgnik (rury, zamocowania, izolatory, siodła, uziemienia) ma jedną
+  teksturę. Słup: `pole_skin` z wpisu, inaczej `skin` z katalogu słupów, inaczej „none”; fundamenty zawsze „none”.
+- Modele components/, słupy 161x i 1701 muszą mieć „Map: -1” (u Jana przerobione). Sceneria wstawiająca je ręcznie
+  z teksturą „none” zobaczy je bez tekstury.
+- Zmienia: `world/catenary_cantilever.*`, `world/catenary_suspension.*`, `world/catenary_scene.cpp`,
+  `application/editormodecatenary.cpp`, `lang/editor_pl.po`, dane `traction_supports.txt` (do `data/`). Wymaga: `49a3d78`
+  (wspólny plik edytora).
+
+### Sieć trakcyjna: stan przewodów „czarne” — `49a3d78`
+- Czwarty stan między przejściowym a zaśniedziałym: czarne, matowe przewody. Flaga 4 w pliku sieci (stare exe – jak nowe).
+- Zmienia: `world/Traction.*`, `world/catenary_span.cpp`, `application/editormodecatenary.cpp`, `lang/editor_pl.po`,
+  dane `traction_materials.txt` (do `data/`). Wymaga: nic.
+
 ## 2026-10-31
 
 ### Sieć trakcyjna: uchwyty kotwień 4530, 4560, 4570 — `7318b3c`
