@@ -4,6 +4,11 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 
 ## START TUTAJ – 2026-10-30 01:00 (najpierw to)
 
+**31.10 14:20 (Jan: przęsło zwarte wykryte, łączników nie ma):** `overlap_connector` rysował łącznik 33-0640 tylko, gdy wspólne było też
+przęsło PRZED – w czterosłupowym jest jedno wspólne. Teraz: przy każdym słupie krzyżowym, czyli na końcu części wspólnej (przęsło przed /
+za nie jest wspólne), 1,5 m od słupa, w obu końcach. Zwarte = ten sam zasilacz (nie none) i bez `isolated` (tak samo w panelu). Test `te`
+(`catenary_chain_connectors`). Plik Częstochowy przeliczony na współrzędne względem `origin -16000 0 0` (kopia `cze_nowa_siec_przed_originem.scm`).
+
 **31.10 wieczór: SZABLONY PRZĘSEŁ NAPRĘŻENIA (w exe NIESPRAWDZONE, nowy plik `world/catenary_overlap.cpp` w CMakeLists – odświeżyć projekt).**
 Karty z Katalogu ESN tom 1 (s. 36–52 PDF „z- KATALOG 1 -z.pdf”: 0060-3/-4/-10/-20/-26/-30/-32/-35, 0062-30/-32/-35, 0068, 0078-3/-4/-10/-30/-35)
 i Kolprojekt_2010-1.PDF s. 19–20 (0060-36/37) w `data/traction_overlaps.txt` (19 kart; G: zapisany 31.10, 7694 B): słupy z odległościami
