@@ -15,6 +15,13 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-10-31
 
+### Sieć trakcyjna: dźwignia naprężacza w YpC120-2C, YpC95-2C, YwsC120-2C — (ten commit)
+- Dźwignia 6406 (ta ze śrubami rzymskimi i izolatorami) w sieciach, gdzie lina nośna idzie do dolnego otworu dźwigni
+  (dźwignia odwrócona), stała tyłem na przód wzdłuż osi naprężacza. Teraz odwraca się o 180° wokół osi uchwytu, tak jak
+  w rzeczywistości: otwory zamieniają się góra–dół, a strona z otworami dalej patrzy w stronę drutów. YC95-2C i inne
+  nieodwrócone bez zmian. To samo dla drugiej dźwigni w urządzeniach z dwiema dźwigniami.
+- Zmienia `world/catenary_tensioner.cpp`. Wymaga: nic.
+
 ### Edytor terenu: klawisze pędzla, osobny pędzel dla każdego narzędzia — `a2744c6`
 - `[` / `]` – promień pędzla mniejszy / większy, `Shift+[` / `Shift+]` – siła; po 10 %, przytrzymanie powtarza.
 - Rzeźbienie, wygładzanie, poziomowanie, malowanie, przywracanie, dziury i trawa mają każde swój promień i siłę,
