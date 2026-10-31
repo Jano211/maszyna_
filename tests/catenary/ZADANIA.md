@@ -230,7 +230,7 @@ Te rzeczy są w danych jako ZAŁOŻENIE albo czekają na obejrzenie w grze. Odha
 **Modele do zrobienia (Jan 2026-10-31)**
 
 - [x] 4530 (01–03 przody, 04 tył; dół prowadnicy na 1701: 4530-3 + 4530-4), 4560 (01 C240 … 05 C160, C140 jak C160; dół
-  prowadnicy na nogach bramek, tył 4520-8 – ZAŁOŻENIE), 4570-1 (słupy przestrzenne: półbramki 1901, bez tyłu) – 2026-10-31
+  prowadnicy na nogach bramek, bez tyłu – śruby hakowe), 4570-1 (słupy przestrzenne: półbramki 1901, bez tyłu) – 2026-10-31
 - [ ] Uchwyty kotwień **4550, 4580** – brakuje; nowe półbramki 190x czekają na opisy (wtedy też 4570)
 
 **Poprawki w modelach (Jan)**
