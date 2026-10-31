@@ -146,6 +146,7 @@ double const kLaneReach{2.5}; // a lane with its middle this close to the cursor
 double const kFullTurn{6.283185307179586};
 double const kJoinClearance{15.0}; // a road isn't led into the side of another this close to the point it's led from
 double const kReach{3000.0}; // clicks landing further than this are taken for misses
+double const kDragMinimum{0.3}; // a point moved less than this was clicked, not dragged
 double const kLaneRange{600.0}; // lanes are drawn for the roads this close to the camera
 double const kLongestStretch{2000.0}; // a single click doesn't lead a road further than this
 // lengths of the pieces a road following the ground is tried with, from the longest; the first one to fit the ground is taken
@@ -210,6 +211,23 @@ std::vector<std::pair<road_node *, road_node::state>> point_changes(std::vector<
 	return changes;
 }
 
+// where the dragged point would go: under the cursor, at the height it had
+glm::dvec3 drag_target(glm::dvec3 const &From, glm::dvec3 const &Mouse)
+{
+	return {Mouse.x, From.y, Mouse.z};
+}
+
+// new definitions of the pieces meeting or ending at a dragged point, with the point moved to Target.
+// only the ends move: the control points are relative to them, so each piece leaves the point in the direction it did
+std::vector<std::pair<road_node *, road_node::state>> drag_changes(glm::dvec3 const &From, glm::dvec3 const &Target)
+{
+	return point_changes({From}, [&Target](road_node::state &State, bool const Atend, std::size_t const) {
+		auto &point{State.axis.points[Atend ? segment_data::point::end : segment_data::point::start]};
+		point.x = Target.x;
+		point.z = Target.z;
+	});
+}
+
 // direction of a path for specified value of its curve parameter. like path_point() it's cheap enough to be asked for a lot each frame
 glm::dvec3 path_direction(segment_data const &Path, double const T)
 {
@@ -252,6 +270,8 @@ void editor_mode::update_road_tool()
 		tool.hastarget = false;
 		tool.aimedkind = -1;
 	}
+	if (false == tool.window || tool.tool != 0 || false == tool.held)
+		tool.dragging = false;
 	if (false == tool.window)
 	{
 		tool.chain = false;
@@ -1192,7 +1212,25 @@ void editor_mode::road_click()
 			// a point where pieces meet or end. with Shift it's added to the selected ones, or taken out of them
 			auto const listed{std::find_if(tool.points.begin(), tool.points.end(), [&joint](glm::dvec3 const &Point) { return glm::distance(Point, joint) < 0.25; })};
 			if (false == Global.shiftState)
+			{
 				tool.points.assign(1, joint);
+				// held down it's dragged to another place; an arm of a junction stays where the junction has it
+				if (tool.held)
+				{
+					if (editor_road::arms_at(joint).empty())
+					{
+						tool.dragging = true;
+						tool.dragfrom = joint;
+					}
+					else
+					{
+						tool.selected = nullptr;
+						tool.junction = nullptr;
+						tool.status = STR_C("An arm of a junction can't be dragged, move the junction instead");
+						return;
+					}
+				}
+			}
 			else if (listed != tool.points.end())
 				tool.points.erase(listed);
 			else
@@ -1751,6 +1789,27 @@ bool editor_mode::road_split()
 	tool.status = format(STR_C("Split in two: \"%s\" and \"%s\", Ctrl+Z takes it back. Click the point between them to set the width or the height of the road there"), road->name().c_str(),
 	                     created->name().c_str());
 	return true;
+}
+
+// the left button let go: a dragged point is put where the cursor is
+void editor_mode::road_drag_end()
+{
+	auto &tool{m_roadtool};
+	if (false == tool.dragging)
+		return;
+	tool.dragging = false;
+	glm::dvec3 const camera{Global.pCamera.Pos};
+	auto const mouse{camera + GfxRenderer->Mouse_Position()};
+	if (glm::distance(mouse, camera) > kReach)
+	{
+		tool.status = STR_C("The point stays where it was, the cursor isn't over anything near enough");
+		return;
+	}
+	auto const target{drag_target(tool.dragfrom, mouse)};
+	if (glm::distance(target, tool.dragfrom) < kDragMinimum)
+		return; // a click, not a drag
+	if (road_points_apply(drag_changes(tool.dragfrom, target), {}))
+		tool.points.assign(1, target);
 }
 
 // makes the changes gathered for the selected points. returns: true if they were made
@@ -2860,16 +2919,29 @@ void editor_mode::draw_road_overlay() const
 			drawpoint(road->definition().axis.points[segment_data::point::start], kPointColor, 3.5f, true);
 			drawpoint(road->definition().axis.points[segment_data::point::end], kPointColor, 3.5f, true);
 		}
+		if (tool.dragging)
+		{
+			// the pieces as they'd go with the point let go here
+			auto const target{drag_target(tool.dragfrom, tool.mouse)};
+			if (glm::distance(target, tool.dragfrom) >= kDragMinimum)
+			{
+				for (auto const &change : drag_changes(tool.dragfrom, target))
+					drawpath(change.second.axis, kSelectedColor, 2.5f, is_curved(change.second.axis) ? 24 : 1);
+				drawpoint(target, kSelectedColor, 6.0f, true);
+				drawpoint(target, kSelectedColor, 11.0f, false);
+			}
+		}
 		for (auto const &point : tool.points)
 		{
 			drawpoint(point, kSelectedColor, 6.0f, true);
 			drawpoint(point, kSelectedColor, 11.0f, false);
 		}
 		hint = tool.marker != nullptr       ? STR_C("LMB: select a piece, a junction, a point or a marker   Del: delete   Ctrl+Z: undo") :
-		       false == tool.points.empty() ? STR_C("LMB: select a point   Shift+LMB: add a point or take it out   Del: delete the points   Ctrl+Z: undo") :
+		       false == tool.points.empty() ? tool.dragging ? STR_C("Let go of LMB to put the point here, the pieces keep leaving it in their directions") :
+		                                      STR_C("LMB: select a point, drag it to move it   Shift+LMB: add a point or take it out   Del: delete the points   Ctrl+Z: undo") :
 		       tool.selected != nullptr     ? STR_C("LMB: select a piece, a junction or a point (white dot)   K: split at the cursor   Del: delete   Ctrl+Z: undo") :
 		       tool.junction != nullptr     ? STR_C("LMB: select a piece, a junction or a point (white dot)   Del: delete   Ctrl+Z: undo") :
-		                                      STR_C("LMB: select a piece, a junction, a point (white dot) or a marker");
+		                                      STR_C("LMB: select a piece, a junction, a point (white dot) or a marker; drag a point to move it");
 	}
 	// shown above the place the track tools put their hints at
 	ImVec2 const position{editor_ui::view_min().x + 12.0f, editor_ui::view_max().y - 56.0f};

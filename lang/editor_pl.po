@@ -12267,3 +12267,18 @@ msgstr "łagodny łuk zostaje łukiem, bez prostowania"
 
 msgid "LMB: build up to the cursor   Ctrl: straight ahead   Alt: a gentle arc, not straightened   Esc: finish   Ctrl+Z: undo the last piece"
 msgstr "LPM: buduj do kursora   Ctrl: prosto przed siebie   Alt: łagodny łuk bez prostowania   Esc: zakończ   Ctrl+Z: cofnij ostatni odcinek"
+
+msgid "An arm of a junction can't be dragged, move the junction instead"
+msgstr "Ramienia skrzyżowania nie da się przeciągnąć, przesuń całe skrzyżowanie"
+
+msgid "The point stays where it was, the cursor isn't over anything near enough"
+msgstr "Punkt zostaje na miejscu, kursor nie wskazuje niczego wystarczająco blisko"
+
+msgid "Let go of LMB to put the point here, the pieces keep leaving it in their directions"
+msgstr "Puść LPM, żeby postawić tu punkt; odcinki wychodzą z niego w swoich dotychczasowych kierunkach"
+
+msgid "LMB: select a point, drag it to move it   Shift+LMB: add a point or take it out   Del: delete the points   Ctrl+Z: undo"
+msgstr "LPM: zaznacz punkt, przeciągnij, żeby go przesunąć   Shift+LPM: dodaj punkt albo go odznacz   Del: usuń punkty   Ctrl+Z: cofnij"
+
+msgid "LMB: select a piece, a junction, a point (white dot) or a marker; drag a point to move it"
+msgstr "LPM: zaznacz odcinek, skrzyżowanie, punkt (biała kropka) albo znacznik; przeciągnij punkt, żeby go przesunąć"
