@@ -2344,6 +2344,7 @@ bool catenary_editor::catenary_chain_continue(std::size_t const Pole)
 	tool.chaining = true;
 	tool.connect_from = -1;
 	tool.overlap_placing = false;
+	tool.anchor_move = -1;
 	tool.anchor_pick = -1;
 	tool.anchor_selected = -1;
 	tool.selected = -1;
@@ -3155,6 +3156,27 @@ void catenary_editor::catenary_overlap_place(TTrack &Track, int const Path, glm:
 		data.network = chain->type;
 		data.pole_type = spot.data.pole_type;
 		std::copy(std::begin(spot.data.pole), std::end(spot.data.pole), data.pole);
+		// a pole already standing near the place of the card (by the same track, on the side of the poles): the anchor goes on it
+		{
+			constexpr double kAnchorSnap{6.0};
+			auto best{kAnchorSnap};
+			glm::dvec2 const place{spot.data.pole[0], spot.data.pole[2]};
+			for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+			{
+				auto const *other{catenary_scene_get(index)};
+				if (other == nullptr || false == other->has_pole || other->name.empty() || other->shared_pole || catenary_scene_file_of(index) != file)
+					continue;
+				if (std::find(members[0].begin(), members[0].end(), other->name) != members[0].end() || std::find(members[1].begin(), members[1].end(), other->name) != members[1].end())
+					continue;
+				if (auto const gap{glm::length(glm::dvec2{other->pole[0], other->pole[2]} - place)}; gap < best)
+				{
+					best = gap;
+					data.on = other->name;
+					data.pole_type = other->pole_type;
+					std::copy(std::begin(other->pole), std::end(other->pole), data.pole);
+				}
+			}
+		}
 		std::copy(std::begin(toward->at), std::end(toward->at), data.toward);
 		data.distance = 700.0;
 		data.color = "szary";
@@ -3654,6 +3676,32 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 	}
 	if (is_intent(Intent, intent_detail::select))
 	{
+		if (tool.anchor_move >= 0)
+		{
+			// the anchor off its own pole onto this one
+			auto const *carrier{catenary_scene_get(static_cast<std::size_t>(Intent.index))};
+			auto const *anchor{catenary_anchor_get(static_cast<std::size_t>(tool.anchor_move))};
+			if (anchor == nullptr || carrier == nullptr || false == carrier->has_pole || carrier->name.empty()
+			    || catenary_scene_file_of(static_cast<std::size_t>(Intent.index)) != catenary_anchor_file(static_cast<std::size_t>(tool.anchor_move)))
+			{
+				tool.status = STR("This pole can't carry the anchor: it has to be a pole (not a drop or a point) from the file of the chain");
+				return;
+			}
+			auto data{*anchor};
+			data.on = carrier->name;
+			data.pole_type = carrier->pole_type;
+			std::copy(std::begin(carrier->pole), std::end(carrier->pole), data.pole);
+			catenary_change before;
+			before.group = ++tool.group;
+			before.anchor = true;
+			before.index = static_cast<std::size_t>(tool.anchor_move);
+			before.anchor_before = *anchor;
+			tool.undo.push_back(before);
+			catenary_anchor_update(static_cast<std::size_t>(tool.anchor_move), data);
+			tool.status = format(STR_C("Anchor %s is on the pole of %s now; its own pole is gone (Ctrl+Z takes it back)"), data.name.c_str(), carrier->name.c_str());
+			tool.anchor_move = -1;
+			return;
+		}
 		if (tool.anchor_pick >= 0)
 		{
 			// the tensioning device on this pole
@@ -4730,6 +4778,19 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			ImGui::TextDisabled("%s", format(STR_C("On the pole of %s"), data.on.c_str()).c_str());
 		else
 		{
+			// onto a pole already standing (the one of the catalogue next to it, say), the own pole goes
+			{
+				auto const moving{tool.anchor_move == static_cast<int>(index)};
+				if (ImGui::SmallButton(moving ? STR_C("Stop picking the pole") : STR_C("Move onto an existing pole")))
+				{
+					tool.anchor_move = moving ? -1 : static_cast<int>(index);
+					tool.anchor_pick = -1;
+					tool.connect_from = -1;
+					tool.status = moving ? std::string{} : STR("LMB on the pole the tensioning device goes on");
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("The tensioning device leaves its own pole and goes on the pole clicked (one already standing, with its cantilever)"));
+			}
 			// the anchor pole along the line of the last two poles; how far it's to the side of that line stays
 			glm::dvec2 const pole{data.pole[0], data.pole[2]};
 			glm::dvec2 const aside{-along.y, along.x};
@@ -7651,7 +7712,7 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 		return true;
 	}
 	// the tensioning device of an anchor (not while a pole is being picked for an anchor or a span)
-	if (m_catenary.anchor_pick < 0 && m_catenary.connect_from < 0)
+	if (m_catenary.anchor_pick < 0 && m_catenary.connect_from < 0 && m_catenary.anchor_move < 0)
 		if (auto const hit{catenary_anchor_hit()}; hit >= 0)
 		{
 			Intent.index = hit;
@@ -7663,7 +7724,7 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 	if (auto const hit{catenary_hit()}; hit >= 0)
 	{
 		Intent.index = hit;
-		Intent.action = m_catenary.page == 3 && m_catenary.earthing_building ? STR("Click: the earthing goes over this pole") : m_catenary.anchor_pick >= 0 ? STR("Click: the tensioning device on this pole") : m_catenary.connect_from >= 0 ? STR("Click: hang the span to this pole") : STR("Click: select the pole");
+		Intent.action = m_catenary.page == 3 && m_catenary.earthing_building ? STR("Click: the earthing goes over this pole") : m_catenary.anchor_pick >= 0 || m_catenary.anchor_move >= 0 ? STR("Click: the tensioning device on this pole") : m_catenary.connect_from >= 0 ? STR("Click: hang the span to this pole") : STR("Click: select the pole");
 		Intent.what = kind::catenary;
 		Intent.detail = static_cast<int>(intent_detail::select);
 		return true;
@@ -7837,8 +7898,9 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 			tool.status.clear();
 			return true;
 		}
-		if (tool.anchor_pick >= 0 || tool.connect_from >= 0 || tool.umbrella_from >= 0 || tool.anchor_cantilever >= 0)
+		if (tool.anchor_pick >= 0 || tool.connect_from >= 0 || tool.umbrella_from >= 0 || tool.anchor_cantilever >= 0 || tool.anchor_move >= 0)
 		{
+			tool.anchor_move = -1;
 			tool.anchor_cantilever = -1;
 			tool.anchor_pick = -1;
 			tool.connect_from = -1;

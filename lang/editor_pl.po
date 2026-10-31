@@ -12249,3 +12249,12 @@ msgstr "Klik: przęsło naprężenia %s, pierwszy słup krzyżowy tutaj (Esc anu
 
 msgid "Tension overlap: LMB by the track at the first crossing pole, Esc cancels"
 msgstr "Przęsło naprężenia: LPM przy torze w miejscu pierwszego słupa krzyżowego, Esc anuluje"
+
+msgid "Anchor %s is on the pole of %s now; its own pole is gone (Ctrl+Z takes it back)"
+msgstr "Kotwienie %s jest teraz na słupie %s; jego własny słup zniknął (Ctrl+Z cofa)"
+
+msgid "Move onto an existing pole"
+msgstr "Przepnij na istniejący słup"
+
+msgid "The tensioning device leaves its own pole and goes on the pole clicked (one already standing, with its cantilever)"
+msgstr "Urządzenie naprężające schodzi z własnego słupa na słup kliknięty (już stojący, z wysięgnikiem)"
