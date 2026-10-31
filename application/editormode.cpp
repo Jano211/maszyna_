@@ -5689,7 +5689,8 @@ void editor_mode::render_shortcuts_window()
 	      {"RMB held, W S A D", "Fly forwards, back, left, right (arrows in the legacy scheme)"},
 	      {"RMB held, E / Q", "Fly up / down (Page Up / Page Down in the legacy scheme)"},
 	      {"F", "Fly to the selected"},
-	      {"O", "Top view, orthographic"}}},
+	      {"O", "Top view, orthographic"},
+	      {"F7", "Wireframe on / off"}}},
 	    {"Gizmo",
 	     {{"Q / W / E", "Translate / rotate / scale"},
 	      {"R", "Local space"},
@@ -6532,6 +6533,8 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
         case GLFW_KEY_F4: choose_work_area(work_area::roads); break;
         case GLFW_KEY_F5: choose_work_area(work_area::terrain); break;
         case GLFW_KEY_F6: choose_work_area(work_area::catenary); break;
+        // the view in wireframe, to see where the surfaces really lie (the ballast against the terrain, say)
+        case GLFW_KEY_F7: Global.bWireFrame = !Global.bWireFrame; break;
         // the edit modes in the order of the toolbar; in the track mode the digits typed as a value were taken already
         case GLFW_KEY_1: handled = ui()->mode() != nodebank_panel::TRACK; if (handled) choose_edit_mode(nodebank_panel::MODIFY); break;
         case GLFW_KEY_2: handled = ui()->mode() != nodebank_panel::TRACK; if (handled) choose_edit_mode(nodebank_panel::ADD); break;

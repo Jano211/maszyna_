@@ -12312,3 +12312,6 @@ msgstr "Poprawka wysokości (m)"
 
 msgid "Added to the heights of the sheets, as between Kronsztadt 86 of the older ones and EVRF2007 of the service (some 0.1-0.2 m).\nOnly the edges where the sheets meet the terrain from the service show it: the terrain is fitted to the tracks anyway"
 msgstr "Dodawana do wysokości z arkuszy, np. różnica między Kronsztadtem 86 starszych a EVRF2007 usługi (ok. 0,1–0,2 m).\nWidać ją tylko na styku arkuszy z terenem z usługi: teren i tak jest dopasowywany do torów"
+
+msgid "Wireframe on / off"
+msgstr "Siatka (wireframe) włącz / wyłącz"
