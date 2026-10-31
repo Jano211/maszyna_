@@ -12288,3 +12288,27 @@ msgstr "Zrób od nowa teren pod torami wokół kamery"
 
 msgid "Only the chunks around the camera (%d along a side, as set on the Chunks page) are made anew from the model and drawn to the tracks, their painting too; the rest of the terrain stays as it is.\nPlaces where a track lies more than 10 m over or under the model, as a track left at height zero, don't pull the terrain"
 msgstr "Od nowa z modelu i dociągnięte do torów są tylko kafle wokół kamery (%d na bok, jak ustawione w sekcji Kafle), razem z malowaniem; reszta terenu zostaje jak jest.\nMiejsca, gdzie tor leży ponad 10 m nad albo pod modelem, jak tor zostawiony na wysokości zero, nie ciągną terenu"
+
+msgid "The folder isn't there"
+msgstr "Nie ma takiego folderu"
+
+msgid "Sheets"
+msgstr "Arkusze"
+
+msgid "skipped"
+msgstr "pominięte"
+
+msgid "Terrain from the sheets in a folder"
+msgstr "Teren z arkuszy z folderu"
+
+msgid "The terrain model is taken from the sheets downloaded by hand from geoportal.gov.pl (ESRI ASCII grid, .asc), as the older ones of before the land was dug over;\nwhere they don't reach it's fetched from the service as usual. PUWG 1992 and PUWG 2000 are both read, told apart by themselves.\nWhere sheets overlap, the one first by the name of the file is taken. Kept for this scenery.\nThe terrain already made doesn't change until it's made anew"
+msgstr "Model terenu jest brany z arkuszy pobranych ręcznie z geoportal.gov.pl (siatka ESRI ASCII, .asc), np. starszych, sprzed przekopania terenu;\ntam, gdzie nie sięgają, pobiera się jak zwykle z usługi. Czytane są PUWG 1992 i PUWG 2000, rozpoznawane samoczynnie.\nGdzie arkusze na siebie zachodzą, brany jest pierwszy wg nazwy pliku. Zapamiętywane dla tej scenerii.\nTeren już zrobiony nie zmienia się, dopóki nie zrobi się go od nowa"
+
+msgid "Folder with the sheets, e.g. G:\\NMT\\2011"
+msgstr "Folder z arkuszami, np. G:\\NMT\\2011"
+
+msgid "Height correction (m)"
+msgstr "Poprawka wysokości (m)"
+
+msgid "Added to the heights of the sheets, as between Kronsztadt 86 of the older ones and EVRF2007 of the service (some 0.1-0.2 m).\nOnly the edges where the sheets meet the terrain from the service show it: the terrain is fitted to the tracks anyway"
+msgstr "Dodawana do wysokości z arkuszy, np. różnica między Kronsztadtem 86 starszych a EVRF2007 usługi (ok. 0,1–0,2 m).\nWidać ją tylko na styku arkuszy z terenem z usługi: teren i tak jest dopasowywany do torów"
