@@ -32,8 +32,9 @@ extern catenary_settings CatenarySettings;
 // Messenger, Contact: naciąg liny nośnej i przewodów jezdnych w daN zamiast naciągu typu (dopisek "tension"); 0 = jak w typie
 // Rope2: końce drugiej liny nośnej podane w wpisie ("rope2 start|end x y z", kotwienie z dwiema liniami): [0] start, [1] koniec,
 // Rope2set - które podane
+// Spread: rozstaw przewodów jezdnych w uchwytach na początku i końcu (dopisek "spread start|end <m>", ramiona 6207/6208); 0 = jak w typie
 void catenary_span_assign( TTraction &Traction, std::string const &Symbol, double Messenger = 0.0, double Contact = 0.0,
-    glm::dvec3 const *Rope2 = nullptr, bool const *Rope2set = nullptr );
+    glm::dvec3 const *Rope2 = nullptr, bool const *Rope2set = nullptr, double const *Spread = nullptr );
 // symbol typu sieci przypisany przęsłu; pusty gdy brak
 std::string catenary_span_symbol( TTraction const &Traction );
 // odcinki przęsła policzone wg typu sieci, dopisywane do Vertices; false gdy przęsło ma być narysowane po staremu

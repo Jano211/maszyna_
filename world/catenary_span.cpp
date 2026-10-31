@@ -37,6 +37,7 @@ struct catenary_span {
     std::shared_ptr<catenary::network_definition> own;          // kopia typu z naciągiem z dopisku "tension"
     bool rope2set[ 2 ] { false, false };                        // końce drugiej liny nośnej z dopisku "rope2"
     catenary::vec3 rope2[ 2 ];
+    double spread[ 2 ] { 0.0, 0.0 };                            // rozstaw przewodów w uchwytach na końcach z dopisku "spread"
 };
 
 namespace {
@@ -60,6 +61,8 @@ points( TTraction const &Traction ) {
         result.messenger2_end_set = span.rope2set[ 1 ];
         result.messenger2_start = span.rope2[ 0 ];
         result.messenger2_end = span.rope2[ 1 ];
+        result.contact_spread[ 0 ] = span.spread[ 0 ];
+        result.contact_spread[ 1 ] = span.spread[ 1 ];
     }
     return result;
 }
@@ -263,7 +266,7 @@ catenary_span_metal( TTraction const &Traction, bool const Fitting ) {
 
 // przypisuje przęsłu typ sieci z dopisku "type" i dobiera rozstaw wieszaków
 void
-catenary_span_assign( TTraction &Traction, std::string const &Symbol, double const Messenger, double const Contact, glm::dvec3 const *Rope2, bool const *Rope2set ) {
+catenary_span_assign( TTraction &Traction, std::string const &Symbol, double const Messenger, double const Contact, glm::dvec3 const *Rope2, bool const *Rope2set, double const *Spread ) {
 
     Traction.m_catenaryspan.reset();
     if( Symbol.empty() ) { return; }
@@ -274,6 +277,7 @@ catenary_span_assign( TTraction &Traction, std::string const &Symbol, double con
         span->rope2set[ end ] = Rope2set[ end ];
         span->rope2[ end ] = catenary::vec3 { Rope2[ end ].x, Rope2[ end ].y, Rope2[ end ].z };
     }
+    if( Spread != nullptr ) { span->spread[ 0 ] = Spread[ 0 ]; span->spread[ 1 ] = Spread[ 1 ]; }
     Traction.m_catenaryspan = span;
     if( false == Global.CatenaryProcedural ) { return; }
 

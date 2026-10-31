@@ -216,6 +216,28 @@ int main( int argc, char *argv[] ) {
         std::printf( "odcinek do kotwienia 40 m: zwis przewodu jezdnego %.3f m (wzor %.3f m), zwis lin %.3f m  %s\n", 5.0 - lowest, expected, solution.result.sag, good ? "OK" : "BLAD" );
         failed = failed || !good;
     }
+    // ramiona 6207/6208 na początku przęsła: przewody 0,10 m od siebie w uchwytach, do pierwszego wieszaka przechodzą w 0,08
+    {
+        auto const *definition { registry.find( "C120-2C" ) };
+        catenary::span_points points { { 0, 5, 0 }, { 60, 5, 0 }, { 0, 6.7, 0 }, { 60, 6.7, 0 } };
+        points.contact_spread[ 0 ] = 0.10;
+        catenary::span_solution solution; std::string error;
+        auto good { catenary::solve_span_points( *definition, registry.hanger_gaps( definition->hanger_table, 60 ), points, false, false, solution, error ) };
+        catenary::span_geometry geometry;
+        if( good ) { catenary::build_geometry( *definition, solution, points, 0.04, geometry ); }
+        double first { 1e9 }, atstart { 0.0 }, atend { 0.0 };
+        for( auto const &hanger : solution.result.hangers ) { first = std::min( first, hanger.x ); }
+        for( auto const &element : geometry.elements ) {
+            if( element.kind != catenary::element_kind::contact ) { continue; }
+            for( auto const *point : { &element.from, &element.to } ) {
+                if( point->x < 1e-6 ) { atstart = std::max( atstart, std::abs( point->z ) ); }
+                if( point->x > 60 - 1e-6 ) { atend = std::max( atend, std::abs( point->z ) ); }
+            }
+        }
+        good = good && std::abs( atstart - 0.05 ) < 1e-6 && std::abs( atend - 0.04 ) < 1e-6 && first > 1.0;
+        std::printf( "rozstaw 0,10 przy ramionach 6207/6208: w uchwycie %.3f, na drugim koncu %.3f, pierwszy wieszak %.2f m  %s\n", 2 * atstart, 2 * atend, first, good ? "OK" : "BLAD" );
+        failed = failed || !good;
+    }
     // bryły: ściany graniastosłupów i prostopadłościanów zwrócone na zewnątrz, średnice z tabeli przewodów
     {
         auto const *definition { registry.find( "YwsC120-2C" ) };

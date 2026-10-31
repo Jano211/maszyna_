@@ -78,6 +78,8 @@ struct scene_suspension {
     // uchwyt przewodów i lina nośna (współrzędne scenerii) - końce przęseł idą za nimi
     double swing { 0.0 };
     double swing_wire[ 3 ] { 0.0, 0.0, 0.0 }, swing_rope[ 3 ] { 0.0, 0.0, 0.0 };
+    // rozstaw przewodów jezdnych w uchwytach wysięgnika, inny niż w typie sieci (ramiona 6207/6208: 0,10 m); 0 = jak w typie
+    double contact_spread { 0.0 };
 };
 
 std::vector<scene_suspension> Suspensions;
@@ -89,6 +91,7 @@ struct scene_file {
     std::string header;                 // komentarze z początku pliku, zachowywane przy zapisie
     bool created { false };             // założony w edytorze, sceneria go jeszcze nie dołącza
     bool changed { false };             // są zmiany do zapisania
+    double origin[ 3 ] { 0.0, 0.0, 0.0 };   // blok "origin" dyrektywy: punkty w pliku są względem niego (zapis odejmuje)
 };
 std::vector<scene_file> Files;
 // warstwa scenerii (plik), która dołącza plik sieci dyrektywą "catenary"; dla plików z edytora ta, do której trafi dyrektywa
@@ -319,6 +322,44 @@ swing_shift( scene_suspension const &Suspension, glm::dvec3 &Shift ) {
         auto const shift { alpha * along * ( Global.AirTemperature - 10.0 ) };
         auto const unit { glm::normalize( direction ) * shift };
         Shift = { unit.x, 0.0, unit.y };
+        return true;
+    }
+    return false;
+}
+
+bool chain_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *Rope, bool &Anchored );
+std::size_t chain_points( scene_chain const &Chain );
+
+// kierunek liny nośnej przy podwieszeniu (poziomo, w scenerii): dwusieczna kierunków do sąsiednich punktów łańcucha, w którym
+// podwieszenie trzyma linę (pierwsza sieć); przy końcu łańcucha - kierunek do jedynego sąsiada (kotwienie albo podwieszenie)
+bool
+rope_direction( scene_suspension const &Suspension, glm::dvec2 &Direction ) {
+    auto const &name { Suspension.data.name };
+    if( name.empty() ) { return false; }
+    for( auto const &chain : Chains ) {
+        if( chain.removed || chain.file != Suspension.file ) { continue; }
+        auto const &names { chain.data.suspensions };
+        auto const found { std::find( names.begin(), names.end(), name ) };
+        if( found == names.end() ) { continue; }
+        auto const position { static_cast<std::size_t>( found - names.begin() ) };
+        if( second_net( chain, position ) ) { continue; }
+        auto const point { position + ( chain.data.anchor_start.empty() ? 0u : 1u ) };
+        double wire[ 3 ], rope[ 3 ], here[ 3 ];
+        bool anchored;
+        if( false == chain_point( chain, point, wire, here, anchored ) ) { return false; }
+        glm::dvec2 sum { 0.0 };
+        for( auto const step : { -1, 1 } ) {
+            auto const other { static_cast<long>( point ) + step };
+            if( other < 0 || other >= static_cast<long>( chain_points( chain ) ) ) { continue; }
+            if( false == chain_point( chain, static_cast<std::size_t>( other ), wire, rope, anchored ) ) { continue; }
+            glm::dvec2 const toward { rope[ 0 ] - here[ 0 ], rope[ 2 ] - here[ 2 ] };
+            if( glm::length( toward ) < 1e-3 ) { continue; }
+            // oba kierunki zgodnie (od poprzedniego do następnego)
+            auto const unit { glm::normalize( toward ) };
+            sum = glm::dvec2 { sum.x + unit.x * step, sum.y + unit.y * step };
+        }
+        if( glm::length( sum ) < 1e-6 ) { return false; }
+        Direction = glm::normalize( sum );
         return true;
     }
     return false;
@@ -577,6 +618,34 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             }
         }
     }
+    // obrotowy uchwyt liny 4170 (przęsła naprężenia, teowniki): głowica obrócona wokół pionu w kierunek liny nośnej łańcucha
+    // (model stoi wzdłuż toru, czyli wzdłuż X wysięgnika); podstawa zostaje
+    if( solved && Probe == nullptr ) {
+        glm::dvec2 direction;
+        for( auto &placement : result.parts ) {
+            if( placement.role != "messenger_clamp" || placement.part.compare( 0, 4, "4170" ) != 0 ) { continue; }
+            if( false == rope_direction( Suspension, direction ) ) { break; }
+            catenary::cantilever_placement unitx, unity;
+            unitx.position[ 0 ] = 1.0;
+            unity.position[ 1 ] = 1.0;
+            auto const ax { catenary::cantilever_to_scene( unitx, heading ) }, ay { catenary::cantilever_to_scene( unity, heading ) };
+            auto const x { direction.x * ax.offset[ 0 ] + direction.y * ax.offset[ 2 ] };
+            auto const y { direction.x * ay.offset[ 0 ] + direction.y * ay.offset[ 2 ] };
+            auto angle { std::atan2( y, x ) };
+            // głowica symetryczna: najwyżej ćwierć obrotu w którąkolwiek stronę
+            if( angle > 0.5 * 3.14159265358979323846 ) { angle -= 3.14159265358979323846; }
+            if( angle < -0.5 * 3.14159265358979323846 ) { angle += 3.14159265358979323846; }
+            auto const c { std::cos( angle ) }, sn { std::sin( angle ) };
+            double rotated[ 9 ];
+            auto const &r { placement.rotation };
+            for( int column = 0; column < 3; ++column ) {
+                rotated[ 0 + column ] = c * r[ 0 + column ] - sn * r[ 3 + column ];
+                rotated[ 3 + column ] = sn * r[ 0 + column ] + c * r[ 3 + column ];
+                rotated[ 6 + column ] = r[ 6 + column ];
+            }
+            std::copy( std::begin( rotated ), std::end( rotated ), placement.rotation );
+        }
+    }
     if( Probe != nullptr ) { *Probe = result; return ( solved ? 1 : 0 ); }
     // druga sieć: punkty eksportowane przez klocki (y, z w układzie wysięgnika, zero w przewodzie A) do scenerii
     {
@@ -607,6 +676,11 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     }
     if( false == solved ) { return 0; }
 
+    // ramiona 6207/6208 trzymają przewody 0,10 m od siebie (rozstaw przechodzi w 8 cm do pierwszego wieszaka)
+    Suspension.contact_spread = 0.0;
+    for( auto const &placement : result.parts ) {
+        if( placement.part.compare( 0, 5, "6207-" ) == 0 || placement.part.compare( 0, 5, "6208-" ) == 0 ) { Suspension.contact_spread = 0.10; break; }
+    }
     // każda część to zwykły egzemplarz modelu, taki sam jak z wpisu node model
     std::size_t count { 0 };
     auto const skin { Suspension.skin.empty() ? std::string( "none" ) : Suspension.skin };
@@ -1596,10 +1670,18 @@ span_tension( scene_chain const &Chain, std::size_t const Span, double &Messenge
         std::copy( wire, wire + 3, previous );
     }
     auto const middle { 0.5 * ( along[ Span ] + along[ Span + 1 ] ) };
+    // kotwienie środkowe dzieli łańcuch: przęsło dostaje naciąg tylko od kotwienia po swojej stronie
+    std::size_t centre { points };
+    if( false == Chain.data.middle.empty() ) {
+        auto const &names { Chain.data.suspensions };
+        auto const found { std::find( names.begin(), names.end(), Chain.data.middle ) };
+        if( found != names.end() ) { centre = static_cast<std::size_t>( found - names.begin() ) + ( Chain.data.anchor_start.empty() ? 0u : 1u ); }
+    }
     double best { 1e30 }, ratio { 1.0 };
     for( auto const end : { 0, 1 } ) {
         auto const &name { end == 0 ? Chain.data.anchor_start : Chain.data.anchor_end };
         if( name.empty() ) { continue; }
+        if( centre < points && ( end == 0 ? Span >= centre : Span + 1 <= centre ) ) { continue; }
         auto const *anchor { anchor_named( Chain.file, name ) };
         if( anchor == nullptr || false == anchor->solved || anchor->result.grounded || anchor->result.nominal_tension <= 0.0 ) { continue; }
         auto const reach { end == 0 ? middle : along.back() - middle };
@@ -1647,6 +1729,18 @@ span_body( scene_chain const &Chain, std::size_t const Span ) {
     }
     // przęsło naprężenia: z przęsłem drugiego łańcucha bieżnia wspólna, bez przęseł do kotwienia
     if( auto const parallel { anchoreda || anchoredb ? data.parallel : span_parallel( Chain, wirea, wireb ) }; false == parallel.empty() ) { body += " parallel " + parallel; }
+    // ramiona 6207/6208 na końcu przęsła: przewody szerzej w uchwytach (pierwsza sieć wysięgnika, sieć dwuprzewodowa)
+    if( false == single_contact( Chain ) ) {
+        auto const offset { data.anchor_start.empty() ? 0u : 1u };
+        for( auto const end : { 0, 1 } ) {
+            auto const point { Span + end };
+            if( point < offset || point - offset >= data.suspensions.size() || second_net( Chain, point - offset ) ) { continue; }
+            auto const index { suspension_named( Chain.file, data.suspensions[ point - offset ] ) };
+            if( index < Suspensions.size() && Suspensions[ index ].contact_spread > 0.0 ) {
+                body += std::string( " spread " ) + ( end == 0 ? "start " : "end " ) + text_number( Suspensions[ index ].contact_spread, 3 );
+            }
+        }
+    }
     // kotwienie z dwiema liniami: dolna lina przęsła kończy się na swoim uchwycie krańcowym
     for( auto const end : { 0, 1 } ) {
         if( ( end == 0 ? anchoreda : anchoredb ) == false ) { continue; }
@@ -2496,7 +2590,7 @@ add_content( catenary::suspension_file const &File, std::string const &Filename 
 } // namespace
 
 void
-catenary_scene_node( cParser &Input, std::string const &Type, double const RangeMax, double const RangeMin, std::string const &Name, std::string const &File ) {
+catenary_scene_node( cParser &Input, std::string const &Type, double const RangeMax, double const RangeMin, std::string const &Name, std::string const &File, double const *Offset ) {
 
     // treść wpisu do jego końca, z wielkością liter (symbole typów sieci, ścieżki tekstur)
     auto const closing { "end" + Type };
@@ -2520,6 +2614,8 @@ catenary_scene_node( cParser &Input, std::string const &Type, double const Range
     for( auto const &error : errors ) {
         ErrorLog( error );
     }
+    // wpis w bloku "origin": punkty względem niego (zapis scenerii z edytora pisze współrzędne bezwzględne, jak przy innych wpisach)
+    catenary::shift_suspensions( file, Offset );
     InlineFiles.emplace( File );
     if( file_named( File ) == nullptr ) {
         scene_file known;
@@ -2631,7 +2727,7 @@ link_overlaps() {
 
 // obsługa dyrektywy "catenary" ze scenerii: wczytuje wskazany plik podwieszeń
 void
-catenary_scene_load( cParser &Input ) {
+catenary_scene_load( cParser &Input, double const *Offset ) {
 
     // nazwa pliku z zachowaniem wielkości liter, potem reszta dyrektywy do endcatenary
     auto const filename { Input.getToken<std::string>( false ) };
@@ -2666,6 +2762,7 @@ catenary_scene_load( cParser &Input ) {
     for( auto const &error : errors ) {
         ErrorLog( error );
     }
+    catenary::shift_suspensions( file, Offset );
     add_content( file, filename );
     // wczytywany z pliku tej warstwy (tylko przy otwarciu scenerii do edycji, inaczej warstw nie ma)
     FileLayers.emplace( filename, static_cast<std::size_t>( scene::Layers.handle() ) );
@@ -2674,6 +2771,7 @@ catenary_scene_load( cParser &Input ) {
         scene_file known;
         known.name = filename;
         known.skin = file.skin;
+        if( Offset != nullptr ) { std::copy( Offset, Offset + 3, known.origin ); }
         std::ifstream source { Global.asCurrentSceneryPath + filename };
         std::string line;
         while( std::getline( source, line ) ) {
@@ -3187,9 +3285,16 @@ catenary_scene_save( std::string &Message ) {
         for( std::string line; std::getline( header, line ); ) { text += line + "\r\n"; }
         if( false == file.skin.empty() ) { text += "skin " + file.skin + "\r\n"; }
         std::size_t count { 0 };
+        // punkty względem bloku "origin" dyrektywy, jak w wczytanym pliku
+        auto const relative = [ & ]( auto const &Data, auto Member ) {
+            catenary::suspension_file one;
+            ( one.*Member ).push_back( Data );
+            catenary::shift_suspensions( one, file.origin, -1.0 );
+            return ( one.*Member ).front();
+        };
         for( auto const &suspension : Suspensions ) {
             if( suspension.removed || suspension.file != file.name ) { continue; }
-            text += catenary::write_suspension( suspension.data ) + "\r\n";
+            text += catenary::write_suspension( relative( suspension.data, &catenary::suspension_file::entries ) ) + "\r\n";
             ++count;
         }
         for( auto const &chain : Chains ) {
@@ -3198,11 +3303,11 @@ catenary_scene_save( std::string &Message ) {
         }
         for( auto const &gantry : Gantries ) {
             if( gantry.removed || gantry.file != file.name ) { continue; }
-            text += catenary::write_gantry( gantry.data ) + "\r\n";
+            text += catenary::write_gantry( relative( gantry.data, &catenary::suspension_file::gantries ) ) + "\r\n";
         }
         for( auto const &anchor : Anchors ) {
             if( anchor.removed || anchor.file != file.name ) { continue; }
-            text += catenary::write_anchor( anchor.data ) + "\r\n";
+            text += catenary::write_anchor( relative( anchor.data, &catenary::suspension_file::anchors ) ) + "\r\n";
         }
         for( auto const &earthing : Earthings ) {
             if( earthing.removed || earthing.file != file.name ) { continue; }

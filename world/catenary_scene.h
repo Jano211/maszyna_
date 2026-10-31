@@ -17,10 +17,11 @@ http://mozilla.org/MPL/2.0/.
 class cParser;
 
 // obsługa dyrektywy "catenary" ze scenerii: wczytuje wskazany plik podwieszeń
-void catenary_scene_load( cParser &Input );
+// Offset: przesunięcie bloku "origin", w którym stoi dyrektywa (punkty pliku są względem niego); nullptr = bez
+void catenary_scene_load( cParser &Input, double const *Offset = nullptr );
 // wpis "node <max> <min> <nazwa> suspension|chain|gantry|anchor ... end<typ>" wprost w pliku scenerii; Input stoi za typem.
 // File: plik scenerii (warstwa), do którego wpis należy - jego wpisy sieci zapisuje zapis scenerii
-void catenary_scene_node( cParser &Input, std::string const &Type, double RangeMax, double RangeMin, std::string const &Name, std::string const &File );
+void catenary_scene_node( cParser &Input, std::string const &Type, double RangeMax, double RangeMin, std::string const &Name, std::string const &File, double const *Offset = nullptr );
 // "skin <tekstura>" w pliku scenerii: domyślna tekstura podwieszeń tego pliku (jak w osobnym pliku sieci)
 void catenary_scene_skin( cParser &Input, std::string const &File );
 // po wczytaniu wpisów scenerii, przed InitTraction: dodaje zebrane wpisy sieci z plików scenerii

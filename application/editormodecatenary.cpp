@@ -1413,6 +1413,14 @@ void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearan
 	// the system height: the card's, or the one set in the panel (the solver raises the stay mount with the messenger)
 	data.rope[1] = wire.y + (tool.system_height > 0.0f ? static_cast<double>(tool.system_height) : scheme->height);
 	data.rope[2] = wire.z;
+	// on a curve the messenger at the suspension stands a few centimetres to its outside (data/traction_layout.txt, curve_messenger)
+	if (Spot.radius > 0.0 && Spot.inward != 0)
+	{
+		auto const outward{right_of(Spot.forward) * static_cast<double>(-Spot.inward)};
+		auto const shift{catenary_scene_layout().messenger_outward(Spot.radius)};
+		data.rope[0] += outward.x * shift;
+		data.rope[2] += outward.y * shift;
+	}
 }
 
 // where the suspension stands by the track: the place it was put at in this session, or the nearest path to its wires
@@ -5653,7 +5661,24 @@ void catenary_editor::render_catenary_second_net(std::size_t const Chain)
 		catenary_chain_update(Chain, changed);
 	}
 	ImGui::EndDisabled();
-	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+	auto const hovered{ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)};
+	// the second network without a messenger clamp on the cantilever (117x/118x, the insulating breaks): its messenger through a
+	// messenger only cantilever on this pole, that high above the messenger of the first network
+	if (listed && false == hasrope && data->has_pole && catenary::messenger_holder(*chain, data->name) == data->name)
+	{
+		ImGui::PushItemWidth(100.0f);
+		ImGui::SliderFloat("##ropelift_b", &tool.rope_lift, 0.20f, 2.50f, "%.2f m");
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		if (ImGui::Button(STR_C("Messenger B through a messenger only cantilever")))
+		{
+			catenary_rope_lift_create(static_cast<std::size_t>(tool.selected), Chain);
+			return;
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("The cantilever has no clamp for the messenger of this network: a messenger only cantilever (129x, 1002-1015) on this pole, that much higher than the messenger here, holds it (messenger_from)"));
+	}
+	if (hovered)
 		ImGui::SetTooltip("%s", false == listed && user >= 0 ? STR_C("Another chain is on the second network of this cantilever already")
 		                                                     : hasrope ? STR_C("This chain goes through the second contact wire clamp and the second messenger clamp of the cantilever (another chain has its first network)")
 		                                                               : STR_C("This chain goes through the second contact wire clamp of the cantilever; its messenger: from a messenger only cantilever on this pole, otherwise freely past it"));

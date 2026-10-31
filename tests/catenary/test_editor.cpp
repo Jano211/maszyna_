@@ -41,6 +41,8 @@ int main( int, char *argv[] ) {
     check( std::abs( catenary::curve_span( 500.0, 0.40 ) - 40.0 ) < 1e-9, "luk R 500, z 0,40: a = 40 m (wykres 0008)" );
     check( catenary::span_limit( tables, "YwsC120-2C", 1, 2000.0, 0.40 ) == 70.0, "luk R 2000: ograniczenie nominalna 70 m" );
     check( std::abs( catenary::span_limit( tables, "YwsC120-2C", 1, 600.0, 0.40 ) - 2.0 * std::sqrt( 480.0 ) ) < 1e-9, "luk R 600: z wykresu 0008" );
+    check( std::abs( tables.messenger_outward( 600.0 ) - 0.07 ) < 1e-9 && std::abs( tables.messenger_outward( 800.0 ) - 0.06 ) < 1e-9 && tables.messenger_outward( 0.0 ) == 0.0
+        && tables.messenger_outward( 5000.0 ) == 0.0 && std::abs( tables.messenger_outward( 200.0 ) - 0.10 ) < 1e-9, "lina nosna na zewnatrz luku: tablica curve_messenger (R 600 - 7 cm, R 800 - 6 cm, prosta 0)" );
     double a[ 2 ] { 0.0, 0.0 }, b[ 2 ] { 100.0, 0.0 }, c[ 2 ] { 200.0, 0.0 }, d[ 2 ] { 500.0, 500.0 }, e[ 2 ] { 0.0, 1000.0 };
     check( catenary::plan_radius( a, b, c ) == 0.0 && std::abs( catenary::plan_radius( a, d, e ) - 500.0 ) < 1e-6, "promien przez trzy punkty (prosta = 0)" );
     check( catenary::reach_digit( 1.50 ) == 0 && catenary::reach_digit( 2.50 ) == 3 && catenary::reach_digit( 4.20 ) == 9 && catenary::reach_digit( 1.40 ) == -1, "pasmo A -> ostatnia cyfra karty" );
@@ -952,6 +954,31 @@ int main( int, char *argv[] ) {
         }
         Global.AirTemperature = 15.f;
         std::remove( "tests/catenary/td_kotwa_test.scm" );
+    }
+    // dyrektywa "catenary" w bloku origin: punkty pliku względem niego, zapis z edytora z powrotem względny
+    {
+        catenary_scene_clear(); errors.clear();
+        { std::ofstream out { "tests/catenary/td_origin_test.scm", std::ios::binary };
+          out << "node 1000 0 o1 suspension scheme 1124 1 at 0.687 5.800 0.247 rope 0.687 7.500 0.247 pole 1611-11 -2.313 0.200 0.247 endsuspension\n"; }
+        double const offset[ 3 ] { 1000.0, 10.0, -500.0 };
+        cParser directive( "td_origin_test.scm endcatenary" );
+        catenary_scene_load( directive, offset );
+        catenary_scene_resolve();
+        auto const *loaded { catenary_scene_get( 0 ) };
+        auto good { loaded != nullptr && std::abs( loaded->at[ 0 ] - 1000.687 ) < 1e-6 && std::abs( loaded->at[ 1 ] - 15.8 ) < 1e-6 && std::abs( loaded->pole[ 2 ] + 499.753 ) < 1e-6 };
+        if( good ) {
+            auto moved { *loaded };
+            moved.at[ 0 ] += 0.1; moved.rope[ 0 ] += 0.1;
+            catenary_scene_update( 0, moved );
+            std::string message;
+            catenary_scene_save( message );
+            std::ifstream in { "tests/catenary/td_origin_test.scm", std::ios::binary };
+            std::string text { std::istreambuf_iterator<char>( in ), std::istreambuf_iterator<char>() };
+            good = text.find( "at 0.787 5.800 0.247" ) != std::string::npos && text.find( "pole 1611-11 -2.313 0.200 0.247" ) != std::string::npos;
+            if( false == good ) { std::printf( "  %s\n", text.c_str() ); }
+        }
+        check( good, "origin: dyrektywa catenary w bloku origin przesuwa punkty, zapis z edytora wzgledny" );
+        std::remove( "tests/catenary/td_origin_test.scm" );
     }
     for( auto const &line : errors ) { std::printf( "  %s\n", line.c_str() ); }
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDY: %d\n", failures );

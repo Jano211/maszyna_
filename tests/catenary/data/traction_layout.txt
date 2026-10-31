@@ -9,6 +9,14 @@
 
 curve_stagger 0.40
 
+// curve_messenger <promień R> <m>: lina nośna przy podwieszeniu na łuku przesunięta na zewnątrz łuku względem przewodów (edytor przy
+// stawianiu słupa); liniowo między wierszami, ciaśniej niż pierwszy - jego wartość, łagodniej niż ostatni - 0. Wartości na oko
+curve_messenger 300 0.10
+curve_messenger 600 0.07
+curve_messenger 1000 0.05
+curve_messenger 2000 0.02
+curve_messenger 4000 0.00
+
 // karta 43-0002 (wersja z uzupelnienia 2010)
 span C120-2C        72 68
 span C95-2C         72 66

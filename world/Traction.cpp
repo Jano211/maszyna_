@@ -143,6 +143,7 @@ TTraction::Load( cParser *parser, glm::dvec3 const &pOrigin ) {
     double catenarytension[ 2 ] { 0.0, 0.0 };
     glm::dvec3 catenaryrope2[ 2 ];
     bool catenaryrope2set[ 2 ] { false, false };
+    double catenaryspread[ 2 ] { 0.0, 0.0 };
     while( false == token.empty()
         && token != "endtraction" ) {
 
@@ -163,6 +164,12 @@ TTraction::Load( cParser *parser, glm::dvec3 const &pOrigin ) {
             catenaryrope2[ end ] = point;
             catenaryrope2set[ end ] = true;
         }
+        else if( token == "spread" ) {
+            // rozstaw przewodów jezdnych w uchwytach na końcu przęsła (ramiona 6207/6208): "spread start|end <m>"
+            auto const which { parser->getToken<std::string>() };
+            parser->getTokens();
+            *parser >> catenaryspread[ which == "end" ? 1 : 0 ];
+        }
         else if( token == "tension" ) {
             // naciąg liny nośnej i przewodów jezdnych w daN inny niż w typie sieci (brakujące ciężary w kotwieniu)
             parser->getTokens( 2 );
@@ -172,7 +179,7 @@ TTraction::Load( cParser *parser, glm::dvec3 const &pOrigin ) {
     }
 
     Init(); // przeliczenie parametrów
-    catenary_span_assign( *this, catenarytype, catenarytension[ 0 ], catenarytension[ 1 ], catenaryrope2, catenaryrope2set );
+    catenary_span_assign( *this, catenarytype, catenarytension[ 0 ], catenarytension[ 1 ], catenaryrope2, catenaryrope2set, catenaryspread );
 
     // calculate traction location
     location( glm::mix( pPoint2, pPoint1, 0.5 ) );
