@@ -10612,6 +10612,9 @@ msgstr "Wybierz komórkę pamięci z listy, aby ustawić jej zawartość"
 msgid "worn"
 msgstr "przejściowe"
 
+msgid "black"
+msgstr "czarne"
+
 msgid "tarnished"
 msgstr "zaśniedziałe"
 

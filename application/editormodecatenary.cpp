@@ -2433,7 +2433,7 @@ void catenary_editor::catenary_place(catenary_spot const &Spot)
 			created.power = tool.power;
 			created.voltage = tool.voltage;
 			created.material = kMaterials[std::clamp(tool.material, 0, 1)];
-			created.state = kStateValues[std::clamp(tool.state, 0, 2)];
+			created.state = kStateValues[std::clamp(tool.state, 0, 3)];
 			created.type = tool.networks.empty() ? std::string{} : tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
 			created.suspensions = {previousdata.name, data.name};
 			tool.chain = static_cast<int>(catenary_chain_add(file, created));
@@ -3149,7 +3149,7 @@ void catenary_editor::catenary_overlap_place(TTrack &Track, int const Path, glm:
 		created.power = Power;
 		created.voltage = tool.voltage;
 		created.material = kMaterials[std::clamp(tool.material, 0, 1)];
-		created.state = kStateValues[std::clamp(tool.state, 0, 2)];
+		created.state = kStateValues[std::clamp(tool.state, 0, 3)];
 		created.type = false == Type.empty() ? Type : tool.networks.empty() ? std::string{} : tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
 		created.suspensions = Members;
 		created.second_net = Second;
@@ -3600,7 +3600,7 @@ void catenary_editor::catenary_connect(std::size_t const To)
 		created.power = tool.power;
 		created.voltage = tool.voltage;
 		created.material = kMaterials[std::clamp(tool.material, 0, 1)];
-		created.state = kStateValues[std::clamp(tool.state, 0, 2)];
+		created.state = kStateValues[std::clamp(tool.state, 0, 3)];
 		created.type = tool.networks.empty() ? std::string{} : tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
 		created.suspensions = {namea, nameb};
 		result = static_cast<int>(catenary_chain_add(file, created));
@@ -4006,7 +4006,7 @@ void catenary_editor::catenary_chain_show(int const Chain)
 		std::snprintf(tool.power, sizeof(tool.power), "%s", chain->power.c_str());
 		tool.voltage = static_cast<float>(chain->voltage);
 		tool.material = chain->material == "al" ? 1 : 0;
-		tool.state = chain->state == 2 ? 1 : chain->state == 1 ? 2 : 0;
+		tool.state = chain->state == 2 ? 1 : chain->state == 4 ? 2 : chain->state == 1 ? 3 : 0;
 		if (auto const found{std::find(tool.networks.begin(), tool.networks.end(), chain->type)}; found != tool.networks.end())
 			tool.network = static_cast<int>(found - tool.networks.begin());
 	}
@@ -4085,7 +4085,7 @@ void catenary_editor::catenary_chain_apply()
 	changed.power = tool.power;
 	changed.voltage = tool.voltage;
 	changed.material = kMaterials[std::clamp(tool.material, 0, 1)];
-	changed.state = kStateValues[std::clamp(tool.state, 0, 2)];
+	changed.state = kStateValues[std::clamp(tool.state, 0, 3)];
 	if (false == tool.networks.empty())
 		changed.type = tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
 	auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
@@ -4420,9 +4420,9 @@ void catenary_editor::render_catenary_chain_ui()
 	}
 	if (ImGui::Combo(STR_C("Material"), &tool.material, kMaterials, 2))
 		changed = true;
-	std::string const statenames[] = {STR(kStates[0]), STR(kStates[1]), STR(kStates[2])};
-	char const *const states[] = {statenames[0].c_str(), statenames[1].c_str(), statenames[2].c_str()};
-	if (ImGui::Combo(STR_C("Wires"), &tool.state, states, 3))
+	std::string const statenames[] = {STR(kStates[0]), STR(kStates[1]), STR(kStates[2]), STR(kStates[3])};
+	char const *const states[] = {statenames[0].c_str(), statenames[1].c_str(), statenames[2].c_str(), statenames[3].c_str()};
+	if (ImGui::Combo(STR_C("Wires"), &tool.state, states, 4))
 		changed = true;
 	if (catenary_power_combo(STR_C("Power source"), tool.power, sizeof(tool.power)))
 		changed = true;

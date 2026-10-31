@@ -210,16 +210,16 @@ release( gfx::geometry_handle const &Geometry ) {
     GfxRenderer->Replace( empty, userdata, Geometry, GL_TRIANGLES );
 }
 
-// wygląd metalu: [ metal: miedź, aluminium ][ przewód, osprzęt ][ stan: nowa, przejściowa, zaśniedziała ]
-// osprzęt sieci miedzianej jest z brązu albo mosiądzu
-catenary_metal Metals[ 2 ][ 2 ][ 3 ] {
-    { { { { 0.80f, 0.50f, 0.27f }, 0.6f, 0.45f, 0.40f }, { { 0.50f, 0.30f, 0.16f }, 0.8f, 0.18f, 0.15f }, { { 0.30f, 0.52f, 0.46f }, 0.3f, 0.10f, 0.10f } },
-      { { { 0.82f, 0.60f, 0.31f }, 0.6f, 0.40f, 0.35f }, { { 0.52f, 0.40f, 0.20f }, 0.8f, 0.15f, 0.15f }, { { 0.36f, 0.46f, 0.38f }, 0.4f, 0.10f, 0.10f } } },
-    { { { { 0.80f, 0.81f, 0.83f }, 0.9f, 0.45f, 0.30f }, { { 0.55f, 0.55f, 0.56f }, 0.8f, 0.25f, 0.15f }, { { 0.30f, 0.30f, 0.31f }, 0.6f, 0.15f, 0.10f } },
-      { { { 0.70f, 0.71f, 0.73f }, 0.9f, 0.35f, 0.30f }, { { 0.48f, 0.48f, 0.49f }, 0.8f, 0.20f, 0.15f }, { { 0.32f, 0.32f, 0.33f }, 0.6f, 0.15f, 0.10f } } } };
+// wygląd metalu: [ metal: miedź, aluminium ][ przewód, osprzęt ][ stan: nowa, przejściowa, czarna, zaśniedziała ]
+// osprzęt sieci miedzianej jest z brązu albo mosiądzu. Czarna (Jan 2026-11-01): matowa, prawie bez połysku - wartości na oko
+catenary_metal Metals[ 2 ][ 2 ][ 4 ] {
+    { { { { 0.80f, 0.50f, 0.27f }, 0.6f, 0.45f, 0.40f }, { { 0.50f, 0.30f, 0.16f }, 0.8f, 0.18f, 0.15f }, { { 0.11f, 0.09f, 0.08f }, 0.5f, 0.08f, 0.05f }, { { 0.30f, 0.52f, 0.46f }, 0.3f, 0.10f, 0.10f } },
+      { { { 0.82f, 0.60f, 0.31f }, 0.6f, 0.40f, 0.35f }, { { 0.52f, 0.40f, 0.20f }, 0.8f, 0.15f, 0.15f }, { { 0.14f, 0.12f, 0.10f }, 0.5f, 0.08f, 0.05f }, { { 0.36f, 0.46f, 0.38f }, 0.4f, 0.10f, 0.10f } } },
+    { { { { 0.80f, 0.81f, 0.83f }, 0.9f, 0.45f, 0.30f }, { { 0.55f, 0.55f, 0.56f }, 0.8f, 0.25f, 0.15f }, { { 0.16f, 0.16f, 0.16f }, 0.6f, 0.08f, 0.05f }, { { 0.30f, 0.30f, 0.31f }, 0.6f, 0.15f, 0.10f } },
+      { { { 0.70f, 0.71f, 0.73f }, 0.9f, 0.35f, 0.30f }, { { 0.48f, 0.48f, 0.49f }, 0.8f, 0.20f, 0.15f }, { { 0.18f, 0.18f, 0.18f }, 0.6f, 0.08f, 0.05f }, { { 0.32f, 0.32f, 0.33f }, 0.6f, 0.15f, 0.10f } } } };
 bool MetalsLoaded { false };
 
-// czyta data/traction_materials.txt, o ile jest. wiersz: <copper|aluminium> <wire|fitting> <new|worn|tarnished> r g b metaliczność połysk odbicie
+// czyta data/traction_materials.txt, o ile jest. wiersz: <copper|aluminium> <wire|fitting> <new|worn|black|tarnished> r g b metaliczność połysk odbicie
 void
 load_metals() {
 
@@ -240,9 +240,9 @@ load_metals() {
         stream >> part >> state >> value.color[ 0 ] >> value.color[ 1 ] >> value.color[ 2 ] >> value.metalness >> value.gloss >> value.reflection;
         auto const metalindex { metal == "copper" ? 0 : metal == "aluminium" ? 1 : -1 };
         auto const partindex { part == "wire" ? 0 : part == "fitting" ? 1 : -1 };
-        auto const stateindex { state == "new" ? 0 : state == "worn" ? 1 : state == "tarnished" ? 2 : -1 };
+        auto const stateindex { state == "new" ? 0 : state == "worn" ? 1 : state == "black" ? 2 : state == "tarnished" ? 3 : -1 };
         if( stream.fail() || metalindex < 0 || partindex < 0 || stateindex < 0 ) {
-            ErrorLog( "Bad file \"data/traction_materials.txt\" (line " + std::to_string( linenumber ) + "): expected <copper|aluminium> <wire|fitting> <new|worn|tarnished> and six numbers" );
+            ErrorLog( "Bad file \"data/traction_materials.txt\" (line " + std::to_string( linenumber ) + "): expected <copper|aluminium> <wire|fitting> <new|worn|black|tarnished> and six numbers" );
             continue;
         }
         for( auto *number : { &value.color[ 0 ], &value.color[ 1 ], &value.color[ 2 ], &value.metalness, &value.gloss, &value.reflection } ) {
@@ -259,8 +259,8 @@ catenary_metal const &
 catenary_span_metal( TTraction const &Traction, bool const Fitting ) {
 
     if( false == MetalsLoaded ) { load_metals(); }
-    // stan z wpisu przęsła: bit 0 zaśniedziała, bit 1 przejściowa; zaśniedziała ma pierwszeństwo
-    auto const state { ( Traction.DamageFlag & 1 ) != 0 ? 2 : ( Traction.DamageFlag & 2 ) != 0 ? 1 : 0 };
+    // stan z wpisu przęsła: bit 0 zaśniedziała, bit 1 przejściowa, bit 2 czarna; zaśniedziała ma pierwszeństwo, potem czarna
+    auto const state { ( Traction.DamageFlag & 1 ) != 0 ? 3 : ( Traction.DamageFlag & 4 ) != 0 ? 2 : ( Traction.DamageFlag & 2 ) != 0 ? 1 : 0 };
     return Metals[ Traction.Material == 2 ? 1 : 0 ][ Fitting ? 1 : 0 ][ state ];
 }
 
