@@ -4,6 +4,12 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 
 ## START TUTAJ – 2026-10-30 01:00 (najpierw to)
 
+**31.10 14:40 (Jan):** na żadnej karcie przęseł naprężenia nie ma wysięgników samej liny ani drugich uchwytów przewodów. Słup krzyżowy:
+JEDEN wysięgnik „z” (120x, grupa n_tube_zero, przewody wprost na rurze) sieci pracującej, sieć poderwana przechodzi obok swobodnie (nie
+ma jej na liście łańcucha); wyjątek 13-0062-35, słup środkowy: dwa podwieszenia jedno nad drugim (dwa 120x, drugi `shared_pole`, lina
++0,30 – ZAŁOŻENIE). 117x/118x, 102x i wysięgnik samej liny wyrzucone z szablonów; 0060-20: K2 work/lift, K3 lift/work. Dwa przewody
+jezdne na podwieszeniach dopiero w kartach 13-0071, 0073, 0075 (nie w szablonach).
+
 **31.10 14:30:** wstawianie szablonu przęsła LPM przy torze na każdej stronie (`catenary_intent` celuje w tory przy `overlap_placing`);
 kotwienie z szablonu staje na istniejącym słupie do 6 m od miejsca z karty (`on`); w panelu kotwienia z własnym słupem przycisk
 „Przepnij na istniejący słup” (`anchor_move`, LPM na słup, Esc anuluje, Ctrl+Z cofa).

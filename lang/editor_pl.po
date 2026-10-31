@@ -12258,3 +12258,6 @@ msgstr "Przepnij na istniejący słup"
 
 msgid "The tensioning device leaves its own pole and goes on the pole clicked (one already standing, with its cantilever)"
 msgstr "Urządzenie naprężające schodzi z własnego słupa na słup kliknięty (już stojący, z wysięgnikiem)"
+
+msgid "All the poles of the card at its distances along the track: on a crossing pole one cantilever \"z\" (120x) for the network working there, the lifted one goes past it freely; the anchors at both ends; the chain being built comes in and ends at the far anchor, a new chain starts at the near anchor and goes on"
+msgstr "Wszystkie słupy karty w jej odległościach wzdłuż toru: na słupie krzyżowym jeden wysięgnik „z” (120x) sieci, która tam pracuje, poderwana przechodzi obok swobodnie; kotwienia na obu końcach; ciągnięty łańcuch wchodzi i kończy się na dalszym kotwieniu, nowy zaczyna się na bliższym i ciągnie się dalej"

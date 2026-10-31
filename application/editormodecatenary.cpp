@@ -2920,6 +2920,9 @@ bool catenary_editor::catenary_track_ahead(TTrack *&Track, int &Path, double &Pa
 	return found;
 }
 
+// both networks working on one pole (13-0062-35): the messenger of the second one over the first one's (ASSUMPTION)
+double constexpr kStackedMessenger{0.30};
+
 void catenary_editor::catenary_overlap_place(TTrack &Track, int const Path, glm::dvec3 const &Point, glm::dvec3 const &Cursor)
 {
 	auto &tool{m_catenary};
@@ -2971,6 +2974,8 @@ void catenary_editor::catenary_overlap_place(TTrack &Track, int const Path, glm:
 		catenary_spot spot;
 		int index{-1}; // the suspension placed, -1: none (an anchor pole only)
 		int second{-1}; // the second cantilever of a spread pair
+		bool stacked{false}; // both networks working here (13-0062-35, the middle pole): the second one on its own 120x above the first
+		catenary_spot upper;
 	};
 	std::vector<planned_pole> plan(card.poles.size());
 	// first all the places and cantilevers, nothing put yet: a template that doesn't fit leaves the scenery as it was
@@ -3003,15 +3008,23 @@ void catenary_editor::catenary_overlap_place(TTrack &Track, int const Path, glm:
 		auto const both{on(a) && on(b)};
 		auto const net{on(a) ? 0 : 1}; // the network of a cantilever with one network
 		auto const working{both ? (a == catenary::overlap_role::work ? 0 : 1) : net};
-		if (both && a == catenary::overlap_role::work && b == catenary::overlap_role::work)
-			group("n_tube_double"); // 102x: two networks working
-		else if (both)
-			group("n_tube_second"); // 117x/118x: the working network on the arms, the lifted wire on the second clamp
+		// a crossing pole with both networks (Jan 2026-10-31): one cantilever "z" (120x, the wires straight on the tube) for the
+		// working one, the lifted one goes past it freely to the pole it works on; both working (the middle pole of 13-0062-35): two
+		// 120x, the second one's messenger above the first one's
+		if (both)
+			group("n_tube_zero");
 		else
 			group("t_tube_swing");
 		tool.stagger_own = true;
-		auto const stagger{both && a == b ? 0.0 : card.stagger};
-		catenary_compose(place.spot, tool.clearance, stagger, towardnet[working]);
+		catenary_compose(place.spot, tool.clearance, card.stagger, towardnet[working]);
+		if (both && a == catenary::overlap_role::work && b == catenary::overlap_role::work)
+		{
+			place.upper = place.spot;
+			catenary_compose(place.upper, tool.clearance, card.stagger, towardnet[1]);
+			place.upper.data.shared_pole = true;
+			place.upper.data.rope[1] += kStackedMessenger;
+			place.stacked = place.upper.card != 0;
+		}
 		if (false == on(a) && false == on(b))
 			continue; // an anchor pole: its place only
 		if (place.spot.card == 0)
@@ -3084,11 +3097,19 @@ void catenary_editor::catenary_overlap_place(TTrack &Track, int const Path, glm:
 		lastindex = static_cast<int>(index);
 		if (both)
 		{
-			// the working network has it as its own cantilever, the other one goes through its second network
+			// the working network on it; a lifted one goes past freely
 			auto const working{pole.net[0] == catenary::overlap_role::work ? 0 : 1};
 			members[working].push_back(data.name);
-			members[1 - working].push_back(data.name);
-			second[1 - working].push_back(data.name);
+			if (place.stacked)
+			{
+				auto upper{place.upper.data};
+				upper.name = catenary_scene_new_name(file);
+				auto const added{catenary_scene_add(file, upper)};
+				tool.spots[added] = place.upper;
+				tool.spots[added].data = upper;
+				tool.undo.push_back({group_id, false, added, std::nullopt, std::nullopt, false});
+				members[1].push_back(upper.name);
+			}
 		}
 		else
 			members[net].push_back(data.name);
@@ -3193,19 +3214,6 @@ void catenary_editor::catenary_overlap_place(TTrack &Track, int const Path, glm:
 		tool.undo.push_back({group_id, true, chainindex[net], std::nullopt, *chain, false});
 		(start ? changed.anchor_start : changed.anchor_end) = data.name;
 		catenary_chain_update(chainindex[net], changed);
-	}
-	// the messenger of the lifted network on the crossing poles with 117x/118x: a messenger only cantilever on the same pole
-	for (std::size_t k = 0; k < card.poles.size(); ++k)
-	{
-		auto const &pole{card.poles[k]};
-		auto const lifted{pole.net[0] == catenary::overlap_role::lift && pole.net[1] == catenary::overlap_role::work ? 0
-		                  : pole.net[1] == catenary::overlap_role::lift && pole.net[0] == catenary::overlap_role::work ? 1 : -1};
-		if (lifted < 0 || plan[k].index < 0 || chainindex[lifted] >= catenary_chain_size() || pole.same)
-			continue;
-		catenary_rope_lift_create(static_cast<std::size_t>(plan[k].index), chainindex[lifted]);
-		for (auto &change : tool.undo)
-			if (change.group > group_id)
-				change.group = group_id;
 	}
 	tool.group = group_id;
 	// the chain going on: B from its last pole
@@ -3324,7 +3332,7 @@ void catenary_editor::render_catenary_overlap_template()
 	}
 	ImGui::EndDisabled();
 	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-		ImGui::SetTooltip("%s", STR_C("All the poles of the card at its distances along the track, the cantilevers of both networks (117x/118x with the lifted wire, 102x where both work), the messenger of the lifted network on a messenger only cantilever, the anchors at both ends; the chain being built comes in and ends at the far anchor, a new chain starts at the near anchor and goes on"));
+		ImGui::SetTooltip("%s", STR_C("All the poles of the card at its distances along the track: on a crossing pole one cantilever \"z\" (120x) for the network working there, the lifted one goes past it freely; the anchors at both ends; the chain being built comes in and ends at the far anchor, a new chain starts at the near anchor and goes on"));
 }
 
 
