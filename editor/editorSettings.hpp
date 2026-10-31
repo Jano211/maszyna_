@@ -47,6 +47,9 @@ public:
 		double correction{0.0};
 	};
 	nmt_sheets sheets(std::string const &Scenery) const;
+	// m the formation the terrain is dug to under the tracks lies above the foot of their ballast
+	double nmt_shallower() const { return m_nmt_shallower; }
+	void nmt_shallower(double Height) { m_nmt_shallower = Height; }
 	void sheets(std::string const &Scenery, nmt_sheets const &Sheets);
 
 	double platform_edge() const { return m_platform_edge; }
@@ -80,6 +83,7 @@ private:
 	orthophoto_settings m_orthophoto;
 	std::map<std::string, std::pair<double, double>> m_orthophoto_origins;
 	std::map<std::string, nmt_sheets> m_sheets;
+	double m_nmt_shallower{0.0};
 	double m_platform_edge{1.725};
 	double m_signal_offset{2.25};
 	bool m_nodebank_previews{true};

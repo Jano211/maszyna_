@@ -12315,3 +12315,21 @@ msgstr "Dodawana do wysokości z arkuszy, np. różnica między Kronsztadtem 86 
 
 msgid "Wireframe on / off"
 msgstr "Siatka (wireframe) włącz / wyłącz"
+
+msgid "Formation shallower by (m)"
+msgstr "Koryto płycej o (m)"
+
+msgid "The terrain under the tracks is dug this much less deep than the foot of their ballast: where the texture of the ballast doesn't reach down to its foot, the terrain covers the part of it left bare"
+msgstr "Teren pod torami jest wykopany o tyle płycej niż spód ich podsypki: gdzie tekstura podsypki nie sięga do jej spodu, teren przykrywa gołą część"
+
+msgid "Shape the formation anew"
+msgstr "Ukształtuj torowisko od nowa"
+
+msgid "The formation of %zu path shaped"
+msgid_plural "The formation of %zu paths shaped"
+msgstr[0] "Torowisko %zu toru ukształtowane"
+msgstr[1] "Torowisko %zu torów ukształtowane"
+msgstr[2] "Torowisko %zu torów ukształtowane"
+
+msgid "The formation and the slopes of all the tracks made anew with the settings above, over the terrain there is; the chunks aren't made anew"
+msgstr "Torowisko i skarpy wszystkich torów zrobione od nowa z powyższymi ustawieniami, na istniejącym terenie; kafli nie robi od nowa"
