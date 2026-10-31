@@ -1852,7 +1852,7 @@ void catenary_editor::catenary_flip()
 			catenary_take_settings(index);
 			tool.status = format(toward ? STR_C("Swapped: stagger %.2f m towards the pole (short cantilever)") : STR_C("Swapped: stagger %.2f m away from the pole (long cantilever)"), magnitude);
 			if (curve && spot->inward != 0 && toward != (spot->side != spot->inward))
-				tool.status += " " + STR("- on a curve the wires go to its outside (Iet-107 3.4.4.4)");
+				tool.status += " " + STR("- on a curve the wires go to its outside (Iet-107 3.3.4.4)");
 		}
 		else
 			tool.status = STR("No card of the catalogue for the cantilever swapped: it stays as it was");
@@ -2113,7 +2113,7 @@ catenary_editor::chain_report const &catenary_editor::catenary_chain_report(std:
 		if (std::abs(offset) > limit + 0.005)
 			add(member, format(STR_C("%s: stagger %.2f m, more than the %.2f m allowed (Iet-107 %s)"), named(member).c_str(), std::abs(offset), limit, curve || tool.speed_class == 1 ? "7.4.2.1" : "3.4.4.3"), true);
 		if (curve && std::abs(offset) >= kZigzagEpsilon && (offset > 0.0) != (spot->side != spot->inward))
-			add(member, format(STR_C("%s: on a curve the wires go to its outside (Iet-107 3.4.4.4)"), named(member).c_str()), true);
+			add(member, format(STR_C("%s: on a curve the wires go to its outside (Iet-107 3.3.4.4)"), named(member).c_str()), true);
 	}
 	// the spans
 	std::vector<double> spans;
@@ -2155,7 +2155,7 @@ catenary_editor::chain_report const &catenary_editor::catenary_chain_report(std:
 				add(members[k + 1], format(STR_C("Span %s - %s: no zigzag, the wires on the same side of the track axis at both poles (Iet-107 4.6.4.3)"), named(members[k]).c_str(), named(members[k + 1]).c_str()), true);
 			continue;
 		}
-		// on a curve: in the middle of the span the wires no farther inside than the track axis (tangent to it, Iet-107 3.4.4.4)
+		// on a curve: in the middle of the span the wires no farther inside than the track axis (tangent to it, Iet-107 3.3.4.4)
 		auto const middle{0.5 * (wa + wb)};
 		auto const *bend{track_curve(*sa) && sa->inward != 0 ? sa : sb};
 		glm::dvec3 axis{0.0};
@@ -2177,7 +2177,7 @@ catenary_editor::chain_report const &catenary_editor::catenary_chain_report(std:
 		auto const outward{right_of(bend->forward) * static_cast<double>(-bend->inward)};
 		auto const inside{-glm::dot(plan_of(middle) - plan_of(axis + lean), outward)};
 		if (inside > kMidspanInside)
-			add(members[k + 1], format(STR_C("Span %s - %s: in its middle the wires are %.2f m inside the track axis of the curve, the span is too long for the stagger (Iet-107 3.4.4.4)"), named(members[k]).c_str(), named(members[k + 1]).c_str(), inside), true);
+			add(members[k + 1], format(STR_C("Span %s - %s: in its middle the wires are %.2f m inside the track axis of the curve, the span is too long for the stagger (Iet-107 3.3.4.4)"), named(members[k]).c_str(), named(members[k + 1]).c_str(), inside), true);
 	}
 	if (false == tool.zigzag)
 		return report;
@@ -2211,7 +2211,7 @@ catenary_editor::chain_report const &catenary_editor::catenary_chain_report(std:
 			return device != nullptr && false == device->fixed;
 		};
 		if (weights(true) && weights(false))
-			add(std::numeric_limits<std::size_t>::max(), STR("Weight anchors at both ends and no middle anchor (Iet-107 3.4.6.1, 4.6.3.2)"), false);
+			add(std::numeric_limits<std::size_t>::max(), STR("Weight anchors at both ends and no middle anchor (Iet-107 3.3.6.1, 4.6.3.2)"), false);
 	}
 	return report;
 }
@@ -5494,7 +5494,7 @@ void catenary_editor::render_catenary_zigzag_ui()
 		if (ImGui::SliderFloat(STR_C("Stagger on a straight, either side (m)"), &tool.zigzag_straight, 0.0f, static_cast<float>(zigzag_limit(false)), "%.2f"))
 			tool.stagger_own = true;
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("From the track axis, in turn to its two sides: up to 0.30 m, over 160 km/h up to 0.20 m (Iet-107 3.4.4.3, 7.4.2.1)"));
+			ImGui::SetTooltip("%s", STR_C("From the track axis, in turn to its two sides: up to 0.30 m, over 160 km/h up to 0.20 m (Iet-107 3.3.4.3, 7.4.2.1)"));
 		if (ImGui::SliderFloat(STR_C("Stagger on a curve, outwards (m)"), &tool.zigzag_curve, 0.0f, static_cast<float>(zigzag_limit(true)), "%.2f"))
 			tool.stagger_own = true;
 		if (ImGui::IsItemHovered())
