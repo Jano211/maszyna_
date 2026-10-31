@@ -231,7 +231,9 @@ Te rzeczy są w danych jako ZAŁOŻENIE albo czekają na obejrzenie w grze. Odha
 
 - [x] 4530 (01–03 przody, 04 tył; dół prowadnicy na 1701: 4530-3 + 4530-4), 4560 (01 C240 … 05 C160, C140 jak C160; dół
   prowadnicy na nogach bramek, bez tyłu – śruby hakowe), 4570-1 (słupy przestrzenne: półbramki 1901, bez tyłu) – 2026-10-31
-- [ ] Uchwyty kotwień **4550, 4580** – brakuje; nowe półbramki 190x czekają na opisy (wtedy też 4570)
+- [ ] Uchwyty kotwień **4580** – brakuje; nowe półbramki 190x czekają na opisy (wtedy też 4570)
+- [x] Modele 4550-01…07 są (Jan 2026-11-01) + tyły: **4550-08 do 03, 4550-09 do 04** (przelotowe M16×240). 4550-05 jeszcze
+  z teksturą na sztywno (Map siec_trakcyjna\siec) – Jan przeklika na -1. Do wpięcia razem z 0454 (po środzie).
 - [ ] Po środzie (Jan 2026-11-01): stare zamocowanie **0454** (tom 1 s. 111) jako opcja kotwienia ciężarowego – wsporniki 5060-1 ×2
   na uchwytach 4550, prowadnica z prętów 5050-1 ×8, góra 4510-1/4510-2/4520-3 (wyk. 1–3, słup zamknięty; 4550-1 + 4550-2),
   4520-4/-5 (wyk. 4–5, kratowy; 4550-5/-6 ×2), 4570-1 (wyk. 6, przestrzenny; 4550-7 ×2). Modele: 4550-1/-2/-5/-6/-7, 5050-1.
