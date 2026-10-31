@@ -348,6 +348,11 @@ class editor_mode : public application_mode, private editor_track::observer
 		double band{300.0}; // m from the tracks the chunks made along them reach
 		bool shape{true}; // the formation and the slopes of the tracks as modifiers of the terrain
 		bool local{false}; // the terrain under the tracks is made anew only around the camera
+		// the model from the sheets downloaded by hand (.asc) in a folder, where they lie; kept per scenery
+		std::string sheetscenery; // the scenery the settings below were read for
+		bool sheets{false};
+		char sheetfolder[512]{};
+		float correction{0.0f}; // m added to the heights of the sheets
 		bool grow{true}; // while a track is laid, the terrain is made around the cursor where there's none
 		bool grown{false}; // the chunks waiting were all asked for by growing: the formations aren't made anew after them
 		double grow_time{-10.0};

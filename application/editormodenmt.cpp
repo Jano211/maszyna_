@@ -247,10 +247,34 @@ std::vector<editor_mode::nmt_place> editor_mode::nmt_track_places(double const S
 	return result;
 }
 
+// the scenery file without its folder and extension, as the settings kept per scenery are named
+static std::string sheets_scenery()
+{
+	std::string scenery{Global.SceneryFile};
+	if (auto const slash{scenery.find_last_of("/\\")}; slash != std::string::npos)
+		scenery = scenery.substr(slash + 1);
+	if (auto const dot{scenery.find_last_of('.')}; dot != std::string::npos)
+		scenery = scenery.substr(0, dot);
+	return scenery.empty() ? "default" : scenery;
+}
+
 void editor_mode::nmt_locate()
 {
 	auto const &config{m_orthophoto.settings()};
 	m_nmt.place(config.north, config.east);
+	// the sheets of the scenery
+	auto &state{m_nmt_state};
+	if (auto const scenery{sheets_scenery()}; scenery != state.sheetscenery)
+	{
+		state.sheetscenery = scenery;
+		auto const stored{EditorSettings.sheets(scenery)};
+		state.sheets = stored.on;
+		std::snprintf(state.sheetfolder, sizeof(state.sheetfolder), "%s", stored.folder.c_str());
+		state.correction = static_cast<float>(stored.correction);
+	}
+	// as stored, not as being typed
+	auto const applied{EditorSettings.sheets(state.sheetscenery)};
+	m_nmt.local(applied.on ? applied.folder : std::string{}, applied.correction);
 }
 
 void editor_mode::nmt_fit()
@@ -801,6 +825,36 @@ void editor_mode::render_nmt_ui()
 	}
 
 	step_heading(3, STR_C("Load"));
+	{
+		// the older model, downloaded by hand: for the sceneries of what's gone since the newer one was scanned
+		nmt_locate();
+		bool changed{ImGui::Checkbox(STR_C("Terrain from the sheets in a folder"), &state.sheets)};
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("The terrain model is taken from the sheets downloaded by hand from geoportal.gov.pl (ESRI ASCII grid, .asc), as the older ones of before the land was dug over;\n"
+			                              "where they don't reach it's fetched from the service as usual. PUWG 1992 and PUWG 2000 are both read, told apart by themselves.\n"
+			                              "Where sheets overlap, the one first by the name of the file is taken. Kept for this scenery.\n"
+			                              "The terrain already made doesn't change until it's made anew"));
+		if (state.sheets)
+		{
+			ImGui::SetNextItemWidth(-1.0f);
+			ImGui::InputTextWithHint("##nmtsheets", STR_C("Folder with the sheets, e.g. G:\\NMT\\2011"), state.sheetfolder, sizeof(state.sheetfolder));
+			changed |= ImGui::IsItemDeactivatedAfterEdit();
+			ImGui::SetNextItemWidth(120.0f);
+			ImGui::InputFloat(STR_C("Height correction (m)"), &state.correction, 0.0f, 0.0f, "%.2f");
+			changed |= ImGui::IsItemDeactivatedAfterEdit();
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Added to the heights of the sheets, as between Kronsztadt 86 of the older ones and EVRF2007 of the service (some 0.1-0.2 m).\n"
+				                              "Only the edges where the sheets meet the terrain from the service show it: the terrain is fitted to the tracks anyway"));
+			if (auto const status{m_nmt.local_status()}; false == status.empty())
+				ImGui::TextDisabled("%s", status.c_str());
+		}
+		if (changed)
+		{
+			EditorSettings.sheets(state.sheetscenery, {state.sheets, state.sheetfolder, static_cast<double>(state.correction)});
+			EditorSettings.save();
+			nmt_locate();
+		}
+	}
 	if (tracks && m_streamer.resident() > 0)
 	{
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.75f, 0.3f, 1.0f));

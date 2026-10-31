@@ -39,6 +39,16 @@ public:
 	bool orthophoto_origin(std::string const &Scenery, double &North, double &East) const;
 	void orthophoto_origin(std::string const &Scenery, double North, double East);
 
+	// terrain model from the sheets in a folder instead of the service, kept per scenery
+	struct nmt_sheets
+	{
+		bool on{false};
+		std::string folder;
+		double correction{0.0};
+	};
+	nmt_sheets sheets(std::string const &Scenery) const;
+	void sheets(std::string const &Scenery, nmt_sheets const &Sheets);
+
 	double platform_edge() const { return m_platform_edge; }
 	void platform_edge(double Distance) { m_platform_edge = Distance; }
 	double signal_offset() const { return m_signal_offset; }
@@ -69,6 +79,7 @@ private:
 	movement_scheme m_movement{movement_scheme::wsad};
 	orthophoto_settings m_orthophoto;
 	std::map<std::string, std::pair<double, double>> m_orthophoto_origins;
+	std::map<std::string, nmt_sheets> m_sheets;
 	double m_platform_edge{1.725};
 	double m_signal_offset{2.25};
 	bool m_nodebank_previews{true};

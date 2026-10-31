@@ -53,6 +53,14 @@ class editor_nmt
 	// whether this build can fetch from the service at all
 	static bool can_download();
 
+	// heights from the sheets of the model downloaded by hand (ESRI ASCII grid, .asc), as the older ones, in PUWG 1992 or
+	// PUWG 2000: where they lie they're taken instead of the service, the rest of the squares come from it. Correction, m:
+	// added to their heights, as between Kronsztadt 86 and EVRF2007. an empty folder: the service only. the squares in the
+	// memory are dropped when it changes, so they're read anew
+	void local(std::string const &Folder, double const Correction);
+	// what was found in the folder, for the window
+	std::string local_status() const;
+
 	// side of a square of the grid, m
 	static double constexpr square_size{500.0};
 
@@ -69,9 +77,27 @@ class editor_nmt
 		bool failed{false}; // the service gave nothing usable: the square has no data
 	};
 
+	// a sheet of the folder: its grid as the file says, the place of it in PUWG 1992 worked out once
+	struct sheet
+	{
+		std::string file;
+		int zone{0}; // 0: PUWG 1992, 5-8: the zone of PUWG 2000
+		double east{0.0}, south{0.0}; // the outer corner of its south-west cell, in its own system
+		double cell{1.0};
+		int columns{0}, rows{0};
+		double nodata{-9999.0};
+		double low_east{0.0}, low_north{0.0}, high_east{0.0}, high_north{0.0}; // the extent in PUWG 1992
+	};
+
 	key key_of(double const East, double const North) const;
 	void work();
 	std::shared_ptr<square const> fetch(key const &Key, std::string &Error);
+	std::shared_ptr<square const> fetch_service(key const &Key, std::string &Error);
+	// the square from the sheets of the folder; null where none of them reaches it. Missing: pixels they don't cover
+	std::shared_ptr<square> fetch_local(key const &Key, bool &Missing);
+	// the heights of a sheet, rows from the north; read once and kept while a few others are
+	std::shared_ptr<std::vector<float> const> sheet_heights(sheet const &Sheet);
+	void index_sheets();
 
 	mutable std::mutex m_mutex;
 	std::condition_variable m_wake;
@@ -84,4 +110,12 @@ class editor_nmt
 	double m_north{0.0};
 	double m_east{0.0};
 	bool m_stop{false};
+	// the sheets of the folder
+	std::string m_folder;
+	double m_correction{0.0};
+	std::vector<sheet> m_sheets;
+	std::string m_localstatus;
+	double m_indexednorth{0.0}, m_indexedeast{0.0}; // the place of the scenery the systems of the sheets were told apart for
+	mutable std::mutex m_sheetmutex; // of the heights read
+	std::deque<std::pair<std::string, std::shared_ptr<std::vector<float> const>>> m_sheetheights;
 };

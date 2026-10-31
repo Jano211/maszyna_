@@ -12,6 +12,7 @@ http://mozilla.org/MPL/2.0/.
 #include "utilities/Logs.h"
 #include "utilities/utilities.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstdlib>
 #include <filesystem>
@@ -48,6 +49,7 @@ template <typename Type_> void parse(std::string const &Text, Type_ &Out)
 }
 
 const std::string origin_prefix{"ortho_origin@"};
+const std::string sheets_prefix{"nmt_sheets@"};
 
 // settings are whitespace separated key/value pairs, so the scenery name used in the key can't contain spaces
 std::string origin_key(std::string const &Scenery)
@@ -110,6 +112,20 @@ bool editorSettings::load()
 			m_track_tools_more = (value == "1");
 		else if (key == "top_ballast")
 			m_top_ballast = (value == "1");
+		else if (key.rfind(sheets_prefix, 0) == 0)
+		{
+			// on;correction;folder, the spaces of the folder written as |
+			auto const first = value.find(';');
+			auto const second = first == std::string::npos ? std::string::npos : value.find(';', first + 1);
+			if (second == std::string::npos)
+				continue;
+			nmt_sheets sheets;
+			sheets.on = value.substr(0, first) == "1";
+			parse(value.substr(first + 1, second - first - 1), sheets.correction);
+			sheets.folder = value.substr(second + 1);
+			std::replace(sheets.folder.begin(), sheets.folder.end(), '|', ' ');
+			m_sheets[key] = sheets;
+		}
 		else if (key.rfind(origin_prefix, 0) == 0)
 		{
 			// northing;easting
@@ -160,6 +176,12 @@ bool editorSettings::save()
 	stream << std::fixed << std::setprecision(3);
 	for (auto const &origin : m_orthophoto_origins)
 		stream << origin.first << " " << origin.second.first << ";" << origin.second.second << "\n";
+	for (auto const &entry : m_sheets)
+	{
+		auto folder = entry.second.folder;
+		std::replace(folder.begin(), folder.end(), ' ', '|');
+		stream << entry.first << " " << (entry.second.on ? 1 : 0) << ";" << entry.second.correction << ";" << folder << "\n";
+	}
 	return true;
 }
 
@@ -176,4 +198,23 @@ bool editorSettings::orthophoto_origin(std::string const &Scenery, double &North
 void editorSettings::orthophoto_origin(std::string const &Scenery, double North, double East)
 {
 	m_orthophoto_origins[origin_key(Scenery)] = {North, East};
+}
+
+editorSettings::nmt_sheets editorSettings::sheets(std::string const &Scenery) const
+{
+	auto key = sheets_prefix + Scenery;
+	for (char &c : key)
+		if (std::isspace(static_cast<unsigned char>(c)))
+			c = '_';
+	auto const lookup = m_sheets.find(key);
+	return lookup == m_sheets.end() ? nmt_sheets{} : lookup->second;
+}
+
+void editorSettings::sheets(std::string const &Scenery, nmt_sheets const &Sheets)
+{
+	auto key = sheets_prefix + Scenery;
+	for (char &c : key)
+		if (std::isspace(static_cast<unsigned char>(c)))
+			c = '_';
+	m_sheets[key] = Sheets;
 }
