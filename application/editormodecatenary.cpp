@@ -98,6 +98,61 @@ double nearest_parameter(TTrack const &Track, int const Path, glm::dvec3 const &
 	return 0.5 * (low + high);
 }
 
+// a pole dragged past the end of its track goes over to the track joined there (a line is made of many short paths): from the
+// end the foot of the cursor fell on, onwards through the joined tracks while the foot falls past their far end too. Only the
+// joined tracks: a parallel one is never taken, so a pole between two tracks doesn't jump over to the other one
+bool drag_onwards(TTrack *&Track, int &Path, glm::dvec3 const &Cursor)
+{
+	constexpr double kEnd{1e-4};
+	auto *track{Track};
+	auto path{std::clamp(Path, 0, static_cast<int>(Track->m_paths.size()) - 1)};
+	auto parameter{nearest_parameter(*track, path, Cursor)};
+	if (parameter > kEnd && parameter < 1.0 - kEnd)
+		return false;
+	auto moved{false};
+	for (int hop = 0; hop < 8; ++hop)
+	{
+		bezier const curve{track->m_paths[path]};
+		auto const end{parameter >= 0.5 ? curve.point(1.0) : curve.point(0.0)};
+		auto *next{parameter >= 0.5 ? track->trNext : track->trPrev};
+		if (next == nullptr || next->m_editorremoved || next->m_paths.empty() || next == Track)
+			break;
+		// the path of the joined track which starts or ends at this end (a switch: the one set, then any)
+		auto best{std::numeric_limits<double>::max()};
+		int nextpath{-1};
+		for (int k = 0; k < static_cast<int>(next->m_paths.size()); ++k)
+		{
+			bezier const other{next->m_paths[k]};
+			auto const gap{std::min(geometry::plan_distance(other.point(0.0), end), geometry::plan_distance(other.point(1.0), end))};
+			if (gap < best)
+			{
+				best = gap;
+				nextpath = k;
+			}
+		}
+		if (nextpath < 0 || best > 0.5)
+			break;
+		auto const nextparameter{nearest_parameter(*next, nextpath, Cursor)};
+		bezier const other{next->m_paths[nextpath]};
+		// the foot back at the end it was entered by: the cursor is at the joint, the track before keeps it
+		auto const entered{geometry::plan_distance(other.point(0.0), end) < geometry::plan_distance(other.point(1.0), end) ? 0.0 : 1.0};
+		if (std::abs(nextparameter - entered) <= kEnd)
+			break;
+		track = next;
+		path = nextpath;
+		parameter = nextparameter;
+		moved = true;
+		if (parameter > kEnd && parameter < 1.0 - kEnd)
+			break;
+	}
+	if (moved)
+	{
+		Track = track;
+		Path = path;
+	}
+	return moved;
+}
+
 glm::dvec2 forward_at(TTrack const &Track, int const Path, double const Parameter)
 {
 	auto const tangent{bezier{Track.m_paths[Path]}.first(Parameter)};
@@ -7674,8 +7729,19 @@ void catenary_editor::catenary_drag_update()
 		if (found == nullptr || current == nullptr || found->track == nullptr || found->track->m_editorremoved)
 			return;
 		auto *track{e.m_hover.track != nullptr ? e.m_hover.track : found->track};
-		auto const path{e.m_hover.track != nullptr ? e.m_hover.path : found->path};
-		auto const side{found->side};
+		auto path{e.m_hover.track != nullptr ? e.m_hover.path : found->path};
+		// with the button held the editor doesn't look for the track under the cursor: past the end of the track of the pole,
+		// the track joined there
+		auto side{found->side};
+		if (e.m_hover.track == nullptr && drag_onwards(track, path, e.cursor_level(found->axis.y)))
+		{
+			// the joined track may run the other way: the side stays the same on the ground
+			auto const cursor{e.cursor_level(found->axis.y)};
+			auto const before{forward_at(*found->track, found->path, found->parameter)};
+			auto const after{forward_at(*track, path, nearest_parameter(*track, path, cursor))};
+			if (glm::dot(before, after) < 0.0)
+				side = -side;
+		}
 		catenary_spot spot;
 		{
 			without_gantry const plain{tool.gantry_selected};
