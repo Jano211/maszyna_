@@ -130,6 +130,7 @@ struct catenary_editor
 		int chain_selected{-1}; // the chain shown in the panel
 		int connect_from{-1}; // hanging the wires on from this suspension: the next poles clicked get the spans
 		int umbrella_from{-1}; // an umbrella from this suspension: the next LMB by a track puts the second cantilever on its pole (or drop)
+		int pull_next{-1}; // a pull-off goes on from this one to the next track: the next LMB by a track puts it there (multi-track pull-off)
 		int anchor_cantilever{-1}; // a cantilever on the pole of this anchor: the next LMB by a track puts it there
 		int anchor_pick{-1}; // anchoring this chain to an existing pole: the next pole clicked carries the tensioning device
 		bool anchor_pick_start{false}; // ... at the start of the chain, otherwise at its end
@@ -213,6 +214,8 @@ struct catenary_editor
 	void catenary_file_follow();
 	void catenary_file_store(bool Save);
 	void render_catenary_move_ui();
+	void render_catenary_pull_ui();
+	bool catenary_pull_next(TTrack &Track, int Path);
 	// the scenery layer of this file name; 0 none
 	static std::size_t catenary_layer_of(std::string const &File);
 	// Placing: the spot of a new pole, which takes the zigzag proposed after the last pole and the step of the span

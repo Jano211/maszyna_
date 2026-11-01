@@ -15,6 +15,16 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-11-01
 
+### Sieć trakcyjna: odciągi wielotorowe (0315/0316, 0325/0326) i na bramkach — commit o tym tytule na `funkcja/odciagi-sieci`
+- Panel zaznaczonego odciągu: „Odciąg dalej na sąsiedni tor” – LPM przy następnym torze. Ten odciąg staje się pośrednim
+  (0311/0313 → 0315, 0312/0314 → 0316, 0321/0323 → 0325, 0322/0324 → 0326), następny staje bez słupa, na wprost niego, z wpisem
+  `pull_from <poprzedni>`: pojedynczy ciągnie linę od liny nośnej poprzedniego (zacisk 5640), podwójny – dolną od jego uchwytu ramion,
+  górną od liny nośnej (Głowacki rys. 13.8). Z izolacją – izolator 7020 na początku liny, czyli między torami. Klik w przęśle
+  łańcucha tamtego toru wstawia odciąg do łańcucha. Przesunięcie poprzedniego przestawia następne.
+- Odciągi na bramkach: na słupie bramki (4630-04, karta 0361 wyk. 4) i na zwisie (4630-05, wyk. 5) składają się tak samo jak na słupie.
+- Zmienia: `world/catenary_suspension.*` (`pull_from`), `world/catenary_scene.cpp` (`pull_start`), `application/editormodecatenary.*`,
+  `lang/editor_pl.po`, dane `traction_cantilevers.txt` i `traction_catalog.txt` (do `data/`), test. Wymaga: poprzedni commit odciągów.
+
 Branch `funkcja/odciagi-sieci` (od `dab19e5`).
 
 ### Sieć trakcyjna: odciągi sieci (karty 0311–0314, 0321–0324) — commit o tym tytule

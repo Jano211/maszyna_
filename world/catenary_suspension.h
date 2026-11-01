@@ -52,6 +52,10 @@ struct suspension {
     double lean { 0.0 };
     bool   has_spread { false };
     double spread[ 3 ] { 0.0, 0.0, 0.0 };
+    // odciąg sieci wielotorowy (karty 0315/0316, 0325/0326 - pośrednie): ten odciąg nie ma słupa, jego lina idzie dalej od odciągu
+    // <nazwa> z sąsiedniego toru (pojedynczy: od jego liny nośnej, podwójny: dolna od uchwytu ramion, górna od liny nośnej).
+    // Wpis "pull_from <nazwa>"; "attach" liczy wtedy exe
+    std::string pull_from;
 };
 
 // łańcuch sieci: kolejne przęsła między podwieszeniami z listy (od kotwy do kotwy), wpis
