@@ -15,6 +15,15 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-11-01
 
+Branch `funkcja/polbramki-1901` (od `eb72be7`).
+
+### Sieć trakcyjna: półbramki 1901 – zwisy ESN-544 obrócone, wysięgniki na nodze — commit o tym tytule
+- Zwisy ESN-544 stały obrócone o 90° względem 4840 / 4850: dostały `turn 90` jak tamte (modele bez obrotu w t3d, przekrój ułożony
+  jak 4840).
+- Noga półbramki 1901 (słup przestrzenny, gabaryt 600) ma mocowania wysięgników wyk. 04 (4610-04 / 4620-04 / 4630-04 – karta 0361
+  wyk. 4, jak słupy bramek): da się na niej postawić wysięgnik i odciąg. Słupy 1901 w katalogu edytora w grupie g_1901.
+- Zmienia: dane `traction_supports.txt`, `traction_catalog.txt` (do `data/`). Wymaga: nic.
+
 Branch `funkcja/odsuw-i-tor` (od `2ccb42f`).
 
 ### Edytor sieci: przepięcie wysięgnika na inny tor — commit o tym tytule
