@@ -11834,6 +11834,9 @@ msgstr "Nie udało się zapisać sieci trakcyjnej w \"%s\": %s"
 msgid "From the track axis: + towards the pole, - away from it. Ctrl+click types a value"
 msgstr "Od osi toru: + do słupa, - od słupa. Ctrl+klik i wpisz"
 
+msgid "From the track axis: + towards the pole, - away from it. The cantilever stays short or long as it is - swap it with \"Wires towards the pole\" or X. Ctrl+click types a value"
+msgstr "Od osi toru: + w stronę słupa, - od słupa. Wysięgnik zostaje krótki albo długi, jaki jest - zamienia się go „Przewody do słupa” albo X. Ctrl+klik wpisuje wartość"
+
 msgid "+-0.5"
 msgstr "±0,5"
 

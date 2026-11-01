@@ -1836,8 +1836,14 @@ void catenary_editor::catenary_take_settings(std::size_t const Index)
 	// from the leaning axis of a superelevated track, as catenary_compose() puts it (otherwise the lean would be added again)
 	double offset{0.0};
 	stagger_of(Index, offset);
-	tool.stagger = static_cast<float>(std::abs(offset));
-	tool.toward = offset >= 0.0;
+	// short or long from the card (its family says), not from the side the wires went to (+-0.5 lets them cross the axis)
+	auto toward{offset >= 0.0};
+	if (auto const *family{catenary_scene_structures().family_of(data->card)}; family != nullptr && family->toward >= 0)
+		toward = family->toward == 2 ? (data->card % 2 == 1) : family->toward == 1;
+	tool.toward = toward;
+	tool.stagger = static_cast<float>(toward ? offset : -offset);
+	if (tool.stagger < 0.0f)
+		tool.wide_stagger = true; // the wires on the other side of the axis than the card: shown on the +-0.5 slider
 	// the height over the rails without the rise of the middle of a superelevated track, which catenary_compose() adds itself
 	// (Jan 2026-10-30: with it read back here every swap X lifted the wires again)
 	tool.height = static_cast<float>(data->at[1] - railhead - catenary_cant_shift(*spot, data->at[1] - railhead).y);
@@ -5668,22 +5674,29 @@ static bool catenary_stagger_slider(Tool &tool)
 	auto changed{false};
 	if (tool.wide_stagger)
 	{
+		// signed across the track axis; the short / long cantilever (the card) stays as it is, it's swapped by hand (Jan 2026-11-01: going
+		// through 0 swapped the cantilever). The stagger is kept relative to the side of the card, so it may be negative here
 		auto signedstagger{tool.toward ? tool.stagger : -tool.stagger};
 		if (ImGui::SliderFloat(STR_C("Stagger of the wires (m)"), &signedstagger, -0.50f, 0.50f, "%+.2f"))
 		{
-			tool.stagger = std::abs(signedstagger);
-			tool.toward = signedstagger >= 0.0f;
+			tool.stagger = tool.toward ? signedstagger : -signedstagger;
 			changed = true;
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("From the track axis: + towards the pole, - away from it. Ctrl+click types a value"));
+			ImGui::SetTooltip("%s", STR_C("From the track axis: + towards the pole, - away from it. The cantilever stays short or long as it is - swap it with \"Wires towards the pole\" or X. Ctrl+click types a value"));
 	}
 	else
 		changed = ImGui::SliderFloat(STR_C("Stagger of the wires (m)"), &tool.stagger, 0.0f, 0.45f, "%.2f");
 	if (tool.expert || tool.wide_stagger)
 	{
 		ImGui::SameLine();
-		ImGui::Checkbox(STR_C("+-0.5"), &tool.wide_stagger);
+		if (ImGui::Checkbox(STR_C("+-0.5"), &tool.wide_stagger) && false == tool.wide_stagger && tool.stagger < 0.0f)
+		{
+			// back to the usual stagger with the wires on the other side than the card: the card follows the wires
+			tool.stagger = -tool.stagger;
+			tool.toward = false == tool.toward;
+			changed = true;
+		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("Stagger from -0.50 to +0.50 m across the track axis, for tuning at turnouts; not allowed on a line"));
 	}
