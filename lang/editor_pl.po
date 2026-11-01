@@ -6259,6 +6259,27 @@ msgstr "Plik w katalogu scenerii, do którego trafiają nowe słupy; nowy plik j
 msgid "Selected pole (%s): changes apply to it at once"
 msgstr "Zaznaczony słup (%s): zmiany od razu na nim"
 
+msgid "Multi-track pull-off: the rope goes on from %s"
+msgstr "Odciąg wielotorowy: lina idzie dalej od %s"
+
+msgid "Goes on to the next track: %s"
+msgstr "Idzie dalej na następny tor: %s"
+
+msgid "Pull-off on to the next track"
+msgstr "Odciąg dalej na sąsiedni tor"
+
+msgid "LMB by the next track: the pull-off goes on there (Esc cancels)"
+msgstr "LPM przy następnym torze: odciąg idzie tam dalej (Esc anuluje)"
+
+msgid "A multi-track pull-off (cards 0315/0316, 0325/0326): this one becomes the intermediate one, the next one stands without a pole, square across from it on the clicked track, its rope going on from this one (with insulation: an insulator between the tracks). Click the track in a span of its chain to put it into the chain"
+msgstr "Odciąg wielotorowy (karty 0315/0316, 0325/0326): ten staje się pośrednim, następny staje bez słupa, na wprost niego przy klikniętym torze, a jego lina idzie dalej od tego (z izolacją: izolator między torami). Kliknij tor w przęśle jego łańcucha, żeby trafił do łańcucha"
+
+msgid "That's the track of the pull-off itself (or too close to it): click the next track"
+msgstr "To tor samego odciągu (albo za blisko niego): kliknij następny tor"
+
+msgid "Pull-off %s goes on to the next track (%s, card %04d)"
+msgstr "Odciąg %s idzie dalej na następny tor (%s, karta %04d)"
+
 msgid "Move to another file"
 msgstr "Przenieś do innego pliku"
 

@@ -169,8 +169,8 @@ family 0192 w_tee cards 0192 0193 0194 : 0192-0194 - dwie sieci, skrzyżowanie p
 family 0196 w_tee cards 0196 0197 : 0196, 0197 - nad rozjazdem krzyżowym podwójnym
 
 // ---- odciagi sieci (dzial 0300) ----------------------------------------------------------------------------------------
-group o_pull pulloff execution user : Odciągi sieci końcowe (0311-0314, 0321-0324)
-text Lina odciągowa od słupa do liny nośnej, ramiona odciągowe od liny do przewodu. Pojedyncze, gdy lina nośna jest blisko przewodu (w środku rozpiętości, łuki R ok. 400 m, podwieszenie co drugi słup); podwójne, gdy daleko (podwieszenie co trzeci słup, rozpiętości do 24 m). Uchwyt na słupie obniżony pod przewód (Głowacki rys. 13.7).
+group o_pull pulloff execution user : Odciągi sieci (0311-0316, 0321-0326)
+text Lina odciągowa od słupa do liny nośnej, ramiona odciągowe od liny do przewodu. Pojedyncze, gdy lina nośna jest blisko przewodu (w środku rozpiętości, łuki R ok. 400 m, podwieszenie co drugi słup); podwójne, gdy daleko (podwieszenie co trzeci słup, rozpiętości do 24 m). Uchwyt na słupie obniżony pod przewód (Głowacki rys. 13.7). Wielotorowe: na odciągu przycisk „Odciąg dalej na sąsiedni tor” - pierwszy staje się pośredni (0315/0316, 0325/0326), następny bez słupa ciągnie linę od niego.
 exec 1 : wyk. 1 - sieć dwuprzewodowa
 exec 2 : wyk. 2 - sieć jednoprzewodowa
 family 0311 o_pull cards 0311 : 0311 - pojedynczy, bez izolacji, ramiona proste
@@ -181,6 +181,10 @@ family 0321 o_pull cards 0321 : 0321 - podwójny, bez izolacji, ramiona proste
 family 0322 o_pull cards 0322 : 0322 - podwójny, z izolacją, ramiona proste
 family 0323 o_pull cards 0323 : 0323 - podwójny, bez izolacji, ramiona łukowe
 family 0324 o_pull cards 0324 : 0324 - podwójny, z izolacją, ramiona łukowe
+family 0315 o_pull cards 0315 : 0315 - pojedynczy pośredni (wielotorowy), bez izolacji
+family 0316 o_pull cards 0316 : 0316 - pojedynczy pośredni (wielotorowy), z izolacją międzytorową
+family 0325 o_pull cards 0325 : 0325 - podwójny pośredni (wielotorowy), bez izolacji
+family 0326 o_pull cards 0326 : 0326 - podwójny pośredni (wielotorowy), z izolacją międzytorową
 
 // ---- specjalne ------------------------------------------------------------------------------------------------------
 group s_platform special execution user : Peronowe przelotowe (103x, 104x)

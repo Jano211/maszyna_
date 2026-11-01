@@ -34,7 +34,7 @@ std::string normalize_path( std::string Path ) {
 
 // słowa kluczowe wewnątrz wpisu podwieszenia
 bool is_keyword( std::string const &Token ) {
-    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "lean", "endsuspension" };
+    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "lean", "pull_from", "endsuspension" };
     return keywords.find( Token ) != keywords.end();
 }
 
@@ -330,6 +330,10 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 if( list.size() == 1 && to_number( list[ 0 ], entry.lean ) && std::abs( entry.lean ) <= 10.0 ) {}
                 else { report( entry.name, "\"lean\" needs one number of degrees, up to 10" ); entry.lean = 0.0; good = false; }
             }
+            else if( key == "pull_from" ) {
+                if( list.size() == 1 ) { entry.pull_from = list.front(); }
+                else { report( entry.name, "\"pull_from\" needs exactly one name: the pull-off on the next track this one goes on from" ); good = false; }
+            }
             else if( key == "stay_shift" ) {
                 if( list.size() == 1 && to_number( list[ 0 ], entry.stay_shift ) && std::abs( entry.stay_shift ) <= 0.5 + 1e-9 ) {}
                 else { report( entry.name, "\"stay_shift\" needs one number from -0.5 to 0.5: the top mount moved up (+) or down (-), metres" ); entry.stay_shift = 0.0; good = false; }
@@ -414,6 +418,7 @@ std::string write_suspension( suspension const &Entry ) {
     if( Entry.above_pole ) { text += " above_pole"; }
     if( Entry.stay_shift != 0.0 ) { text += " stay_shift " + number( Entry.stay_shift, 3 ); }
     if( Entry.lean != 0.0 ) { text += " lean " + number( Entry.lean, 2 ); }
+    if( false == Entry.pull_from.empty() ) { text += " pull_from " + Entry.pull_from; }
     return text + " endsuspension";
 }
 

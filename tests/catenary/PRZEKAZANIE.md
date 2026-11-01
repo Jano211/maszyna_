@@ -34,6 +34,7 @@ kopia z literówką, nieużywana. Testy po `02a80e5` puszczone 01.11: tc te tk t
    01.11 14:30: ODCIĄGI SIECI zrobione na `funkcja/odciagi-sieci` (karty z „z- KATALOG 1 -z.pdf” s. 64–84: 0311–0326, mocowania
    0361/0362/0371/0372 = 4630; Głowacki s. 344–346 PDF 336–338: rys. 13.3/13.5, tablica obniżenia 13.7). Odciąg = podwieszenie z kartą
    31x/32x (schemat `pulloff`), lina nośna w jego miejscu z całej rozpiętości (`pulloff_ropes`, `pulloff_run`), przęsła `pull`.
+   01.11 14:50: wielotorowe (pull_from, `pull_start`, przycisk „Odciąg dalej na sąsiedni tor”) i bramki (4630-04 / -05) – zrobione.
    Szczegóły i ZAŁOŻENIA w docs/EDYTOR_ZMIANY.md. Skrzyżowania przewodów nad rozjazdami (ogranicznik) – Jan: odłożone na po środzie.
 4. Po środzie: kotwienie 0454 (4550-1/-2/-5/-6/-7, tyły 4550-8 do 03 i 4550-9 do 04, 5050-1 – model od Jana), konsoleta 4580
    (dwa modele), Iet-107 (uchwyty odległościowe 4.6.1.8, YwsC 345 daN / Y 14 m – decyzja Jana). Malowanie wariantów tekstur

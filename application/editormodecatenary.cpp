@@ -3896,6 +3896,7 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 			return;
 		}
 		tool.umbrella_from = -1;
+		tool.pull_next = -1;
 		tool.anchor_cantilever = -1;
 		if (tool.connect_from >= 0)
 		{
@@ -4141,6 +4142,13 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 			tool.status = spot.problem;
 		else
 			catenary_anchor_cantilever_place(spot);
+		return;
+	}
+	if (tool.pull_next >= 0)
+	{
+		// a multi-track pull-off: the rope goes on from the pull-off on the track before to this one
+		if (catenary_pull_next(*Intent.track, Intent.path))
+			tool.pull_next = -1;
 		return;
 	}
 	if (tool.umbrella_from >= 0)
@@ -5841,6 +5849,130 @@ void catenary_editor::render_catenary_chain_report(std::size_t const Chain)
 	}
 }
 
+// pull-offs (cards 031x/032x): single-track ones end at the messenger, multi-track ones go on to the next track. The end one becomes the
+// intermediate one of its kind (only straight arms there), the new one has no pole: its rope (lower and upper on the double ones)
+// goes on from the pull-off before
+namespace
+{
+bool pulloff_card(catenary::suspension const &Data, bool *Double = nullptr)
+{
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *scheme{catalog != nullptr ? catalog->scheme(Data.card, Data.execution) : nullptr};
+	if (Double != nullptr)
+		*Double = scheme != nullptr && scheme->upper_mounted;
+	return scheme != nullptr && scheme->pulloff;
+}
+
+int pulloff_intermediate(int const Card)
+{
+	switch (Card)
+	{
+	case 311: case 313: case 315: return 315;
+	case 312: case 314: case 316: return 316;
+	case 321: case 323: case 325: return 325;
+	case 322: case 324: case 326: return 326;
+	default: return 0;
+	}
+}
+
+// the end card of the same kind for the next track (intermediate -> end with straight arms)
+int pulloff_end(int const Card)
+{
+	switch (Card)
+	{
+	case 315: return 311;
+	case 316: return 312;
+	case 325: return 321;
+	case 326: return 322;
+	default: return Card;
+	}
+}
+} // namespace
+
+void catenary_editor::render_catenary_pull_ui()
+{
+	auto &tool{m_catenary};
+	auto const *data{tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr};
+	if (data == nullptr || false == pulloff_card(*data))
+		return;
+	if (false == data->pull_from.empty())
+		ImGui::TextDisabled("%s", format(STR_C("Multi-track pull-off: the rope goes on from %s"), data->pull_from.c_str()).c_str());
+	// one next track from each pull-off
+	auto next{std::string{}};
+	for (std::size_t index = 0; index < catenary_scene_size() && next.empty(); ++index)
+		if (auto const *other{catenary_scene_get(index)}; other != nullptr && other->pull_from == data->name && catenary_scene_file_of(index) == catenary_scene_file_of(static_cast<std::size_t>(tool.selected)))
+			next = other->name;
+	if (false == next.empty())
+	{
+		ImGui::TextDisabled("%s", format(STR_C("Goes on to the next track: %s"), next.c_str()).c_str());
+		return;
+	}
+	if (ImGui::Button(STR_C("Pull-off on to the next track")))
+	{
+		tool.pull_next = tool.selected;
+		tool.selected = -1;
+		tool.status = STR("LMB by the next track: the pull-off goes on there (Esc cancels)");
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("A multi-track pull-off (cards 0315/0316, 0325/0326): this one becomes the intermediate one, the next one stands without a pole, square across from it on the clicked track, its rope going on from this one (with insulation: an insulator between the tracks). Click the track in a span of its chain to put it into the chain"));
+}
+
+bool catenary_editor::catenary_pull_next(TTrack &Track, int const Path)
+{
+	auto &tool{m_catenary};
+	auto const source{static_cast<std::size_t>(tool.pull_next)};
+	auto const *before{catenary_scene_get(source)};
+	if (before == nullptr || false == pulloff_card(*before) || false == before->has_at)
+		return true;
+	auto const previous{*before};
+	double rope[3]{previous.at[0], previous.at[1] + 0.5, previous.at[2]};
+	if (previous.has_rope)
+		std::copy(std::begin(previous.rope), std::end(previous.rope), rope);
+	glm::dvec3 const start{rope[0], rope[1], rope[2]};
+	catenary_spot spot;
+	{
+		// square across from the pull-off before, on the side of it
+		without_gantry const plain{tool.gantry_selected};
+		if (false == catenary_spot_at(Track, Path, start, start, 0, spot))
+			return false;
+	}
+	auto const right{right_of(spot.forward) * static_cast<double>(spot.side)};
+	auto const across{glm::dot(plan_of(start) - plan_of(spot.axis), right)};
+	if (across < 1.5)
+	{
+		tool.status = STR("That's the track of the pull-off itself (or too close to it): click the next track");
+		return false;
+	}
+	catenary_compose(spot, across - 0.25, zigzag_stagger(spot.curve), true, previous.has_pole ? previous.pole_type : std::string{});
+	auto &data{spot.data};
+	data.card = pulloff_end(previous.card);
+	data.execution = previous.execution;
+	data.has_pole = false;
+	data.pole_type.clear();
+	data.has_attach = true;
+	data.attach[0] = start.x;
+	data.attach[1] = start.y;
+	data.attach[2] = start.z;
+	data.pull_from = previous.name;
+	data.skin = previous.skin;
+	spot.card = data.card;
+	spot.problem.clear();
+	catenary_place(spot);
+	// the one before becomes the intermediate one (rope on to this one)
+	if (auto const *current{catenary_scene_get(source)}; current != nullptr && pulloff_intermediate(current->card) != 0 && pulloff_intermediate(current->card) != current->card)
+	{
+		auto changed{*current};
+		tool.undo.push_back({tool.group, false, source, *current, std::nullopt, false});
+		changed.card = pulloff_intermediate(current->card);
+		catenary_scene_update(source, changed);
+		if (auto found{tool.spots.find(source)}; found != tool.spots.end())
+			found->second.data = changed;
+	}
+	auto const *added{catenary_scene_size() > 0 ? catenary_scene_get(catenary_scene_size() - 1) : nullptr};
+	tool.status = format(STR_C("Pull-off %s goes on to the next track (%s, card %04d)"), previous.name.c_str(), added != nullptr ? added->name.c_str() : "-", data.card);
+	return true;
+}
+
 // the selected pole moves to another catenary file with everything tied to it by names: its chains with their poles, anchors,
 // gantries with anchors on their legs, earthing (a span hung into a wrong file)
 void catenary_editor::render_catenary_move_ui()
@@ -5952,6 +6084,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 	{
 		ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Selected pole (%s): changes apply to it at once"), catenary_scene_file_of(static_cast<std::size_t>(tool.selected)).c_str()).c_str());
 		render_catenary_move_ui();
+		render_catenary_pull_ui();
 	}
 
 	// on the gantries the drop or the mast is the pole, its distance is the one of the gantry
@@ -8405,8 +8538,9 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 			tool.status.clear();
 			return true;
 		}
-		if (tool.anchor_pick >= 0 || tool.connect_from >= 0 || tool.umbrella_from >= 0 || tool.anchor_cantilever >= 0 || tool.anchor_move >= 0)
+		if (tool.anchor_pick >= 0 || tool.connect_from >= 0 || tool.umbrella_from >= 0 || tool.anchor_cantilever >= 0 || tool.anchor_move >= 0 || tool.pull_next >= 0)
 		{
+			tool.pull_next = -1;
 			tool.anchor_move = -1;
 			tool.anchor_cantilever = -1;
 			tool.anchor_pick = -1;

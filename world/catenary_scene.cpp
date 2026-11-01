@@ -81,6 +81,9 @@ struct scene_suspension {
     double swing_wire[ 3 ] { 0.0, 0.0, 0.0 }, swing_rope[ 3 ] { 0.0, 0.0, 0.0 };
     // rozstaw przewodów jezdnych w uchwytach wysięgnika, inny niż w typie sieci (ramiona 6207/6208: 0,10 m); 0 = jak w typie
     double contact_spread { 0.0 };
+    // odciąg wielotorowy z "pull_from": początek górnej liny (podwójny) od odciągu z sąsiedniego toru, współrzędne scenerii
+    bool has_pull_upper { false };
+    glm::dvec3 pull_upper { 0.0 };
 };
 
 std::vector<scene_suspension> Suspensions;
@@ -413,6 +416,14 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     input.stay_mount = { reach, scheme->mount_stay + raise };
     input.strut_mount = { reach, scheme->mount_strut + ( scheme->steady_mounted ? raise : 0.0 ) };
     input.steady_mount = { reach, scheme->mount_steady };
+    // odciąg bez słupa (dalej od odciągu na sąsiednim torze): lina zaczyna się w punkcie Attach, górna (podwójny) w swoim punkcie
+    if( scheme->pulloff ) {
+        input.steady_mount = { reach, Attach.y - Wire.y };
+        if( scheme->upper_mounted ) {
+            auto const upper { Suspension.has_pull_upper ? Suspension.pull_upper : glm::dvec3 { Attach.x, Wire.y + input.messenger.z, Attach.z } };
+            input.points[ "upper_mount" ] = { ( ( upper.x - Wire.x ) * towardx + ( upper.z - Wire.z ) * towardz ) / reach, upper.y - Wire.y };
+        }
+    }
     // zestaw izolatorów (np. "25" - 25 kV): każdy izolator schematu NNNN-xx podmieniony na NNNN-<zestaw>, jeśli taka część jest
     if( false == data.insulators.empty() ) {
         for( auto const &role : scheme->roles ) {
@@ -747,11 +758,57 @@ entry_points( catenary::suspension const &Data, glm::dvec3 &Wire, glm::dvec3 &Ro
 }
 
 bool held_rope_at( std::size_t Index, glm::dvec3 &Rope );
+std::size_t suspension_named( std::string const &File, std::string const &Name );
+void rope_of( catenary::suspension const &Data, double *Rope );
+
+// odciąg wielotorowy: skąd idą liny odciągu z "pull_from" - z odciągu na sąsiednim torze. Pojedynczy: lina od jego liny nośnej
+// (zacisk 5640); podwójny: dolna lina od jego uchwytu ramion 4270, górna od liny nośnej (Głowacki rys. 13.8). false, gdy tamtego
+// odciągu nie ma
+bool
+pull_start( scene_suspension const &Suspension, glm::dvec3 &Lower, glm::dvec3 &Upper, bool &HasUpper ) {
+    HasUpper = false;
+    auto const index { suspension_named( Suspension.file, Suspension.data.pull_from ) };
+    if( index >= Suspensions.size() || false == Suspensions[ index ].data.has_at ) { return false; }
+    auto const &previous { Suspensions[ index ].data };
+    double rope[ 3 ];
+    rope_of( previous, rope );
+    glm::dvec3 const messenger { rope[ 0 ], rope[ 1 ], rope[ 2 ] };
+    Lower = messenger;
+    auto const *catalog { cantilevers() };
+    auto const *scheme { catalog != nullptr ? catalog->scheme( Suspension.data.card, Suspension.data.execution ) : nullptr };
+    if( scheme == nullptr || false == scheme->upper_mounted ) { return true; }
+    // uchwyt ramion tamtego odciągu: punkt "holder" jego ramion, w płaszczyźnie od przewodu do jego słupa (albo początku liny)
+    auto const *own { catalog->scheme( previous.card, previous.execution ) };
+    auto const arms { own != nullptr ? own->roles.find( "arms" ) : std::map<std::string, std::string>::const_iterator() };
+    auto const *set { own != nullptr && arms != own->roles.end() ? catalog->part( arms->second ) : nullptr };
+    auto const holder { set != nullptr ? set->points.find( "holder" ) : decltype( set->points.end() )() };
+    glm::dvec3 const wire { previous.at[ 0 ], previous.at[ 1 ], previous.at[ 2 ] };
+    glm::dvec3 const start { previous.has_pole ? glm::dvec3 { previous.pole[ 0 ], previous.pole[ 1 ], previous.pole[ 2 ] } : glm::dvec3 { previous.attach[ 0 ], previous.attach[ 1 ], previous.attach[ 2 ] } };
+    glm::dvec2 toward { start.x - wire.x, start.z - wire.z };
+    if( set == nullptr || holder == set->points.end() || glm::length( toward ) < 0.1 ) { return true; }
+    toward = glm::normalize( toward );
+    Lower = wire + glm::dvec3 { toward.x * holder->second.first, holder->second.second, toward.y * holder->second.first };
+    Upper = messenger;
+    HasUpper = true;
+    return true;
+}
 
 // składa wysięgnik wpisu z punktami, bez parasola; zwraca liczbę wstawionych części
 std::size_t
 assemble_alone( std::size_t const Index, catenary::cantilever_catalog const &Catalog ) {
     auto &suspension { Suspensions[ Index ] };
+    // odciąg wielotorowy: początek liny z odciągu na sąsiednim torze (bez słupa)
+    if( false == suspension.data.pull_from.empty() && false == suspension.data.has_pole ) {
+        glm::dvec3 lower, upper;
+        bool hasupper;
+        if( pull_start( suspension, lower, upper, hasupper ) ) {
+            suspension.data.has_attach = true;
+            suspension.data.attach[ 0 ] = lower.x; suspension.data.attach[ 1 ] = lower.y; suspension.data.attach[ 2 ] = lower.z;
+            suspension.has_pull_upper = hasupper;
+            suspension.pull_upper = upper;
+        }
+        else { ErrorLog( "Bad scenario: pull-off \"" + suspension.data.name + "\" goes on from \"" + suspension.data.pull_from + "\", which isn't in the file" ); }
+    }
     glm::dvec3 wire, rope, attach;
     entry_points( suspension.data, wire, rope, attach );
     // linę nośną łańcucha w tym miejscu trzyma inny wysięgnik: linki i zaczepy celują w nią
@@ -3261,6 +3318,13 @@ reassemble( std::size_t const Index ) {
     }
     drop_parts( suspension );
     assemble_alone( Index, *catalog );
+    // odciągi wielotorowe idące dalej od tego: ich liny zaczynają się na nim
+    if( false == suspension.data.name.empty() ) {
+        for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
+            auto const &other { Suspensions[ index ] };
+            if( index != Index && false == other.removed && other.file == Suspensions[ Index ].file && other.data.pull_from == Suspensions[ Index ].data.name ) { reassemble( index ); }
+        }
+    }
 }
 
 // przęsła łańcuchów przy podwieszeniu idą za nim, kotwienia na jego słupie też

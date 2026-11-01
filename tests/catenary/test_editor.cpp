@@ -1052,6 +1052,28 @@ int main( int, char *argv[] ) {
         for( auto const &warning : pulled.warnings ) { std::printf( "    %s\n", warning.c_str() ); }
         check( probed && rope != nullptr && insulator != nullptr && arms != nullptr && mount != nullptr && pulled.find( "strut_mount" ) == nullptr && sag > 0.2 && pull->rope[ 1 ] - pull->at[ 1 ] > 0.1 && pulls == 2,
             "odciag sieci 0312: lina, izolator, ramiona, uchwyt 4630 na slupie; lina nosna wg calej rozpietosci, przesla z \"pull\"" );
+        // odciąg wielotorowy: drugi tor 4,5 m dalej od słupa, odciąg bez słupa z "pull_from s0002" - lina od liny nośnej odciągu
+        // pierwszego toru (izolator międzytorowy na jej początku); podwójny - dolna od uchwytu ramion, górna od liny nośnej
+        for( auto const card : { 312, 322 } ) {
+            auto first { *catenary_scene_get( ib ) };
+            first.card = ( card == 312 ? 316 : 326 );
+            catenary_scene_update( ib, first );
+            auto next { first };
+            next.name = "s0102"; next.card = card; next.has_pole = false; next.pole_type.clear();
+            next.at[ 0 ] = first.at[ 0 ] + 4.5; next.rope[ 0 ] = next.at[ 0 ];
+            next.has_attach = true; std::copy( std::begin( first.rope ), std::end( first.rope ), next.attach );
+            next.pull_from = "s0002";
+            auto const in { catenary_scene_add( "td_odciag_test.scm", next ) };
+            auto const parts { catenary_scene_parts( in ) };
+            auto const *placed { catenary_scene_get( in ) };
+            auto const written { catenary::write_suspension( *placed ) };
+            // początek liny: pojedynczy na linie nośnej s0002, podwójny niżej (uchwyt ramion s0002)
+            auto const start { placed->attach[ 1 ] - catenary_scene_get( ib )->rope[ 1 ] };
+            std::printf( "  odciag wielotorowy %d: czesci %d, poczatek liny %.3f m wzgledem liny nosnej poprzedniego\n", card, static_cast<int>( parts ), start );
+            check( parts == ( card == 312 ? 5u : 8u ) && written.find( " pull_from s0002" ) != std::string::npos && ( card == 312 ? std::abs( start ) < 1e-6 : start < -0.1 ),
+                ( "odciag wielotorowy " + std::to_string( card ) + ": bez slupa, lina od odciagu sasiedniego toru, zapis \"pull_from\"" ).c_str() );
+            catenary_scene_remove( in );
+        }
         std::remove( "tests/catenary/td_odciag_test.scm" );
     }
     // szablony przęseł naprężenia (traction_overlaps.txt) i znacznik izolowanego końca łańcucha
