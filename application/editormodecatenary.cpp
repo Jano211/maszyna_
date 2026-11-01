@@ -98,6 +98,61 @@ double nearest_parameter(TTrack const &Track, int const Path, glm::dvec3 const &
 	return 0.5 * (low + high);
 }
 
+// a pole dragged past the end of its track goes over to the track joined there (a line is made of many short paths): from the
+// end the foot of the cursor fell on, onwards through the joined tracks while the foot falls past their far end too. Only the
+// joined tracks: a parallel one is never taken, so a pole between two tracks doesn't jump over to the other one
+bool drag_onwards(TTrack *&Track, int &Path, glm::dvec3 const &Cursor)
+{
+	constexpr double kEnd{1e-4};
+	auto *track{Track};
+	auto path{std::clamp(Path, 0, static_cast<int>(Track->m_paths.size()) - 1)};
+	auto parameter{nearest_parameter(*track, path, Cursor)};
+	if (parameter > kEnd && parameter < 1.0 - kEnd)
+		return false;
+	auto moved{false};
+	for (int hop = 0; hop < 8; ++hop)
+	{
+		bezier const curve{track->m_paths[path]};
+		auto const end{parameter >= 0.5 ? curve.point(1.0) : curve.point(0.0)};
+		auto *next{parameter >= 0.5 ? track->trNext : track->trPrev};
+		if (next == nullptr || next->m_editorremoved || next->m_paths.empty() || next == Track)
+			break;
+		// the path of the joined track which starts or ends at this end (a switch: the one set, then any)
+		auto best{std::numeric_limits<double>::max()};
+		int nextpath{-1};
+		for (int k = 0; k < static_cast<int>(next->m_paths.size()); ++k)
+		{
+			bezier const other{next->m_paths[k]};
+			auto const gap{std::min(geometry::plan_distance(other.point(0.0), end), geometry::plan_distance(other.point(1.0), end))};
+			if (gap < best)
+			{
+				best = gap;
+				nextpath = k;
+			}
+		}
+		if (nextpath < 0 || best > 0.5)
+			break;
+		auto const nextparameter{nearest_parameter(*next, nextpath, Cursor)};
+		bezier const other{next->m_paths[nextpath]};
+		// the foot back at the end it was entered by: the cursor is at the joint, the track before keeps it
+		auto const entered{geometry::plan_distance(other.point(0.0), end) < geometry::plan_distance(other.point(1.0), end) ? 0.0 : 1.0};
+		if (std::abs(nextparameter - entered) <= kEnd)
+			break;
+		track = next;
+		path = nextpath;
+		parameter = nextparameter;
+		moved = true;
+		if (parameter > kEnd && parameter < 1.0 - kEnd)
+			break;
+	}
+	if (moved)
+	{
+		Track = track;
+		Path = path;
+	}
+	return moved;
+}
+
 glm::dvec2 forward_at(TTrack const &Track, int const Path, double const Parameter)
 {
 	auto const tangent{bezier{Track.m_paths[Path]}.first(Parameter)};
@@ -171,6 +226,28 @@ std::vector<std::size_t> pole_sharers(std::size_t const Index)
 			list.push_back(index);
 	}
 	return list;
+}
+
+// a pole standing closer than 0.5 m (in the plan) to the point, other than the given entries and the ones by From; -1 when none. Drops and masts of
+// gantries don't stand on the ground there
+int pole_in_the_way(glm::dvec3 const &Point, std::vector<std::size_t> const &Own, glm::dvec3 const &From)
+{
+	auto const *catalog{catenary_scene_catalog()};
+	for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+	{
+		if (std::find(Own.begin(), Own.end(), index) != Own.end())
+			continue;
+		auto const *data{catenary_scene_get(index)};
+		if (data == nullptr || false == data->has_pole)
+			continue;
+		auto const *pole{catalog != nullptr ? catalog->pole(data->pole_type) : nullptr};
+		if (pole != nullptr && (false == pole->drop.empty() || pole->gantry))
+			continue;
+		// one already by the pole where it was grabbed (two poles dragged into each other earlier): it may go away from it
+		if (glm::length(glm::dvec2{data->pole[0] - Point.x, data->pole[2] - Point.z}) < 0.5 && glm::length(glm::dvec2{data->pole[0] - From.x, data->pole[2] - From.z}) >= 0.5)
+			return static_cast<int>(index);
+	}
+	return -1;
 }
 
 // from the pole towards the wires, in the plan; across the track
@@ -3834,8 +3911,21 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		// the pole the wires go from
 		if ((tool.page == 1 || tool.page == 4) && tool.gantry_selected < 0)
 			tool.page = 0;
-		// held and dragged: the pole goes along the track
+		// held and dragged: the pole goes along the track. What stands on it is taken now: a pole dragged into another one of the
+		// same type would count it as its own (the same place) and drag it along
 		tool.dragging = tool.selected >= 0 ? 1 : 0;
+		tool.drag_pole.clear();
+		if (auto const *own{tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr}; own != nullptr)
+		{
+			// only what is put together on one pole (an umbrella, spread cantilevers, a cantilever sharing the pole): two poles which
+			// only ended up in one place (dragged into each other) come apart again
+			for (auto const index : pole_sharers(static_cast<std::size_t>(tool.selected)))
+			{
+				auto const *other{catenary_scene_get(index)};
+				if (index == static_cast<std::size_t>(tool.selected) || (other != nullptr && ((false == own->umbrella.empty() && other->umbrella == own->umbrella) || other->shared_pole || own->shared_pole)))
+					tool.drag_pole.push_back(index);
+			}
+		}
 		return;
 	}
 	if (is_intent(Intent, intent_detail::gantry))
@@ -7674,8 +7764,19 @@ void catenary_editor::catenary_drag_update()
 		if (found == nullptr || current == nullptr || found->track == nullptr || found->track->m_editorremoved)
 			return;
 		auto *track{e.m_hover.track != nullptr ? e.m_hover.track : found->track};
-		auto const path{e.m_hover.track != nullptr ? e.m_hover.path : found->path};
-		auto const side{found->side};
+		auto path{e.m_hover.track != nullptr ? e.m_hover.path : found->path};
+		// with the button held the editor doesn't look for the track under the cursor: past the end of the track of the pole,
+		// the track joined there
+		auto side{found->side};
+		if (e.m_hover.track == nullptr && drag_onwards(track, path, e.cursor_level(found->axis.y)))
+		{
+			// the joined track may run the other way: the side stays the same on the ground
+			auto const cursor{e.cursor_level(found->axis.y)};
+			auto const before{forward_at(*found->track, found->path, found->parameter)};
+			auto const after{forward_at(*track, path, nearest_parameter(*track, path, cursor))};
+			if (glm::dot(before, after) < 0.0)
+				side = -side;
+		}
 		catenary_spot spot;
 		{
 			without_gantry const plain{tool.gantry_selected};
@@ -7685,7 +7786,8 @@ void catenary_editor::catenary_drag_update()
 		auto const *catalog{catenary_scene_catalog()};
 		auto const *own{catalog != nullptr ? catalog->pole(current->pole_type) : nullptr};
 		auto const drop{own != nullptr && false == own->drop.empty()};
-		if (drop && pole_sharers(static_cast<std::size_t>(tool.selected)).size() == 1)
+		auto const shared{tool.drag_pole.size() > 1};
+		if (drop && false == shared)
 		{
 			// a drop along the beam of its gantry, to where the cursor is over it; the wires stay by the track
 			glm::dvec3 from, to;
@@ -7705,7 +7807,14 @@ void catenary_editor::catenary_drag_update()
 			return; // an umbrella on a drop, or a cantilever on a mast, goes with its gantry
 		spot.curve = tool.bend == 2 || (tool.bend == 0 && spot.radius > 0.0 && spot.radius < kCurveRadius);
 		catenary_compose(spot, tool.clearance, tool.stagger, tool.toward);
-		if (pole_sharers(static_cast<std::size_t>(tool.selected)).size() > 1)
+		// two poles can't stand in one place: the dragged one stops 0.5 m before another one
+		if (spot.card != 0)
+			if (auto const blocker{pole_in_the_way(glm::dvec3{spot.data.pole[0], spot.data.pole[1], spot.data.pole[2]}, tool.drag_pole, pole_of(*current))}; blocker >= 0)
+			{
+				tool.status = format(STR_C("Another pole stands there (%s): the pole stays where it was"), catenary_scene_get(static_cast<std::size_t>(blocker))->name.c_str());
+				return;
+			}
+		if (shared)
 		{
 			// an umbrella or spread cantilevers: the pole goes where this one puts it, the other cantilever goes with it
 			if (spot.card == 0)
