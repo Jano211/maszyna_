@@ -272,3 +272,4 @@ polegroup g_3036 poles 3036-1 3036-2 3036-3 3036-4 : 3036 końcowy, prześwit 5,
 polegroup g_3037 poles 3037-1 3037-2 3037-3 3037-4 : 3037 przelotowo-końcowy, prześwit 7,55/7,95 (-1 szlak?, -2 równia?, -3/-4 peron?)
 polegroup g_3038 poles 3038-1 3038-2 3038-3 3038-4 : 3038 końcowy, prześwit 7,55/7,95 (-1 szlak?, -2 równia?, -3/-4 peron?)
 text Dopisek -1...-4: wykonanie fundamentu, głowica 25 / 54 / 110 / 170 cm.
+polegroup g_1901 poles polbramka_1901_7-3m polbramka_1901_10m polbramka_1901_2x7-3m polbramka_1901_2x10m : Półbramki 1901 (słup przestrzenny, gabaryt 600: mocowania wysięgników wyk. 04 - karta 0361)
