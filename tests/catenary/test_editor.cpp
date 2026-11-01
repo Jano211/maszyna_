@@ -209,6 +209,26 @@ int main( int, char *argv[] ) {
             std::printf( "  %s @ %.3f %.3f %.3f\n", beam.entry.c_str(), beam.position.x, beam.position.y, beam.position.z );
         }
         check( good, "bramka: slupy w punktach, dzwigar od sciany pierwszego slupa (offset wzdluz dzwigara), na przeswicie gornym" );
+        // kotwienie na nodze bramki: uchwyty na ceowniku bliższym kotwionemu przęsłu (½ "length" masztu wzdłuż toru), nie w osi nogi
+        {
+            catenary::anchor leg;
+            leg.name = "kb1"; leg.device = "0461"; leg.gantry = "b1"; leg.mast = 0;
+            leg.toward[ 0 ] = 1.5; leg.toward[ 1 ] = 5.8; leg.toward[ 2 ] = 10.0;
+            auto const first { simulation::State.created.size() };
+            auto const ia { catenary_anchor_add( "td_bramka_test.scm", leg ) };
+            auto const &made { simulation::State.created };
+            int clamps { 0 };
+            auto ok { catenary_anchor_parts( ia ) > 0 };
+            for( auto k { first }; ok && k < made.size(); ++k ) {
+                if( made[ k ].entry.find( "4520" ) == std::string::npos && made[ k ].entry.find( "4560" ) == std::string::npos ) { continue; }
+                ++clamps;
+                auto const dz { made[ k ].position.z - 50.0 };
+                std::printf( "  %s @ %.3f %.3f %.3f\n", made[ k ].entry.c_str(), made[ k ].position.x, made[ k ].position.y, made[ k ].position.z );
+                ok = std::abs( made[ k ].position.x ) < 0.2 && dz < -0.2 && dz > -0.45;
+            }
+            check( ok && clamps > 0, "kotwienie na nodze bramki: uchwyty na ceowniku od strony kotwienia (0,30 m od osi wzdluz toru)" );
+            catenary_anchor_remove( ia );
+        }
         // zwis 4850 na dźwigarze jako "pływający słup"
         catenary::suspension drop;
         drop.card = 1112; drop.execution = 1; drop.range_max = 1000;

@@ -1176,7 +1176,10 @@ assemble_anchor( scene_anchor &Anchor ) {
     if( data.on.empty() && false == data.gantry.empty() ) {
         // noga bramki z dwóch ceowników: uchwyty 4520-4/-5 chwytają jeden ceownik (Jan 2026-10-31), jego półkę (śruby 0,107 / 0,127); ZAŁOŻENIE: półka
         // 75 mm (C160-200, wyk. 4), 85 mm (C240, wyk. 5)
-        auto const flange { pole->width >= 0.235 ? 0.085 : 0.075 };
+        // wymiar ceownika (wysokość) z danych masztu - słup bramki w katalogu słupów nie ma szerokości
+        auto const *mast { catalog->mast( poletype ) };
+        auto const channel { mast != nullptr ? mast->width : pole->width };
+        auto const flange { channel >= 0.235 ? 0.085 : 0.075 };
         input.depth = [ flange ]( double ) { return flange; };
     }
     input.color = data.color;
@@ -1243,7 +1246,12 @@ assemble_anchor( scene_anchor &Anchor ) {
     dz /= along;
     auto const table { devices->table( device->table ) };
     // czoło: kotwienie ciągnie wzdłuż toru, więc słup kratowy z szerokością wzdłuż toru ma czoło w połowie szerokości
-    auto const face { pole->width > 0.0 ? 0.5 * pole->width : 0.5 * pole->depth( data.height > 0.0 ? data.height : table != nullptr ? table->height : 6.7 ) };
+    auto face { pole->width > 0.0 ? 0.5 * pole->width : 0.5 * pole->depth( data.height > 0.0 ? data.height : table != nullptr ? table->height : 6.7 ) };
+    // noga bramki: dwa ceowniki rozstawione wzdłuż toru o "length" z masztu (wzdłuż dźwigara noga ma 2 x offset); uchwyty na zewnętrznej
+    // ścianie ceownika bliższego kotwionemu przęsłu, nie w osi kratownicy (Jan 2026-11-01)
+    if( data.on.empty() && false == data.gantry.empty() ) {
+        if( auto const *mast { catalog->mast( poletype ) }; mast != nullptr && mast->length > 0.0 ) { face = 0.5 * mast->length; }
+    }
     // oś słupa wzdłuż toru (w stronę kotwionego przęsła): własny słup kotwowy stoi w linii drutów; istniejący - prostopadle
     // do swojego wysięgnika. Uchwyty, prowadnica i stos są przy słupie, urządzenie od przegubu ciągnie do drutów
     auto ax { dx }, az { dz };

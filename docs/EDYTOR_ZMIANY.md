@@ -15,6 +15,12 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-11-01
 
+### Sieć trakcyjna: kotwienie na nodze bramki na ceowniku — commit o tym tytule na `siec-gl46` (poprawka)
+- Uchwyty kotwienia na nodze bramki (4520-4/-5, dół 4560) stały w środku kratownicy. Teraz siedzą na zewnętrznej ścianie
+  ceownika bliższego kotwionemu przęsłu: ½ `length` masztu (rozstaw ceowników, 0,30 m) od osi nogi wzdłuż toru.
+- Półka ceownika (75 / 85 mm) dobierana z `width` masztu (wysokość ceownika); wcześniej zawsze 75 mm.
+- Zmienia: `world/catenary_scene.cpp` (`assemble_anchor`), test edytora. Wymaga: `c9b6761`.
+
 Branch `funkcja/tekstury-sieci` (od `f02b7d2`).
 
 ### Sieć trakcyjna: wymienne tekstury wysięgników i słupów — `45fb061`
