@@ -11547,6 +11547,18 @@ msgstr "Do słupa: wysięgnik krótki; od słupa: długi. Na prostej przewody id
 msgid "Swap short / long (X)"
 msgstr "Przełóż krótki / długi (X)"
 
+msgid "Over to another track"
+msgstr "Przepnij na inny tor"
+
+msgid "LMB by the track the cantilever is for (Esc cancels)"
+msgstr "LPM przy torze, dla którego jest wysięgnik (Esc anuluje)"
+
+msgid "The cantilever goes by another track, e.g. at a turnout from the diverging track to the main one: the pole stays, the card, the stagger and the dragging along go by the clicked track"
+msgstr "Wysięgnik przechodzi na inny tor, np. na rozjeździe ze zwrotnego na zasadniczy: słup zostaje, karta, odsuw i przeciąganie idą wg klikniętego toru"
+
+msgid "Cantilever by the clicked track now: card %d, A = %.2f m"
+msgstr "Wysięgnik teraz wg klikniętego toru: karta %d, A = %.2f m"
+
 msgid "The wires of this pole to the other side of the track axis: the short cantilever becomes a long one or the other way round; the pole stays where it stands"
 msgstr "Przewody tego słupa na drugą stronę osi toru: wysięgnik krótki staje się długim albo odwrotnie; słup zostaje na miejscu"
 

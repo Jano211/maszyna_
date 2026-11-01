@@ -3903,6 +3903,7 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		}
 		tool.umbrella_from = -1;
 		tool.pull_next = -1;
+		tool.retrack = -1;
 		tool.anchor_cantilever = -1;
 		if (tool.connect_from >= 0)
 		{
@@ -4148,6 +4149,12 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 			tool.status = spot.problem;
 		else
 			catenary_anchor_cantilever_place(spot);
+		return;
+	}
+	if (tool.retrack >= 0)
+	{
+		if (catenary_retrack(*Intent.track, Intent.path))
+			tool.retrack = -1;
 		return;
 	}
 	if (tool.pull_next >= 0)
@@ -5930,6 +5937,37 @@ void catenary_editor::render_catenary_pull_ui()
 		ImGui::SetTooltip("%s", STR_C("A multi-track pull-off (cards 0315/0316, 0325/0326): this one becomes the intermediate one, the next one stands without a pole, square across from it on the clicked track, its rope going on from this one (with insulation: an insulator between the tracks). Click the track in a span of its chain to put it into the chain"));
 }
 
+// the selected cantilever goes by another track (Jan 2026-11-01: at a turnout one for the main track stuck to the diverging one): the
+// pole stays, the card and the stagger go by the clicked track, its spot (dragging along, the panel) too
+bool catenary_editor::catenary_retrack(TTrack &Track, int const Path)
+{
+	auto &tool{m_catenary};
+	auto const index{static_cast<std::size_t>(tool.retrack)};
+	auto const *current{catenary_scene_get(index)};
+	if (current == nullptr || false == current->has_pole || false == current->has_at)
+		return true;
+	auto const foot{pole_of(*current)};
+	catenary_spot spot;
+	{
+		without_gantry const plain{tool.gantry_selected};
+		if (false == catenary_spot_at(Track, Path, foot, foot, 0, spot))
+			return false;
+	}
+	spot.curve = tool.bend == 2 || (tool.bend == 0 && spot.radius > 0.0 && spot.radius < kCurveRadius);
+	catenary_keep_pole(spot, *current, tool.stagger, tool.toward);
+	if (spot.card == 0)
+	{
+		tool.status = spot.problem;
+		return false;
+	}
+	spot.data.pole[1] = current->pole[1];
+	tool.selected = static_cast<int>(index);
+	++tool.group;
+	catenary_apply(spot);
+	tool.status = format(STR_C("Cantilever by the clicked track now: card %d, A = %.2f m"), spot.card, spot.reach);
+	return true;
+}
+
 bool catenary_editor::catenary_pull_next(TTrack &Track, int const Path)
 {
 	auto &tool{m_catenary};
@@ -6162,6 +6200,13 @@ void catenary_editor::render_catenary_cantilever_ui()
 			catenary_flip();
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("The wires of this pole to the other side of the track axis: the short cantilever becomes a long one or the other way round; the pole stays where it stands"));
+		if (ImGui::Button(STR_C("Over to another track")))
+		{
+			tool.retrack = tool.selected;
+			tool.status = STR("LMB by the track the cantilever is for (Esc cancels)");
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("The cantilever goes by another track, e.g. at a turnout from the diverging track to the main one: the pole stays, the card, the stagger and the dragging along go by the clicked track"));
 		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole)
 		{
 			auto const *catalog{catenary_scene_catalog()};
@@ -8554,9 +8599,10 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 			tool.status.clear();
 			return true;
 		}
-		if (tool.anchor_pick >= 0 || tool.connect_from >= 0 || tool.umbrella_from >= 0 || tool.anchor_cantilever >= 0 || tool.anchor_move >= 0 || tool.pull_next >= 0)
+		if (tool.anchor_pick >= 0 || tool.connect_from >= 0 || tool.umbrella_from >= 0 || tool.anchor_cantilever >= 0 || tool.anchor_move >= 0 || tool.pull_next >= 0 || tool.retrack >= 0)
 		{
 			tool.pull_next = -1;
+			tool.retrack = -1;
 			tool.anchor_move = -1;
 			tool.anchor_cantilever = -1;
 			tool.anchor_pick = -1;

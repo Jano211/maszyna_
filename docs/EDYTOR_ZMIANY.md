@@ -17,6 +17,12 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Branch `funkcja/odsuw-i-tor` (od `2ccb42f`).
 
+### Edytor sieci: przepięcie wysięgnika na inny tor — commit o tym tytule
+- Panel zaznaczonego słupa: „Przepnij na inny tor”, potem LPM przy torze (Esc anuluje). Wysięgnik wstawiony przy rozjeździe do
+  złego toru (np. dla toru zasadniczego, a przyklejony do zwrotnego) przechodzi na kliknięty tor: słup zostaje, karta i odsuw
+  liczą się od osi tego toru, przeciąganie wzdłuż toru i suwaki panelu też idą już po nim. Ctrl+Z cofa.
+- Zmienia: `application/editormodecatenary.*`, `lang/editor_pl.po`. Wymaga: nic.
+
 ### Edytor sieci: odsuw ±0,5 nie przełącza krótkiego wysięgnika na długi — commit o tym tytule
 - Suwak odsuwu w trybie ±0,5 (tryb eksperta) przesuwa tylko przewody: przejście przez oś toru nie zmienia już karty z krótkiego na
   długi (i odwrotnie). Krótki / długi zmienia się ręcznie: „Przewody do słupa” albo X. Przy zaznaczeniu słupa krótki / długi bierze się
