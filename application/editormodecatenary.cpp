@@ -1836,8 +1836,14 @@ void catenary_editor::catenary_take_settings(std::size_t const Index)
 	// from the leaning axis of a superelevated track, as catenary_compose() puts it (otherwise the lean would be added again)
 	double offset{0.0};
 	stagger_of(Index, offset);
-	tool.stagger = static_cast<float>(std::abs(offset));
-	tool.toward = offset >= 0.0;
+	// short or long from the card (its family says), not from the side the wires went to (+-0.5 lets them cross the axis)
+	auto toward{offset >= 0.0};
+	if (auto const *family{catenary_scene_structures().family_of(data->card)}; family != nullptr && family->toward >= 0)
+		toward = family->toward == 2 ? (data->card % 2 == 1) : family->toward == 1;
+	tool.toward = toward;
+	tool.stagger = static_cast<float>(toward ? offset : -offset);
+	if (tool.stagger < 0.0f)
+		tool.wide_stagger = true; // the wires on the other side of the axis than the card: shown on the +-0.5 slider
 	// the height over the rails without the rise of the middle of a superelevated track, which catenary_compose() adds itself
 	// (Jan 2026-10-30: with it read back here every swap X lifted the wires again)
 	tool.height = static_cast<float>(data->at[1] - railhead - catenary_cant_shift(*spot, data->at[1] - railhead).y);
@@ -3897,6 +3903,7 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		}
 		tool.umbrella_from = -1;
 		tool.pull_next = -1;
+		tool.retrack = -1;
 		tool.anchor_cantilever = -1;
 		if (tool.connect_from >= 0)
 		{
@@ -4142,6 +4149,12 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 			tool.status = spot.problem;
 		else
 			catenary_anchor_cantilever_place(spot);
+		return;
+	}
+	if (tool.retrack >= 0)
+	{
+		if (catenary_retrack(*Intent.track, Intent.path))
+			tool.retrack = -1;
 		return;
 	}
 	if (tool.pull_next >= 0)
@@ -5668,22 +5681,29 @@ static bool catenary_stagger_slider(Tool &tool)
 	auto changed{false};
 	if (tool.wide_stagger)
 	{
+		// signed across the track axis; the short / long cantilever (the card) stays as it is, it's swapped by hand (Jan 2026-11-01: going
+		// through 0 swapped the cantilever). The stagger is kept relative to the side of the card, so it may be negative here
 		auto signedstagger{tool.toward ? tool.stagger : -tool.stagger};
 		if (ImGui::SliderFloat(STR_C("Stagger of the wires (m)"), &signedstagger, -0.50f, 0.50f, "%+.2f"))
 		{
-			tool.stagger = std::abs(signedstagger);
-			tool.toward = signedstagger >= 0.0f;
+			tool.stagger = tool.toward ? signedstagger : -signedstagger;
 			changed = true;
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("From the track axis: + towards the pole, - away from it. Ctrl+click types a value"));
+			ImGui::SetTooltip("%s", STR_C("From the track axis: + towards the pole, - away from it. The cantilever stays short or long as it is - swap it with \"Wires towards the pole\" or X. Ctrl+click types a value"));
 	}
 	else
 		changed = ImGui::SliderFloat(STR_C("Stagger of the wires (m)"), &tool.stagger, 0.0f, 0.45f, "%.2f");
 	if (tool.expert || tool.wide_stagger)
 	{
 		ImGui::SameLine();
-		ImGui::Checkbox(STR_C("+-0.5"), &tool.wide_stagger);
+		if (ImGui::Checkbox(STR_C("+-0.5"), &tool.wide_stagger) && false == tool.wide_stagger && tool.stagger < 0.0f)
+		{
+			// back to the usual stagger with the wires on the other side than the card: the card follows the wires
+			tool.stagger = -tool.stagger;
+			tool.toward = false == tool.toward;
+			changed = true;
+		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("Stagger from -0.50 to +0.50 m across the track axis, for tuning at turnouts; not allowed on a line"));
 	}
@@ -5915,6 +5935,37 @@ void catenary_editor::render_catenary_pull_ui()
 	}
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%s", STR_C("A multi-track pull-off (cards 0315/0316, 0325/0326): this one becomes the intermediate one, the next one stands without a pole, square across from it on the clicked track, its rope going on from this one (with insulation: an insulator between the tracks). Click the track in a span of its chain to put it into the chain"));
+}
+
+// the selected cantilever goes by another track (Jan 2026-11-01: at a turnout one for the main track stuck to the diverging one): the
+// pole stays, the card and the stagger go by the clicked track, its spot (dragging along, the panel) too
+bool catenary_editor::catenary_retrack(TTrack &Track, int const Path)
+{
+	auto &tool{m_catenary};
+	auto const index{static_cast<std::size_t>(tool.retrack)};
+	auto const *current{catenary_scene_get(index)};
+	if (current == nullptr || false == current->has_pole || false == current->has_at)
+		return true;
+	auto const foot{pole_of(*current)};
+	catenary_spot spot;
+	{
+		without_gantry const plain{tool.gantry_selected};
+		if (false == catenary_spot_at(Track, Path, foot, foot, 0, spot))
+			return false;
+	}
+	spot.curve = tool.bend == 2 || (tool.bend == 0 && spot.radius > 0.0 && spot.radius < kCurveRadius);
+	catenary_keep_pole(spot, *current, tool.stagger, tool.toward);
+	if (spot.card == 0)
+	{
+		tool.status = spot.problem;
+		return false;
+	}
+	spot.data.pole[1] = current->pole[1];
+	tool.selected = static_cast<int>(index);
+	++tool.group;
+	catenary_apply(spot);
+	tool.status = format(STR_C("Cantilever by the clicked track now: card %d, A = %.2f m"), spot.card, spot.reach);
+	return true;
 }
 
 bool catenary_editor::catenary_pull_next(TTrack &Track, int const Path)
@@ -6149,6 +6200,13 @@ void catenary_editor::render_catenary_cantilever_ui()
 			catenary_flip();
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("The wires of this pole to the other side of the track axis: the short cantilever becomes a long one or the other way round; the pole stays where it stands"));
+		if (ImGui::Button(STR_C("Over to another track")))
+		{
+			tool.retrack = tool.selected;
+			tool.status = STR("LMB by the track the cantilever is for (Esc cancels)");
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("The cantilever goes by another track, e.g. at a turnout from the diverging track to the main one: the pole stays, the card, the stagger and the dragging along go by the clicked track"));
 		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole)
 		{
 			auto const *catalog{catenary_scene_catalog()};
@@ -8541,9 +8599,10 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 			tool.status.clear();
 			return true;
 		}
-		if (tool.anchor_pick >= 0 || tool.connect_from >= 0 || tool.umbrella_from >= 0 || tool.anchor_cantilever >= 0 || tool.anchor_move >= 0 || tool.pull_next >= 0)
+		if (tool.anchor_pick >= 0 || tool.connect_from >= 0 || tool.umbrella_from >= 0 || tool.anchor_cantilever >= 0 || tool.anchor_move >= 0 || tool.pull_next >= 0 || tool.retrack >= 0)
 		{
 			tool.pull_next = -1;
+			tool.retrack = -1;
 			tool.anchor_move = -1;
 			tool.anchor_cantilever = -1;
 			tool.anchor_pick = -1;

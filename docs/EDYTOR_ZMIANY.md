@@ -15,6 +15,21 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-11-01
 
+Branch `funkcja/odsuw-i-tor` (od `2ccb42f`).
+
+### Edytor sieci: przepięcie wysięgnika na inny tor — commit o tym tytule
+- Panel zaznaczonego słupa: „Przepnij na inny tor”, potem LPM przy torze (Esc anuluje). Wysięgnik wstawiony przy rozjeździe do
+  złego toru (np. dla toru zasadniczego, a przyklejony do zwrotnego) przechodzi na kliknięty tor: słup zostaje, karta i odsuw
+  liczą się od osi tego toru, przeciąganie wzdłuż toru i suwaki panelu też idą już po nim. Ctrl+Z cofa.
+- Zmienia: `application/editormodecatenary.*`, `lang/editor_pl.po`. Wymaga: nic.
+
+### Edytor sieci: odsuw ±0,5 nie przełącza krótkiego wysięgnika na długi — commit o tym tytule
+- Suwak odsuwu w trybie ±0,5 (tryb eksperta) przesuwa tylko przewody: przejście przez oś toru nie zmienia już karty z krótkiego na
+  długi (i odwrotnie). Krótki / długi zmienia się ręcznie: „Przewody do słupa” albo X. Przy zaznaczeniu słupa krótki / długi bierze się
+  z rodziny jego karty, a nie ze strony, po której są przewody; przewody po drugiej stronie osi niż karta – suwak od razu w trybie ±0,5.
+  Wyłączenie ±0,5 przy przewodach po „złej” stronie przestawia kartę za przewodami.
+- Zmienia: `application/editormodecatenary.cpp`, `lang/editor_pl.po`. Wymaga: nic.
+
 Branch `funkcja/wczytywanie-sieci` (od `e0e1eeb`).
 
 ### Sieć trakcyjna: łańcuchy z plików scenerii nie ginęły przy wczytaniu — commit o tym tytule

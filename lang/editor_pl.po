@@ -11547,6 +11547,18 @@ msgstr "Do słupa: wysięgnik krótki; od słupa: długi. Na prostej przewody id
 msgid "Swap short / long (X)"
 msgstr "Przełóż krótki / długi (X)"
 
+msgid "Over to another track"
+msgstr "Przepnij na inny tor"
+
+msgid "LMB by the track the cantilever is for (Esc cancels)"
+msgstr "LPM przy torze, dla którego jest wysięgnik (Esc anuluje)"
+
+msgid "The cantilever goes by another track, e.g. at a turnout from the diverging track to the main one: the pole stays, the card, the stagger and the dragging along go by the clicked track"
+msgstr "Wysięgnik przechodzi na inny tor, np. na rozjeździe ze zwrotnego na zasadniczy: słup zostaje, karta, odsuw i przeciąganie idą wg klikniętego toru"
+
+msgid "Cantilever by the clicked track now: card %d, A = %.2f m"
+msgstr "Wysięgnik teraz wg klikniętego toru: karta %d, A = %.2f m"
+
 msgid "The wires of this pole to the other side of the track axis: the short cantilever becomes a long one or the other way round; the pole stays where it stands"
 msgstr "Przewody tego słupa na drugą stronę osi toru: wysięgnik krótki staje się długim albo odwrotnie; słup zostaje na miejscu"
 
@@ -11833,6 +11845,9 @@ msgstr "Nie udało się zapisać sieci trakcyjnej w \"%s\": %s"
 
 msgid "From the track axis: + towards the pole, - away from it. Ctrl+click types a value"
 msgstr "Od osi toru: + do słupa, - od słupa. Ctrl+klik i wpisz"
+
+msgid "From the track axis: + towards the pole, - away from it. The cantilever stays short or long as it is - swap it with \"Wires towards the pole\" or X. Ctrl+click types a value"
+msgstr "Od osi toru: + w stronę słupa, - od słupa. Wysięgnik zostaje krótki albo długi, jaki jest - zamienia się go „Przewody do słupa” albo X. Ctrl+klik wpisuje wartość"
 
 msgid "+-0.5"
 msgstr "±0,5"
