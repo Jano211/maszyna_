@@ -12,6 +12,18 @@
 
 namespace catenary {
 
+double cantilever_rules::pulloff_drop_at( double const A ) const {
+    if( pulloff_drop.empty() ) { return 0.17; }    // środek tablicy Głowackiego, gdy danych brak
+    if( A <= pulloff_drop.front().first ) { return pulloff_drop.front().second; }
+    if( A >= pulloff_drop.back().first ) { return pulloff_drop.back().second; }
+    for( std::size_t k = 1; k < pulloff_drop.size(); ++k ) {
+        auto const &low { pulloff_drop[ k - 1 ] }, &high { pulloff_drop[ k ] };
+        if( A <= high.first ) { return low.second + ( high.second - low.second ) * ( A - low.first ) / std::max( high.first - low.first, 1e-9 ); }
+    }
+    return pulloff_drop.back().second;
+}
+
+
 namespace {
 
 bool to_number( std::string const &Text, double &Value ) {
@@ -240,11 +252,13 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     if( which == "stay" ) { number( scheme.mount_stay, good ); }
                     else if( which == "strut" ) { number( scheme.mount_strut, good ); }
                     else if( which == "steady" ) { number( scheme.mount_steady, good ); scheme.steady_mounted = true; }
+                    else if( which == "upper" ) { number( scheme.mount_upper, good ); scheme.upper_mounted = true; }
                     else { report( entry, "unknown mount \"" + which + "\"" ); good = false; }
                 }
                 else if( key == "role" ) {
                     if( index + 1 < count ) { scheme.roles[ Tokens[ index ] ] = Tokens[ index + 1 ]; index += 2; } else { good = false; }
                 }
+                else if( key == "pulloff" ) { scheme.pulloff = true; scheme.steady_mounted = true; }
                 else { report( entry, "unknown keyword \"" + key + "\"" ); good = false; --index; }
             }
             if( false == good || false == closed ) {
@@ -477,6 +491,18 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 else if( key == "clamp_margin" ) { number( changed.clamp_margin, good ); }
                 else if( key == "cord_clamp_inset" ) { number( changed.cord_clamp_inset, good ); }
                 else if( key == "umbrella_spread" ) { number( changed.umbrella_spread, good ); }
+                else if( key == "pulloff_drop" ) {
+                    // pulloff_drop <liczba par> a b a b ...
+                    double pairs { 0.0 };
+                    number( pairs, good );
+                    changed.pulloff_drop.clear();
+                    for( int k = 0; good && k < static_cast<int>( pairs ); ++k ) {
+                        double a { 0.0 }, b { 0.0 };
+                        number( a, good ); number( b, good );
+                        changed.pulloff_drop.emplace_back( a, b );
+                    }
+                    std::sort( changed.pulloff_drop.begin(), changed.pulloff_drop.end() );
+                }
                 else { report( "rules", "unknown keyword \"" + key + "\"" ); good = false; --index; }
             }
             if( false == good || false == closed ) {
@@ -2363,7 +2389,20 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
     input.points = Points;
     auto stayeye { fix( "stay", *stay, staybolts ) };
     input.strut_mount = fix( "strut", *strut, Scheme.mount_strut + ( Scheme.steady_mounted ? raise : 0.0 ) - strut->attach_z() );
-    if( steady != nullptr ) { input.steady_mount = fix( "steady", *steady, Scheme.mount_steady - steady->attach_z() ); }
+    if( steady != nullptr ) {
+        auto steadyeye { Scheme.mount_steady };
+        if( Scheme.pulloff ) {
+            // odciąg sieci: zaczep obniżony pod przewód jezdny o b(a), a - odległość zaczepu od osi toru. Osi toru solver nie zna:
+            // przewód na łuku stoi odsunięty w stronę słupa (odciąg jest na zewnątrz łuku), więc a = czoło słupa od przewodu + 0,30
+            // (ZAŁOŻENIE, odsuw typowy; błąd b do ok. 1 cm)
+            auto const face { Distance - 0.5 * Pole.depth( 0.0 - RailHead ) };
+            steadyeye = -Catalog.rules.pulloff_drop_at( face + 0.30 );
+            heights[ "pulloff_drop" ] = -steadyeye;   // do wyniku razem z wysokościami mocowań (Result jest czyszczony przy składaniu)
+        }
+        input.steady_mount = fix( "steady", *steady, steadyeye - steady->attach_z() );
+        // odciąg podwójny: górna lina na drugim mocowaniu tego samego rodzaju, za liną nośną
+        if( Scheme.upper_mounted ) { input.points[ "upper_mount" ] = fix( "upper", *steady, Scheme.mount_upper + raise - steady->attach_z() ); }
+    }
     // zwis na bramce: mocowania nie mogą zejść poniżej jego końca
     if( Pole.has_mount_min ) {
         for( auto const &height : heights ) {
@@ -2409,7 +2448,7 @@ bool solve_on_pole_once( cantilever_catalog const &Catalog, cantilever_scheme co
         }
     }
     for( auto const &note : notes ) { Result.warnings.push_back( "cantilever " + label + ": " + note ); }
-    for( auto const &height : heights ) { Result.values[ "mount." + height.first ] = height.second; }
+    for( auto const &height : heights ) { Result.values[ ( height.first == "pulloff_drop" ? std::string( "pulloff.drop" ) : "mount." + height.first ) ] = height.second; }
     if( false == solved ) { return false; }
     // wysięgnik pomocniczy bez ukośnika i odciągu (0167, 0169 - tylko zaczep na wysokości przewodu): bez ich mocowań na słupie
     if( Scheme.roles.count( "strut" ) == 0 && Scheme.roles.count( "stay" ) == 0 ) {

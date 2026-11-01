@@ -15,6 +15,26 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-11-01
 
+Branch `funkcja/odciagi-sieci` (od `dab19e5`).
+
+### Sieć trakcyjna: odciągi sieci (karty 0311–0314, 0321–0324) — commit o tym tytule
+- Nowa kategoria w katalogu edytora „Odciągi sieci”: słup, który sieci nie podwiesza, tylko odciąga ją w bok (łuki, na zewnątrz
+  łuku co drugi / co trzeci słup). Wstawia się go jak zwykły słup łańcucha, rodzina = karta (pojedynczy / podwójny, z izolacją
+  albo bez, ramiona proste / łukowe), wykonanie 1 – sieć dwuprzewodowa, 2 – jednoprzewodowa.
+- Złożenie: lina odciągowa od uchwytu 4630 na słupie (jak wysięgu pomocniczego) przez uchwyt ramion 4270 do liny nośnej, ramiona
+  odciągowe (6204/6202, łukowe 6205/6203) od uchwytu do przewodów; z izolacją – izolator 7020 przy słupie. Uchwyt na słupie
+  obniżony pod przewód o b z tablicy Głowackiego (rys. 13.7: a 2,20–2,55 m → b 0,14–0,20 m). Podwójny: druga lina z drugiego
+  uchwytu 4630 na wysokości liny nośnej, łącznik pionowy między linami.
+- Lina nośna w miejscu odciągu wisi wg całej rozpiętości między podwieszeniami (odciąg nie niesie sieci): solver liczy całą
+  rozpiętość i odczytuje wysokość liny. Przęsła po obu stronach odciągu dostają dopisek `pull <początek> <całość>`: wieszaki z
+  tablicy całej rozpiętości, przy odciągu bez linki Y. Exe bez tej zmiany pominie dopisek i policzy przęsła osobno.
+- ZAŁOŻENIA: a = czoło słupa od przewodu + 0,30 m (osi toru solver nie zna); lina załamuje się w uchwycie 4270; model 4270 zerem
+  w osi liny, lina wzdłuż Y; lina 9811-3 modelem 4490-00 (jak 9814-3); łącznik w podwójnym 0,9 m od słupa. Bez modeli: końcówka
+  liny na linie nośnej 6303-7, zaciski 5270-3, kausze 6301-3. Odciągi pośrednie / wielotorowe (0315, 0316, 0325, 0326) – później.
+- Zmienia: `world/catenary_cantilever.*` (`pulloff`, `mount upper`, `rules pulloff_drop`), `world/catenary_scene.cpp`,
+  `world/catenary_span.*`, `world/Traction.cpp` (dopisek `pull`), dane `traction_cantilevers.txt` i `traction_catalog.txt`
+  (do `data/`), testy. Wymaga: nic.
+
 Branch `funkcja/zastrzal-6506` (od `520072f`).
 
 ### Sieć trakcyjna: zastrzał 6506 jako opcja wysięgników rurowych — commit o tym tytule

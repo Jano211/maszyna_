@@ -38,6 +38,8 @@ struct catenary_span {
     bool rope2set[ 2 ] { false, false };                        // końce drugiej liny nośnej z dopisku "rope2"
     catenary::vec3 rope2[ 2 ];
     double spread[ 2 ] { 0.0, 0.0 };                            // rozstaw przewodów w uchwytach na końcach z dopisku "spread"
+    bool pulled { false };                                      // część rozpiętości przedzielonej odciągami sieci (dopisek "pull")
+    double pull[ 2 ] { 0.0, 0.0 };                              // początek przęsła od pierwszego podwieszenia rozpiętości i jej długość
 };
 
 namespace {
@@ -76,8 +78,19 @@ y_length( TTraction const &Traction ) {
     if( Traction.m_catenaryspan->hangergaps.empty() ) { return 0.0; } // odcinek bez wieszaków
     if( type->type.y_tension <= 0.0 ) { return 0.0; }
     auto const length { std::hypot( Traction.pPoint2.x - Traction.pPoint1.x, Traction.pPoint2.z - Traction.pPoint1.z ) };
-    auto const ylength { type->type.y_length( length ) };
+    // przęsło przedzielone odciągiem: linka Y wg całej rozpiętości między podwieszeniami
+    auto const span { Traction.m_catenaryspan->pulled ? Traction.m_catenaryspan->pull[ 1 ] : length };
+    auto const ylength { type->type.y_length( span ) };
     return ( ylength < length ? ylength : 0.0 );
+}
+
+// koniec przęsła (0: Point1, 1: Point2) jest na odciągu sieci, nie na podwieszeniu
+bool
+pull_end( TTraction const &Traction, int const End ) {
+    if( !Traction.m_catenaryspan || false == Traction.m_catenaryspan->pulled ) { return false; }
+    auto const &pull { Traction.m_catenaryspan->pull };
+    auto const length { std::hypot( Traction.pPoint2.x - Traction.pPoint1.x, Traction.pPoint2.z - Traction.pPoint1.z ) };
+    return ( End == 0 ? pull[ 0 ] > 0.01 : pull[ 0 ] + length < pull[ 1 ] - 0.01 );
 }
 
 // czy przy podwieszeniu od strony wskazanego końca (0: Point1, 1: Point2) jest linka Y wspólna z sąsiednim przęsłem.
@@ -88,6 +101,8 @@ y_at( TTraction const &Traction, int const End ) {
 
     auto const ylength { y_length( Traction ) };
     if( ylength <= 0.0 ) { return false; }
+    // przy odciągu sieci linki Y nie ma (odciąg nie podwiesza sieci)
+    if( pull_end( Traction, End ) ) { return false; }
     auto const *neighbour { Traction.hvNext[ End ] };
     if( neighbour == nullptr ) { return false; }
     auto const neighbourend { Traction.iNext[ End ] };
@@ -266,7 +281,7 @@ catenary_span_metal( TTraction const &Traction, bool const Fitting ) {
 
 // przypisuje przęsłu typ sieci z dopisku "type" i dobiera rozstaw wieszaków
 void
-catenary_span_assign( TTraction &Traction, std::string const &Symbol, double const Messenger, double const Contact, glm::dvec3 const *Rope2, bool const *Rope2set, double const *Spread ) {
+catenary_span_assign( TTraction &Traction, std::string const &Symbol, double const Messenger, double const Contact, glm::dvec3 const *Rope2, bool const *Rope2set, double const *Spread, double const *Pull ) {
 
     Traction.m_catenaryspan.reset();
     if( Symbol.empty() ) { return; }
@@ -297,10 +312,26 @@ catenary_span_assign( TTraction &Traction, std::string const &Symbol, double con
     // odstęp wieszaków 0 w scenerii oznacza odcinek bez wieszaków (do kotwienia albo urządzenia naprężającego):
     // rysowane są same liny i przewody w liczbie wg typu, a rozstaw wieszaków zostaje pusty
     if( Traction.iNumSections == 0 ) { return; }
-    span->hangergaps =
-        registry.hanger_gaps(
-            span->definition->hanger_table,
-            std::hypot( Traction.pPoint2.x - Traction.pPoint1.x, Traction.pPoint2.z - Traction.pPoint1.z ) );
+    auto const length { std::hypot( Traction.pPoint2.x - Traction.pPoint1.x, Traction.pPoint2.z - Traction.pPoint1.z ) };
+    if( Pull != nullptr && Pull[ 1 ] > length + 0.01 ) {
+        // część rozpiętości przedzielonej odciągami: wieszaki tablicy całej rozpiętości, które wypadają na tym przęśle
+        span->pulled = true;
+        span->pull[ 0 ] = Pull[ 0 ];
+        span->pull[ 1 ] = Pull[ 1 ];
+        auto const gaps { registry.hanger_gaps( span->definition->hanger_table, Pull[ 1 ] ) };
+        std::vector<double> inside;
+        double at { 0.0 };
+        for( std::size_t k = 0; k + 1 < gaps.size(); ++k ) {
+            at += gaps[ k ];
+            auto const local { at - Pull[ 0 ] };
+            if( local > 0.05 && local < length - 0.05 ) { inside.push_back( local ); }
+        }
+        double previous { 0.0 };
+        for( auto const position : inside ) { span->hangergaps.push_back( position - previous ); previous = position; }
+        span->hangergaps.push_back( length - previous );
+        return;
+    }
+    span->hangergaps = registry.hanger_gaps( span->definition->hanger_table, length );
 }
 
 // wygląd liny stalowej (ocynk, lekko zmatowiały)
