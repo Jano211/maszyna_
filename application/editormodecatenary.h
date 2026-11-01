@@ -167,6 +167,7 @@ struct catenary_editor
 		float gantry_face{2.50f}; // from the axis of the track to the face of the mast (towards the track)
 		char gantry_skin[128]{}; // the replaceable texture of the masts, the beam and the drops
 		int dragging{0}; // 1: the selected pole along the track, 2: the selected gantry along the track, 3: the selected anchor along the track
+		std::vector<std::size_t> drag_pole; // the entries of the pole dragged, taken when it's grabbed (one pole: an umbrella, spread cantilevers)
 		glm::vec2 pressed{0.f};
 		glm::dvec3 drag_start{0.0}; // the point of the ground the drag started at
 		std::vector<std::pair<std::size_t, catenary::gantry>> drag_group; // the spans of the dragged gantry as they were when the drag started

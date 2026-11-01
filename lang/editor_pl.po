@@ -11986,6 +11986,9 @@ msgstr " (przelotowy)"
 msgid "No card for A = %.2f m here: the drop stays where it was"
 msgstr "Brak karty dla A = %.2f m w tym miejscu: zwis zostaje, gdzie był"
 
+msgid "Another pole stands there (%s): the pole stays where it was"
+msgstr "Tam stoi inny słup (%s): słup zostaje, gdzie był"
+
 msgid "Click: the earthing goes over this pole"
 msgstr "Kliknij: uszynienie przez ten słup"
 

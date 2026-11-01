@@ -228,6 +228,28 @@ std::vector<std::size_t> pole_sharers(std::size_t const Index)
 	return list;
 }
 
+// a pole standing closer than 0.5 m (in the plan) to the point, other than the given entries and the ones by From; -1 when none. Drops and masts of
+// gantries don't stand on the ground there
+int pole_in_the_way(glm::dvec3 const &Point, std::vector<std::size_t> const &Own, glm::dvec3 const &From)
+{
+	auto const *catalog{catenary_scene_catalog()};
+	for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+	{
+		if (std::find(Own.begin(), Own.end(), index) != Own.end())
+			continue;
+		auto const *data{catenary_scene_get(index)};
+		if (data == nullptr || false == data->has_pole)
+			continue;
+		auto const *pole{catalog != nullptr ? catalog->pole(data->pole_type) : nullptr};
+		if (pole != nullptr && (false == pole->drop.empty() || pole->gantry))
+			continue;
+		// one already by the pole where it was grabbed (two poles dragged into each other earlier): it may go away from it
+		if (glm::length(glm::dvec2{data->pole[0] - Point.x, data->pole[2] - Point.z}) < 0.5 && glm::length(glm::dvec2{data->pole[0] - From.x, data->pole[2] - From.z}) >= 0.5)
+			return static_cast<int>(index);
+	}
+	return -1;
+}
+
 // from the pole towards the wires, in the plan; across the track
 glm::dvec2 across_of(catenary::suspension const &Data)
 {
@@ -3889,8 +3911,21 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		// the pole the wires go from
 		if ((tool.page == 1 || tool.page == 4) && tool.gantry_selected < 0)
 			tool.page = 0;
-		// held and dragged: the pole goes along the track
+		// held and dragged: the pole goes along the track. What stands on it is taken now: a pole dragged into another one of the
+		// same type would count it as its own (the same place) and drag it along
 		tool.dragging = tool.selected >= 0 ? 1 : 0;
+		tool.drag_pole.clear();
+		if (auto const *own{tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr}; own != nullptr)
+		{
+			// only what is put together on one pole (an umbrella, spread cantilevers, a cantilever sharing the pole): two poles which
+			// only ended up in one place (dragged into each other) come apart again
+			for (auto const index : pole_sharers(static_cast<std::size_t>(tool.selected)))
+			{
+				auto const *other{catenary_scene_get(index)};
+				if (index == static_cast<std::size_t>(tool.selected) || (other != nullptr && ((false == own->umbrella.empty() && other->umbrella == own->umbrella) || other->shared_pole || own->shared_pole)))
+					tool.drag_pole.push_back(index);
+			}
+		}
 		return;
 	}
 	if (is_intent(Intent, intent_detail::gantry))
@@ -7751,7 +7786,8 @@ void catenary_editor::catenary_drag_update()
 		auto const *catalog{catenary_scene_catalog()};
 		auto const *own{catalog != nullptr ? catalog->pole(current->pole_type) : nullptr};
 		auto const drop{own != nullptr && false == own->drop.empty()};
-		if (drop && pole_sharers(static_cast<std::size_t>(tool.selected)).size() == 1)
+		auto const shared{tool.drag_pole.size() > 1};
+		if (drop && false == shared)
 		{
 			// a drop along the beam of its gantry, to where the cursor is over it; the wires stay by the track
 			glm::dvec3 from, to;
@@ -7771,7 +7807,14 @@ void catenary_editor::catenary_drag_update()
 			return; // an umbrella on a drop, or a cantilever on a mast, goes with its gantry
 		spot.curve = tool.bend == 2 || (tool.bend == 0 && spot.radius > 0.0 && spot.radius < kCurveRadius);
 		catenary_compose(spot, tool.clearance, tool.stagger, tool.toward);
-		if (pole_sharers(static_cast<std::size_t>(tool.selected)).size() > 1)
+		// two poles can't stand in one place: the dragged one stops 0.5 m before another one
+		if (spot.card != 0)
+			if (auto const blocker{pole_in_the_way(glm::dvec3{spot.data.pole[0], spot.data.pole[1], spot.data.pole[2]}, tool.drag_pole, pole_of(*current))}; blocker >= 0)
+			{
+				tool.status = format(STR_C("Another pole stands there (%s): the pole stays where it was"), catenary_scene_get(static_cast<std::size_t>(blocker))->name.c_str());
+				return;
+			}
+		if (shared)
 		{
 			// an umbrella or spread cantilevers: the pole goes where this one puts it, the other cantilever goes with it
 			if (spot.card == 0)

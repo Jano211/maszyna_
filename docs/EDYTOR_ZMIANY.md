@@ -15,6 +15,13 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-11-01
 
+### Edytor sieci: przeciągane słupy się nie sklejają — commit o tym tytule na `siec-gl46` (poprawka)
+- Słup wsunięty przy przeciąganiu w drugi słup tego samego typu (do 5 cm) był brany za jeden słup z nim (jak parasol)
+  i dalej ciągnął oba. Teraz to, co stoi na słupie (parasol, rozstawione, słup dzielony), jest ustalane przy chwyceniu,
+  a przeciągany słup nie stanie bliżej niż 0,5 m od innego (status „Tam stoi inny słup”). Słupy sklejone wcześniej
+  rozjeżdżają się zwykłym przeciągnięciem.
+- Zmienia: `application/editormodecatenary.*`, `lang/editor_pl.po`. Wymaga: nic.
+
 ### Edytor sieci: przeciągany słup przechodzi na dołączony odcinek toru — commit o tym tytule na `siec-gl46` (poprawka)
 - Przy wciśniętym przycisku edytor nie szuka toru pod kursorem, więc słup przeciągany za koniec swojego odcinka stawał na
   jego końcu. Teraz przechodzi na tor dołączony w tym miejscu (`trNext` / `trPrev`, do 8 odcinków dalej), po tej samej stronie
