@@ -85,6 +85,12 @@ struct cantilever_scheme {
     double mount_strut { 0.0 };
     double mount_steady { 0.0 };
     bool   steady_mounted { false };// wysięg pomocniczy ma własny izolator przy konstrukcji (karty z trzema zaczepami)
+    // odciąg sieci (karty 0311-0326, dział 0300): zaczep dolnej liny na słupie obniżony pod przewód jezdny o b z tablicy
+    // rules.pulloff_drop (Głowacki rys. 13.7) zamiast "mount steady"; podwójny ma drugi zaczep ("mount upper", jak odciągu - za liną
+    // nośną) z tym samym mocowaniem co dolny (4630, karta 0371)
+    bool   pulloff { false };
+    double mount_upper { 0.0 };
+    bool   upper_mounted { false };
     std::string registration;       // nazwa zestawu ramion odciągowych
     std::string assembly;           // sposób składania (blok "assembly")
     std::vector<double> tube_steps; // regulowany uchwyt ramion (np. 4290): możliwe podniesienia rury wysięgu względem zestawu
@@ -102,6 +108,10 @@ struct cantilever_rules {
     double clamp_margin { 0.03 };       // ile rury musi zostać za osią uchwytu
     double cord_clamp_inset { 0.0 };    // najmniejsza odległość osi obejmy linki od końca wysięgu pomocniczego
     double umbrella_spread { 0.10 };    // parasol: największa różnica wysokości mocowań obu wysięgników, przy której idą na wspólne mocowanie
+    // odciąg sieci: obniżenie zaczepu na słupie pod przewód jezdny (b) w funkcji odległości zaczepu od osi toru (a), pary (a, b) rosnąco;
+    // między punktami liniowo, poza tablicą - skrajna wartość
+    std::vector<std::pair<double, double>> pulloff_drop;
+    double pulloff_drop_at( double A ) const;
 };
 
 // słup: wymiary potrzebne do położenia czoła na dowolnej wysokości i mocowania, które się na nim stosuje.

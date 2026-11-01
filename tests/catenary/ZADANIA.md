@@ -263,7 +263,9 @@ Te rzeczy są w danych jako ZAŁOŻENIE albo czekają na obejrzenie w grze. Odha
 
 - [ ] Domyślne lico słupa: 2,50 m szlak, 2,20 m stacja, 4,00 m przy rozjeździe; powiększenie skrajni na łuku (tabela 15.21)
 - [ ] Ostrzeżenie, gdy przęsło przekracza rozpiętość dla odsuwów obu podwieszeń (współczynnik B 2,68 / 3,24 / 3,6 / 4)
-- [ ] Odciągi sieciowe co 2. / 3. słup na zewnątrz łuku jako osobny rodzaj podwieszenia
+- [x] Odciągi sieciowe (01.11): karty 0311–0314, 0321–0324 jako schematy `pulloff` na słupie, lina nośna wg całej rozpiętości, przęsła z `pull`. W exe niesprawdzone
+- [ ] Odciągi pośrednie / wielotorowe 0315, 0316, 0325, 0326 (lina dalej na następny tor, 5640-1, izolacja międzytorowa)
+- [ ] Modele: końcówka liny odciągowej na linie nośnej 6303-7, zaciski 5270-3, kausze 6301-3
 - [x] Szablony przęseł naprężenia (31.10): wszystkie karty 0060, 0062, 0068, 0078 tomu 1 + 0060-36/37 (Kolprojekt 2010) w `traction_overlaps.txt`, w edytorze (strona Druty) wybór karty, LPM w miejscu K1 stawia całość; „izolowane” przy wstawianiu i potem w panelu łańcucha (`isolated start|end`). W exe niesprawdzone
 - [ ] Szablony przęseł: odsuwy na łukach z tablic 0027-3 / 0027-10 (dziś z 0,20 na oko), kotwienia rozdzielone 7,00 / 6,30 (dziś jedno urządzenie na wysokości przewodów), modele izolatorów (bryły zastępcze)
 - [ ] Przęsła pochyłe (hk 1,70 ↔ 1,30) – sprawdzić liczenie wieszaków

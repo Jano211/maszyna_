@@ -1580,6 +1580,110 @@ chain_point( scene_chain const &Chain, std::size_t Point, double *Wire, double *
     return true;
 }
 
+// odciąg sieci (karty 0311-0326): ustala tylko odsuw, nie podwiesza sieci
+bool
+pulloff_entry( catenary::suspension const &Data ) {
+    auto const *catalog { cantilevers() };
+    auto const *scheme { catalog != nullptr ? catalog->scheme( Data.card, Data.execution ) : nullptr };
+    return scheme != nullptr && scheme->pulloff;
+}
+
+// punkt Point łańcucha (z kotwieniami) to odciąg sieci
+bool
+pulloff_point( scene_chain const &Chain, std::size_t const Point ) {
+    auto const offset { Chain.data.anchor_start.empty() ? 0u : 1u };
+    if( Point < offset || Point - offset >= Chain.data.suspensions.size() ) { return false; }
+    auto const index { suspension_named( Chain.file, Chain.data.suspensions[ Point - offset ] ) };
+    return index < Suspensions.size() && pulloff_entry( Suspensions[ index ].data );
+}
+
+// rozpiętość między podwieszeniami, w której leży przęsło Span przedzielone odciągami: pierwszy i ostatni punkt (podwieszenia albo
+// kotwienia), początek przęsła od pierwszego punktu i długość całości wzdłuż przewodu w planie. false, gdy żaden koniec przęsła nie
+// jest odciągiem albo brakuje punktu
+bool
+pulloff_run( scene_chain const &Chain, std::size_t const Span, std::size_t &First, std::size_t &Last, double &Offset, double &Full ) {
+    auto const points { chain_points( Chain ) };
+    if( Span + 1 >= points || ( false == pulloff_point( Chain, Span ) && false == pulloff_point( Chain, Span + 1 ) ) ) { return false; }
+    First = Span;
+    while( First > 0 && pulloff_point( Chain, First ) ) { --First; }
+    Last = Span + 1;
+    while( Last + 1 < points && pulloff_point( Chain, Last ) ) { ++Last; }
+    if( pulloff_point( Chain, First ) || pulloff_point( Chain, Last ) ) { return false; }   // odciąg na końcu łańcucha
+    Offset = Full = 0.0;
+    double previous[ 3 ];
+    for( auto point { First }; point <= Last; ++point ) {
+        double wire[ 3 ], rope[ 3 ];
+        bool anchored, wireknown, ropeknown;
+        if( false == raw_point( Chain, point, wire, rope, anchored, wireknown, ropeknown ) ) { return false; }
+        if( point > First ) { Full += std::hypot( wire[ 0 ] - previous[ 0 ], wire[ 2 ] - previous[ 2 ] ); }
+        if( point == Span ) { Offset = Full; }
+        std::copy( wire, wire + 3, previous );
+    }
+    return Full > 1.0;
+}
+
+// lina nośna w miejscu odciągów: na wysokości z całej rozpiętości między podwieszeniami (odciąg nie niesie sieci; Głowacki 13.6 - zwis
+// liczony dla odległości między podwieszeniami). Zapisuje ją w punkcie "rope" odciągu; zwraca numery podwieszeń, którym się zmieniła
+std::vector<std::size_t>
+pulloff_ropes( scene_chain &Chain ) {
+    std::vector<std::size_t> changed;
+    auto const *definition { Chain.data.type.empty() ? nullptr : catenary::types().find( Chain.data.type ) };
+    auto const points { chain_points( Chain ) };
+    auto const offset { Chain.data.anchor_start.empty() ? 0u : 1u };
+    for( std::size_t span = 0; span + 1 < points; ++span ) {
+        std::size_t first, last;
+        double start, full;
+        if( false == pulloff_run( Chain, span, first, last, start, full ) || span != first ) { continue; }
+        double wirea[ 3 ], wireb[ 3 ], ropea[ 3 ], ropeb[ 3 ];
+        bool anchored, wk, rk;
+        if( false == raw_point( Chain, first, wirea, ropea, anchored, wk, rk ) || false == raw_point( Chain, last, wireb, ropeb, anchored, wk, rk ) ) { continue; }
+        // lina nad przewodem wzdłuż całej rozpiętości: rozwiązanie przęsła tej długości (wieszaki z tablicy), inaczej parabola
+        std::vector<catenary::point2> messenger;
+        if( definition != nullptr ) {
+            catenary::span_input input;
+            input.length = full;
+            input.hanger_gaps = catenary::types().hanger_gaps( definition->hanger_table, full );
+            input.height_start = std::max( 0.0, ropea[ 1 ] - wirea[ 1 ] );
+            input.height_end = std::max( 0.0, ropeb[ 1 ] - wireb[ 1 ] );
+            input.y_at_start = input.y_at_end = definition->type.y_tension > 0.0;
+            for( int attempt = 0; attempt < 2 && messenger.empty(); ++attempt ) {
+                try { messenger = catenary::solve_span( definition->type, input, 1.0 ).messenger; }
+                catch( std::exception const & ) { input.y_at_start = input.y_at_end = false; }
+            }
+        }
+        double along { 0.0 };
+        double previous[ 3 ] { wirea[ 0 ], wirea[ 1 ], wirea[ 2 ] };
+        for( auto point { first + 1 }; point < last; ++point ) {
+            auto const index { suspension_named( Chain.file, Chain.data.suspensions[ point - offset ] ) };
+            if( index >= Suspensions.size() ) { continue; }
+            auto &data { Suspensions[ index ].data };
+            along += std::hypot( data.at[ 0 ] - previous[ 0 ], data.at[ 2 ] - previous[ 2 ] );
+            std::copy( std::begin( data.at ), std::end( data.at ), previous );
+            auto const t { std::clamp( along / full, 0.0, 1.0 ) };
+            auto const chord { ( ropea[ 1 ] - wirea[ 1 ] ) * ( 1.0 - t ) + ( ropeb[ 1 ] - wireb[ 1 ] ) * t };
+            // bez typu sieci: parabola, zwis ok. 0,30 m na 72 m (rośnie z kwadratem rozpiętości)
+            auto height { chord - 4.0 * 0.30 * ( full / 72.0 ) * ( full / 72.0 ) * t * ( 1.0 - t ) };
+            if( messenger.size() > 1 ) {
+                for( std::size_t k = 1; k < messenger.size(); ++k ) {
+                    if( messenger[ k ].x < along && k + 1 < messenger.size() ) { continue; }
+                    auto const &a { messenger[ k - 1 ] }, &b { messenger[ k ] };
+                    auto const u { b.x - a.x > 1e-9 ? std::clamp( ( along - a.x ) / ( b.x - a.x ), 0.0, 1.0 ) : 0.0 };
+                    height = a.y + ( b.y - a.y ) * u;
+                    break;
+                }
+            }
+            double rope[ 3 ] { data.at[ 0 ], data.at[ 1 ] + std::max( height, 0.05 ), data.at[ 2 ] };
+            if( data.has_rope ) { rope[ 0 ] = data.rope[ 0 ]; rope[ 2 ] = data.rope[ 2 ]; }
+            if( false == data.has_rope || std::abs( data.rope[ 1 ] - rope[ 1 ] ) > 0.001 ) {
+                data.has_rope = true;
+                std::copy( rope, rope + 3, data.rope );
+                changed.push_back( index );
+            }
+        }
+    }
+    return changed;
+}
+
 // punkt łańcucha bez rozwiązywania przewodu i liny przechodzących swobodnie: WireKnown / RopeKnown - false, gdy w tym miejscu nic ich
 // nie trzyma (druga sieć wysięgnika bez tego uchwytu); Wire i Rope są wtedy przybliżone (w punkcie A wysięgnika)
 bool
@@ -1806,6 +1910,12 @@ span_body( scene_chain const &Chain, std::size_t const Span ) {
                 body += std::string( " spread " ) + ( end == 0 ? "start " : "end " ) + text_number( Suspensions[ index ].contact_spread, 3 );
             }
         }
+    }
+    // przęsło przedzielone odciągiem sieci: wieszaki i linka Y wg całej rozpiętości między podwieszeniami
+    {
+        std::size_t first, last;
+        double start, full;
+        if( pulloff_run( Chain, Span, first, last, start, full ) ) { body += " pull " + text_number( start, 3 ) + " " + text_number( full, 3 ); }
     }
     // kotwienie z dwiema liniami: dolna lina przęsła kończy się na swoim uchwycie krańcowym
     for( auto const end : { 0, 1 } ) {
@@ -2543,8 +2653,29 @@ overlap_insulators( scene_chain const &Chain, std::size_t const Span, std::vecto
 }
 
 // robi od nowa przęsło k łańcucha (przy podwieszeniu przesuniętym w edytorze tylko dwa przęsła przy nim)
+void rebuild_span_only( scene_chain &Chain, std::size_t const Span );
+void reassemble( std::size_t const Index );
+
+// robi od nowa przęsło k łańcucha; gdy łańcuch ma odciągi sieci, najpierw lina nośna w ich miejscu (zależy od podwieszeń całej
+// rozpiętości), a zmienione odciągi - złożone od nowa razem z przęsłami przy nich
 void
 rebuild_span( scene_chain &Chain, std::size_t const Span ) {
+    auto const changed { pulloff_ropes( Chain ) };
+    rebuild_span_only( Chain, Span );
+    if( changed.empty() ) { return; }
+    auto const offset { Chain.data.anchor_start.empty() ? 0u : 1u };
+    for( auto const index : changed ) {
+        reassemble( index );
+        auto const found { std::find( Chain.data.suspensions.begin(), Chain.data.suspensions.end(), Suspensions[ index ].data.name ) };
+        if( found == Chain.data.suspensions.end() ) { continue; }
+        auto const point { static_cast<std::size_t>( found - Chain.data.suspensions.begin() ) + offset };
+        if( point > 0 && point - 1 != Span ) { rebuild_span_only( Chain, point - 1 ); }
+        if( point != Span ) { rebuild_span_only( Chain, point ); }
+    }
+}
+
+void
+rebuild_span_only( scene_chain &Chain, std::size_t const Span ) {
     if( Span >= Chain.spans.size() ) { return; }
     if( Chain.spans[ Span ] != nullptr ) {
         catenary_span_delete( Chain.spans[ Span ] );
@@ -2591,7 +2722,9 @@ rebuild_chain( scene_chain &Chain ) {
     assemble_middle( Chain );
     for( auto *span : Chain.spans ) { if( span != nullptr ) { catenary_span_delete( span ); } }
     Chain.spans.assign( Chain.removed || Chain.data.suspensions.size() < 2 ? 0 : chain_points( Chain ) - 1, nullptr );
-    for( std::size_t span = 0; span < Chain.spans.size(); ++span ) { rebuild_span( Chain, span ); }
+    // odciągi sieci: lina nośna w ich miejscu z całej rozpiętości, odciągi złożone od nowa
+    if( false == Chain.removed ) { for( auto const index : pulloff_ropes( Chain ) ) { reassemble( index ); } }
+    for( std::size_t span = 0; span < Chain.spans.size(); ++span ) { rebuild_span_only( Chain, span ); }
 }
 
 // uszynienia, które idą przez słup podwieszenia: uchwyty od nowa (słup przesunięty w edytorze)

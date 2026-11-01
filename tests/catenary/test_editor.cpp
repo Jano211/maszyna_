@@ -1021,6 +1021,39 @@ int main( int, char *argv[] ) {
         Global.AirTemperature = 15.f;
         std::remove( "tests/catenary/td_kotwa_test.scm" );
     }
+    // odciąg sieci (0312-1) w połowie rozpiętości 72 m: lina nośna w jego miejscu wg całej rozpiętości (niżej niż przy podwieszeniach),
+    // przęsła po obu stronach z dopiskiem "pull" (wieszaki i linka Y wg 72 m), odciąg złożony na słupie (lina, izolator, ramiona, uchwyt)
+    {
+        catenary_scene_clear(); catenary_scene_resolve(); errors.clear(); mock_span_bodies.clear();
+        auto a { entry }, b { entry }, c { entry };
+        a.name = "s0001"; b.name = "s0002"; c.name = "s0003";
+        for( auto *d : { &a, &b, &c } ) { d->has_rope = true; d->rope[ 0 ] = d->at[ 0 ]; d->rope[ 1 ] = 5.8 + 1.7; }
+        a.at[ 2 ] = a.rope[ 2 ] = a.pole[ 2 ] = 0.0;
+        b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] = 36.0;
+        c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 72.0;
+        b.card = 312; b.execution = 1;
+        auto const ia { catenary_scene_add( "td_odciag_test.scm", a ) };
+        auto const ib { catenary_scene_add( "td_odciag_test.scm", b ) };
+        catenary_scene_add( "td_odciag_test.scm", c );
+        catenary::cantilever_result pulled;
+        auto const probed { catenary_scene_probe( b, pulled ) };
+        catenary::chain line;
+        line.name = "o1"; line.power = "pwr01"; line.type = "YwsC120-2C";
+        line.suspensions = { "s0001", "s0002", "s0003" };
+        mock_span_bodies.clear();
+        catenary_chain_add( "td_odciag_test.scm", line );
+        auto const *pull { catenary_scene_get( ib ) }, *real { catenary_scene_get( ia ) };
+        auto const sag { real->rope[ 1 ] - pull->rope[ 1 ] };
+        auto pulls { 0 };
+        for( auto const &body : mock_span_bodies ) { if( body.find( " pull 0.000 72.000" ) != std::string::npos || body.find( " pull 36.000 72.000" ) != std::string::npos ) { ++pulls; } }
+        auto const *rope { pulled.find( "rope" ) }, *insulator { pulled.find( "rope_insulator" ) }, *arms { pulled.find( "arms" ) }, *mount { pulled.find( "steady_mount" ) };
+        std::printf( "  odciag 0312-1: czesci %d, lina nosna %.3f m nizej niz przy podwieszeniu, przesel z \"pull\" %d, zaczep %.3f m pod przewodem\n",
+            static_cast<int>( pulled.parts.size() ), sag, pulls, pulled.values.count( "pulloff.drop" ) ? pulled.values.at( "pulloff.drop" ) : -1.0 );
+        for( auto const &warning : pulled.warnings ) { std::printf( "    %s\n", warning.c_str() ); }
+        check( probed && rope != nullptr && insulator != nullptr && arms != nullptr && mount != nullptr && pulled.find( "strut_mount" ) == nullptr && sag > 0.2 && pull->rope[ 1 ] - pull->at[ 1 ] > 0.1 && pulls == 2,
+            "odciag sieci 0312: lina, izolator, ramiona, uchwyt 4630 na slupie; lina nosna wg calej rozpietosci, przesla z \"pull\"" );
+        std::remove( "tests/catenary/td_odciag_test.scm" );
+    }
     // szablony przęseł naprężenia (traction_overlaps.txt) i znacznik izolowanego końca łańcucha
     {
         auto const &cards { catenary_scene_overlaps() };

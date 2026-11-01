@@ -139,6 +139,8 @@ endregistration
 // ustawienia montazowe; cord_clamp_inset: obejma linki 4210 co najmniej 2 cm od konca wysiegu (inaczej wystaje poza rure; Jan 2026-10-13)
 // umbrella_spread: parasol na mocowaniach regulowanych - wspolna wysokosc (srednia), gdy obie strony roznia sie najwyzej o tyle (Jan 2026-10-14)
 rules cord_clamp_inset 0.0200 umbrella_spread 0.1000 endrules
+// odciagi sieci: obnizenie uchwytu slupowego pod przewod jezdny b [m] od odleglosci uchwytu od osi toru a [m] (Glowacki rys. 13.7)
+rules pulloff_drop 8 2.20 0.140 2.25 0.150 2.30 0.155 2.35 0.160 2.40 0.170 2.45 0.180 2.50 0.190 2.55 0.200 endrules
 
 // ---- sposoby skladania -----------------------------------------------------------------------------------------
 // Wysiegnik sklada sie klockami w podanej kolejnosci. Uklad: zero w osi przewodow jezdnych, Y do konstrukcji, Z w gore.
@@ -2345,6 +2347,69 @@ assembly aux_steady
   roll steady -
 endassembly
 
+// ---- odciagi sieci (dzial 0300, karty 0311-0324; Glowacki rys. 13.3-13.7) --------------------------------------------
+// Odciag ustala tylko odsuw sieci, nie niesie jej ciezaru. Lina odciagowa (9811-3, Cu 35) od uchwytu na slupie (4630 jak wysieg
+// pomocniczy; obnizony pod przewod jezdny o b z rules pulloff_drop) przez uchwyt ramion 4270 do liny nosnej, ramiona odciagowe od uchwytu
+// do przewodu jezdnego. Zero ukladu w przewodzie jezdnym; lina nosna w miejscu odciagu - z przesla (zwis calej rozpietosci).
+// ZALOZENIA: lina zalamuje sie w uchwycie 4270 (prosto slup-uchwyt, prosto uchwyt-lina nosna); 4270 zerem w osi liny, os liny po Y
+// modelu; koncowka liny na linie nosnej (6303-7, zaciski 5270-3) i kausze 6301-3 - bez modeli.
+assembly pulloff
+  shift arms_side wire 1 0
+  setarms arms arms_side
+  line rope_line steady_mount toward arms_holder
+  point rope_eye steady_mount
+  armropes rope rope_eye
+  place ?rope_holder arms_holder rope_line -y
+  stretch rope_end arms_holder messenger +z
+endassembly
+// z izolacja (0312, 0314): izolator 7020-1 przy slupie
+assembly pulloff_insulated
+  shift arms_side wire 1 0
+  setarms arms arms_side
+  line rope_line steady_mount toward arms_holder
+  place rope_insulator steady_mount rope_line -y
+  point rope_eye rope_line@rope_insulator.length
+  armropes rope rope_eye
+  place ?rope_holder arms_holder rope_line -y
+  stretch rope_end arms_holder messenger +z
+  roll rope_insulator -
+endassembly
+// podwojny (0321-0324): gorna lina z drugiego uchwytu (na wysokosci liny nosnej) do liny nosnej, dolna do uchwytu ramion, ukosna lina od
+// liny nosnej do uchwytu ramion, pionowy lacznik miedzy linami 0,9 m od slupa (ZALOZENIE: polozenie lacznika z rysunku karty, na oko)
+assembly pulloff_double
+  shift arms_side wire 1 0
+  setarms arms arms_side
+  line rope_line steady_mount toward arms_holder
+  point rope_eye steady_mount
+  armropes rope rope_eye
+  place ?rope_holder arms_holder rope_line -y
+  stretch rope_end arms_holder messenger +z
+  line upper_line upper_mount toward messenger
+  stretch rope_upper upper_mount messenger +z
+  point tie_low rope_line@0.9
+  project upper_line tie_at tie_low 10 0
+  stretch rope_tie tie_low upper_line@upper_line.tie_at +z
+endassembly
+assembly pulloff_double_insulated
+  shift arms_side wire 1 0
+  setarms arms arms_side
+  line rope_line steady_mount toward arms_holder
+  place rope_insulator steady_mount rope_line -y
+  point rope_eye rope_line@rope_insulator.length
+  armropes rope rope_eye
+  place ?rope_holder arms_holder rope_line -y
+  stretch rope_end arms_holder messenger +z
+  line upper_line upper_mount toward messenger
+  place upper_insulator upper_mount upper_line -y
+  point upper_eye upper_line@upper_insulator.length
+  stretch rope_upper upper_eye messenger +z
+  point tie_low rope_line@0.9
+  project upper_line tie_at tie_low 10 0
+  stretch rope_tie tie_low upper_line@upper_line.tie_at +z
+  roll rope_insulator -
+  roll upper_insulator -
+endassembly
+
 // 0169: ramiona specjalne 6207-3 na linie 9814-3 z izolatora 7120 na slupie, linki z luku ramion do liny nosnej
 assembly aux_rope
   shift arms_side wire 1 0
@@ -3621,6 +3686,26 @@ scheme 167 5 reach 3.7000 4.5000 height 1.3000 registration 113x-3 mount steady 
 scheme 169 2 reach 1.7500 2.2000 height 1.3000 registration ropex mount steady 0.1000 assembly aux_rope role rope_insulator 7120-01 role rope 9814-03 role arms 6207-03 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
 scheme 169 3 reach 2.2000 2.6500 height 1.3000 registration ropex mount steady 0.1000 assembly aux_rope role rope_insulator 7120-01 role rope 9814-03 role arms 6207-03 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
 scheme 169 4 reach 2.6500 3.1000 height 1.3000 registration ropex mount steady 0.1000 assembly aux_rope role rope_insulator 7120-01 role rope 9814-03 role arms 6207-03 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme
+// odciagi sieci: lina 9811-3 (Cu 35, ok. 7,5 mm) modelem linki jak 9814-3; uchwyt ramion na linie 4270 (-1 jedno ramie, -2 para)
+part 9811-03 kind cord length 1.0000 model 4490-00 girth 1.9000 endpart   // ZALOZENIE: model i grubosc jak 9814-3
+part 4270-01 kind clamp endpart   // ZALOZENIE: zero w osi liny odciagowej, lina wzdluz Y modelu (do sprawdzenia w modelu)
+part 4270-02 kind clamp endpart
+scheme 311 1 reach 1.5000 4.5000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 endscheme
+scheme 311 2 reach 1.5000 4.5000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff role rope 9811-03 role rope_end 9811-03 role arms 6202-01 role rope_holder 4270-01 endscheme
+scheme 312 1 reach 1.5000 4.5000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff_insulated role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 role rope_insulator 7020-01 endscheme
+scheme 312 2 reach 1.5000 4.5000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff_insulated role rope 9811-03 role rope_end 9811-03 role arms 6202-01 role rope_holder 4270-01 role rope_insulator 7020-01 endscheme
+scheme 313 1 reach 1.5000 4.5000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff role rope 9811-03 role rope_end 9811-03 role arms 6205-02 role rope_holder 4270-02 endscheme
+scheme 313 2 reach 1.5000 4.5000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff role rope 9811-03 role rope_end 9811-03 role arms 6203-01 role rope_holder 4270-01 endscheme
+scheme 314 1 reach 1.5000 4.5000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff_insulated role rope 9811-03 role rope_end 9811-03 role arms 6205-02 role rope_holder 4270-02 role rope_insulator 7020-01 endscheme
+scheme 314 2 reach 1.5000 4.5000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff_insulated role rope 9811-03 role rope_end 9811-03 role arms 6203-01 role rope_holder 4270-01 role rope_insulator 7020-01 endscheme
+scheme 321 1 reach 1.5000 4.5000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 role rope_upper 9811-03 role rope_tie 9811-03 endscheme
+scheme 321 2 reach 1.5000 4.5000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double role rope 9811-03 role rope_end 9811-03 role arms 6202-01 role rope_holder 4270-01 role rope_upper 9811-03 role rope_tie 9811-03 endscheme
+scheme 322 1 reach 1.5000 4.5000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double_insulated role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 role rope_insulator 7020-01 role rope_upper 9811-03 role rope_tie 9811-03 role upper_insulator 7020-01 endscheme
+scheme 322 2 reach 1.5000 4.5000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double_insulated role rope 9811-03 role rope_end 9811-03 role arms 6202-01 role rope_holder 4270-01 role rope_insulator 7020-01 role rope_upper 9811-03 role rope_tie 9811-03 role upper_insulator 7020-01 endscheme
+scheme 323 1 reach 1.5000 4.5000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double role rope 9811-03 role rope_end 9811-03 role arms 6205-02 role rope_holder 4270-02 role rope_upper 9811-03 role rope_tie 9811-03 endscheme
+scheme 323 2 reach 1.5000 4.5000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double role rope 9811-03 role rope_end 9811-03 role arms 6203-01 role rope_holder 4270-01 role rope_upper 9811-03 role rope_tie 9811-03 endscheme
+scheme 324 1 reach 1.5000 4.5000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double_insulated role rope 9811-03 role rope_end 9811-03 role arms 6205-02 role rope_holder 4270-02 role rope_insulator 7020-01 role rope_upper 9811-03 role rope_tie 9811-03 role upper_insulator 7020-01 endscheme
+scheme 324 2 reach 1.5000 4.5000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double_insulated role rope 9811-03 role rope_end 9811-03 role arms 6203-01 role rope_holder 4270-01 role rope_insulator 7020-01 role rope_upper 9811-03 role rope_tie 9811-03 role upper_insulator 7020-01 endscheme
 // teowniki 0141-0144 (sieci 3, 4) i 0161-0164 (siec 5, hk 1,30): nieprzechylne, wyk. 1-5
 scheme 141 1 reach 1.3000 1.7500 height 1.7000 registration 111x-2 mount stay 1.6449 mount strut 0.9486 mount steady 0.2200 assembly tee_bar_steady role strut_insulator 7110-01 role strut 6102-01 role stay_insulator 7110-01 role stay 4330-01 role steady_insulator 7110-01 role messenger_clamp 4160-01 role steady 6111-01 role cord 4490-00 role cord_clamp 4210-02 role cord_holder 4230-01 role arms 6204-02 role arms_bracket 4250-04 endscheme
 scheme 141 2 reach 1.7500 2.2000 height 1.7000 registration 111x-2 mount stay 1.7451 mount strut -0.0193 assembly tee_swing role strut_insulator 7110-01 role strut 6101-02 role stay_insulator 7110-01 role stay 4320-02 role steady_clamp 4350-02 role steady_head 4350-01 role messenger_clamp 4160-01 role steady 6111-01 role cord 4490-00 role cord_clamp 4210-02 role cord_holder 4230-01 role arms 6204-02 role arms_bracket 4250-04 endscheme

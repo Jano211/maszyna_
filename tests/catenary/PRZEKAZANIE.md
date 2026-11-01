@@ -31,6 +31,10 @@ kopia z literówką, nieużywana. Testy po `02a80e5` puszczone 01.11: tc te tk t
    link_clamp / link_cord_clamp we wpisie, złożenie `brace` (iteracja punktu na wysięgu pomocniczym) dokładane w solve_cantilever_once
    z kontrolą (otwory w uszach, 4760 na rurze), checkbox w panelu słupa; 448/574 wariantów, lista kart bez zastrzału w EDYTOR_ZMIANY;
    test `tc`, `te`. W exe NIESPRAWDZONE. Dla 77x/78x/swing_steady trzeba by dłuższego płaskownika – zapytać Jana (model 6505?).
+   01.11 14:30: ODCIĄGI SIECI zrobione na `funkcja/odciagi-sieci` (karty z „z- KATALOG 1 -z.pdf” s. 64–84: 0311–0326, mocowania
+   0361/0362/0371/0372 = 4630; Głowacki s. 344–346 PDF 336–338: rys. 13.3/13.5, tablica obniżenia 13.7). Odciąg = podwieszenie z kartą
+   31x/32x (schemat `pulloff`), lina nośna w jego miejscu z całej rozpiętości (`pulloff_ropes`, `pulloff_run`), przęsła `pull`.
+   Szczegóły i ZAŁOŻENIA w docs/EDYTOR_ZMIANY.md. Skrzyżowania przewodów nad rozjazdami (ogranicznik) – Jan: odłożone na po środzie.
 4. Po środzie: kotwienie 0454 (4550-1/-2/-5/-6/-7, tyły 4550-8 do 03 i 4550-9 do 04, 5050-1 – model od Jana), konsoleta 4580
    (dwa modele), Iet-107 (uchwyty odległościowe 4.6.1.8, YwsC 345 daN / Y 14 m – decyzja Jana). Malowanie wariantów tekstur
    (Jan); tekstury 161x_{new,used,old}_{gray,white}, 1701 do przemalowania (na razie siec_trakcyjna_ph/beton1).
