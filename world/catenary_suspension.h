@@ -189,7 +189,11 @@ struct suspension_file {
 
 // rozbiera plik podwieszeń podany jako kolejne słowa (już bez komentarzy). Source: nazwa pliku do komunikatów.
 // Błędne wpisy są pomijane, a opis każdego błędu trafia do Errors
-void parse_suspensions( std::vector<std::string> const &Tokens, std::string const &Source, suspension_file &Output, std::vector<std::string> &Errors );
+// References: łańcuchy, których podwieszeń nie ma wśród rozebranych wpisów, są odrzucane (cały plik naraz). Wpisy scenerii rozbierane
+// po jednym (node ... chain w pliku warstwy) - false; sprawdza je wtedy check_chain_references dla wszystkich wpisów pliku
+void parse_suspensions( std::vector<std::string> const &Tokens, std::string const &Source, suspension_file &Output, std::vector<std::string> &Errors, bool References = true );
+// odrzuca łańcuchy, które wskazują podwieszenia spoza pliku (każdy z błędem w Errors)
+void check_chain_references( suspension_file &File, std::string const &Source, std::vector<std::string> &Errors );
 
 // przesuwa wszystkie punkty pliku (podwieszenia, kotwienia, bramki) o Offset - blok "origin" scenerii, w którym stoi dyrektywa
 // "catenary" albo wpis sieci; przy zapisie pliku z edytora przesunięcie odejmowane (Sign -1)

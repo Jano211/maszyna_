@@ -36,6 +36,9 @@ kopia z literówką, nieużywana. Testy po `02a80e5` puszczone 01.11: tc te tk t
    31x/32x (schemat `pulloff`), lina nośna w jego miejscu z całej rozpiętości (`pulloff_ropes`, `pulloff_run`), przęsła `pull`.
    01.11 14:50: wielotorowe (pull_from, `pull_start`, przycisk „Odciąg dalej na sąsiedni tor”) i bramki (4630-04 / -05) – zrobione.
    Szczegóły i ZAŁOŻENIA w docs/EDYTOR_ZMIANY.md. Skrzyżowania przewodów nad rozjazdami (ogranicznik) – Jan: odłożone na po środzie.
+   01.11 22:00: BUG u kolegi („słupy stoją, drutów brak” po zapisie i wczytaniu) – sieć wprost w pliku warstwy: parse_suspensions
+   wpis po wpisie odrzucał łańcuchy (podwieszenia „nie w pliku”). Poprawione na `funkcja/wczytywanie-sieci`, test te (zapis + wczytanie
+   drogą scenerii). Przy okazji: earthing z Pending, podwójne składanie odciągów przy wczytaniu.
 4. Po środzie: kotwienie 0454 (4550-1/-2/-5/-6/-7, tyły 4550-8 do 03 i 4550-9 do 04, 5050-1 – model od Jana), konsoleta 4580
    (dwa modele), Iet-107 (uchwyty odległościowe 4.6.1.8, YwsC 345 daN / Y 14 m – decyzja Jana). Malowanie wariantów tekstur
    (Jan); tekstury 161x_{new,used,old}_{gray,white}, 1701 do przemalowania (na razie siec_trakcyjna_ph/beton1).

@@ -40,7 +40,7 @@ bool is_keyword( std::string const &Token ) {
 
 } // namespace
 
-void parse_suspensions( std::vector<std::string> const &Tokens, std::string const &Source, suspension_file &Output, std::vector<std::string> &Errors ) {
+void parse_suspensions( std::vector<std::string> const &Tokens, std::string const &Source, suspension_file &Output, std::vector<std::string> &Errors, bool const References ) {
 
     auto const count { Tokens.size() };
     std::size_t index { 0 };
@@ -375,15 +375,19 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
         }
         if( good ) { Output.entries.push_back( entry ); }
     }
-    // łańcuchy wskazują podwieszenia z tego samego pliku: brakujące nazwy to błąd całego łańcucha
-    for( auto chain { Output.chains.begin() }; chain != Output.chains.end(); ) {
+    if( References ) { check_chain_references( Output, Source, Errors ); }
+}
+
+// łańcuchy wskazują podwieszenia z tego samego pliku: brakujące nazwy to błąd całego łańcucha
+void check_chain_references( suspension_file &File, std::string const &Source, std::vector<std::string> &Errors ) {
+    for( auto chain { File.chains.begin() }; chain != File.chains.end(); ) {
         std::string missing;
         for( auto const &name : chain->suspensions ) {
-            if( std::none_of( Output.entries.begin(), Output.entries.end(), [ & ]( suspension const &Entry ) { return Entry.name == name; } ) ) { missing = name; break; }
+            if( std::none_of( File.entries.begin(), File.entries.end(), [ & ]( suspension const &Entry ) { return Entry.name == name; } ) ) { missing = name; break; }
         }
         if( missing.empty() ) { ++chain; continue; }
-        report( chain->name, "chain refers to suspension \"" + missing + "\" which isn't in the file; the chain is left out" );
-        chain = Output.chains.erase( chain );
+        Errors.push_back( "Bad catenary file \"" + Source + "\", suspension \"" + chain->name + "\": chain refers to suspension \"" + missing + "\" which isn't in the file; the chain is left out" );
+        chain = File.chains.erase( chain );
     }
 }
 

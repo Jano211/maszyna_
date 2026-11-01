@@ -15,6 +15,18 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-11-01
 
+Branch `funkcja/wczytywanie-sieci` (od `e0e1eeb`).
+
+### Sieć trakcyjna: łańcuchy z plików scenerii nie ginęły przy wczytaniu — commit o tym tytule
+- Sieć zapisana wprost w pliku warstwy (wpisy `node … suspension/chain`, a nie osobny plik `catenary … endcatenary`) po
+  ponownym wczytaniu stała bez drutów: słupy i wysięgniki były, łańcuchy odrzucone z błędem „chain refers to suspension … which
+  isn't in the file”. Wpisy scenerii są rozbierane po jednym, a parser sprawdzał podwieszenia łańcucha tylko w jego własnym wpisie.
+  Teraz sprawdza je dla wszystkich wpisów pliku naraz, przy dodaniu do sceny.
+- Uszynienia (`earthing`) z pliku scenerii wczytywanego przed FirstInit nie trafiały do sceny – są.
+- Odciągi sieci w łańcuchu przy wczytaniu składały się dwa razy (raz przez łańcuch, raz przy powiązaniu scenerii) – teraz raz.
+- Zmienia: `world/catenary_suspension.*` (`check_chain_references`, parametr `References`), `world/catenary_scene.cpp`, test edytora
+  (zapis wpisów warstwy i wczytanie drogą scenerii). Wymaga: nic.
+
 ### Edytor sieci: słup odciągu do 50 m od osi toru — commit o tym tytule na `funkcja/odciagi-sieci`
 - Przy grupie „Odciągi sieci” suwak „Czoło słupa od osi toru” sięga do 50 m (skala logarytmiczna), pasmo A kart odciągów
   1–55 m. Lina odciągowa prosto od słupa; obniżenie uchwytu na słupie dla a > 2,55 m zostaje 0,20 m (koniec tablicy Głowackiego).

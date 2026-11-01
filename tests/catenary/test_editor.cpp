@@ -1124,6 +1124,42 @@ int main( int, char *argv[] ) {
         check( good, "origin: dyrektywa catenary w bloku origin przesuwa punkty, zapis z edytora wzgledny" );
         std::remove( "tests/catenary/td_origin_test.scm" );
     }
+    // zapis wpisów w pliku warstwy i wczytanie z powrotem (ścieżka scenerii: catenary_scene_node przed FirstInit, potem
+    // catenary_scene_loaded i resolve) - łańcuch z kotwieniem musi dać te same przęsła co przed zapisem
+    {
+        catenary_scene_clear(); catenary_scene_resolve(); errors.clear(); mock_span_bodies.clear();
+        std::string const layer { "td_warstwa.scm" };
+        catenary_scene_file_inline( layer, true );
+        auto a { entry }, b { entry }, c { entry };
+        a.name = "s0001"; b.name = "s0002"; c.name = "s0003";
+        a.at[ 2 ] = a.rope[ 2 ] = a.pole[ 2 ] = 0.0;
+        b.at[ 2 ] = b.rope[ 2 ] = b.pole[ 2 ] = 60.0;
+        c.at[ 2 ] = c.rope[ 2 ] = c.pole[ 2 ] = 120.0;
+        for( auto *d : { &a, &b, &c } ) { catenary_scene_add( layer, *d ); }
+        catenary::chain line;
+        line.name = "td_warstwa_l1"; line.power = "pwr01"; line.type = "YwsC120-2C";
+        line.suspensions = { "s0001", "s0002", "s0003" };
+        mock_span_bodies.clear();
+        catenary_chain_add( layer, line );
+        auto const before { mock_span_bodies.size() };
+        auto const lines { catenary_scene_entries( layer ) };
+        // jak sceneria: "node <max> <min> <nazwa> <typ>" czyta serializer, resztę do end<typ> - catenary_scene_node
+        catenary_scene_clear(); errors.clear(); mock_span_bodies.clear();
+        for( auto const &text : lines ) {
+            std::istringstream words { text };
+            std::string node, max, min, name, type;
+            words >> node >> max >> min >> name >> type;
+            std::string rest { std::istreambuf_iterator<char>( words ), std::istreambuf_iterator<char>() };
+            cParser input( rest );
+            catenary_scene_node( input, type, std::stod( max ), std::stod( min ), name, layer );
+        }
+        catenary_scene_loaded();
+        catenary_scene_resolve();
+        auto const after { mock_span_bodies.size() };
+        std::printf( "  zapis w warstwie i wczytanie: wpisow %zu, przesel przed %zu, po %zu, lancuchow %zu\n", lines.size(), before, after, catenary_chain_size() );
+        for( auto const &text : lines ) { std::printf( "    %s\n", text.substr( 0, 110 ).c_str() ); }
+        check( before == 2 && after == before && catenary_chain_size() == 1, "wpisy sieci w pliku warstwy: po zapisie i wczytaniu te same przesla" );
+    }
     for( auto const &line : errors ) { std::printf( "  %s\n", line.c_str() ); }
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDY: %d\n", failures );
     return failures;
