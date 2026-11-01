@@ -281,6 +281,8 @@ text_number( double const Value, int const Precision = 4 ) {
 // a przy wpisie ze słupem oś słupa na wysokości główki szyny. Umbrella: ustawienia strony parasola (tylko przy słupie);
 // obrót zwisu na dźwigarze bramki względem płaszczyzny wysięgnika (stopnie; 0 do ok. 2° skosu - zwis idzie za wysięgnikiem)
 double drop_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Pole, double Heading );
+// bramka, na której dźwigarze wisi zwis wpisu (nullptr, gdy żadna)
+scene_gantry const *drop_gantry( catenary::suspension const &Data, catenary::cantilever_pole const &Pole );
 std::size_t suspension_named( std::string const &File, std::string const &Name );
 bool second_net( scene_chain const &Chain, std::size_t Point );
 
@@ -689,10 +691,20 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     // każda część to zwykły egzemplarz modelu, taki sam jak z wpisu node model
     std::size_t count { 0 };
     // jedna tekstura na cały wysięgnik (żeby nie wymienić jednej rurki na nową); słup swoją, fundament - stałą z modelu
-    auto const fittingskin { Suspension.skin.empty() ? kFittingSkin : Suspension.skin };
+    // Jan 2026-11-01: wysięgnik (także na bramce) zawsze z tekstur siec_trakcyjna/siec*; dawne wpisy na bramkach mają w `skin`
+    // teksturę bramki (dla zwisu) - taka idzie do zwisu, a wysięgnik dostaje domyślną
+    auto const fitting_named = []( std::string const &Skin ) { return Skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0; };
+    auto const fittingskin { fitting_named( data.skin ) ? data.skin : kFittingSkin };
     auto const poleskin = [ & ]( std::string const &Pole ) -> std::string {
         if( false == data.pole_skin.empty() ) { return data.pole_skin; }
         auto const *pole { Catalog.pole( Pole ) };
+        if( pole != nullptr && false == pole->drop.empty() ) {
+            // zwis: tekstura bramki, na której wisi
+            if( false == data.skin.empty() && false == fitting_named( data.skin ) ) { return data.skin; }
+            if( auto const *gantry { drop_gantry( data, *pole ) }; gantry != nullptr && false == gantry->data.skin.empty() ) { return gantry->data.skin; }
+            if( false == Suspension.skin.empty() && false == fitting_named( Suspension.skin ) ) { return Suspension.skin; }
+            return std::string( "none" );
+        }
         return pole != nullptr && false == pole->skin.empty() ? pole->skin : std::string( "none" );
     };
     Suspension.has_saddle = false;
@@ -868,11 +880,11 @@ namespace {
 // stoi równo z dźwigarem, a wysięgnik obraca się na zawiasach (tak jak wysięgniki obrotowe)
 double constexpr kDropSkewLimit { 2.0 };
 
-double
-drop_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Pole, double const Heading ) {
-    if( Pole.drop.empty() || false == Data.has_pole ) { return 0.0; }
+scene_gantry const *
+drop_gantry( catenary::suspension const &Data, catenary::cantilever_pole const &Pole ) {
+    if( Pole.drop.empty() || false == Data.has_pole ) { return nullptr; }
     auto const *catalog { cantilevers() };
-    if( catalog == nullptr ) { return 0.0; }
+    if( catalog == nullptr ) { return nullptr; }
     for( auto const &gantry : Gantries ) {
         if( gantry.removed ) { continue; }
         auto const *first { catalog->mast( gantry.data.masts[ 0 ] ) };
@@ -889,16 +901,30 @@ drop_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Po
         auto const dx { from[ 0 ] + ux * along - Data.pole[ 0 ] }, dz { from[ 2 ] + uz * along - Data.pole[ 2 ] };
         auto const bottom { from[ 1 ] + ( to[ 1 ] - from[ 1 ] ) * along };
         if( dx * dx + dz * dz > 0.09 || std::abs( bottom - Data.pole[ 1 ] ) > 1.0 ) { continue; }
-        // kierunek dźwigara w układzie wysięgnika: Y (do konstrukcji) = (sin h, cos h), X (wzdłuż toru) = (-cos h, sin h)
-        auto const length { std::sqrt( length2 ) };
-        auto const bx { ux / length }, bz { uz / length };
-        auto alongx { -bx * std::cos( Heading ) + bz * std::sin( Heading ) };
-        auto alongy { bx * std::sin( Heading ) + bz * std::cos( Heading ) };
-        if( alongy < 0.0 ) { alongx = -alongx; alongy = -alongy; }
-        auto const turn { std::atan2( -alongx, alongy ) * 180.0 / 3.14159265358979323846 };
-        return ( std::abs( turn ) > kDropSkewLimit ? turn : 0.0 );
+        return &gantry;
     }
-    return 0.0;
+    return nullptr;
+}
+
+double
+drop_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Pole, double const Heading ) {
+    auto const *gantry { drop_gantry( Data, Pole ) };
+    if( gantry == nullptr ) { return 0.0; }
+    auto const *catalog { cantilevers() };
+    auto const *first { catalog->mast( gantry->data.masts[ 0 ] ) };
+    auto const *second { gantry->data.masts[ 1 ].empty() ? nullptr : catalog->mast( gantry->data.masts[ 1 ] ) };
+    auto const *beam { catalog->beam( gantry->data.beam ) };
+    double from[ 3 ], to[ 3 ];
+    gantry_beam_ends( gantry->data, *first, second, beam->span, from, to );
+    auto const ux { to[ 0 ] - from[ 0 ] }, uz { to[ 2 ] - from[ 2 ] };
+    // kierunek dźwigara w układzie wysięgnika: Y (do konstrukcji) = (sin h, cos h), X (wzdłuż toru) = (-cos h, sin h)
+    auto const length { std::sqrt( ux * ux + uz * uz ) };
+    auto const bx { ux / length }, bz { uz / length };
+    auto alongx { -bx * std::cos( Heading ) + bz * std::sin( Heading ) };
+    auto alongy { bx * std::sin( Heading ) + bz * std::cos( Heading ) };
+    if( alongy < 0.0 ) { alongx = -alongx; alongy = -alongy; }
+    auto const turn { std::atan2( -alongx, alongy ) * 180.0 / 3.14159265358979323846 };
+    return ( std::abs( turn ) > kDropSkewLimit ? turn : 0.0 );
 }
 } // namespace
 
@@ -1382,7 +1408,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     }
     Anchor.solved = true;
 
-    auto const fittingskin { data.skin.empty() ? kFittingSkin : data.skin };
+    auto const fittingskin { data.skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0 ? data.skin : kFittingSkin };
     std::size_t count { 0 };
     auto const place = [ & ]( std::string const &Model, catenary::cantilever_placement const &Placement, double const Heading, glm::dvec3 const &Origin, std::string const &Skin = std::string() ) {
         auto const part { catenary::cantilever_to_scene( Placement, Heading ) };
@@ -2379,7 +2405,7 @@ assemble_earthing( scene_earthing &Earthing ) {
     if( Earthing.removed ) { return 0; }
     auto const *catalog { cantilevers() };
     if( catalog == nullptr ) { return 0; }
-    auto const skin { Earthing.data.skin.empty() ? kFittingSkin : Earthing.data.skin };
+    auto const skin { Earthing.data.skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0 ? Earthing.data.skin : kFittingSkin };
     std::size_t count { 0 };
     std::vector<std::size_t> done;     // słupy z uchwytem (kilka wpisów listy na jednym słupie - jeden uchwyt)
     for( auto const &name : Earthing.data.poles ) {

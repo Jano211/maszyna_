@@ -2400,7 +2400,7 @@ void catenary_editor::catenary_place(catenary_spot const &Spot)
 	data.name = catenary_scene_new_name(file);
 	// a drop on a gantry takes the texture of the gantry
 	if (auto const *gantry{tool.gantry_selected >= 0 ? catenary_gantry_get(static_cast<std::size_t>(tool.gantry_selected)) : nullptr}; gantry != nullptr && data.pole_type != tool.poles[std::clamp(tool.pole, 0, static_cast<int>(tool.poles.size()) - 1)])
-		data.skin = gantry->skin;
+		data.pole_skin = gantry->skin;
 	// the span from the pole before, for the status
 	auto const *before{last_pole_near(wire_of(data))};
 	auto const span{before != nullptr ? glm::length(plan_of(wire_of(data)) - plan_of(wire_of(*before))) : 0.0};
@@ -5913,7 +5913,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 			};
 			ImGui::PushItemWidth(220.0f);
 			std::string chosen;
-			if (skin_combo(STR_C("Cantilever skin"), data->skin, "siec_trakcyjna/siec", catenary_skins("siec"), chosen))
+			if (skin_combo(STR_C("Cantilever skin"), data->skin.compare(0, 19, "siec_trakcyjna/siec") == 0 ? data->skin : std::string{}, "siec_trakcyjna/siec", catenary_skins("siec"), chosen))
 			{
 				auto changed{*data};
 				changed.skin = chosen;
@@ -5922,6 +5922,25 @@ void catenary_editor::render_catenary_cantilever_ui()
 			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("All the parts of the cantilever, the mounts and the insulators take this one texture (textures/siec_trakcyjna/siec*)"));
+			// a drop takes the texture of its gantry; another one can be picked (Jan 2026-11-01)
+			if (own != nullptr && false == own->drop.empty())
+			{
+				std::vector<std::string> choices(std::begin(kGantrySkins), std::end(kGantrySkins));
+				for (auto const &extra : catenary_skins("bramki"))
+					if (std::find(choices.begin(), choices.end(), extra) == choices.end())
+						choices.push_back(extra);
+				// an old entry has the texture of the gantry in the cantilever skin
+				auto const legacy{data->skin.compare(0, 19, "siec_trakcyjna/siec") != 0 ? data->skin : std::string{}};
+				if (skin_combo(STR_C("Drop skin"), data->pole_skin, legacy.empty() ? STR("like the gantry") : legacy, choices, chosen))
+				{
+					auto changed{*data};
+					changed.pole_skin = chosen;
+					if (false == legacy.empty())
+						changed.skin.clear();
+					tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+					catenary_scene_update(index, changed);
+				}
+			}
 			if (own != nullptr && false == own->gantry && own->drop.empty() && false == data->shared_pole)
 			{
 				// the variants of the pole's family: 161x_new_gray... for 1611-11
