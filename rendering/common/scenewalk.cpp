@@ -849,7 +849,7 @@ void scene_walk::Render(TAnimModel *Instance)
     }
    // second stage visibility cull, reject modelstoo far away to be noticeable
     auto const radiussquared { Instance->radius() * Instance->radius() };
-    if( radiussquared * Global.ZoomFactor / distancesquared < 0.003 * 0.003 ) {
+    if( ( false == Instance->m_catenary ) && ( radiussquared * Global.ZoomFactor / distancesquared < 0.003 * 0.003 ) ) {
         return;
     }
     if( m_modelcomparekey != nullptr ) {
@@ -1008,7 +1008,9 @@ void scene_walk::Update_Instance_Records( TModel3d const *Model, scene::basic_ce
 			rangesquared = std::max( rangesquared, record.rangesquaredmax );
 			record.flags =
 				( instance->visible() ? scene::basic_cell::instance_visible : 0u )
-				| ( instance->m_instanceable ? scene::basic_cell::instance_instanceable : 0u );
+				| ( instance->m_instanceable ? scene::basic_cell::instance_instanceable : 0u )
+				// części sieci trakcyjnej mają własne zasięgi lod (Model3d.cpp), próg wielkości na ekranie gasił drobnicę już po kilkudziesięciu metrach
+				| ( instance->m_catenary ? scene::basic_cell::instance_keep_small : 0u );
 			auto const &rotationscale { instance->rotation_scale() };
 			for( int column = 0; column < 3; ++column ) {
 				record.rotationscale[ column ] = rotationscale[ column ];
@@ -1024,8 +1026,10 @@ void scene_walk::Update_Instance_Records( TModel3d const *Model, scene::basic_ce
 	glm::dvec3 low { std::numeric_limits<double>::max() };
 	glm::dvec3 high { std::numeric_limits<double>::lowest() };
 	auto radiusmax { 0.f };
+	auto keepsmall { false };
 	for( auto const &record : Bucket.records ) {
 		if( ( record.flags & scene::basic_cell::instance_visible ) == 0 ) { continue; }
+		keepsmall = keepsmall || ( ( record.flags & scene::basic_cell::instance_keep_small ) != 0 );
 		glm::dvec3 const position { record.position };
 		low = glm::min( low, position );
 		high = glm::max( high, position );
@@ -1034,6 +1038,7 @@ void scene_walk::Update_Instance_Records( TModel3d const *Model, scene::basic_ce
 	Bucket.recordlocationradius = 0.f;
 	Bucket.recordradius = -1.f;
 	Bucket.recordradiusmax = radiusmax;
+	Bucket.recordkeepsmall = keepsmall;
 	if( low.x <= high.x ) {
 		auto const center { 0.5 * ( low + high ) };
 		auto locationradius { 0.0 };
@@ -1087,7 +1092,7 @@ bool scene_walk::Bucket_Culled( scene::basic_cell::instance_bucket const &Bucket
 	if( distancesquared > slack * sq( static_cast<double>( m_renderpass.draw_range ) + 250.0 ) ) { return true; }
 	// the largest instance at the nearest location takes the largest part of the view
 	auto const radiusmax { static_cast<double>( Bucket.recordradiusmax ) };
-	if( radiusmax * radiusmax * zoom * slack < 0.003 * 0.003 * distancesquared ) { return true; }
+	if( ( false == Bucket.recordkeepsmall ) && ( radiusmax * radiusmax * zoom * slack < 0.003 * 0.003 * distancesquared ) ) { return true; }
 
 	return false;
 }
@@ -1198,7 +1203,8 @@ void scene_walk::Render_Instanced( TModel3d *Model, std::vector<queued_instance>
 		if( distancesquared > sq( drawdistancethreshold ) ) { continue; }
 
 		auto const radiussquared { record.radius * record.radius };
-		if( radiussquared * Global.ZoomFactor / distancesquared < 0.003 * 0.003 ) { continue; }
+		if( ( ( record.flags & scene::basic_cell::instance_keep_small ) == 0 )
+		 && ( radiussquared * Global.ZoomFactor / distancesquared < 0.003 * 0.003 ) ) { continue; }
 
 		if( batch_instance == nullptr ) {
 			batch_instance = queued.bucket->instances[ queued.index ];
@@ -2659,7 +2665,7 @@ void scene_walk::Render_Alpha(TAnimModel *Instance)
     }
    // second stage visibility cull, reject modelstoo far away to be noticeable
     auto const radiussquared { Instance->radius() * Instance->radius() };
-    if( radiussquared * Global.ZoomFactor / distancesquared < 0.003 * 0.003 ) {
+    if( ( false == Instance->m_catenary ) && ( radiussquared * Global.ZoomFactor / distancesquared < 0.003 * 0.003 ) ) {
         return;
     }
 

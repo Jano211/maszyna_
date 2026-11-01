@@ -43,6 +43,9 @@ kopia z literówką, nieużywana. Testy po `02a80e5` puszczone 01.11: tc te tk t
    `funkcja/odsuw-i-tor`, w exe NIESPRAWDZONE.
    01.11 22:30 (Jan): półbramki 1901 – ESN-544 turn 90, mocowania wyk. 04 na nodze (karta 0361 wyk. 4), domyślny zwis 4840
    (kolejność rodzin z wpisu dźwigara) – `funkcja/polbramki-1901`.
+   01.11 22:40 (Jan): drobnica (np. 4050) znikała po kilkudziesięciu metrach – próg wielkości na ekranie (0,003) rendererów
+   GL4.6/Vulkan (CPU scenewalk.cpp i GPU instance_cull.comp); części sieci (m_catenary) z niego zwolnione, zostają ich własne
+   zasięgi LOD z Model3d.cpp – `funkcja/drobnica-lod`, w exe NIESPRAWDZONE.
 4. Po środzie: kotwienie 0454 (4550-1/-2/-5/-6/-7, tyły 4550-8 do 03 i 4550-9 do 04, 5050-1 – model od Jana), konsoleta 4580
    (dwa modele), Iet-107 (uchwyty odległościowe 4.6.1.8, YwsC 345 daN / Y 14 m – decyzja Jana). Malowanie wariantów tekstur
    (Jan); tekstury 161x_{new,used,old}_{gray,white}, 1701 do przemalowania (na razie siec_trakcyjna_ph/beton1).

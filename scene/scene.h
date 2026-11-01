@@ -265,6 +265,7 @@ public:
     enum instance_record_flags : std::uint32_t {
         instance_visible = 1 << 0,
         instance_instanceable = 1 << 1, // false once an event gave the instance animations or a skin of its own
+        instance_keep_small = 1 << 2, // not left out for its small size on screen: a part of the catenary, which has lod ranges of its own
     };
     struct instance_bucket {
         std::vector<TAnimModel *> instances;
@@ -280,6 +281,7 @@ public:
         mutable float recordlocationradius { 0.f };
         mutable float recordradius { -1.f };
         mutable float recordradiusmax { 0.f };
+        mutable bool recordkeepsmall { false }; // a visible record has instance_keep_small: the bucket isn't left out for its size
         mutable unsigned int recordsversion { 0 };
         // place of the records in the record buffer of the gpu culling: first record, room, and the generation of
         // the buffer it is good for. gpustale: the records changed since they were sent

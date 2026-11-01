@@ -15,6 +15,14 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-11-01
 
+Branch `funkcja/drobnica-lod` (od `b8f2fc1`).
+
+### Sieć trakcyjna: drobnica nie znika po kilkudziesięciu metrach — commit o tym tytule
+- Renderery GL4.6 i Vulkan pomijały modele mniejsze niż 0,003 wysokości ekranu (izolator 4050 znikał po ok. 50 m). Części sieci
+  trakcyjnej są z tego zwolnione (flaga `instance_keep_small` w rekordzie instancji), znikają według własnych zasięgów LOD.
+- Zmienia: `scene/scene.h` (przebudowa sporej części), `rendering/common/scenewalk.cpp`, `shaders/ogl46/instance_cull.comp`,
+  `shaders/vk14/instance_cull.comp` (do `shaders/` obok exe). Wymaga: nic.
+
 Branch `funkcja/polbramki-1901` (od `eb72be7`).
 
 ### Edytor sieci: na półbramce 1901 domyślnie zwis 4840 — commit o tym tytule
