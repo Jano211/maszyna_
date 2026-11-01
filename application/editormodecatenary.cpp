@@ -766,9 +766,15 @@ bool catenary_editor::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3
 		return catenary_on_mast(*gantry, stagger, Spot);
 	auto const *beam{gantry != nullptr ? catalog->beam(gantry->beam) : nullptr};
 	std::vector<std::pair<double, std::string>> drops;
+	// the families of the beam in the order it gives them ("drop 4840,ESN-544": 4840 first - Jan 2026-11-01), shortest first in each
+	auto const rank = [&](std::string const &Family) {
+		auto const &list{beam->drop};
+		auto const at{(',' + list + ',').find(',' + Family + ',')};
+		return at == std::string::npos ? 0.0 : static_cast<double>(std::count(list.begin(), list.begin() + static_cast<std::ptrdiff_t>(std::min(at, list.size())), ','));
+	};
 	for (auto const &pole : catalog->poles())
 		if (beam != nullptr && catenary::cantilever_catalog::drop_fits(*beam, pole.second.drop))
-			drops.emplace_back(pole.second.length, pole.first);
+			drops.emplace_back(rank(pole.second.drop) * 1000.0 + pole.second.length, pole.first);
 	std::sort(drops.begin(), drops.end());
 	if (drops.empty())
 	{

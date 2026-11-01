@@ -17,6 +17,11 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Branch `funkcja/polbramki-1901` (od `eb72be7`).
 
+### Edytor sieci: na półbramce 1901 domyślnie zwis 4840 — commit o tym tytule
+- Automatyczny dobór zwisu bierze rodziny w kolejności z wpisu dźwigara (`drop 4840,ESN-544` – najpierw 4840), w rodzinie
+  najkrótszy, który sięga do mocowań; wcześniej najkrótszy ze wszystkich rodzin (ESN-544-1, 1,65 m). Wybór ręczny bez zmian.
+- Zmienia: `application/editormodecatenary.cpp`. Wymaga: nic.
+
 ### Sieć trakcyjna: półbramki 1901 – zwisy ESN-544 obrócone, wysięgniki na nodze — commit o tym tytule
 - Zwisy ESN-544 stały obrócone o 90° względem 4840 / 4850: dostały `turn 90` jak tamte (modele bez obrotu w t3d, przekrój ułożony
   jak 4840).
