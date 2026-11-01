@@ -2722,7 +2722,7 @@ rebuild_span( scene_chain &Chain, std::size_t const Span ) {
     if( changed.empty() ) { return; }
     auto const offset { Chain.data.anchor_start.empty() ? 0u : 1u };
     for( auto const index : changed ) {
-        reassemble( index );
+        if( Initialized ) { reassemble( index ); }
         auto const found { std::find( Chain.data.suspensions.begin(), Chain.data.suspensions.end(), Suspensions[ index ].data.name ) };
         if( found == Chain.data.suspensions.end() ) { continue; }
         auto const point { static_cast<std::size_t>( found - Chain.data.suspensions.begin() ) + offset };
@@ -2780,7 +2780,8 @@ rebuild_chain( scene_chain &Chain ) {
     for( auto *span : Chain.spans ) { if( span != nullptr ) { catenary_span_delete( span ); } }
     Chain.spans.assign( Chain.removed || Chain.data.suspensions.size() < 2 ? 0 : chain_points( Chain ) - 1, nullptr );
     // odciągi sieci: lina nośna w ich miejscu z całej rozpiętości, odciągi złożone od nowa
-    if( false == Chain.removed ) { for( auto const index : pulloff_ropes( Chain ) ) { reassemble( index ); } }
+    // (przed powiązaniem scenerii tylko lina - odciągi złoży catenary_scene_resolve, inaczej części stałyby dwa razy)
+    if( false == Chain.removed ) { for( auto const index : pulloff_ropes( Chain ) ) { if( Initialized ) { reassemble( index ); } } }
     for( std::size_t span = 0; span < Chain.spans.size(); ++span ) { rebuild_span_only( Chain, span ); }
 }
 
@@ -2907,7 +2908,8 @@ catenary_scene_node( cParser &Input, std::string const &Type, double const Range
     if( false == Global.bLoadTraction ) { return; }
     catenary::suspension_file file;
     std::vector<std::string> errors;
-    catenary::parse_suspensions( tokens, File, file, errors );
+    // wpis po wpisie: łańcuch nie widzi tu swoich podwieszeń (są w osobnych wpisach), sprawdzany dla całego pliku przy dodaniu
+    catenary::parse_suspensions( tokens, File, file, errors, false );
     for( auto const &error : errors ) {
         ErrorLog( error );
     }
@@ -2936,6 +2938,8 @@ catenary_scene_node( cParser &Input, std::string const &Type, double const Range
     target.chains.insert( target.chains.end(), file.chains.begin(), file.chains.end() );
     target.gantries.insert( target.gantries.end(), file.gantries.begin(), file.gantries.end() );
     target.anchors.insert( target.anchors.end(), file.anchors.begin(), file.anchors.end() );
+    // uszynienia też (wpisy earthing z pliku scenerii ginęły przy wczytaniu przed FirstInit)
+    target.earthings.insert( target.earthings.end(), file.earthings.begin(), file.earthings.end() );
 }
 
 void
@@ -2969,7 +2973,11 @@ catenary_scene_loaded() {
     void link_overlaps();
     auto pending { std::move( Pending ) };
     Pending.clear();
-    for( auto const &file : pending ) {
+    for( auto &file : pending ) {
+        // wpisy scenerii rozbierane po jednym: łańcuchy sprawdzone dopiero względem wszystkich wpisów pliku
+        std::vector<std::string> errors;
+        catenary::check_chain_references( file.second, file.first, errors );
+        for( auto const &error : errors ) { ErrorLog( error ); }
         add_content( file.second, file.first );
     }
     link_overlaps();
