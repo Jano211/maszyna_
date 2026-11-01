@@ -6102,7 +6102,10 @@ void catenary_editor::render_catenary_cantilever_ui()
 			catenary_preview_image(tool.poles[std::clamp(tool.pole, 0, static_cast<int>(tool.poles.size()) - 1)], 160.0f);
 			ImGui::EndTooltip();
 		}
-		changed |= ImGui::SliderFloat(STR_C("Face of the pole from the track axis (m)"), &tool.clearance, 1.60f, 4.50f, "%.2f");
+		// pull-offs: the pole can stand far away from the track (a long pull-off rope, Jan 2026-11-01: up to 50 m)
+		auto const *catalogued{catenary_scene_structures().group(tool.catalog_group)};
+		auto const pulling{catalogued != nullptr && catalogued->category == "pulloff"};
+		changed |= ImGui::SliderFloat(STR_C("Face of the pole from the track axis (m)"), &tool.clearance, 1.60f, pulling ? 50.0f : 4.50f, "%.2f", pulling ? ImGuiSliderFlags_Logarithmic : ImGuiSliderFlags_None);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("Structure gauge 2.20 or 2.50 m by the catalogue (card 0007); drag it and the cantilever follows, the card changes with band A. Ctrl+click types a value"));
 		// the usual faces: a line, a station, by a switch
