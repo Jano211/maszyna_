@@ -11980,6 +11980,12 @@ msgstr "Wszystkie części wysięgnika, zamocowania i izolatory biorą tę jedn�
 msgid "Pole skin"
 msgstr "Tekstura słupa"
 
+msgid "Drop skin"
+msgstr "Tekstura zwisu"
+
+msgid "like the gantry"
+msgstr "jak bramka"
+
 msgid "These skins on the whole chain"
 msgstr "Te tekstury na całym ciągu"
 
