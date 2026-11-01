@@ -15,6 +15,11 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-11-01
 
+### Edytor sieci: słup odciągu do 50 m od osi toru — commit o tym tytule na `funkcja/odciagi-sieci`
+- Przy grupie „Odciągi sieci” suwak „Czoło słupa od osi toru” sięga do 50 m (skala logarytmiczna), pasmo A kart odciągów
+  1–55 m. Lina odciągowa prosto od słupa; obniżenie uchwytu na słupie dla a > 2,55 m zostaje 0,20 m (koniec tablicy Głowackiego).
+- Zmienia: `application/editormodecatenary.cpp`, dane `traction_cantilevers.txt` (do `data/`). Wymaga: `7c1fec5`.
+
 ### Sieć trakcyjna: odciągi wielotorowe (0315/0316, 0325/0326) i na bramkach — commit o tym tytule na `funkcja/odciagi-sieci`
 - Panel zaznaczonego odciągu: „Odciąg dalej na sąsiedni tor” – LPM przy następnym torze. Ten odciąg staje się pośrednim
   (0311/0313 → 0315, 0312/0314 → 0316, 0321/0323 → 0325, 0322/0324 → 0326), następny staje bez słupa, na wprost niego, z wpisem
