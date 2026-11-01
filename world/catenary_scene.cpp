@@ -3396,6 +3396,182 @@ catenary_scene_file_layer( std::string const &File, std::size_t const Layer ) {
     FileLayers[ File ] = Layer;
 }
 
+namespace {
+std::string Target, TargetRequest;
+}
+
+std::string const &
+catenary_scene_target() { return Target; }
+
+void
+catenary_scene_target( std::string const &File ) { Target = File; }
+
+void
+catenary_scene_target_request( std::string const &File ) { TargetRequest = File; }
+
+std::string
+catenary_scene_target_take() {
+    auto taken { TargetRequest };
+    TargetRequest.clear();
+    return taken;
+}
+
+catenary_move_result
+catenary_scene_move( std::size_t const Index, std::string const &File, bool const Apply ) {
+    catenary_move_result result;
+    if( Index >= Suspensions.size() || Suspensions[ Index ].removed || File.empty() ) { return result; }
+    auto const source { Suspensions[ Index ].file };
+    if( source == File ) { return result; }
+    // ciąg: wszystko z tego samego pliku, co odwołuje się do siebie nazwami (nazwy są w obrębie pliku), aż nic nie dochodzi
+    std::set<std::size_t> suspensions { Index }, chains, anchors, gantries, earthings;
+    auto const take_suspension = [ & ]( std::string const &Name ) {
+        if( auto const found { suspension_named( source, Name ) }; found < Suspensions.size() ) { return suspensions.insert( found ).second; }
+        return false;
+    };
+    for( auto grown { true }; grown; ) {
+        grown = false;
+        for( std::size_t k = 0; k < Chains.size(); ++k ) {
+            auto const &chain { Chains[ k ] };
+            if( chain.removed || chain.file != source ) { continue; }
+            auto const &data { chain.data };
+            if( chains.count( k ) == 0 ) {
+                auto linked { false };
+                for( auto const s : suspensions ) {
+                    auto const &name { Suspensions[ s ].data.name };
+                    if( name.empty() ) { continue; }
+                    linked |= std::find( data.suspensions.begin(), data.suspensions.end(), name ) != data.suspensions.end();
+                    for( auto const &pair : data.messenger_from ) { linked |= ( pair.first == name || pair.second == name ); }
+                }
+                for( auto const a : anchors ) { linked |= anchors_chain( data, Anchors[ a ].data.name ); }
+                if( false == linked ) { continue; }
+                chains.insert( k );
+                grown = true;
+            }
+            for( auto const &name : data.suspensions ) { grown |= take_suspension( name ); }
+            for( auto const &pair : data.messenger_from ) { grown |= take_suspension( pair.first ); grown |= take_suspension( pair.second ); }
+            if( false == data.middle.empty() ) { grown |= take_suspension( data.middle ); }
+        }
+        for( std::size_t k = 0; k < Anchors.size(); ++k ) {
+            auto const &anchor { Anchors[ k ] };
+            if( anchor.removed || anchor.file != source ) { continue; }
+            auto const &data { anchor.data };
+            if( anchors.count( k ) == 0 ) {
+                auto linked { false };
+                for( auto const c : chains ) { linked |= anchors_chain( Chains[ c ].data, data.name ); }
+                for( auto const s : suspensions ) { linked |= ( false == data.on.empty() && data.on == Suspensions[ s ].data.name ); }
+                for( auto const g : gantries ) { linked |= ( false == data.gantry.empty() && data.gantry == Gantries[ g ].data.name ); }
+                if( false == linked ) { continue; }
+                anchors.insert( k );
+                grown = true;
+            }
+            if( false == data.on.empty() ) { grown |= take_suspension( data.on ); }
+            if( false == data.gantry.empty() ) {
+                for( std::size_t g = 0; g < Gantries.size(); ++g ) {
+                    if( false == Gantries[ g ].removed && Gantries[ g ].file == source && Gantries[ g ].data.name == data.gantry ) { grown |= gantries.insert( g ).second; }
+                }
+            }
+        }
+        for( std::size_t k = 0; k < Earthings.size(); ++k ) {
+            auto const &earthing { Earthings[ k ] };
+            if( earthing.removed || earthing.file != source ) { continue; }
+            if( earthings.count( k ) == 0 ) {
+                auto linked { false };
+                for( auto const s : suspensions ) {
+                    linked |= std::find( earthing.data.poles.begin(), earthing.data.poles.end(), Suspensions[ s ].data.name ) != earthing.data.poles.end();
+                }
+                if( false == linked ) { continue; }
+                earthings.insert( k );
+                grown = true;
+            }
+            for( auto const &name : earthing.data.poles ) { grown |= take_suspension( name ); }
+        }
+    }
+    result.suspensions = suspensions.size();
+    result.chains = chains.size();
+    result.anchors = anchors.size();
+    result.gantries = gantries.size();
+    result.earthings = earthings.size();
+    // nazwy zajęte w pliku docelowym: dopisek _2, _3, ...
+    auto const fresh = [ & ]( std::string const &Name, auto const &Taken, std::map<std::string, std::string> &Renames ) {
+        if( Name.empty() || false == Taken( Name ) ) { return; }
+        for( int number = 2; ; ++number ) {
+            auto const name { Name + "_" + std::to_string( number ) };
+            auto used { Taken( name ) };
+            for( auto const &rename : Renames ) { used |= ( rename.second == name ); }
+            if( false == used ) { Renames[ Name ] = name; ++result.renamed; return; }
+        }
+    };
+    std::map<std::string, std::string> suspension_names, anchor_names, gantry_names, earthing_names;
+    for( auto const s : suspensions ) {
+        fresh( Suspensions[ s ].data.name, [ & ]( std::string const &N ) { return suspension_named( File, N ) < Suspensions.size(); }, suspension_names );
+    }
+    for( auto const a : anchors ) {
+        fresh( Anchors[ a ].data.name, [ & ]( std::string const &N ) { return anchor_named( File, N ) != nullptr; }, anchor_names );
+    }
+    for( auto const g : gantries ) {
+        fresh( Gantries[ g ].data.name, [ & ]( std::string const &N ) {
+            return std::any_of( Gantries.begin(), Gantries.end(), [ & ]( scene_gantry const &G ) { return false == G.removed && G.file == File && G.data.name == N; } ); }, gantry_names );
+    }
+    for( auto const e : earthings ) {
+        fresh( Earthings[ e ].data.name, [ & ]( std::string const &N ) {
+            return std::any_of( Earthings.begin(), Earthings.end(), [ & ]( scene_earthing const &E ) { return false == E.removed && E.file == File && E.data.name == N; } ); }, earthing_names );
+    }
+    if( false == Apply ) { return result; }
+
+    auto const rename = []( std::string &Name, std::map<std::string, std::string> const &Renames ) {
+        if( auto const found { Renames.find( Name ) }; found != Renames.end() ) { Name = found->second; }
+    };
+    if( file_named( File ) == nullptr ) {
+        scene_file created;
+        created.name = File;
+        created.created = true;
+        created.header = "// Plik sieci trakcyjnej (podwieszenia), zalozony w edytorze scenerii.\n";
+        Files.emplace_back( created );
+    }
+    auto const *target { file_named( File ) };
+    for( auto const s : suspensions ) {
+        auto &suspension { Suspensions[ s ] };
+        rename( suspension.data.name, suspension_names );
+        suspension.file = File;
+        suspension.skin = ( suspension.data.skin.empty() ? target->skin : suspension.data.skin );
+    }
+    for( auto const c : chains ) {
+        auto &data { Chains[ c ].data };
+        for( auto &name : data.suspensions ) { rename( name, suspension_names ); }
+        for( auto &pair : data.messenger_from ) { rename( pair.first, suspension_names ); rename( pair.second, suspension_names ); }
+        for( auto &name : data.second_net ) { rename( name, suspension_names ); }
+        for( auto &insulator : data.insulators ) { rename( insulator.after, suspension_names ); }
+        rename( data.middle, suspension_names );
+        for( auto *name : { &data.anchor_start, &data.anchor_end, &data.anchor_start_contact, &data.anchor_end_contact } ) { rename( *name, anchor_names ); }
+        Chains[ c ].file = File;
+    }
+    for( auto const a : anchors ) {
+        auto &data { Anchors[ a ].data };
+        rename( data.name, anchor_names );
+        rename( data.on, suspension_names );
+        rename( data.gantry, gantry_names );
+        Anchors[ a ].file = File;
+    }
+    for( auto const g : gantries ) {
+        rename( Gantries[ g ].data.name, gantry_names );
+        Gantries[ g ].file = File;
+    }
+    for( auto const e : earthings ) {
+        rename( Earthings[ e ].data.name, earthing_names );
+        for( auto &name : Earthings[ e ].data.poles ) { rename( name, suspension_names ); }
+        Earthings[ e ].file = File;
+    }
+    mark_changed( source );
+    mark_changed( File );
+    // składane od nowa w kolejności wczytywania: tekstura domyślna nowego pliku, nowe nazwy w odwołaniach
+    for( auto const g : gantries ) { assemble_gantry( Gantries[ g ] ); }
+    for( auto const s : suspensions ) { reassemble( s ); }
+    for( auto const a : anchors ) { assemble_anchor( Anchors[ a ] ); }
+    for( auto const c : chains ) { rebuild_chain( Chains[ c ] ); }
+    for( auto const e : earthings ) { assemble_earthing( Earthings[ e ] ); }
+    return result;
+}
+
 bool
 catenary_scene_save( std::string &Message ) {
 

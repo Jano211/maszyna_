@@ -50,6 +50,7 @@ template <typename Type_> void parse(std::string const &Text, Type_ &Out)
 
 const std::string origin_prefix{"ortho_origin@"};
 const std::string sheets_prefix{"nmt_sheets@"};
+const std::string catenary_prefix{"catenary_file@"};
 
 // settings are whitespace separated key/value pairs, so the scenery name used in the key can't contain spaces
 std::string origin_key(std::string const &Scenery)
@@ -141,6 +142,12 @@ bool editorSettings::load()
 			std::replace(sheets.folder.begin(), sheets.folder.end(), '|', ' ');
 			m_sheets[key] = sheets;
 		}
+		else if (key.rfind(catenary_prefix, 0) == 0)
+		{
+			// the spaces of the file written as |
+			std::replace(value.begin(), value.end(), '|', ' ');
+			m_catenary_files[key] = value;
+		}
 		else if (key.rfind(origin_prefix, 0) == 0)
 		{
 			// northing;easting
@@ -200,6 +207,12 @@ bool editorSettings::save()
 		std::replace(folder.begin(), folder.end(), ' ', '|');
 		stream << entry.first << " " << (entry.second.on ? 1 : 0) << ";" << entry.second.correction << ";" << folder << "\n";
 	}
+	for (auto const &entry : m_catenary_files)
+	{
+		auto file = entry.second;
+		std::replace(file.begin(), file.end(), ' ', '|');
+		stream << entry.first << " " << file << "\n";
+	}
 	return true;
 }
 
@@ -235,6 +248,28 @@ void editorSettings::sheets(std::string const &Scenery, nmt_sheets const &Sheets
 		if (std::isspace(static_cast<unsigned char>(c)))
 			c = '_';
 	m_sheets[key] = Sheets;
+}
+
+std::string editorSettings::catenary_file(std::string const &Scenery) const
+{
+	auto key = catenary_prefix + Scenery;
+	for (char &c : key)
+		if (std::isspace(static_cast<unsigned char>(c)))
+			c = '_';
+	auto const lookup = m_catenary_files.find(key);
+	return lookup == m_catenary_files.end() ? std::string{} : lookup->second;
+}
+
+void editorSettings::catenary_file(std::string const &Scenery, std::string const &File)
+{
+	auto key = catenary_prefix + Scenery;
+	for (char &c : key)
+		if (std::isspace(static_cast<unsigned char>(c)))
+			c = '_';
+	if (File.empty())
+		m_catenary_files.erase(key);
+	else
+		m_catenary_files[key] = File;
 }
 
 bool editorSettings::terrain_brush_stored(int const Tool, float &Radius, float &Strength) const

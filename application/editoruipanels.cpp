@@ -25,6 +25,7 @@ http://mozilla.org/MPL/2.0/.
 #include "editor/editorModelSets.hpp"
 #include "editor/editorFormat.hpp"
 #include "editor/editorSettings.hpp"
+#include "world/catenary_scene.h"
 #include "imgui/imgui_internal.h"
 
 #include <cstring>
@@ -1704,6 +1705,15 @@ std::string layer_content(scene::basic_layer const &Layer)
 	return content;
 }
 
+// two names of a scenery file are the same file (separators, case)
+bool same_scenery_file(std::string const &A, std::string const &B)
+{
+	auto a{std::filesystem::path(A).lexically_normal().generic_string()}, b{std::filesystem::path(B).lexically_normal().generic_string()};
+	std::transform(a.begin(), a.end(), a.begin(), [](unsigned char const C) { return static_cast<char>(std::tolower(C)); });
+	std::transform(b.begin(), b.end(), b.begin(), [](unsigned char const C) { return static_cast<char>(std::tolower(C)); });
+	return a == b;
+}
+
 std::string layer_name(scene::layer_handle const Layer)
 {
 	return scene::Layers.valid(Layer) ? Bezogonkow(scene::Layers.layer(Layer).name) : std::string{STR_C("(none)")};
@@ -1988,6 +1998,12 @@ void layers_panel::render_list()
 		{
 			label += std::string{"  "} + STR_C("[after FirstInit]");
 		}
+		// the catenary straight in the file of the layer, the new poles of the catenary editor go there
+		auto const &target{catenary_scene_target()};
+		if (false == target.empty() && catenary_scene_file_inline(target) && same_scenery_file(layer.name, target))
+		{
+			label += std::string{"  "} + STR_C("[new catenary goes here]");
+		}
 		if (ImGui::Selectable(label.c_str(), handle == m_selected))
 		{
 			m_selected = handle;
@@ -2016,6 +2032,42 @@ void layers_panel::render_list()
 		if (isremoved)
 		{
 			ImGui::PopStyleVar();
+		}
+		// catenary files of the layer (catenary <file> endcatenary, also the ones made in the editor, written on save): the one the
+		// new poles go into is marked, a click makes another one it
+		if (false == isremoved)
+		{
+			for (auto const &file : catenary_scene_files())
+			{
+				if (catenary_scene_file_inline(file))
+				{
+					continue;
+				}
+				auto const owner{static_cast<scene::layer_handle>(catenary_scene_file_layer(file))};
+				if ((owner == 0 ? scene::layer_handle{1} : scene::Layers.resolve(owner)) != handle)
+				{
+					continue;
+				}
+				auto const istarget{file == catenary_scene_target()};
+				auto filelabel{std::string(2 * scene::Layers.depth(handle) + 6, ' ') + STR_C("catenary:") + " " + Bezogonkow(file)};
+				if (catenary_scene_file_changed(file))
+				{
+					filelabel += " *";
+				}
+				if (istarget)
+				{
+					filelabel += std::string{"  "} + STR_C("[new catenary goes here]");
+				}
+				if (ImGui::Selectable((filelabel + "##catenary_" + file).c_str(), istarget))
+				{
+					catenary_scene_target_request(file);
+					report(format(STR_C("New catenary goes into \"%s\""), file.c_str()));
+				}
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::SetTooltip("%s", STR_C("Catenary file included by this layer (* - changes to save). Click: the catenary editor puts new poles into it"));
+				}
+			}
 		}
 		ImGui::PopID();
 	}

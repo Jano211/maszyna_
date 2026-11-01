@@ -15,6 +15,23 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-11-01
 
+Branch `funkcja/plik-sieci` (od `0de40d4`).
+
+### Edytor sieci: plik sieci zapamiętany, widoczny w warstwach, przenoszenie ciągu do innego pliku — commit o tym tytule
+- Plik sieci podany w panelu („Plik sieci”) jest zapamiętany dla scenerii w `eu07_editor.ini` (`catenary_file@<sceneria>`);
+  „wg warstwy” go kasuje. Po ciągnięciu łańcucha od słupa z innego pliku edytor wraca do podanego pliku (wcześniej zostawał
+  w pliku tamtego łańcucha i następne przęsła szły nie tam).
+- Panel warstw: pod każdą warstwą jej pliki sieci („sieć: …”, * = zmiany do zapisania), plik, do którego idą nowe słupy,
+  z dopiskiem „[tu idzie nowa sieć]” (przy sieci wpisanej wprost w plik warstwy – dopisek przy warstwie). Klik w plik sieci
+  robi go docelowym. Pokazuje stan z edytora sieci (zakładka sieci otwarta choć raz).
+- Panel zaznaczonego słupa: „Przenieś do innego pliku” – słup razem ze wszystkim, co jest z nim powiązane nazwami w jego pliku
+  (łańcuchy, ich podwieszenia, kotwienia, bramki z kotwieniami na nogach, uszynienia), idzie do wybranego / wpisanego pliku;
+  nazwy zajęte w pliku docelowym dostają dopisek `_2`, `_3`… Podpowiedź przycisku mówi, co pójdzie. Ctrl+Z tego nie cofa
+  (historia cofania jest czyszczona) – przenosi się z powrotem tym samym przyciskiem.
+- Zmienia: `editor/editorSettings.*` (nagłówek – przebudowa ok. 20 plików), `world/catenary_scene.*`
+  (`catenary_scene_move`, `catenary_scene_target*`), `application/editormodecatenary.*`, `application/editoruipanels.cpp`,
+  `lang/editor_pl.po`, test edytora. Wymaga: nic.
+
 ### Sieć trakcyjna: kotwienie na nodze bramki na ceowniku — commit o tym tytule na `siec-gl46` (poprawka)
 - Uchwyty kotwienia na nodze bramki (4520-4/-5, dół 4560) stały w środku kratownicy. Teraz siedzą na zewnętrznej ścianie
   ceownika bliższego kotwionemu przęsłu: ½ `length` masztu (rozstaw ceowników, 0,30 m) od osi nogi wzdłuż toru.

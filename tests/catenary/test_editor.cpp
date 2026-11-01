@@ -985,6 +985,28 @@ int main( int, char *argv[] ) {
             std::printf( "  kotwienie na przechylonym slupie: czolo x %.3f -> %.3f (oczekiwane +%.3f), y %.3f -> %.3f\n", flat[ 0 ][ 0 ], leaning[ 0 ][ 0 ], expected, flat[ 0 ][ 1 ], leaning[ 0 ][ 1 ] );
             check( std::abs( ( leaning[ 0 ][ 0 ] - flat[ 0 ][ 0 ] ) - expected ) < 0.02 && leaning[ 0 ][ 1 ] < flat[ 0 ][ 1 ], "kotwienie na istniejacym slupie idzie za jego przechylem" );
         }
+        // przeniesienie ciągu do innego pliku: łańcuch l1 z s0001, s0002 i kotwieniem k1 (s0003 z k2 nie należy do ciągu);
+        // w pliku docelowym jest już s0001, więc przeniesione dostaje nową nazwę i łańcuch ją podaje
+        {
+            auto other { entry };
+            other.name = "s0001"; other.at[ 2 ] = other.rope[ 2 ] = other.pole[ 2 ] = 300.0;
+            catenary_scene_add( "td_inny_test.scm", other );
+            std::size_t first { catenary_scene_size() };
+            for( std::size_t k = 0; k < catenary_scene_size(); ++k ) {
+                if( catenary_scene_file_of( k ) == "td_kotwa_test.scm" && catenary_scene_get( k ) != nullptr && catenary_scene_get( k )->name == "s0001" ) { first = k; }
+            }
+            auto const plan { catenary_scene_move( first, "td_inny_test.scm", false ) };
+            mock_span_bodies.clear();
+            auto const done { catenary_scene_move( first, "td_inny_test.scm", true ) };
+            auto const *chain { catenary_chain_get( 0 ) };
+            auto good { plan.suspensions == 2 && plan.chains == 1 && plan.anchors == 1 && plan.renamed == 1 && done.total() == plan.total() && chain != nullptr };
+            good = good && catenary_chain_file( 0 ) == "td_inny_test.scm" && chain->suspensions == std::vector<std::string>{ "s0001_2", "s0002" } && chain->anchor_end == "k1";
+            good = good && catenary_anchor_file( 0 ) == "td_inny_test.scm" && catenary_anchor_file( 1 ) == "td_kotwa_test.scm" && mock_span_bodies.size() == 2;
+            std::printf( "  przeniesienie: podwieszen %d, lancuchow %d, kotwien %d, nowych nazw %d, przesel od nowa %d\n", static_cast<int>( done.suspensions ), static_cast<int>( done.chains ),
+                static_cast<int>( done.anchors ), static_cast<int>( done.renamed ), static_cast<int>( mock_span_bodies.size() ) );
+            check( good, "przeniesienie ciagu do innego pliku: lancuch, jego podwieszenia i kotwienie, nazwy zajete w pliku docelowym zmienione" );
+            check( catenary_scene_move( first, "td_inny_test.scm", true ).total() == 0, "przeniesienie do tego samego pliku: nic" );
+        }
         Global.AirTemperature = 15.f;
         std::remove( "tests/catenary/td_kotwa_test.scm" );
     }

@@ -3030,6 +3030,18 @@ msgstr "Zapisuje zmienione obiekty i warstwy do plików scenerii (Ctrl+S)"
 msgid "visible, locked, active, layer file"
 msgstr "widoczna, zablokowana, aktywna, plik warstwy"
 
+msgid "[new catenary goes here]"
+msgstr "[tu idzie nowa sieć]"
+
+msgid "catenary:"
+msgstr "sieć:"
+
+msgid "New catenary goes into \"%s\""
+msgstr "Nowa sieć idzie do \"%s\""
+
+msgid "Catenary file included by this layer (* - changes to save). Click: the catenary editor puts new poles into it"
+msgstr "Plik sieci dołączany przez tę warstwę (* – zmiany do zapisania). Klik: edytor sieci wstawia do niego nowe słupy"
+
 msgid "Active layer: nodes created in the editor are placed in it"
 msgstr "Aktywna warstwa: tu trafiają obiekty tworzone w edytorze"
 
@@ -6246,6 +6258,27 @@ msgstr "Plik w katalogu scenerii, do którego trafiają nowe słupy; nowy plik j
 
 msgid "Selected pole (%s): changes apply to it at once"
 msgstr "Zaznaczony słup (%s): zmiany od razu na nim"
+
+msgid "Move to another file"
+msgstr "Przenieś do innego pliku"
+
+msgid "(a file)"
+msgstr "(plik)"
+
+msgid "Target file"
+msgstr "Plik docelowy"
+
+msgid "Move the chain to this file"
+msgstr "Przenieś ciąg do tego pliku"
+
+msgid "Moved to %s: poles %d, chains %d, anchors %d, gantries %d, earthing %d; renamed %d (Ctrl+Z doesn't take it back, move them back instead)"
+msgstr "Przeniesione do %s: słupów %d, łańcuchów %d, kotwień %d, bramek %d, uszynień %d; nowych nazw %d (Ctrl+Z tego nie cofa – przenieś z powrotem)"
+
+msgid "Give another file than the one of the pole"
+msgstr "Podaj inny plik niż plik słupa"
+
+msgid "Goes along: poles %d, chains %d, anchors %d, gantries %d, earthing %d (all tied to the pole by names in its file). Names taken in the target file get a suffix (%d). Ctrl+Z doesn't take it back"
+msgstr "Idą razem: słupów %d, łańcuchów %d, kotwień %d, bramek %d, uszynień %d (wszystko powiązane ze słupem nazwami w jego pliku). Nazwy zajęte w pliku docelowym dostają dopisek (%d). Ctrl+Z tego nie cofa"
 
 msgid "Pole"
 msgstr "Słup"

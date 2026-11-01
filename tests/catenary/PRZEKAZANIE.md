@@ -23,7 +23,7 @@ kopia z literówką, nieużywana. Testy po `02a80e5` puszczone 01.11: tc te tk t
 1. ZROBIONE 01.11 (czoło = ½ `length` masztu wzdłuż toru, półka z `width` masztu; test `te`). Kotwienie na nodze bramki nie trafia w ceownik: uchwyty (4520-4/-5, dół 4560) są na osi nogi (środek kratownicy), mają być na
    ceowniku bliższym urządzeniu – przesunięcie w poprzek nogi o pół rozstawu ceowników w stronę kotwienia. Obrót i wysokość dobre.
    `world/catenary_scene.cpp` `assemble_anchor`, gałąź gantry (`c9b6761`).
-2. Plik sieci w edytorze się nie zapamiętuje i nie widać go w warstwach – zapamiętać (EditorSettings per sceneria), pokazać w
+2. ZROBIONE 01.11 na `funkcja/plik-sieci` (EditorSettings `catenary_file@`, pliki sieci w panelu warstw z klikiem, `catenary_scene_move` + panel słupa „Przenieś do innego pliku”; test `te`; w exe NIESPRAWDZONE). Plik sieci w edytorze się nie zapamiętuje i nie widać go w warstwach – zapamiętać (EditorSettings per sceneria), pokazać w
    warstwach; przydałoby się przenoszenie wpisów/ciągu do innego pliku (Jan rozwiesił przęsło do złego pliku).
 3. Przesuwanie słupa poza jeden odcinek toru (przeskok na sąsiedni tor) – niska waga.
    Jan 01.11 01:58: słup wsunięty w drugi słup „skleja się” z nim i wariuje – sprawdzić przy przeciąganiu.

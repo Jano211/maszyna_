@@ -115,6 +115,7 @@ struct catenary_editor
 		float system_height{0.0f}; // hk: of the messenger over the contact wires; 0 = the card's
 		bool insulators25{false};
 		char file[128]{};
+		char move_file[128]{}; // the catenary file the selected pole moves to, with its chains and anchors
 		int selected{-1};
 		// chains: the poles placed one after another are joined by spans
 		bool stagger_own{false}; // the stagger slider moved since the group / family was chosen: it counts, not the stagger of the catalogue
@@ -209,6 +210,8 @@ struct catenary_editor
 	void catenary_scan();
 	// the catenary file of the new poles follows the active layer of the scenery
 	void catenary_file_follow();
+	void catenary_file_store(bool Save);
+	void render_catenary_move_ui();
 	// the scenery layer of this file name; 0 none
 	static std::size_t catenary_layer_of(std::string const &File);
 	// Placing: the spot of a new pole, which takes the zigzag proposed after the last pole and the step of the span
