@@ -589,6 +589,26 @@ assembly double_net
   place link_clamp strut@strut.link_clamp strut.down -z
 endassembly
 
+// zastrzal 6506 (jak w 102x) dokladany do innych wysiegnikow rurowych na zyczenie wpisu (Jan 2026-11-01): role link (6506-01),
+// link_clamp (4760-01), link_cord_clamp (4210-02) z nadpisan podwieszenia. Plaskownik pionowo od obejmy 4210 na wysiegu
+// pomocniczym do uchwytu 4760 na ukosniku, tam gdzie odstep miedzy nimi pasuje; od punktu ramion, punkt na wysiegu pomocniczym
+// dociagany (wysieg pomocniczy moze isc skosnie). Solver wola to zlozenie po zwyklym; gdy sie nie zlozy - wysiegnik bez zastrzalu
+assembly brace
+  point link_foot registration
+  repeat 6 link_foot
+    shift link_top link_foot 0 link_cord_clamp.eye+link.length
+    level strut link_clamp link_top -link_clamp.eye
+    side link_high strut strut.link_clamp -link_clamp.eye
+    shift link_low link_high 0 -link.length
+    project steady link_cord_clamp link_low steady.length 0
+    point link_foot steady@steady.link_cord_clamp
+  endrepeat
+  place link_cord_clamp steady@steady.link_cord_clamp steady.up +z
+  line link_line link_low toward link_high
+  place link link_low link_line +y
+  place link_clamp strut@strut.link_clamp strut.down -z
+endassembly
+
 // jak swing_vee, z drugim zestawem ramion od slupa do tego samego przewodu (109x)
 assembly swing_vee_pair
   point cord_clamp_at registration

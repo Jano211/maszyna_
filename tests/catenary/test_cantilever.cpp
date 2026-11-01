@@ -366,6 +366,55 @@ int main( int argc, char *argv[] ) {
         failed = failed || !good;
     }
 
+    // --- zastrzał 6506 (z 102x) dokładany do wysięgników rurowych (nadpisania link, link_clamp, link_cord_clamp): w środku pasma A
+    // każdej karty z ukośnikiem i wysięgiem pomocniczym; płaskownik prawie pionowo, długość 0,15 m między otworami, obejma na
+    // wysięgu pomocniczym, uchwyt na ukośniku. Teowniki i karty bez wysięgu pomocniczego - poza testem
+    {
+        int tried { 0 }, fitted { 0 };
+        double worst_foot { 0.0 }, worst_tilt { 0.0 };
+        std::map<std::string, std::vector<int>> missed;
+        auto good { true };
+        for( auto const &entry : catalog.schemes() ) {
+            auto const &scheme { entry.second };
+            if( scheme.assembly.compare( 0, 3, "tee" ) == 0 || scheme.assembly.compare( 0, 3, "aux" ) == 0 || scheme.assembly == "double_net" ) { continue; }
+            auto input { catenary::cantilever_nominal_input( scheme, 0.5 * ( scheme.reach_min + scheme.reach_max ) ) };
+            catenary::cantilever_result plain;
+            if( false == catenary::solve_cantilever( catalog, scheme, input, plain ) || plain.find( "strut" ) == nullptr || plain.find( "steady" ) == nullptr ) { continue; }
+            input.overrides = { { "link", "6506-01" }, { "link_clamp", "4760-01" }, { "link_cord_clamp", "4210-02" } };
+            catenary::cantilever_result braced;
+            ++tried;
+            if( false == catenary::solve_cantilever( catalog, scheme, input, braced ) ) { good = false; missed[ "nie zlozony" ].push_back( scheme.card ); continue; }
+            auto const *link { braced.find( "link" ) }, *top { braced.find( "link_clamp" ) }, *foot { braced.find( "link_cord_clamp" ) };
+            if( link == nullptr || top == nullptr || foot == nullptr ) {
+                // bez zastrzału: reszta wysięgnika jak bez opcji
+                good = good && braced.parts.size() == plain.parts.size();
+                auto reason { braced.warnings.empty() ? std::string( "?" ) : braced.warnings.back() };
+                reason = reason.substr( reason.find( "(" ) == std::string::npos ? 0 : reason.find( "(" ) );
+                for( auto &c : reason ) { if( c >= '0' && c <= '9' ) { c = '#'; } }
+                missed[ reason.substr( 0, 90 ) ].push_back( scheme.card );
+                continue;
+            }
+            ++fitted;
+            good = good && braced.parts.size() == plain.parts.size() + 3;
+            // dolny otwór płaskownika w uchu obejmy 4210-02 (0,041 m od osi wysięgu pomocniczego), górny w uchu 4760 (0,0462 m)
+            auto const *rod { catalog.part( link->part ) };
+            double const upper[ 2 ] { link->position[ 1 ] + link->rotation[ 4 ] * rod->length, link->position[ 2 ] + link->rotation[ 7 ] * rod->length };
+            auto const miss { std::max( std::abs( std::hypot( link->position[ 1 ] - foot->position[ 1 ], link->position[ 2 ] - foot->position[ 2 ] ) - 0.041 ),
+                std::abs( std::hypot( upper[ 0 ] - top->position[ 1 ], upper[ 1 ] - top->position[ 2 ] ) - 0.0462 ) ) };
+            worst_foot = std::max( worst_foot, miss );
+            worst_tilt = std::max( worst_tilt, std::atan2( std::abs( link->rotation[ 4 ] ), link->rotation[ 7 ] ) * 180.0 / 3.14159265358979323846 );
+            good = good && miss < 0.005;
+        }
+        std::printf( "zastrzal 6506 na wysiegnikach rurowych: kart z ukosnikiem i wysiegiem pomocniczym %d, zastrzal wszedl %d; otwory najdalej %.4f m od uszu, plaskownik do %.1f st. od pionu\n", tried, fitted, worst_foot, worst_tilt );
+        for( auto const &miss : missed ) {
+            std::string cards;
+            for( std::size_t k = 0; k < miss.second.size() && k < 12; ++k ) { cards += " " + std::to_string( miss.second[ k ] ); }
+            std::printf( "    %3d x %s:%s\n", static_cast<int>( miss.second.size() ), miss.first.c_str(), cards.c_str() );
+        }
+        std::printf( "zastrzal 6506 jako opcja: %s\n", good ? "OK" : "BLAD" );
+        failed = failed || !good;
+    }
+
     std::printf( failed ? "TEST NIE PRZESZEDL\n" : "wszystko OK\n" );
     return failed ? 1 : 0;
 }

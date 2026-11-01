@@ -11947,6 +11947,21 @@ msgstr "Zwis przechodzi po dźwigarze na drugą stronę osi toru w tej samej odl
 msgid "Top mount moved"
 msgstr "Górne mocowanie przesunięte"
 
+msgid "Brace 6506 (as on 102x)"
+msgstr "Zastrzał 6506 (jak w 102x)"
+
+msgid "Brace 6506 added"
+msgstr "Zastrzał 6506 dołożony"
+
+msgid "Brace 6506 taken off"
+msgstr "Zastrzał 6506 zdjęty"
+
+msgid "The brace 6506 doesn't fit on this cantilever (the strut doesn't come within 0.24 m of the steady arm along its length): the entry keeps it, the cantilever goes without it"
+msgstr "Zastrzał 6506 nie wchodzi w ten wysięgnik (ukośnik nigdzie nie zbliża się do wysięgu pomocniczego na 0,24 m): wpis go zachowuje, wysięgnik składa się bez niego"
+
+msgid "The flat bar 6506 from the clamp 4210 on the steady arm up to the clamp 4760 on the strut, as on the cantilevers 102x; it goes where the gap between them fits. It doesn't fit on 70x, 73x, 74x, 77x, 78x, 1110, 1120, 1130, 1140, 1210-1240, 1260, 1280 (the strut doesn't come close enough to the steady arm)"
+msgstr "Płaskownik 6506 od obejmy 4210 na wysięgu pomocniczym do uchwytu 4760 na ukośniku, jak w wysięgnikach 102x; staje tam, gdzie odstęp między nimi pasuje. Nie wchodzi w 70x, 73x, 74x, 77x, 78x, 1110, 1120, 1130, 1140, 1210–1240, 1260, 1280 (ukośnik nie zbliża się dość do wysięgu pomocniczego)"
+
 msgid "The top (stay) mount up or down from the card by up to 0.50 m, e.g. where something is in the way on the pole; the stay tube or rod is taken shorter or longer to fit"
 msgstr "Górne mocowanie (odciągu) wyżej albo niżej niż w karcie, do 0,50 m, np. gdy coś na słupie przeszkadza; rura albo pręt odciągu dobierane krótsze lub dłuższe"
 
