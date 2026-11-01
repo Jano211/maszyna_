@@ -15,6 +15,21 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## 2026-11-01
 
+Branch `funkcja/zastrzal-6506` (od `520072f`).
+
+### Sieć trakcyjna: zastrzał 6506 jako opcja wysięgników rurowych — commit o tym tytule
+- Panel słupa (karty 7xx, 10xx, 11xx, 12xx, bez 102x, które mają go same): „Zastrzał 6506 (jak w 102x)” – płaskownik od obejmy
+  4210-02 na wysięgu pomocniczym do uchwytu 4760-01 na ukośniku, tam gdzie odstęp między nimi pasuje. Zostaje przy zmianie
+  karty; Ctrl+Z cofa.
+- We wpisie to trzy nadpisania ról (`override link 6506-01 override link_clamp 4760-01 override link_cord_clamp 4210-02`),
+  exe bez tej zmiany składa wysięgnik bez zastrzału. Solver po zwykłym złożeniu dokłada złożenie `brace`
+  z `traction_cantilevers.txt`; gdy płaskownik się nie mieści (ukośnik daleko od wysięgu pomocniczego, uchwyt poza rurą),
+  wysięgnik zostaje bez niego, z jedną uwagą.
+- Wchodzi w 448 z 574 wariantów (karta × wykonanie) z ukośnikiem i wysięgiem pomocniczym; nie wchodzi w 70x, 73x, 74x, 77x,
+  78x, 1110, 1120, 1130, 1140, 1210–1240, 1260, 1280.
+- Zmienia: `world/catenary_cantilever.cpp`, `application/editormodecatenary.cpp`, `lang/editor_pl.po`, dane
+  `traction_cantilevers.txt` (do `data/`), testy. Wymaga: nic.
+
 ### Edytor sieci: przeciągane słupy się nie sklejają — commit o tym tytule na `siec-gl46` (poprawka)
 - Słup wsunięty przy przeciąganiu w drugi słup tego samego typu (do 5 cm) był brany za jeden słup z nim (jak parasol)
   i dalej ciągnął oba. Teraz to, co stoi na słupie (parasol, rozstawione, słup dzielony), jest ustalane przy chwyceniu,

@@ -27,6 +27,10 @@ kopia z literówką, nieużywana. Testy po `02a80e5` puszczone 01.11: tc te tk t
    warstwach; przydałoby się przenoszenie wpisów/ciągu do innego pliku (Jan rozwiesił przęsło do złego pliku).
 3. ZROBIONE 01.11 (`drag_onwards`: przez koniec odcinka na tor dołączony; w exe NIESPRAWDZONE). Przesuwanie słupa poza jeden odcinek toru (przeskok na sąsiedni tor) – niska waga.
    Jan 01.11 01:58: słup wsunięty w drugi słup „skleja się” z nim i wariuje – ZROBIONE 01.11 (`drag_pole` ustalane przy chwyceniu, `pole_in_the_way` 0,5 m; w exe NIESPRAWDZONE).
+   01.11 02:35 (Jan): zastrzał 6506 z 102x jako opcja innych rurowych – ZROBIONE na `funkcja/zastrzal-6506`: nadpisania link /
+   link_clamp / link_cord_clamp we wpisie, złożenie `brace` (iteracja punktu na wysięgu pomocniczym) dokładane w solve_cantilever_once
+   z kontrolą (otwory w uszach, 4760 na rurze), checkbox w panelu słupa; 448/574 wariantów, lista kart bez zastrzału w EDYTOR_ZMIANY;
+   test `tc`, `te`. W exe NIESPRAWDZONE. Dla 77x/78x/swing_steady trzeba by dłuższego płaskownika – zapytać Jana (model 6505?).
 4. Po środzie: kotwienie 0454 (4550-1/-2/-5/-6/-7, tyły 4550-8 do 03 i 4550-9 do 04, 5050-1 – model od Jana), konsoleta 4580
    (dwa modele), Iet-107 (uchwyty odległościowe 4.6.1.8, YwsC 345 daN / Y 14 m – decyzja Jana). Malowanie wariantów tekstur
    (Jan); tekstury 161x_{new,used,old}_{gray,white}, 1701 do przemalowania (na razie siec_trakcyjna_ph/beton1).

@@ -1979,6 +1979,19 @@ public:
         Direction = lookup->second.direction;
         return true;
     }
+    bool role_given( std::string const &Role ) const { return has_role( Role ); }
+    // kroki dokładane do gotowego wysięgnika: gdy się nie złożą, wysięgnik zostaje bez nich (części i uwagi sprzed),
+    // z jedną uwagą Reason i przyczyną
+    bool run_optional( std::vector<cantilever_step> const &Steps, std::string const &Reason ) {
+        auto const parts { m_result.parts };
+        auto const warnings { m_result.warnings };
+        if( run( Steps ) ) { return true; }
+        auto const cause { m_result.warnings.size() > warnings.size() ? m_result.warnings.back() : std::string() };
+        m_result.parts = parts;
+        m_result.warnings = warnings;
+        m_result.warnings.push_back( "cantilever " + m_label + ": " + Reason + ( cause.empty() ? std::string() : " (" + cause + ")" ) );
+        return false;
+    }
 };
 
 } // namespace
@@ -2000,6 +2013,48 @@ bool solve_cantilever_once( cantilever_catalog const &Catalog, cantilever_scheme
     }
     assembler builder { Catalog, Scheme, Input, registration, Result };
     if( false == builder.run( assembly->steps ) ) { return false; }
+    // zastrzał 6506 z 102x jako opcja innych wysięgników rurowych (Jan 2026-11-01): role link, link_clamp, link_cord_clamp
+    // dokłada wpis (nadpisania), kroki daje złożenie "brace"; złożenia, które stawiają go same (102x), go nie dostają
+    if( builder.role_given( "link" ) && Result.find( "link" ) == nullptr ) {
+        vec2 direction;
+        if( false == builder.line_direction( "strut", direction ) || false == builder.line_direction( "steady", direction ) ) {
+            Result.warnings.push_back( "cantilever " + label + ": the brace 6506 needs a strut and a steady arm, this cantilever has none; left out" );
+        }
+        else if( auto const *brace { Catalog.assembly( "brace" ) }; brace == nullptr ) {
+            Result.warnings.push_back( "cantilever " + label + ": the brace 6506 needs the assembly \"brace\" in traction_cantilevers.txt; left out" );
+        }
+        else {
+            auto const parts { Result.parts };
+            auto const warnings { Result.warnings };
+            if( builder.run_optional( brace->steps, "the brace 6506 doesn't fit, left out" ) ) {
+                // klocki nie pilnują końców członów: oba otwory płaskownika w uszach uchwytów, uchwyt 4760 na samej rurze ukośnika
+                // (przy ukośniku prawie równoległym do wysięgu pomocniczego wysokość wypada daleko za rurą)
+                auto const *link { Result.find( "link" ) }, *top { Result.find( "link_clamp" ) }, *foot { Result.find( "link_cord_clamp" ) }, *strut { Result.find( "strut" ) };
+                auto const *linkpart { Catalog.part( link != nullptr ? link->part : std::string() ) };
+                auto const *toppart { Catalog.part( top != nullptr ? top->part : std::string() ) };
+                auto const *footpart { Catalog.part( foot != nullptr ? foot->part : std::string() ) };
+                auto const *strutpart { Catalog.part( strut != nullptr ? strut->part : std::string() ) };
+                std::string reason;
+                if( linkpart == nullptr || toppart == nullptr || footpart == nullptr || strutpart == nullptr ) { reason = "parts missing"; }
+                else {
+                    auto const gap = []( double const *A, double const *B ) { return std::hypot( A[ 1 ] - B[ 1 ], A[ 2 ] - B[ 2 ] ); };
+                    double const upper[ 3 ] { link->position[ 0 ] + link->rotation[ 1 ] * linkpart->length, link->position[ 1 ] + link->rotation[ 4 ] * linkpart->length,
+                        link->position[ 2 ] + link->rotation[ 7 ] * linkpart->length };
+                    vec2 along;
+                    builder.line_direction( "strut", along );
+                    auto const at { ( top->position[ 1 ] - strut->position[ 1 ] ) * along.y + ( top->position[ 2 ] - strut->position[ 2 ] ) * along.z };
+                    if( std::abs( gap( link->position, foot->position ) - footpart->eye ) > 0.005 ) { reason = "its lower hole isn't at the clamp on the steady arm"; }
+                    else if( std::abs( gap( upper, top->position ) - toppart->eye ) > 0.005 ) { reason = "its upper hole isn't at the clamp on the strut"; }
+                    else if( at < 0.0 || at > strutpart->length ) { reason = "the clamp would be off the strut"; }
+                }
+                if( false == reason.empty() ) {
+                    Result.parts = parts;
+                    Result.warnings = warnings;
+                    Result.warnings.push_back( "cantilever " + label + ": the brace 6506 doesn't fit, left out (" + reason + ")" );
+                }
+            }
+        }
+    }
 
     // wartości z nazwami używanymi przez wysięgniki przechylne
     vec2 strut;

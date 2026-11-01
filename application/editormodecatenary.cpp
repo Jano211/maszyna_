@@ -188,9 +188,27 @@ glm::dvec3 wire_of(catenary::suspension const &Data)
 	return {Data.at[0], Data.at[1], Data.at[2]};
 }
 
+// the brace 6506 of 102x put on another tubular cantilever (Jan 2026-11-01): three roles added to the entry as overrides, the solver
+// adds the parts where the flat bar fits between the strut and the steady arm
+std::pair<char const *, char const *> const kBrace[]{{"link", "6506-01"}, {"link_clamp", "4760-01"}, {"link_cord_clamp", "4210-02"}};
+
+bool has_brace(catenary::suspension const &Data)
+{
+	return std::any_of(Data.overrides.begin(), Data.overrides.end(), [](std::pair<std::string, std::string> const &O) { return O.first == "link"; });
+}
+
+void set_brace(catenary::suspension &Data, bool const On)
+{
+	std::erase_if(Data.overrides, [](std::pair<std::string, std::string> const &O) { return O.first == "link" || O.first == "link_clamp" || O.first == "link_cord_clamp"; });
+	if (On)
+		for (auto const &role : kBrace)
+			Data.overrides.emplace_back(role.first, role.second);
+}
+
 // a messenger holder higher on its pole (above_pole): the panel changes its card, but its messenger stays where it is
 void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data)
 {
+	set_brace(Data, has_brace(Current)); // the brace stays on with another card
 	Data.stay_shift = Current.stay_shift; // the top mount moved by hand stays where it was put
 	Data.lean = Current.lean;             // and so does the lean of the pole
 	if (false == Current.above_pole)
@@ -6050,6 +6068,27 @@ void catenary_editor::render_catenary_cantilever_ui()
 				}
 				ImGui::PopItemWidth();
 			}
+		}
+		// the brace 6506 (as on 102x) on another tubular cantilever; 102x has it of its own
+		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole
+			&& (data->card / 100 == 7 || data->card / 100 == 10 || data->card / 100 == 11 || data->card / 100 == 12) && data->card / 10 != 102)
+		{
+			auto const index{static_cast<std::size_t>(tool.selected)};
+			auto braced{has_brace(*data)};
+			if (ImGui::Checkbox(STR_C("Brace 6506 (as on 102x)"), &braced))
+			{
+				auto changed{*data};
+				set_brace(changed, braced);
+				tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+				catenary_scene_update(index, changed);
+				tool.probed = false;
+				tool.status = braced ? STR("Brace 6506 added") : STR("Brace 6506 taken off");
+				// where the flat bar doesn't fit between the strut and the steady arm the solver leaves it out: say so at once
+				if (catenary::cantilever_result tried; braced && catenary_scene_probe(changed, tried) && nullptr == tried.find("link"))
+					tool.status = STR("The brace 6506 doesn't fit on this cantilever (the strut doesn't come within 0.24 m of the steady arm along its length): the entry keeps it, the cantilever goes without it");
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("The flat bar 6506 from the clamp 4210 on the steady arm up to the clamp 4760 on the strut, as on the cantilevers 102x; it goes where the gap between them fits. It doesn't fit on 70x, 73x, 74x, 77x, 78x, 1110, 1120, 1130, 1140, 1210-1240, 1260, 1280 (the strut doesn't come close enough to the steady arm)"));
 		}
 		// the lean of the pole across the track (with its mounts, the cantilever goes to them); umbrellas, spread cantilevers and gantry
 		// masts stand upright

@@ -75,6 +75,17 @@ int main( int, char *argv[] ) {
     auto const first { simulation::State.created.size() - before };
     check( catenary_scene_get( index ) != nullptr && first > 10 && catenary_scene_parts( index ) == first && errors.empty(), "dodane podwieszenie: wysiegnik zlozony od razu" );
     check( catenary_scene_changed() && catenary_scene_new_files().size() == 1, "nowy plik sieci do zapisania i do dolaczenia" );
+    // zastrzał 6506 jako opcja (nadpisania ról we wpisie): ten sam wysięgnik z trzema częściami więcej, zapis z "override"
+    {
+        auto braced { entry };
+        braced.overrides = { { "link", "6506-01" }, { "link_clamp", "4760-01" }, { "link_cord_clamp", "4210-02" } };
+        catenary::cantilever_result plain, with;
+        auto const solved { catenary_scene_probe( entry, plain ) && catenary_scene_probe( braced, with ) };
+        auto const written { catenary::write_suspension( braced ) };
+        std::printf( "  zastrzal 6506 na 1124-1: czesci %d -> %d\n", static_cast<int>( plain.parts.size() ), static_cast<int>( with.parts.size() ) );
+        check( solved && with.parts.size() == plain.parts.size() + 3 && with.find( "link" ) != nullptr && written.find( " override link 6506-01" ) != std::string::npos,
+            "zastrzal 6506 dolozony do wysiegnika 1124 przez nadpisania wpisu" );
+    }
     auto moved { entry };
     moved.pole[ 0 ] = -2.613; moved.card = 1125;   // słup 0,3 m dalej: A o 0,3 m większe, następna karta
     mock_deleted_parts = 0;
