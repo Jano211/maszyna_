@@ -17,15 +17,16 @@ siec_trakcyjna/siec*, słup `pole_skin` / `skin` z katalogu, fundament none), `0
 zwisy z tekstury bramki (`drop_gantry`), lista „Tekstura zwisu”. Modele na G: components/, słupy 161x i 1701 → `Map: -1`
 (kopia: `G:\Maszyna2510\models\siec_trakcyjna_kopia_20261101.zip`). Dźwigary, zwisy, słupy bramek już miały -1; polbramki/
 i bramki/ (stare gotowce) nie ruszane. 4550-05 jeszcze z Map na sztywno (Jan przeklika). `components/6101-02t3d.t3d` – stara
-kopia z literówką, nieużywana. Testy sieci po `02a80e5` nie puszczone (tylko kompilacja) – puścić.
+kopia z literówką, nieużywana. Testy po `02a80e5` puszczone 01.11: tc te tk tt ts OK; `t` (wieszaki przęsła 95 m) i `tsc` (schemat 9999) błędy stare, sprzed zmian; `ta` wymaga glm.
 
 **Do zrobienia (Jan 2026-11-01 01:54), w tej kolejności:**
-1. Kotwienie na nodze bramki nie trafia w ceownik: uchwyty (4520-4/-5, dół 4560) są na osi nogi (środek kratownicy), mają być na
+1. ZROBIONE 01.11 (czoło = ½ `length` masztu wzdłuż toru, półka z `width` masztu; test `te`). Kotwienie na nodze bramki nie trafia w ceownik: uchwyty (4520-4/-5, dół 4560) są na osi nogi (środek kratownicy), mają być na
    ceowniku bliższym urządzeniu – przesunięcie w poprzek nogi o pół rozstawu ceowników w stronę kotwienia. Obrót i wysokość dobre.
    `world/catenary_scene.cpp` `assemble_anchor`, gałąź gantry (`c9b6761`).
 2. Plik sieci w edytorze się nie zapamiętuje i nie widać go w warstwach – zapamiętać (EditorSettings per sceneria), pokazać w
    warstwach; przydałoby się przenoszenie wpisów/ciągu do innego pliku (Jan rozwiesił przęsło do złego pliku).
 3. Przesuwanie słupa poza jeden odcinek toru (przeskok na sąsiedni tor) – niska waga.
+   Jan 01.11 01:58: słup wsunięty w drugi słup „skleja się” z nim i wariuje – sprawdzić przy przeciąganiu.
 4. Po środzie: kotwienie 0454 (4550-1/-2/-5/-6/-7, tyły 4550-8 do 03 i 4550-9 do 04, 5050-1 – model od Jana), konsoleta 4580
    (dwa modele), Iet-107 (uchwyty odległościowe 4.6.1.8, YwsC 345 daN / Y 14 m – decyzja Jana). Malowanie wariantów tekstur
    (Jan); tekstury 161x_{new,used,old}_{gray,white}, 1701 do przemalowania (na razie siec_trakcyjna_ph/beton1).
