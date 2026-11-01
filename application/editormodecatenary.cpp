@@ -25,6 +25,7 @@ http://mozilla.org/MPL/2.0/.
 #include "utilities/Globals.h"
 #include "world/Track.h"
 #include "world/catenary_scene.h"
+#include "editor/editorSettings.hpp"
 #include "world/catenary_layout.h"
 #include "world/catenary_overlap.h"
 #include "world/catenary_network.h"
@@ -504,6 +505,15 @@ void catenary_editor::catenary_scan()
 	tool.network = preferred != tool.networks.end() ? static_cast<int>(preferred - tool.networks.begin()) : 0;
 	auto const pole{std::find(tool.poles.begin(), tool.poles.end(), std::string{"1611-11"})};
 	tool.pole = pole != tool.poles.end() ? static_cast<int>(pole - tool.poles.begin()) : 0;
+	// the file chosen in an earlier session of this scenery
+	if (tool.file[0] == '\0')
+	{
+		if (auto const stored{EditorSettings.catenary_file(Global.SceneryFile)}; false == stored.empty())
+		{
+			std::snprintf(tool.file, sizeof(tool.file), "%s", stored.c_str());
+			tool.file_own = true;
+		}
+	}
 	if (tool.file[0] == '\0')
 	{
 		auto const files{catenary_scene_files()};
@@ -779,10 +789,26 @@ void catenary_editor::catenary_file_follow()
 	auto const active{scene::Layers.active()};
 	if (false == scene::Layers.valid(active))
 		return; // the scenery wasn't opened for editing: no layers
+	// a catenary file picked in the panel of the layers: chosen as if typed
+	if (auto const picked{catenary_scene_target_take()}; false == picked.empty())
+	{
+		std::snprintf(tool.file, sizeof(tool.file), "%s", picked.c_str());
+		tool.file_own = true;
+		tool.last = -1; // the next span starts anew, in the picked file
+		tool.chain = -1;
+		catenary_file_store(true);
+	}
 	// the new poles go into the file of the active layer, as its node entries; not while a chain goes on (a chain is in one
-	// file) nor when the user gave the file
-	if (false == tool.file_own && tool.last < 0 && tool.selected < 0)
-		std::snprintf(tool.file, sizeof(tool.file), "%s", scene::Layers.layer(active).name.c_str());
+	// file) nor when the user gave the file. Once the chain is done, the file given by the user comes back (a chain continued
+	// from a pole of another file switched to that file)
+	if (tool.last < 0 && tool.selected < 0)
+	{
+		if (false == tool.file_own)
+			std::snprintf(tool.file, sizeof(tool.file), "%s", scene::Layers.layer(active).name.c_str());
+		else if (auto const stored{EditorSettings.catenary_file(Global.SceneryFile)}; false == stored.empty() && stored != tool.file)
+			std::snprintf(tool.file, sizeof(tool.file), "%s", stored.c_str());
+	}
+	catenary_scene_target(tool.file);
 	if (tool.file[0] == '\0')
 		return;
 	// the file of a layer takes the entries straight; another one is a catenary file of its own (catenary <file> endcatenary),
@@ -791,6 +817,15 @@ void catenary_editor::catenary_file_follow()
 		catenary_scene_file_inline(tool.file, true);
 	else if (false == catenary_scene_file_inline(tool.file))
 		catenary_scene_file_layer(tool.file, active);
+}
+
+// the file given by the user is kept for the scenery (eu07_editor.ini); Save: written to the disk at once
+void catenary_editor::catenary_file_store(bool const Save)
+{
+	auto const &tool{m_catenary};
+	EditorSettings.catenary_file(Global.SceneryFile, tool.file_own ? std::string{tool.file} : std::string{});
+	if (Save)
+		EditorSettings.save();
 }
 
 std::size_t catenary_editor::catenary_layer_of(std::string const &File)
@@ -5698,6 +5733,66 @@ void catenary_editor::render_catenary_chain_report(std::size_t const Chain)
 	}
 }
 
+// the selected pole moves to another catenary file with everything tied to it by names: its chains with their poles, anchors,
+// gantries with anchors on their legs, earthing (a span hung into a wrong file)
+void catenary_editor::render_catenary_move_ui()
+{
+	auto &tool{m_catenary};
+	auto const index{static_cast<std::size_t>(tool.selected)};
+	auto const source{catenary_scene_file_of(index)};
+	if (false == ImGui::TreeNode(STR_C("Move to another file")))
+		return;
+	// a pole newly selected: the target is the file the new poles go into, unless it's the file of the pole
+	static int prefilled{-1};
+	if (prefilled != tool.selected)
+	{
+		prefilled = tool.selected;
+		std::snprintf(tool.move_file, sizeof(tool.move_file), "%s", source == tool.file ? "" : tool.file);
+	}
+	ImGui::PushItemWidth(180.0f);
+	if (ImGui::BeginCombo("##move_files", tool.move_file[0] == '\0' ? STR_C("(a file)") : tool.move_file))
+	{
+		for (auto const &file : catenary_scene_files())
+		{
+			if (file == source)
+				continue;
+			if (ImGui::Selectable(file.c_str(), file == tool.move_file))
+				std::snprintf(tool.move_file, sizeof(tool.move_file), "%s", file.c_str());
+		}
+		ImGui::EndCombo();
+	}
+	ImGui::SameLine();
+	ImGui::InputText(STR_C("Target file"), tool.move_file, sizeof(tool.move_file));
+	ImGui::PopItemWidth();
+	auto const plan{catenary_scene_move(index, tool.move_file, false)};
+	if (plan.total() == 0)
+		ImGui::BeginDisabled();
+	if (ImGui::Button(STR_C("Move the chain to this file")))
+	{
+		std::string const target{tool.move_file};
+		// the file of a layer takes the entries straight, another one is a catenary file of its own included by the active layer
+		auto const active{scene::Layers.active()};
+		if (catenary_layer_of(target) != 0)
+			catenary_scene_file_inline(target, true);
+		else if (false == catenary_scene_file_inline(target) && scene::Layers.valid(active))
+			catenary_scene_file_layer(target, active);
+		auto const done{catenary_scene_move(index, target, true)};
+		// the undo steps keep the old names and files of the moved entries
+		tool.undo.clear();
+		tool.last = -1;
+		tool.chain = -1;
+		tool.status = format(STR_C("Moved to %s: poles %d, chains %d, anchors %d, gantries %d, earthing %d; renamed %d (Ctrl+Z doesn't take it back, move them back instead)"), target.c_str(),
+			static_cast<int>(done.suspensions), static_cast<int>(done.chains), static_cast<int>(done.anchors), static_cast<int>(done.gantries), static_cast<int>(done.earthings), static_cast<int>(done.renamed));
+	}
+	if (plan.total() == 0)
+		ImGui::EndDisabled();
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+		ImGui::SetTooltip("%s", plan.total() == 0 ? STR_C("Give another file than the one of the pole")
+			: format(STR_C("Goes along: poles %d, chains %d, anchors %d, gantries %d, earthing %d (all tied to the pole by names in its file). Names taken in the target file get a suffix (%d). Ctrl+Z doesn't take it back"),
+				static_cast<int>(plan.suspensions), static_cast<int>(plan.chains), static_cast<int>(plan.anchors), static_cast<int>(plan.gantries), static_cast<int>(plan.earthings), static_cast<int>(plan.renamed)).c_str());
+	ImGui::TreePop();
+}
+
 // the settings of the cantilevers (the next ones placed, or the selected one) and the selected pole
 void catenary_editor::render_catenary_cantilever_ui()
 {
@@ -5708,14 +5803,22 @@ void catenary_editor::render_catenary_cantilever_ui()
 	if (tool.selected < 0)
 	{
 		if (ImGui::InputText(STR_C("Catenary file"), tool.file, sizeof(tool.file)))
+		{
 			tool.file_own = true;
+			catenary_file_store(false);
+		}
+		if (ImGui::IsItemDeactivatedAfterEdit())
+			catenary_file_store(true);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("Where the new poles go: by default the file of the active layer, as its node entries (node ... suspension / chain / gantry / anchor), saved with the scenery. Another file name makes a catenary file of its own, included with catenary <file> endcatenary from the file of the active layer"));
 		if (tool.file_own)
 		{
 			ImGui::SameLine();
 			if (ImGui::SmallButton(STR_C("by the layer")))
+			{
 				tool.file_own = false;
+				catenary_file_store(true);
+			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("The catenary file follows the active layer again"));
 		}
@@ -5738,7 +5841,10 @@ void catenary_editor::render_catenary_cantilever_ui()
 		render_catenary_chain_state();
 	}
 	else
+	{
 		ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Selected pole (%s): changes apply to it at once"), catenary_scene_file_of(static_cast<std::size_t>(tool.selected)).c_str()).c_str());
+		render_catenary_move_ui();
+	}
 
 	// on the gantries the drop or the mast is the pole, its distance is the one of the gantry
 	if (tool.page == 0)

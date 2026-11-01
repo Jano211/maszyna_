@@ -96,6 +96,20 @@ std::vector<std::string> catenary_scene_entries( std::string const &File );
 // trafić jego dyrektywa; 0 gdy nieznana (wtedy plik scenariusza)
 std::size_t catenary_scene_file_layer( std::string const &File );
 void catenary_scene_file_layer( std::string const &File, std::size_t Layer );
+// przenosi podwieszenie do innego pliku sieci razem ze wszystkim, co jest z nim powiązane nazwami (łańcuchy, które je mają,
+// ich podwieszenia, kotwienia, bramki z kotwieniami na nogach, uszynienia) - ten sam ciąg; nazwy zajęte w pliku docelowym dostają
+// nowe. Nowy plik jest zakładany. Apply == false: tylko liczy, co poszłoby. Ten sam plik albo zły numer - nic
+// plik, do którego edytor wstawia teraz nowe słupy (pokazuje go panel warstw); panel może poprosić o inny - edytor odbiera prośbę raz
+std::string const &catenary_scene_target();
+void catenary_scene_target( std::string const &File );
+void catenary_scene_target_request( std::string const &File );
+std::string catenary_scene_target_take();
+struct catenary_move_result {
+    std::size_t suspensions { 0 }, chains { 0 }, anchors { 0 }, gantries { 0 }, earthings { 0 };
+    std::size_t renamed { 0 };          // wpisy, które w pliku docelowym dostały nową nazwę
+    std::size_t total() const { return suspensions + chains + anchors + gantries + earthings; }
+};
+catenary_move_result catenary_scene_move( std::size_t Index, std::string const &File, bool Apply );
 // zapisuje zmienione pliki sieci do katalogu scenerii. Message: co zapisano albo co poszło źle
 bool catenary_scene_save( std::string &Message );
 

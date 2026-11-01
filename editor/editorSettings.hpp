@@ -55,6 +55,10 @@ public:
 	void nmt_shallower(double Height) { m_nmt_shallower = Height; }
 	void sheets(std::string const &Scenery, nmt_sheets const &Sheets);
 
+	// the catenary file the editor puts new poles into, kept per scenery; empty: it follows the active layer
+	std::string catenary_file(std::string const &Scenery) const;
+	void catenary_file(std::string const &Scenery, std::string const &File);
+
 	double platform_edge() const { return m_platform_edge; }
 	void platform_edge(double Distance) { m_platform_edge = Distance; }
 	double signal_offset() const { return m_signal_offset; }
@@ -86,6 +90,7 @@ private:
 	orthophoto_settings m_orthophoto;
 	std::map<std::string, std::pair<double, double>> m_orthophoto_origins;
 	std::map<std::string, nmt_sheets> m_sheets;
+	std::map<std::string, std::string> m_catenary_files;
 	double m_nmt_shallower{0.0};
 	std::map<int, std::pair<float, float>> m_terrain_brushes;
 	double m_platform_edge{1.725};
