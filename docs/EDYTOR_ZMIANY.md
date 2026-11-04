@@ -18,6 +18,13 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: przesuwanie kotwienia bez przebudowy całego łańcucha — commit o tym tytule
+- Suwaki wysokości kotwienia i przeciąganie słupa kotwowego przebudowywały co klatkę wszystkie przęsła łańcucha (solver
+  wieszaków i linek Y), stąd spadek klatek tylko w trakcie przesuwania. Teraz, gdy naciąg od kotwienia się nie zmienia
+  (ten sam stos, ciężary nie na gruncie, ten sam zasięg), przebudowuje się tylko przęsło do kotwienia; zmiana naciągu
+  (brakujące ciężary, wydłużenie, inne urządzenie) nadal przelicza cały łańcuch.
+- Zmienia: `world/catenary_scene.cpp` (`catenary_anchor_update`, `follow_anchor`). Wymaga: nic.
+
 ### Sieć trakcyjna: kotwienie środkowe na nodze bramki trafia w ceownik — commit o tym tytule
 - Lina kotwienia środkowego (0406) kończyła się w osi nogi bramki (środek kratownicy). Teraz tak jak kotwienie końcowe na
   bramce: uchwyty na zewnętrznej ścianie ceownika bliższego słupowi środkowemu (czoło ½ `length` masztu, oś prostopadle
