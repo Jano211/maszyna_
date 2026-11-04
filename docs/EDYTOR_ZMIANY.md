@@ -18,6 +18,13 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: podgląd ślizgu pantografu nad torami — commit o tym tytule
+- Strona Druty, przełącznik „Pantograf”: nad torami do 250 m od kamery co 2 m ślizg na wysokości najniższego przewodu jezdnego,
+  który by złapał (jak `vehicle_table::update_traction`), w osi toru przechylony z przechyłką. Pole pracy 1,45 m niebieskie, cały
+  ślizg 1,95 m szary; gdzie przewód wychodzi poza pole pracy – czerwony odcinek i kropka w miejscu przewodu.
+- ZAŁOŻENIE: pole pracy 1,45 m (EN 50367 dla ślizgu 1950 mm). Działa też dla starych drutów (node traction).
+- Zmienia: `application/editormodecatenary.h/.cpp`, `lang/editor_pl.po`. Wymaga: nic.
+
 ### Edytor sieci: dowolny izolator w każdej roli wysięgnika — commit o tym tytule
 - Panel wysięgnika: rozwijane „Izolatory tego wysięgnika” – każdy izolator z karty (ukośnika, odciągu, wysięgu, na teownikach
   7110/7120) można zamienić na dowolny izolator z katalogu (wpis `override <rola> <część>`), także rurowe na teowniku.

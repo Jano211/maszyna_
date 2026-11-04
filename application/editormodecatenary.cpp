@@ -21,6 +21,7 @@ http://mozilla.org/MPL/2.0/.
 #include "editor/editorPreviews.hpp"
 
 #include "simulation/simulation.h"
+#include "world/Traction.h"
 #include "world/TractionPower.h"
 #include "utilities/Globals.h"
 #include "world/Track.h"
@@ -47,6 +48,12 @@ using geometry::plan_of;
 
 double const kRailTop{0.18}; // m from the points of a track to the heads of its rails
 double const kCatenaryRange{1500.0}; // m from the camera, farther poles aren't drawn nor picked
+// the pantograph preview (Jan 2026-11-04): the head 1.95 m (PKP), its working range 1.45 m between the horns (EN 50367 for the
+// 1950 mm head - ZALOZENIE), drawn every 2 m along the tracks up to 250 m from the camera
+double const kPantographHead{1.95};
+double const kPantographWorking{1.45};
+double const kPantographStep{2.0};
+double const kPantographRange{250.0};
 double const kSpanSearch{150.0}; // m, the farthest a neighbouring pole of the same line is looked for
 double const kSameLine{1.5}; // m across the span, farther the two poles belong to different tracks
 double const kCurveRadius{4000.0}; // m, a track bent less is a straight for the cards (table 0007)
@@ -5724,6 +5731,10 @@ void catenary_editor::render_catenary_zigzag_ui()
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%s", STR_C("The remarks of Iet-107 to the chains and the spans over their limit in red. Off: nothing is checked (unusual layouts, poles placed by the orthophoto)"));
 	ImGui::SameLine();
+	ImGui::Checkbox(STR_C("Pantograph"), &tool.pantograph);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("Over the tracks around the camera the pantograph head as it goes: at the height of the contact wire above it, tilted with the cant. The working range of the head in blue, the whole head (with the horns) grey; where the wire runs out of the working range red"));
+	ImGui::SameLine();
 	ImGui::Checkbox(STR_C("Zigzag by Iet-107 (PKP PLK)"), &tool.zigzag);
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%s", STR_C("The staggers of the next poles by the guidelines Iet-107: on a straight the wires on the other side of the track axis than at the pole before, the full cycle in two spans (4.6.4.3), on a curve to its outside so that in the middle of the span they're tangent to the track axis (3.4.4.4). The chains and their spans are checked by it too"));
@@ -8043,6 +8054,106 @@ void catenary_editor::draw_catenary_overlay() const
 			if (warned)
 				label += "  (" + result->warnings.front() + ")";
 			drawlist->AddText(ImVec2(head.x + 6.0f, head.y - 6.0f), colour, label.c_str());
+		}
+	}
+	// the pantograph over the tracks: at the height of the lowest contact wire it would take (as vehicle_table::update_traction:
+	// the wire crossing the plane of the pantograph across the track, within the head), tilted with the cant of the track
+	if (tool.pantograph)
+	{
+		std::vector<TTraction const *> wires;
+		for (auto const *traction : simulation::Traction.sequence())
+		{
+			if (traction == nullptr)
+				continue;
+			auto const middle{0.5 * (traction->pPoint1 + traction->pPoint2)};
+			if (glm::distance(middle, camera) < kPantographRange + 0.5 * glm::distance(traction->pPoint1, traction->pPoint2) + 10.0)
+				wires.push_back(traction);
+		}
+		ImU32 const working{IM_COL32(80, 190, 255, 220)}, head{IM_COL32(220, 220, 220, 140)}, off{overlay_color::invalid};
+		for (auto const *track : simulation::Paths.sequence())
+		{
+			if (track == nullptr || track->m_editorremoved)
+				continue;
+			for (auto const &path : track->m_paths)
+			{
+				bezier const curve{path};
+				auto const length{curve.plan_length()};
+				if (length < 0.1 || geometry::plan_distance(curve.point(0.5), camera) > kPantographRange + 0.5 * length)
+					continue;
+				auto const steps{std::max(1, static_cast<int>(length / kPantographStep))};
+				bool has{false};
+				glm::dvec3 before[4];
+				for (int k = 0; k <= steps; ++k)
+				{
+					auto const t{static_cast<double>(k) / steps};
+					auto const axis{curve.point(t)};
+					if (glm::distance(axis, camera) > kPantographRange)
+					{
+						has = false;
+						continue;
+					}
+					auto tangent{curve.first(t)};
+					tangent.y = 0.0;
+					if (glm::length(tangent) < 1e-6)
+						continue;
+					auto const front{glm::normalize(tangent)};
+					// the cant: the body (and the pantograph on it) turned about the track direction, like TDynamicObject
+					auto const roll{glm::radians(static_cast<double>(path.rolls[0]) + (path.rolls[1] - path.rolls[0]) * t)};
+					auto left{glm::normalize(glm::cross(glm::dvec3{0.0, 1.0, 0.0}, front))};
+					auto up{glm::cross(front, left)};
+					if (roll != 0.0)
+					{
+						up = glm::dvec3(glm::rotate(glm::dmat4(1.0), roll, front) * glm::dvec4(up, 0.0));
+						left = glm::normalize(glm::cross(up, front));
+					}
+					// the lowest wire over the head (within its whole width) in the plane of the pantograph
+					auto lowest{1e9}, across{0.0};
+					for (auto const *wire : wires)
+					{
+						auto const along{glm::dot(wire->vParametric, front)};
+						if (std::abs(along) < 1e-9)
+							continue;
+						auto const u{-(glm::dot(wire->pPoint1, front) - glm::dot(axis, front)) / along};
+						if (u < -0.001 || u > 1.001)
+							continue;
+						auto const where{wire->pPoint1 + u * wire->vParametric - axis};
+						auto const vertical{glm::dot(where, up)}, side{glm::dot(where, left)};
+						if (vertical < 3.0 || vertical > 8.0 || std::abs(side) > 0.5 * kPantographHead)
+							continue;
+						if (vertical < lowest)
+						{
+							lowest = vertical;
+							across = side;
+						}
+					}
+					if (lowest > 1e8)
+					{
+						has = false;
+						continue;
+					}
+					auto const centre{axis + up * lowest};
+					glm::dvec3 const now[4]{centre - left * (0.5 * kPantographHead), centre - left * (0.5 * kPantographWorking), centre + left * (0.5 * kPantographWorking), centre + left * (0.5 * kPantographHead)};
+					auto const out{std::abs(across) > 0.5 * kPantographWorking};
+					projection.line(drawlist, now[0], now[1], head, 1.0f);
+					projection.line(drawlist, now[2], now[3], head, 1.0f);
+					projection.line(drawlist, now[1], now[2], out ? off : working, out ? 2.5f : 1.2f);
+					if (out)
+					{
+						ImVec2 point;
+						if (projection.project(centre + left * across, point))
+							drawlist->AddCircleFilled(point, 4.0f, off);
+					}
+					if (has)
+					{
+						projection.line(drawlist, before[0], now[0], head, 1.0f);
+						projection.line(drawlist, before[3], now[3], head, 1.0f);
+						projection.line(drawlist, before[1], now[1], working, 1.5f);
+						projection.line(drawlist, before[2], now[2], working, 1.5f);
+					}
+					std::copy(std::begin(now), std::end(now), before);
+					has = true;
+				}
+			}
 		}
 	}
 	// spans against the catalogue: green within the limit, red over it; the selected chain brighter
