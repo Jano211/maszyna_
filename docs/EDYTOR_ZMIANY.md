@@ -18,6 +18,18 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Sieć trakcyjna: bieżnia wspólna nad rozjazdami i ręcznie dla przęsła — commit o tym tytule
+- Pantograf trzymał się przewodu przęsła, póki ten był pod ślizgiem – nad rozjazdem jechał w górę za przewodem uciekającym
+  do kotwienia i dopiero za ślizgiem przeskakiwał na niższy („prawie łamie”, zależnie od kierunku). Przęsło z bieżnią wspólną
+  (`parallel`) każe mu co chwilę szukać najniższego przewodu.
+- Bieżnia wspólna wykrywana sama także tam, gdzie przewód innego łańcucha zbliża się w planie na 0,98 m (pół ślizgu 1,95 m) przy
+  różnicy wysokości do 1 m (rozjazdy, skrzyżowania sieci) – również w przęsłach do kotwień (wcześniej pomijanych).
+- Panel łańcucha przy słupie: „Bieżnia wspólna” dla przęsła za słupem (i od kotwienia początkowego przy pierwszym słupie):
+  samo / zawsze / nigdy; wpis łańcucha `shared <podwieszenie|start> on|off`. „Zawsze” bez drugiego przęsła obok łączy przęsło
+  samo ze sobą (pantograf i tak szuka).
+- Zmienia: `world/catenary_suspension.h/.cpp`, `world/catenary_scene.cpp`, `world/catenary_scene_objects.cpp`,
+  `application/editormodecatenary.h/.cpp`, `lang/editor_pl.po`, test `te`. Wymaga: nic.
+
 ### Edytor sieci: dolne mocowanie przesunięte i obrót ręczny wysięgnika — commit o tym tytule
 - Panel słupa: „Dolne mocowanie przesunięte” (tryb ekspert albo gdy ustawione) – ±0,50 m jak „Górne mocowanie przesunięte”,
   solver dobiera ukośnik z tej samej rodziny części; wpis `strut_shift <m>`.

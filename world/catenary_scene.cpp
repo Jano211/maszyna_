@@ -1946,7 +1946,18 @@ span_tension( scene_chain const &Chain, std::size_t const Span, double &Messenge
     return true;
 }
 
-std::string span_parallel( scene_chain const &Chain, double const *WireA, double const *WireB );
+std::string span_parallel( scene_chain const &Chain, std::size_t Span, double const *WireA, double const *WireB );
+std::string span_name( scene_chain const &Chain, std::size_t Span );
+// bieżnia wspólna ustawiona ręcznie dla przęsła k (wpis "shared"): 1 włączona, 0 wyłączona, -1 bez wpisu (wykrywana sama)
+int
+span_shared( scene_chain const &Chain, std::size_t const Span ) {
+    auto const &data { Chain.data };
+    if( data.shared.empty() ) { return -1; }
+    auto const offset { data.anchor_start.empty() ? std::size_t { 0 } : std::size_t { 1 } };
+    std::string const key { Span < offset ? std::string( "start" ) : Span - offset < data.suspensions.size() ? data.suspensions[ Span - offset ] : std::string() };
+    for( auto const &shared : data.shared ) { if( shared.first == key ) { return shared.second ? 1 : 0; } }
+    return -1;
+}
 // treść wpisu node traction dla przęsła k łańcucha; pusta, gdy brakuje podwieszenia. Przęsło do kotwienia bez wieszaków
 std::string
 span_body( scene_chain const &Chain, std::size_t const Span ) {
@@ -1978,8 +1989,13 @@ span_body( scene_chain const &Chain, std::size_t const Span ) {
         double messenger, contact;
         if( span_tension( Chain, Span, messenger, contact ) ) { body += " tension " + text_number( messenger, 0 ) + " " + text_number( contact, 0 ); }
     }
-    // przęsło naprężenia: z przęsłem drugiego łańcucha bieżnia wspólna, bez przęseł do kotwienia
-    if( auto const parallel { anchoreda || anchoredb ? data.parallel : span_parallel( Chain, wirea, wireb ) }; false == parallel.empty() ) { body += " parallel " + parallel; }
+    // bieżnia wspólna: przęsło naprężenia (drugi łańcuch obok) i przewody nad rozjazdem (drugi łańcuch krzyżuje się z tym w zasięgu
+    // ślizgu), także przęsła do kotwienia; ręcznie wpisem "shared" (on - choćby samo ze sobą, off - nigdy)
+    {
+        auto parallel { span_parallel( Chain, Span, wirea, wireb ) };
+        if( parallel.empty() && span_shared( Chain, Span ) == 1 ) { parallel = span_name( Chain, Span ); }
+        if( false == parallel.empty() ) { body += " parallel " + parallel; }
+    }
     // ramiona 6207/6208 na końcu przęsła: przewody szerzej w uchwytach (pierwsza sieć wysięgnika, sieć dwuprzewodowa)
     if( false == single_contact( Chain ) ) {
         auto const offset { data.anchor_start.empty() ? 0u : 1u };
@@ -2058,26 +2074,61 @@ overlap_ends( glm::dvec3 const &A1, glm::dvec3 const &A2, glm::dvec3 const &B1, 
     return fit.across < kOverlapReach && fit.height < 1.0 && fit.along >= kOverlapAlong;
 }
 
-// przęsło innego łańcucha biegnące przy przewodzie od A do B; nullptr gdy żadne. Except: łańcuch, którego się nie bierze
+// nad rozjazdem / skrzyżowaniem sieci: przewody dwóch przęseł zbliżają się w planie na zasięg ślizgu (kCrossingReach, pół ślizgu 1,95 m)
+// przy różnicy wysokości do kCrossingHeight. Wtedy pantograf może przejść z jednego na drugi i musi co chwilę szukać najniższego;
+// bez tego trzymał się przewodu uciekającego w górę do kotwienia, dopóki nie wyjechał spod ślizgu (Jan 2026-11-04: „prawie łamie”)
+double constexpr kCrossingReach { 0.98 };
+double constexpr kCrossingHeight { 1.0 };
+
+bool
+crossing_ends( glm::dvec3 const &A1, glm::dvec3 const &A2, glm::dvec3 const &B1, glm::dvec3 const &B2 ) {
+    glm::dvec2 const b1 { B1.x, B1.z }, b2 { B2.x, B2.z };
+    auto const db { b2 - b1 };
+    auto const lengthb2 { glm::dot( db, db ) };
+    if( lengthb2 < 1.0 ) { return false; }
+    // obwiednie w planie z zapasem: większość par odpada od razu
+    auto const lo = []( double P, double Q ) { return std::min( P, Q ) - kCrossingReach; };
+    auto const hi = []( double P, double Q ) { return std::max( P, Q ) + kCrossingReach; };
+    if( std::max( A1.x, A2.x ) < lo( B1.x, B2.x ) || std::min( A1.x, A2.x ) > hi( B1.x, B2.x )
+     || std::max( A1.z, A2.z ) < lo( B1.z, B2.z ) || std::min( A1.z, A2.z ) > hi( B1.z, B2.z ) ) { return false; }
+    auto const length { glm::length( glm::dvec2 { A2.x - A1.x, A2.z - A1.z } ) };
+    auto const steps { std::max( 4, static_cast<int>( length / 0.5 ) ) };
+    for( int k = 0; k <= steps; ++k ) {
+        auto const point { A1 + ( A2 - A1 ) * ( static_cast<double>( k ) / steps ) };
+        glm::dvec2 const p { point.x, point.z };
+        auto const u { std::clamp( glm::dot( p - b1, db ) / lengthb2, 0.0, 1.0 ) };
+        if( glm::length( p - ( b1 + db * u ) ) < kCrossingReach && std::abs( point.y - ( B1.y + ( B2.y - B1.y ) * u ) ) < kCrossingHeight ) { return true; }
+    }
+    return false;
+}
+
+// przęsło innego łańcucha biegnące przy przewodzie od A do B (przęsło naprężenia) albo krzyżujące się z nim w zasięgu ślizgu (rozjazd);
+// nullptr gdy żadne. Except: łańcuch, którego się nie bierze. Crossing: także krzyżujące się (dla bieżni wspólnej; przęsła wyłączone
+// ręcznie "shared ... off" pomijane); bez niego tylko przęsła naprężenia (łączniki, panel)
 TTraction *
-overlap_span( glm::dvec3 const &A, glm::dvec3 const &B, std::size_t const Except ) {
+overlap_span( glm::dvec3 const &A, glm::dvec3 const &B, std::size_t const Except, bool const Crossing = false ) {
+    TTraction *crossing { nullptr };
     for( std::size_t chain = 0; chain < Chains.size(); ++chain ) {
         if( chain == Except || Chains[ chain ].removed ) { continue; }
-        for( auto *span : Chains[ chain ].spans ) {
-            if( span != nullptr && overlap_ends( A, B, span->pPoint1, span->pPoint2 ) ) { return span; }
+        for( std::size_t index = 0; index < Chains[ chain ].spans.size(); ++index ) {
+            auto *span { Chains[ chain ].spans[ index ] };
+            if( span == nullptr || ( Crossing && span_shared( Chains[ chain ], index ) == 0 ) ) { continue; }
+            if( overlap_ends( A, B, span->pPoint1, span->pPoint2 ) ) { return span; }
+            if( Crossing && crossing == nullptr && crossing_ends( A, B, span->pPoint1, span->pPoint2 ) ) { crossing = span; }
         }
     }
-    return nullptr;
+    return crossing;
 }
 
 // przęsło bieżni wspólnej dla przęsła k łańcucha: podane w łańcuchu albo wykryte w przęśle naprężenia; puste gdy brak.
 // Przy wczytywaniu scenerii (przed inicjalizacją) przęsła łańcuchów łączy raz catenary_scene_loaded()
 std::string
-span_parallel( scene_chain const &Chain, double const *WireA, double const *WireB ) {
+span_parallel( scene_chain const &Chain, std::size_t const Span, double const *WireA, double const *WireB ) {
     if( false == Chain.data.parallel.empty() ) { return Chain.data.parallel; }
+    if( span_shared( Chain, Span ) == 0 ) { return {}; }
     if( false == Initialized ) { return {}; }
     auto const index { static_cast<std::size_t>( &Chain - Chains.data() ) };
-    auto const *other { overlap_span( { WireA[ 0 ], WireA[ 1 ], WireA[ 2 ] }, { WireB[ 0 ], WireB[ 1 ], WireB[ 2 ] }, index ) };
+    auto const *other { overlap_span( { WireA[ 0 ], WireA[ 1 ], WireA[ 2 ] }, { WireB[ 0 ], WireB[ 1 ], WireB[ 2 ] }, index, true ) };
     return ( other != nullptr ? other->name() : std::string() );
 }
 
@@ -3034,35 +3085,41 @@ catenary_scene_loaded() {
 // w komórkach 2 m, żeby nie porównywać każdego z każdym
 void
 link_overlaps() {
+    // siatka 20 m: przęsło w każdym oczku, przez które przechodzi jego obwiednia z zapasem na ślizg (krzyżujące się przęsła nad
+    // rozjazdem mają końce daleko od siebie)
     std::map<std::pair<long long, long long>, std::vector<std::pair<std::size_t, TTraction *>>> grid;
-    auto const cell = []( double const X ) { return static_cast<long long>( std::floor( X / 2.0 ) ); };
+    auto const cell = []( double const X ) { return static_cast<long long>( std::floor( X / 20.0 ) ); };
     for( std::size_t chain = 0; chain < Chains.size(); ++chain ) {
         if( Chains[ chain ].removed ) { continue; }
-        for( auto *span : Chains[ chain ].spans ) {
-            if( span != nullptr ) { grid[ { cell( span->pPoint1.x ), cell( span->pPoint1.z ) } ].emplace_back( chain, span ); }
+        for( std::size_t index = 0; index < Chains[ chain ].spans.size(); ++index ) {
+            auto *span { Chains[ chain ].spans[ index ] };
+            if( span == nullptr || span_shared( Chains[ chain ], index ) == 0 ) { continue; }
+            for( auto x { cell( std::min( span->pPoint1.x, span->pPoint2.x ) - 1.0 ) }; x <= cell( std::max( span->pPoint1.x, span->pPoint2.x ) + 1.0 ); ++x ) {
+                for( auto z { cell( std::min( span->pPoint1.z, span->pPoint2.z ) - 1.0 ) }; z <= cell( std::max( span->pPoint1.z, span->pPoint2.z ) + 1.0 ); ++z ) {
+                    grid[ { x, z } ].emplace_back( chain, span );
+                }
+            }
         }
     }
     std::size_t linked { 0 };
     for( std::size_t chain = 0; chain < Chains.size(); ++chain ) {
         if( Chains[ chain ].removed || false == Chains[ chain ].data.parallel.empty() ) { continue; }
-        auto const points { chain_points( Chains[ chain ] ) };
         for( std::size_t index = 0; index < Chains[ chain ].spans.size(); ++index ) {
             auto *span { Chains[ chain ].spans[ index ] };
-            if( span == nullptr || false == span->asParallel.empty() ) { continue; }
-            if( index == 0 && false == Chains[ chain ].data.anchor_start.empty() ) { continue; }          // przęsło do kotwienia
-            if( index + 2 == points && false == Chains[ chain ].data.anchor_end.empty() ) { continue; }
-            TTraction *found { nullptr };
-            for( auto const &end : { span->pPoint1, span->pPoint2 } ) {
-                for( long long dx = -1; dx <= 1 && found == nullptr; ++dx ) {
-                    for( long long dz = -1; dz <= 1 && found == nullptr; ++dz ) {
-                        auto const bucket { grid.find( { cell( end.x ) + dx, cell( end.z ) + dz } ) };
-                        if( bucket == grid.end() ) { continue; }
-                        for( auto const &[ otherchain, other ] : bucket->second ) {
-                            if( otherchain != chain && overlap_ends( span->pPoint1, span->pPoint2, other->pPoint1, other->pPoint2 ) ) { found = other; break; }
-                        }
+            if( span == nullptr || false == span->asParallel.empty() || span_shared( Chains[ chain ], index ) == 0 ) { continue; }
+            TTraction *found { nullptr }, *crossing { nullptr };
+            for( auto x { cell( std::min( span->pPoint1.x, span->pPoint2.x ) ) }; x <= cell( std::max( span->pPoint1.x, span->pPoint2.x ) ) && found == nullptr; ++x ) {
+                for( auto z { cell( std::min( span->pPoint1.z, span->pPoint2.z ) ) }; z <= cell( std::max( span->pPoint1.z, span->pPoint2.z ) ) && found == nullptr; ++z ) {
+                    auto const bucket { grid.find( { x, z } ) };
+                    if( bucket == grid.end() ) { continue; }
+                    for( auto const &[ otherchain, other ] : bucket->second ) {
+                        if( otherchain == chain ) { continue; }
+                        if( overlap_ends( span->pPoint1, span->pPoint2, other->pPoint1, other->pPoint2 ) ) { found = other; break; }
+                        if( crossing == nullptr && crossing_ends( span->pPoint1, span->pPoint2, other->pPoint1, other->pPoint2 ) ) { crossing = other; }
                     }
                 }
             }
+            if( found == nullptr ) { found = crossing; }
             if( found != nullptr ) {
                 span->asParallel = found->name();
                 // w kółko z tamtym od razu (InitTraction, gdy jeszcze będzie, pomija przęsła już połączone)
@@ -3074,7 +3131,7 @@ link_overlaps() {
             }
         }
     }
-    if( linked > 0 ) { WriteLog( ( "Catenary: " + std::to_string( linked ) + " spans of tension overlaps share the running line with the other chain (parallel)" ).c_str() ); }
+    if( linked > 0 ) { WriteLog( ( "Catenary: " + std::to_string( linked ) + " spans of tension overlaps and over switches share the running line with the other chain (parallel)" ).c_str() ); }
 }
 
 // obsługa dyrektywy "catenary" ze scenerii: wczytuje wskazany plik podwieszeń

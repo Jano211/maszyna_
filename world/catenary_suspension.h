@@ -114,6 +114,11 @@ struct chain {
     // izolowane przęsło naprężenia (karty 0060/0062/0078: „w przęśle izolowanym - izolatory”): izolatory w przewodach i linie
     // schodzących do kotwienia na początku / końcu łańcucha, przy słupie krzyżowym. Wpis "isolated start|end", przed "suspensions"
     bool isolated[ 2 ] { false, false };
+    // bieżnia wspólna ustawiona ręcznie dla jednego przęsła (Jan 2026-11-04, rozjazdy: pantograf szuka wtedy co chwilę najniższego
+    // przewodu nad sobą zamiast trzymać się przewodu uciekającego do kotwienia): przęsło za podwieszeniem <nazwa> albo "start"
+    // (przęsło od kotwienia początkowego), on = zawsze, off = nigdy; bez wpisu - wykrywane samo. Wpis "shared <nazwa|start> on|off",
+    // przed "suspensions"
+    std::vector<std::pair<std::string, bool>> shared;
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
 };
 

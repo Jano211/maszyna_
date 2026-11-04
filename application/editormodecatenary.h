@@ -305,6 +305,7 @@ struct catenary_editor
 	void render_catenary_zigzag_ui();
 	void render_catenary_overlaps(std::size_t const Chain);
 	void render_catenary_insulator(std::size_t const Chain);
+	void render_catenary_shared(std::size_t const Chain);
 	void render_catenary_earthing_ui();
 	// the earthing being built is finished: from two poles on it goes into the file
 	void catenary_earthing_finish();

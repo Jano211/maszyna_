@@ -105,6 +105,13 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else if( key == "anchor_start_contact" ) { one( line.anchor_start_contact ); }
                 else if( key == "anchor_end_contact" ) { one( line.anchor_end_contact ); }
                 else if( key == "middle" ) { one( line.middle ); }
+                else if( key == "shared" ) {
+                    std::string after, value;
+                    if( one( after ) && one( value ) ) {
+                        if( value != "on" && value != "off" ) { report( line.name, "\"shared\" needs a suspension (or \"start\") and \"on\" or \"off\"" ); good = false; }
+                        else { line.shared.emplace_back( after, value == "on" ); }
+                    }
+                }
                 else if( key == "isolated" ) {
                     std::string end;
                     if( one( end ) ) { line.isolated[ end == "end" ? 1 : 0 ] = true; }
@@ -469,6 +476,7 @@ std::string write_chain( chain const &Entry ) {
     for( auto const &listed : Entry.second_net ) { text += " second_net " + listed; }
     if( Entry.isolated[ 0 ] ) { text += " isolated start"; }
     if( Entry.isolated[ 1 ] ) { text += " isolated end"; }
+    for( auto const &shared : Entry.shared ) { text += " shared " + shared.first + ( shared.second ? " on" : " off" ); }
     for( auto const &insulator : Entry.insulators ) {
         text += " insulator " + insulator.after + " " + insulator.kind + " " + ( insulator.power.empty() ? std::string( "-" ) : insulator.power );
         if( insulator.at >= 0.0 ) { text += " at " + number( std::round( insulator.at * 100.0 ) / 100.0 ); }
