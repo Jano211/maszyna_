@@ -18,6 +18,14 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Sieć trakcyjna: obrót wysięgników od brakujących ciężarów — commit o tym tytule
+- W łańcuchu z kotwieniem środkowym brakujące ciężary skracają sieć po stronie swojego kotwienia (skrócenie z urządzenia:
+  sprężystość i zwis). Wysięgniki po tej stronie obracają się w stronę kotwienia środkowego proporcjonalnie do odległości od
+  niego, razem z obrotem od temperatury. Ciężary na gruncie – nie liczymy (sieć bez naciągu).
+- Zmiana kotwienia, która zmienia naciąg, składa od nowa wysięgniki łańcucha; przy zmianie temperatury kotwienia łańcucha
+  liczone są przed wysięgnikami.
+- Zmienia: `world/catenary_scene.cpp`, test `te`. Wymaga: nic.
+
 ### Edytor sieci: lista zestawów izolatorów zamiast „Izolatory 25 kV” — commit o tym tytule
 - W panelu wysięgnika lista „Izolatory”: zwykłe + zestawy, które katalog wysięgników ma dla co najmniej dwóch rodzin izolatorów
   (części NNNN-<zestaw>; dziś 25 kV). Nowe zestawy (plastikowe) pojawią się same po dopisaniu części.

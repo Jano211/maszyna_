@@ -466,6 +466,30 @@ int main( int, char *argv[] ) {
                 && w1 * s1 < 0.0 && w3 * s3 < 0.0 && std::abs( z1 ) < 1e-9 && std::abs( z3 ) < 1e-9 && mock_span_bodies.size() > spans,
                 "obrot wysiegnikow od temperatury: od kotwienia srodkowego, przeciwnie po obu stronach, zero przy +10 C, przesla od nowa" );
         }
+        // obrót od naciągu: brakujące ciężary w kotwieniu "km" (koniec łańcucha) - sieć po jego stronie krótsza, m3 obraca się w stronę
+        // środkowego (tak jak przy mrozie), m1 (bez kotwienia po swojej stronie) stoi; po uzupełnieniu ciężarów znowu zero
+        {
+            auto const s3cold { catenary_scene_swing( 2 ) };   // +10 °C: zero
+            auto data { *catenary_anchor_get( 0 ) };
+            data.missing = 3;
+            catenary_anchor_update( 0, data );
+            auto const *weak { catenary_anchor_result( 0 ) };
+            auto const shortening { weak != nullptr ? weak->shortening : -1.0 };
+            auto const grounded { weak != nullptr && weak->grounded };
+            auto const m1 { catenary_scene_swing( 0 ) }, m3 { catenary_scene_swing( 2 ) };
+            std::printf( "  brakujace ciezary 3: skrocenie %.4f m, na gruncie %d, obrot m1 %.3f, m3 %.3f st.\n", weak != nullptr ? weak->shortening : -1.0, weak != nullptr && weak->grounded ? 1 : 0, m1, m3 );
+            Global.AirTemperature = -20.f;
+            catenary_scene_temperature();
+            auto const frost { catenary_scene_swing( 2 ) };
+            Global.AirTemperature = 10.f;
+            catenary_scene_temperature();
+            data.missing = 0;
+            catenary_anchor_update( 0, data );
+            auto const back { catenary_scene_swing( 2 ) };
+            std::printf( "  mroz z brakami m3 %.3f, po uzupelnieniu %.3f\n", frost, back );
+            check( std::abs( s3cold ) < 1e-9 && shortening > 0.0 && false == grounded && std::abs( m1 ) < 1e-9 && m3 * frost > 0.0 && std::abs( back ) < 1e-9,
+                "obrot wysiegnikow od naciagu: brakujace ciezary skracaja siec po stronie kotwienia, wysiegnik w strone srodkowego, po uzupelnieniu zero" );
+        }
         Global.AirTemperature = 10.f;
     }
 
