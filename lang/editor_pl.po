@@ -6346,6 +6346,18 @@ msgstr "Przewody jezdne nad główką szyny (m)"
 msgid "25 kV insulators"
 msgstr "Izolatory 25 kV"
 
+msgid "usual"
+msgstr "zwykłe"
+
+msgid "25 kV"
+msgstr "25 kV"
+
+msgid "Insulators##cantilever"
+msgstr "Izolatory##cantilever"
+
+msgid "The insulators of the cantilever: the usual ones or another set where the catalogue has its parts (NNNN-25: 25 kV). A part without its version in the set stays as it is (the log says which); the tees have their own 7110/7120"
+msgstr "Izolatory wysięgnika: zwykłe albo inny zestaw, jeśli katalog ma jego części (NNNN-25: 25 kV). Część bez wersji w zestawie zostaje taka, jaka jest (log mówi która); teowniki mają swoje 7110/7120"
+
 msgid "Network (for the spans)"
 msgstr "Typ sieci (do przęseł)"
 

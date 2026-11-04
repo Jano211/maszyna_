@@ -115,7 +115,7 @@ struct catenary_editor
 		float clearance{2.50f}; // from the axis of the track to the face of the pole
 		float height{5.60f}; // of the contact wires over the rails
 		float system_height{0.0f}; // hk: of the messenger over the contact wires; 0 = the card's
-		bool insulators25{false};
+		std::string insulators; // the insulator set of new cantilevers ("": the usual, "25": 25 kV; later plastic)
 		char file[128]{};
 		char move_file[128]{}; // the catenary file the selected pole moves to, with its chains and anchors
 		int selected{-1};
@@ -260,7 +260,8 @@ struct catenary_editor
 	struct panel_settings
 	{
 		int pole{0}, execution{1}, catalog_card{0}, bend{0};
-		bool swinging{true}, insulators25{false}, toward{true};
+		bool swinging{true}, toward{true};
+		std::string insulators; // the insulator set of the cantilevers ("": the usual, "25": 25 kV ...)
 		std::string catalog_kind, catalog_group, catalog_family;
 		float stagger{0.30f}, height{5.60f}, system_height{0.0f}, clearance{2.50f};
 	};

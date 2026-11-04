@@ -142,6 +142,10 @@ int main( int, char *argv[] ) {
             && problems.empty() && parsed.entries.size() == 1 && parsed.entries.front().strut_shift == -0.30 && parsed.entries.front().turn_by_hand == 10.0,
             "dolne mocowanie -0,30 m (strut_shift) i obrot reczny 10 st. (turn_by_hand): sklada sie, zapis i odczyt" );
     }
+    {
+        auto const sets { catenary_scene_insulator_sets() };
+        check( sets.size() == 1 && sets.front() == "25", "zestawy izolatorow do wyboru z katalogu: tylko 25 (bez zwyklego -01)" );
+    }
     auto wrong { moved }; wrong.card = 9999;
     check( false == catenary_scene_probe( wrong, probe ) && false == probe.warnings.empty() && errors.empty(), "proba z karta spoza katalogu: przyczyna w wyniku, nie w logu" );
     std::string message;
