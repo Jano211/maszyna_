@@ -1050,7 +1050,7 @@ catenary_editor::panel_settings catenary_editor::panel_save() const
 	settings.catalog_card = tool.catalog_card;
 	settings.bend = tool.bend;
 	settings.swinging = tool.swinging;
-	settings.insulators25 = tool.insulators25;
+	settings.insulators = tool.insulators;
 	settings.toward = tool.toward;
 	settings.catalog_kind = tool.catalog_kind;
 	settings.catalog_group = tool.catalog_group;
@@ -1070,7 +1070,7 @@ void catenary_editor::panel_restore(panel_settings const &Settings)
 	tool.catalog_card = Settings.catalog_card;
 	tool.bend = Settings.bend;
 	tool.swinging = Settings.swinging;
-	tool.insulators25 = Settings.insulators25;
+	tool.insulators = Settings.insulators;
 	tool.toward = Settings.toward;
 	tool.catalog_kind = Settings.catalog_kind;
 	tool.catalog_group = Settings.catalog_group;
@@ -1567,8 +1567,7 @@ void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearan
 	data.pole[2] = polepoint.z;
 	Spot.switch_error = catenary_switch_error(pole->name, polepoint, Spot.track);
 	Spot.by_switch = catenary_by_switch(polepoint, Spot.track);
-	if (tool.insulators25)
-		data.insulators = "25";
+	data.insulators = tool.insulators;
 	if (scheme == nullptr)
 	{
 		if (described)
@@ -1827,7 +1826,7 @@ void catenary_editor::catenary_take_settings(std::size_t const Index)
 		tool.catalog_family.clear();
 		tool.catalog_card = 0;
 	}
-	tool.insulators25 = data->insulators == "25";
+	tool.insulators = data->insulators;
 	auto const decade{(data->card / 10) % 10};
 	if (data->card / 100 == 11 || data->card / 100 == 12)
 		tool.bend = (decade == 3 || decade == 4) ? 2 : 1;
@@ -6546,7 +6545,29 @@ void catenary_editor::render_catenary_cantilever_ui()
 			ImGui::PopItemWidth();
 		}
 	}
-	changed |= ImGui::Checkbox(STR_C("25 kV insulators"), &tool.insulators25);
+	// the insulator set: the usual ceramic ones, or a set from the cantilever catalogue (parts NNNN-<set>: 25 kV, later plastic)
+	{
+		auto const sets{catenary_scene_insulator_sets()};
+		auto const label = [](std::string const &Set) { return Set.empty() ? std::string(STR("usual")) : Set == "25" ? std::string(STR("25 kV")) : Set; };
+		ImGui::PushItemWidth(160.0f);
+		if (ImGui::BeginCombo(STR_C("Insulators##cantilever"), label(tool.insulators).c_str()))
+		{
+			std::vector<std::string> choices{std::string()};
+			choices.insert(choices.end(), sets.begin(), sets.end());
+			if (false == tool.insulators.empty() && std::find(sets.begin(), sets.end(), tool.insulators) == sets.end())
+				choices.push_back(tool.insulators); // a set of the entry the catalogue doesn't have (kept as it is)
+			for (auto const &set : choices)
+				if (ImGui::Selectable(label(set).c_str(), set == tool.insulators))
+				{
+					tool.insulators = set;
+					changed = true;
+				}
+			ImGui::EndCombo();
+		}
+		ImGui::PopItemWidth();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("The insulators of the cantilever: the usual ones or another set where the catalogue has its parts (NNNN-25: 25 kV). A part without its version in the set stays as it is (the log says which); the tees have their own 7110/7120"));
+	}
 	// the wind zone needs the papers of the line (where which zone is): the expert mode only
 	if (tool.expert)
 	{

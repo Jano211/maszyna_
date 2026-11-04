@@ -2,6 +2,29 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-04 (najnowsze)
+
+**Sposób pracy od 04.11 (Jan: „sieciowe ficzery dawaj bez osobnych branchy”):** wszystko z sieci commitem prosto na `siec-gl46`
+→ push → merge do `wszystko-gl46` → push. `funkcja/*` już nie zakładać. W płytkim klonie `git fetch origin wszystko-gl46` NIE
+odświeża origin/wszystko-gl46 – fetch z refspec `+refs/heads/wszystko-gl46:refs/remotes/origin/wszystko-gl46`.
+Testy: `tests/catenary/te tests/catenary/data` (argument = katalog danych, bez niego wywala się), wynik 81 OK.
+
+**Zrobione 04.11 (w exe NIESPRAWDZONE):**
+- `ff6b4e8` kotwienie środkowe: lina na nodze bramki na ceowniku (assemble_middle jak assemble_anchor dla bramek).
+- `37e003a` FPS przy suwakach wysokości kotwienia: bez zmiany naciągu przebudowa tylko przęsła do kotwienia.
+- `0486e9d` `strut_shift` (dolne mocowanie ±0,5) i `turn_by_hand` (obrót ręczny ±30°, dodawany do obrotu od temperatury).
+- `bbe6e51` bieżnia wspólna nad rozjazdami: `crossing_ends` (0,98 m w planie, 1 m w pionie), także przęsła do kotwień; wpis
+  łańcucha `shared <podwieszenie|start> on|off` (on bez sąsiada = parallel na siebie).
+- lista „Izolatory” zamiast checkboxa 25 kV (`catenary_scene_insulator_sets`, zestawy z końcówek NNNN-<zestaw>).
+
+**Czeka na odpowiedź Jana (pytania wysłane 04.11):** (1) „dziura w rurowych rozjazdowych” – w danych 109x i 128x tylko wyk. 3/4,
+109x od 1091 (A ≥ 1,75), przy licu 4,00 A > 4,45 bez karty – która sytuacja? (2) teowniki: izolatory jak w rurowych (inne części)
+czy tylko wybór zestawu? (3) „obrót od naciągu” – co to ma być? (4) podgląd szerokości pantografu: 1,95 m czy pole pracy, na
+wysokości przewodu z przechyłką?
+**Na później (pomysł Jana 04.11):** wysięgnik „z pizzy” – baza przechylny/nieprzechylny + ręcznie dokładane części (wieszaki,
+łapki, rura odciągu), tylko jedna lina i jeden układ przewodów; przyda się też na sieć zlikwidowaną i w budowie (same ukośniki
+z odciągami). Potrzebna od Jana lista baz i części dopuszczalnych do każdej.
+
 ## START TUTAJ – 2026-11-01 02:00 (najnowsze, przed starszym START niżej)
 
 **Sposób pracy (Jan):** commit na `siec-gl46` → push → `wszystko-gl46`: pull, merge --no-edit, push → z powrotem `siec-gl46`

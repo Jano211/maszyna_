@@ -18,6 +18,11 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: lista zestawów izolatorów zamiast „Izolatory 25 kV” — commit o tym tytule
+- W panelu wysięgnika lista „Izolatory”: zwykłe + zestawy, które katalog wysięgników ma dla co najmniej dwóch rodzin izolatorów
+  (części NNNN-<zestaw>; dziś 25 kV). Nowe zestawy (plastikowe) pojawią się same po dopisaniu części.
+- Zmienia: `world/catenary_scene.h/.cpp`, `application/editormodecatenary.h/.cpp`, `lang/editor_pl.po`, test `te`. Wymaga: nic.
+
 ### Sieć trakcyjna: bieżnia wspólna nad rozjazdami i ręcznie dla przęsła — commit o tym tytule
 - Pantograf trzymał się przewodu przęsła, póki ten był pod ślizgiem – nad rozjazdem jechał w górę za przewodem uciekającym
   do kotwienia i dopiero za ślizgiem przeskakiwał na niższy („prawie łamie”, zależnie od kierunku). Przęsło z bieżnią wspólną

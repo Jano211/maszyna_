@@ -4427,6 +4427,24 @@ catenary_anchor_devices( std::string const &Only ) {
     return result;
 }
 
+std::vector<std::string>
+catenary_scene_insulator_sets() {
+    std::vector<std::string> sets;
+    auto const *catalog { cantilevers() };
+    if( catalog == nullptr ) { return sets; }
+    std::map<std::string, std::set<std::string>> families;  // końcówka -> rodziny (NNNN), które ją mają
+    for( auto const &part : catalog->parts() ) {
+        if( part.second.kind != "insulator" ) { continue; }
+        auto const dash { part.first.find( '-' ) };
+        if( dash == std::string::npos || dash + 1 >= part.first.size() ) { continue; }
+        families[ part.first.substr( dash + 1 ) ].insert( part.first.substr( 0, dash ) );
+    }
+    for( auto const &suffix : families ) {
+        if( suffix.first != "01" && suffix.second.size() >= 2 ) { sets.push_back( suffix.first ); }
+    }
+    return sets;
+}
+
 catenary::tensioner_catalog const *
 catenary_scene_tensioners() {
     return tensioners();

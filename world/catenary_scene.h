@@ -191,6 +191,9 @@ struct catenary_anchor_card {
 std::vector<catenary_anchor_card> catenary_anchor_devices( std::string const &Only = {} );
 // katalog urządzeń naprężających (traction_tensioners.txt); nullptr, gdy go nie ma
 catenary::tensioner_catalog const *catenary_scene_tensioners();
+// zestawy izolatorów wysięgników do wyboru (wpis "insulators <zestaw>"): końcówki nazw części-izolatorów NNNN-<zestaw> wspólne dla
+// co najmniej dwóch rodzin izolatorów, bez zwykłego -01 (dziś "25" - 25 kV; dojdą plastikowe). Po kolei alfabetycznie
+std::vector<std::string> catenary_scene_insulator_sets();
 // łańcuch, który kończy się tym kotwieniem (Start: na początku), -1 gdy żaden
 int catenary_anchor_chain( std::size_t Index, bool &Start );
 // dodaje kotwienie, składa je i przebudowuje łańcuchy, które go używają. zwraca numer
