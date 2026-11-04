@@ -6352,6 +6352,57 @@ void catenary_editor::render_catenary_cantilever_ui()
 				ImGui::PopItemWidth();
 			}
 		}
+		// every insulator of the cantilever swapped by hand for any insulator of the catalogue (Jan 2026-11-04: every insulator possible
+		// everywhere): override of its role; the tubes are fitted to its length as with an insulator set
+		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->card > 0)
+		{
+			auto const *catalog{catenary_scene_catalog()};
+			auto const *scheme{catalog != nullptr ? catalog->scheme(data->card, data->execution) : nullptr};
+			std::vector<std::pair<std::string, std::string>> roles; // insulator role, the part of the card
+			std::vector<std::string> insulators;
+			if (scheme != nullptr)
+			{
+				for (auto const &role : scheme->roles)
+					if (auto const *part{catalog->part(role.second)}; part != nullptr && part->kind == "insulator")
+						roles.emplace_back(role.first, role.second);
+				for (auto const &part : catalog->parts())
+					if (part.second.kind == "insulator")
+						insulators.push_back(part.first);
+			}
+			if (false == roles.empty() && ImGui::TreeNode(STR_C("Insulators of this cantilever")))
+			{
+				auto const index{static_cast<std::size_t>(tool.selected)};
+				for (auto const &[role, card] : roles)
+				{
+					auto const own{std::find_if(data->overrides.begin(), data->overrides.end(), [&](auto const &O) { return O.first == role; })};
+					auto const current{own != data->overrides.end() ? own->second : std::string()};
+					auto const shown{current.empty() ? format(STR_C("%s (card)"), card.c_str()) : current};
+					ImGui::PushItemWidth(160.0f);
+					if (ImGui::BeginCombo(role.c_str(), shown.c_str()))
+					{
+						auto pick = [&](std::string const &Part) {
+							auto changed{*data};
+							std::erase_if(changed.overrides, [&](std::pair<std::string, std::string> const &O) { return O.first == role; });
+							if (false == Part.empty())
+								changed.overrides.emplace_back(role, Part);
+							tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+							catenary_scene_update(index, changed);
+							tool.probed = false;
+						};
+						if (ImGui::Selectable(format(STR_C("%s (card)"), card.c_str()).c_str(), current.empty()))
+							pick({});
+						for (auto const &part : insulators)
+							if (ImGui::Selectable(part.c_str(), part == current))
+								pick(part);
+						ImGui::EndCombo();
+					}
+					ImGui::PopItemWidth();
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("Any insulator of the catalogue in place of the one of the card (also the tube ones on the tees and the other way round); the tube or rod it sits on is taken shorter or longer to fit, as with an insulator set. Where the parts don't fit together the solver says so in the remarks"));
+				}
+				ImGui::TreePop();
+			}
+		}
 		// the brace 6506 (as on 102x) on another tubular cantilever; 102x has it of its own
 		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole
 			&& (data->card / 100 == 7 || data->card / 100 == 10 || data->card / 100 == 11 || data->card / 100 == 12) && data->card / 10 != 102)

@@ -18,6 +18,12 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: dowolny izolator w każdej roli wysięgnika — commit o tym tytule
+- Panel wysięgnika: rozwijane „Izolatory tego wysięgnika” – każdy izolator z karty (ukośnika, odciągu, wysięgu, na teownikach
+  7110/7120) można zamienić na dowolny izolator z katalogu (wpis `override <rola> <część>`), także rurowe na teowniku.
+- Rura / pręt pod podmienionym izolatorem dobierane z rodziny części jak przy zestawie 25 kV (wcześniej tylko przy zestawie).
+- Zmienia: `world/catenary_scene.cpp`, `application/editormodecatenary.cpp`, `lang/editor_pl.po`, test `te`. Wymaga: nic.
+
 ### Sieć trakcyjna: obrót wysięgników od brakujących ciężarów — commit o tym tytule
 - W łańcuchu z kotwieniem środkowym brakujące ciężary skracają sieć po stronie swojego kotwienia (skrócenie z urządzenia:
   sprężystość i zwis). Wysięgniki po tej stronie obracają się w stronę kotwienia środkowego proporcjonalnie do odległości od
