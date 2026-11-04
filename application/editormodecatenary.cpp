@@ -210,6 +210,8 @@ void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data
 {
 	set_brace(Data, has_brace(Current)); // the brace stays on with another card
 	Data.stay_shift = Current.stay_shift; // the top mount moved by hand stays where it was put
+	Data.strut_shift = Current.strut_shift; // the bottom mount too
+	Data.turn_by_hand = Current.turn_by_hand; // and the cantilever turned by hand
 	Data.lean = Current.lean;             // and so does the lean of the pole
 	if (false == Current.above_pole)
 		return;
@@ -6258,6 +6260,88 @@ void catenary_editor::render_catenary_cantilever_ui()
 					auto changed{*data};
 					changed.stay_shift = shift;
 					// one drag of the slider is taken back at once
+					if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
+					{
+						tool.shift_group = ++tool.group;
+						tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
+					}
+					catenary_scene_update(index, changed);
+					tool.probed = false;
+				}
+				ImGui::PopItemWidth();
+			}
+		}
+		// the bottom (strut) mount of a tubular cantilever moved up or down: the solver takes a shorter or a longer strut tube
+		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && (tool.expert || data->strut_shift != 0.0) && data->has_pole && (data->card / 100 == 7 || data->card / 100 == 10 || data->card / 100 == 11 || data->card / 100 == 12))
+		{
+			auto const index{static_cast<std::size_t>(tool.selected)};
+			auto enabled{data->strut_shift != 0.0 || tool.strut_shift_open};
+			if (ImGui::Checkbox(STR_C("Bottom mount moved"), &enabled))
+			{
+				tool.strut_shift_open = enabled;
+				if (false == enabled && data->strut_shift != 0.0)
+				{
+					auto changed{*data};
+					changed.strut_shift = 0.0;
+					tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+					catenary_scene_update(index, changed);
+					tool.probed = false;
+				}
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("The bottom (strut) mount up or down from the card by up to 0.50 m, e.g. where something is in the way on the pole; the strut tube is taken shorter or longer to fit"));
+			if (enabled)
+			{
+				ImGui::SameLine();
+				auto shift{static_cast<float>(data->strut_shift)};
+				ImGui::PushItemWidth(160.0f);
+				if (ImGui::SliderFloat(STR_C("m##strutshift"), &shift, -0.50f, 0.50f, "%+.2f"))
+				{
+					shift = std::round(shift * 100.0f) / 100.0f;
+					auto changed{*data};
+					changed.strut_shift = shift;
+					// one drag of the slider is taken back at once
+					if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
+					{
+						tool.shift_group = ++tool.group;
+						tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
+					}
+					catenary_scene_update(index, changed);
+					tool.probed = false;
+				}
+				ImGui::PopItemWidth();
+			}
+		}
+		// the cantilever turned by hand on its hinge (on top of the turn from the temperature)
+		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole)
+		{
+			auto const index{static_cast<std::size_t>(tool.selected)};
+			auto const swing{catenary_scene_swing(index)};
+			auto enabled{data->turn_by_hand != 0.0 || tool.turn_open};
+			if (ImGui::Checkbox(STR_C("Turned by hand"), &enabled))
+			{
+				tool.turn_open = enabled;
+				if (false == enabled && data->turn_by_hand != 0.0)
+				{
+					auto changed{*data};
+					changed.turn_by_hand = 0.0;
+					tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+					catenary_scene_update(index, changed);
+					tool.probed = false;
+				}
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip(STR_C("The cantilever turned on its hinge about the vertical by hand, e.g. as it hangs on the ground; added to the turn from the temperature (by the middle anchor). Now in all: %.1f deg"), swing);
+			if (enabled)
+			{
+				ImGui::SameLine();
+				auto turn{static_cast<float>(data->turn_by_hand)};
+				ImGui::PushItemWidth(160.0f);
+				if (ImGui::SliderFloat(STR_C("deg##turnbyhand"), &turn, -30.0f, 30.0f, "%+.1f"))
+				{
+					turn = std::round(turn * 2.0f) / 2.0f;
+					auto changed{*data};
+					changed.turn_by_hand = turn;
 					if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
 					{
 						tool.shift_group = ++tool.group;

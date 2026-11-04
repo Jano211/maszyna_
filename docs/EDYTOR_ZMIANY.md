@@ -18,6 +18,14 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: dolne mocowanie przesunięte i obrót ręczny wysięgnika — commit o tym tytule
+- Panel słupa: „Dolne mocowanie przesunięte” (tryb ekspert albo gdy ustawione) – ±0,50 m jak „Górne mocowanie przesunięte”,
+  solver dobiera ukośnik z tej samej rodziny części; wpis `strut_shift <m>`.
+- „Obrót ręczny” – wysięgnik obrócony na zawiasie wokół pionu o ±30°, dodawany do obrotu od temperatury (podpowiedź pokazuje
+  łączny kąt); wpis `turn_by_hand <°>`. Bez zawiasu (wpis bez słupa) nic nie robi. Kontrola 12° dotyczy tylko części od temperatury.
+- Zmienia: `world/catenary_suspension.h` (przebudowa części sieci), `world/catenary_suspension.cpp`, `world/catenary_scene.cpp`,
+  `application/editormodecatenary.h/.cpp`, `lang/editor_pl.po`, test `te`. Wymaga: nic.
+
 ### Edytor sieci: przesuwanie kotwienia bez przebudowy całego łańcucha — commit o tym tytule
 - Suwaki wysokości kotwienia i przeciąganie słupa kotwowego przebudowywały co klatkę wszystkie przęsła łańcucha (solver
   wieszaków i linek Y), stąd spadek klatek tylko w trakcie przesuwania. Teraz, gdy naciąg od kotwienia się nie zmienia

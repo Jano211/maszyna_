@@ -471,6 +471,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             // słup z katalogu: zaczepy, mocowania i słup liczy solver; Attach to oś słupa na wysokości główki szyny
             auto lowered { *scheme };
             lowered.mount_strut -= Drop;
+            lowered.mount_strut += data.strut_shift;
             lowered.mount_stay += data.stay_shift;
             auto umbrella { Umbrella != nullptr ? *Umbrella : catenary::cantilever_umbrella() };
             umbrella.turn = drop_turn( data, *pole, heading );
@@ -480,6 +481,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         auto attempt { input };
         attempt.overrides = Overrides;
         attempt.strut_mount.z -= Drop;
+        attempt.strut_mount.z += data.strut_shift;
         attempt.stay_mount.z += data.stay_shift;
         return catenary::solve_cantilever( Catalog, *scheme, attempt, Result );
     };
@@ -537,6 +539,25 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             if( candidates.size() > 1 ) { fits.emplace_back( "stay", candidates ); }
         }
     }
+    // dolne mocowanie przesunięte (strut_shift, ±0,5 m - Jan 2026-11-04): ukośnik dobierany z tej samej rodziny części jak odciąg przy
+    // stay_shift; bez podmiany, gdy ukośnik podano w scenerii albo dobiera go już zestaw izolatorów
+    if( data.strut_shift != 0.0 && scheme->roles.count( "strut" ) && std::none_of( data.overrides.begin(), data.overrides.end(), []( std::pair<std::string, std::string> const &O ) { return O.first == "strut"; } )
+     && std::none_of( fits.begin(), fits.end(), []( auto const &Fit ) { return Fit.first == "strut"; } ) ) {
+        auto const &name { scheme->roles.at( "strut" ) };
+        auto const *original { Catalog.part( name ) };
+        auto const dash { name.find( '-' ) };
+        if( original != nullptr && dash != std::string::npos ) {
+            auto const family { name.substr( 0, dash + 1 ) };
+            std::vector<std::pair<double, std::string>> sorted;
+            for( auto const &part : Catalog.parts() ) {
+                if( part.first.compare( 0, family.size(), family ) == 0 && part.second.kind == original->kind ) { sorted.emplace_back( std::abs( part.second.length - original->length ), part.first ); }
+            }
+            std::sort( sorted.begin(), sorted.end() );
+            std::vector<std::string> candidates;
+            for( std::size_t index = 0; index < sorted.size() && index < 7; ++index ) { candidates.push_back( sorted[ index ].second ); }
+            if( candidates.size() > 1 ) { fits.emplace_back( "strut", candidates ); }
+        }
+    }
     catenary::cantilever_result result;
     auto solved { false };
     if( fits.empty() ) {
@@ -586,17 +607,20 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     }
     glm::dvec3 shift;
     auto const *hinge { solved && pole != nullptr ? result.find( "strut_hinge" ) : nullptr };
-    if( hinge != nullptr && swing_shift( Suspension, shift ) && glm::length( shift ) > 1e-4 ) {
+    auto const bytemperature { hinge != nullptr && swing_shift( Suspension, shift ) && glm::length( shift ) > 1e-4 };
+    if( hinge != nullptr && ( bytemperature || data.turn_by_hand != 0.0 ) ) {
         // oś X wysięgnika w scenerii (wzdłuż toru)
         catenary::cantilever_placement unit;
         unit.position[ 0 ] = 1.0;
         auto const axis { catenary::cantilever_to_scene( unit, heading ) };
-        auto const along { shift.x * axis.offset[ 0 ] + shift.z * axis.offset[ 2 ] };
+        auto const along { bytemperature ? shift.x * axis.offset[ 0 ] + shift.z * axis.offset[ 2 ] : 0.0 };
         auto const *clamp { result.find( "messenger_clamp" ) };
         auto const radius { hinge->position[ 1 ] - ( clamp != nullptr ? clamp->position[ 1 ] : input.messenger.y ) };
         if( radius > 0.3 ) {
-            swing[ 0 ] = std::clamp( along / radius, -0.5, 0.5 );
-            swing[ 1 ] = std::sqrt( 1.0 - swing[ 0 ] * swing[ 0 ] );
+            // od temperatury (przesuw liny wzdłuż toru) plus ręczny obrót z wpisu (turn_by_hand)
+            auto const angle { std::asin( std::clamp( along / radius, -0.5, 0.5 ) ) + data.turn_by_hand * 3.14159265358979323846 / 180.0 };
+            swing[ 0 ] = std::sin( angle );
+            swing[ 1 ] = std::cos( angle );
             swing[ 2 ] = hinge->position[ 0 ];
             swing[ 3 ] = hinge->position[ 1 ];
             auto const fixed = []( std::string const &Role ) {
@@ -617,7 +641,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             }
             auto const degrees { std::asin( swing[ 0 ] ) * 180.0 / 3.14159265358979323846 };
             // kontrola obrotu wysięgnika (Głowacki: najwyżej 12° na skrajnych słupach odcinka)
-            if( std::abs( degrees ) > 12.0 ) {
+            if( std::abs( degrees - data.turn_by_hand ) > 12.0 ) {
                 result.warnings.push_back( "cantilever of suspension "" + data.name + "" swings " + text_number( std::abs( degrees ), 1 ) + " deg at " + text_number( Global.AirTemperature, 1 )
                     + " C, more than 12 deg allowed; the middle anchor is too far away" );
             }

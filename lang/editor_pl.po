@@ -12004,6 +12004,24 @@ msgstr "Górne mocowanie (odciągu) wyżej albo niżej niż w karcie, do 0,50 m,
 msgid "m##stayshift"
 msgstr "m##stayshift"
 
+msgid "Bottom mount moved"
+msgstr "Dolne mocowanie przesunięte"
+
+msgid "The bottom (strut) mount up or down from the card by up to 0.50 m, e.g. where something is in the way on the pole; the strut tube is taken shorter or longer to fit"
+msgstr "Dolne mocowanie (ukośnika) w górę lub w dół względem karty, do 0,50 m, np. gdy na słupie coś przeszkadza; rura ukośnika dobierana krótsza albo dłuższa"
+
+msgid "m##strutshift"
+msgstr "m##strutshift"
+
+msgid "Turned by hand"
+msgstr "Obrót ręczny"
+
+msgid "The cantilever turned on its hinge about the vertical by hand, e.g. as it hangs on the ground; added to the turn from the temperature (by the middle anchor). Now in all: %.1f deg"
+msgstr "Wysięgnik obrócony ręcznie na zawiasie wokół pionu, np. tak jak wisi w terenie; dodawany do obrotu od temperatury (względem kotwienia środkowego). Teraz razem: %.1f°"
+
+msgid "deg##turnbyhand"
+msgstr "°##turnbyhand"
+
 msgid "Section insulator in the span to %s"
 msgstr "Izolator sekcyjny w przęśle do %s"
 

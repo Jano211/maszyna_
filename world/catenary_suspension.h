@@ -47,6 +47,12 @@ struct suspension {
     // górne mocowanie (odciągu) przesunięte w pionie względem karty, ±0,5 m (Jan 2026-10-26, wysięgniki rurowe): solver dobiera do niego
     // krótszą albo dłuższą rurę / pręt odciągu z tej samej rodziny części; wpis "stay_shift <m>"
     double stay_shift { 0.0 };
+    // dolne mocowanie (ukośnika) przesunięte w pionie względem karty, ±0,5 m (Jan 2026-11-04, jak stay_shift): solver dobiera krótszą
+    // albo dłuższą rurę ukośnika z tej samej rodziny części; wpis "strut_shift <m>"
+    double strut_shift { 0.0 };
+    // ręczny obrót wysięgnika na zawiasie wokół pionu, stopnie (Jan 2026-11-04), dodawany do obrotu od temperatury; dodatni - uchwyt
+    // liny w stronę +X wysięgnika. Wpis "turn_by_hand <stopnie>" (do ±30°); bez zawiasu (wpis bez słupa) nic nie robi
+    double turn_by_hand { 0.0 };
     // przechył słupa w poprzek toru (Jan 2026-10-19): słup razem z mocowaniami pochylony o tyle stopni w stronę toru (ujemny - od toru),
     // obrót wokół jego podstawy; wysięgnik składa się do przechylonych mocowań. Wpis "lean <stopnie>" (do ±10°, w edytorze ±1,5°, w trybie eksperta ±10°); parasole i rozstawione bez przechyłu
     double lean { 0.0 };

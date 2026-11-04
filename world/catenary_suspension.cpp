@@ -34,7 +34,7 @@ std::string normalize_path( std::string Path ) {
 
 // słowa kluczowe wewnątrz wpisu podwieszenia
 bool is_keyword( std::string const &Token ) {
-    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "lean", "pull_from", "endsuspension" };
+    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "strut_shift", "turn_by_hand", "lean", "pull_from", "endsuspension" };
     return keywords.find( Token ) != keywords.end();
 }
 
@@ -338,6 +338,14 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 if( list.size() == 1 && to_number( list[ 0 ], entry.stay_shift ) && std::abs( entry.stay_shift ) <= 0.5 + 1e-9 ) {}
                 else { report( entry.name, "\"stay_shift\" needs one number from -0.5 to 0.5: the top mount moved up (+) or down (-), metres" ); entry.stay_shift = 0.0; good = false; }
             }
+            else if( key == "strut_shift" ) {
+                if( list.size() == 1 && to_number( list[ 0 ], entry.strut_shift ) && std::abs( entry.strut_shift ) <= 0.5 + 1e-9 ) {}
+                else { report( entry.name, "\"strut_shift\" needs one number from -0.5 to 0.5: the bottom (strut) mount moved up (+) or down (-), metres" ); entry.strut_shift = 0.0; good = false; }
+            }
+            else if( key == "turn_by_hand" ) {
+                if( list.size() == 1 && to_number( list[ 0 ], entry.turn_by_hand ) && std::abs( entry.turn_by_hand ) <= 30.0 + 1e-9 ) {}
+                else { report( entry.name, "\"turn_by_hand\" needs one number of degrees, up to 30: the cantilever turned on its hinge" ); entry.turn_by_hand = 0.0; good = false; }
+            }
             else if( key == "spread" ) {
                 if( list.size() == 3 && to_number( list[ 0 ], entry.spread[ 0 ] ) && to_number( list[ 1 ], entry.spread[ 1 ] ) && to_number( list[ 2 ], entry.spread[ 2 ] ) ) { entry.has_spread = true; }
                 else { report( entry.name, "\"spread\" needs three numbers: the point on the console in the plane of the cantilever" ); good = false; }
@@ -421,6 +429,8 @@ std::string write_suspension( suspension const &Entry ) {
     if( Entry.shared_pole ) { text += " shared_pole"; }
     if( Entry.above_pole ) { text += " above_pole"; }
     if( Entry.stay_shift != 0.0 ) { text += " stay_shift " + number( Entry.stay_shift, 3 ); }
+    if( Entry.strut_shift != 0.0 ) { text += " strut_shift " + number( Entry.strut_shift, 3 ); }
+    if( Entry.turn_by_hand != 0.0 ) { text += " turn_by_hand " + number( Entry.turn_by_hand, 2 ); }
     if( Entry.lean != 0.0 ) { text += " lean " + number( Entry.lean, 2 ); }
     if( false == Entry.pull_from.empty() ) { text += " pull_from " + Entry.pull_from; }
     return text + " endsuspension";
