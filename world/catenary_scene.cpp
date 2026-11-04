@@ -293,6 +293,8 @@ bool second_net( scene_chain const &Chain, std::size_t Point );
 // środkowym lina nośna przy podwieszeniu przesuwa się o α·L·(t - 10 °C) od kotwienia środkowego (L - odległość od niego wzdłuż
 // łańcucha, +10 °C - stan zerowy montażu). Bez kotwienia środkowego nie liczymy (Jan 2026-10-31: wtedy sieć i tak jest źle
 // powieszona). Shift - przesunięcie poziome w scenerii; false, gdy podwieszenie nie leży w takim łańcuchu (jako pierwsza sieć)
+scene_anchor *anchor_named( std::string const &File, std::string const &Name );
+
 bool
 swing_shift( scene_suspension const &Suspension, glm::dvec3 &Shift ) {
     Shift = glm::dvec3 { 0.0 };
@@ -329,7 +331,27 @@ swing_shift( scene_suspension const &Suspension, glm::dvec3 &Shift ) {
         if( glm::length( direction ) < 1e-3 ) { return true; }
         // rozszerzalność liny nośnej: miedź (brąz) 17e-6, aluminium 23e-6 [1/K]
         auto const alpha { chain.data.material == "al" ? 23e-6 : 17e-6 };
-        auto const shift { alpha * along * ( Global.AirTemperature - 10.0 ) };
+        auto shift { alpha * along * ( Global.AirTemperature - 10.0 ) };
+        // brakujące ciężary (Jan 2026-11-04, „od naciągu”): sieć po tej stronie kotwienia środkowego krótsza o skrócenie z urządzenia
+        // (sprężystość i zwis, tensioner_result::shortening na całej długości do kotwienia); punkt przy podwieszeniu idzie w stronę
+        // kotwienia środkowego proporcjonalnie do odległości od niego. Ciężary na gruncie - sieć bez naciągu, nie liczymy
+        {
+            auto const &end { step > 0 ? chain.data.anchor_end : chain.data.anchor_start };
+            auto const *anchor { end.empty() ? nullptr : anchor_named( chain.file, end ) };
+            if( anchor != nullptr && anchor->solved && false == anchor->result.grounded && anchor->result.shortening > 1e-6 ) {
+                // długość wzdłuż łańcucha od środkowego do końca liny nośnej na kotwieniu
+                double total { along };
+                glm::dvec2 last { current };
+                for( auto k { static_cast<std::ptrdiff_t>( position ) + step }; k >= 0 && k < static_cast<std::ptrdiff_t>( names.size() ); k += step ) {
+                    glm::dvec2 next;
+                    if( false == at( static_cast<std::size_t>( k ), next ) ) { break; }
+                    total += glm::length( next - last );
+                    last = next;
+                }
+                total += glm::length( glm::dvec2 { anchor->messenger[ 0 ], anchor->messenger[ 2 ] } - last );
+                if( total > 1.0 ) { shift -= anchor->result.shortening * std::min( along / total, 1.0 ); }
+            }
+        }
         auto const unit { glm::normalize( direction ) * shift };
         Shift = { unit.x, 0.0, unit.y };
         return true;
@@ -4360,6 +4382,12 @@ follow_anchor( scene_anchor const &Anchor, bool const Whole ) {
         bool start { false };
         if( false == anchors_chain( chain.data, Anchor.data.name, &start ) ) { continue; }
         if( Whole ) {
+            // łańcuch z kotwieniem środkowym: inny naciąg (brakujące ciężary) przesuwa wysięgniki - składane od nowa
+            if( false == chain.data.middle.empty() && Initialized ) {
+                for( auto const &name : chain.data.suspensions ) {
+                    if( auto const index { suspension_named( chain.file, name ) }; index < Suspensions.size() ) { reassemble( index ); }
+                }
+            }
             for( std::size_t span = 0; span < chain.spans.size(); ++span ) { rebuild_span( chain, span ); }
             continue;
         }
@@ -4546,6 +4574,10 @@ catenary_scene_temperature() {
     for( auto &chain : Chains ) {
         if( chain.removed || chain.data.middle.empty() || std::abs( chain.swing_temperature - Global.AirTemperature ) < 0.5 ) { continue; }
         chain.swing_temperature = Global.AirTemperature;
+        // kotwienia najpierw: ich skrócenie (brakujące ciężary) przesuwa wysięgniki
+        for( auto const *name : { &chain.data.anchor_start, &chain.data.anchor_end } ) {
+            if( auto *anchor { anchor_named( chain.file, *name ) }; anchor != nullptr ) { assemble_anchor( *anchor ); }
+        }
         for( auto const &name : chain.data.suspensions ) {
             if( auto const index { suspension_named( chain.file, name ) }; index < Suspensions.size() ) { reassemble( index ); }
         }
