@@ -11475,6 +11475,12 @@ msgstr "Ten wysięgnik trzyma tylko linę nośną: wypada z listy łańcucha, pr
 
 # scenery editor: catenary - the zigzag of Iet-107, the counter and the step of the span, the swaps of the cantilevers
 
+msgid "Pantograph"
+msgstr "Pantograf"
+
+msgid "Over the tracks around the camera the pantograph head as it goes: at the height of the contact wire above it, tilted with the cant. The working range of the head in blue, the whole head (with the horns) grey; where the wire runs out of the working range red"
+msgstr "Nad torami wokół kamery ślizg pantografu tak, jak jedzie: na wysokości przewodu jezdnego nad nim, przechylony z przechyłką. Pole pracy ślizgu na niebiesko, cały ślizg (z nabieżnikami) na szaro; gdzie przewód wychodzi poza pole pracy – na czerwono"
+
 msgid "Zigzag by Iet-107 (PKP PLK)"
 msgstr "Zygzak wg Iet-107 (PKP PLK)"
 
