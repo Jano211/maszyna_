@@ -5,13 +5,24 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 ## Jak brać pojedyncze zmiany
 
-- Od 2026-11-01 każda nowa funkcja ma osobny branch `funkcja/<nazwa>`: pull request z niego bierze tylko ją
-  (plus to, co wpisane w „Wymaga”). Wszystko razem jest w `wszystko-gl46`.
+- Od 2026-11-01 do 2026-11-03 nowe funkcje miały osobne branche `funkcja/<nazwa>`: pull request z niego bierze tylko ją
+  (plus to, co wpisane w „Wymaga”). Od 2026-11-04 zmiany sieci znowu idą pojedynczymi commitami na `siec-gl46`.
+  Wszystko razem jest w `wszystko-gl46`.
 - Starsze zmiany (do 2026-10-31) są pojedynczymi commitami na `siec-gl46`: `git cherry-pick <hash>`, w kolejności
   z sekcji „Wymaga”.
 - Tłumaczenia (`lang/editor_pl.po`) były dopisywane na końcu pliku: przy cherry-picku nie po kolei konflikt na końcu
   pliku rozwiązuje się, biorąc obie strony. Nowe wpisy idą przy pokrewnych tekstach, więc konfliktów będzie mniej.
 - Zmiana pól w `application/editormode.h` oznacza przebudowę prawie całego edytora (ok. 30 min).
+
+## 2026-11-04
+
+Commity na `siec-gl46`.
+
+### Sieć trakcyjna: kotwienie środkowe na nodze bramki trafia w ceownik — commit o tym tytule
+- Lina kotwienia środkowego (0406) kończyła się w osi nogi bramki (środek kratownicy). Teraz tak jak kotwienie końcowe na
+  bramce: uchwyty na zewnętrznej ścianie ceownika bliższego słupowi środkowemu (czoło ½ `length` masztu, oś prostopadle
+  do dźwigara), uchwyty obejmują półkę ceownika (75 / 85 mm – ZAŁOŻENIE jak przy kotwieniu końcowym).
+- Zmienia: `world/catenary_scene.cpp` (`assemble_middle`). Wymaga: nic.
 
 ## 2026-11-01
 

@@ -2275,7 +2275,25 @@ assemble_middle( scene_chain &Chain ) {
                 glm::dvec2 const tomiddle { clamp.x - axis.x, clamp.z - axis.z };
                 glm::dvec2 structure { glm::length( cantilever ) > 0.1 ? glm::dvec2 { -cantilever.y, cantilever.x } / glm::length( cantilever ) : glm::normalize( tomiddle ) };
                 if( glm::dot( structure, tomiddle ) < 0.0 ) { structure = -structure; }
-                auto const face { pole->width > 0.0 ? 0.5 * pole->width : 0.5 * pole->depth( ropes[ neighbour ][ 1 ] - axis.y ) };
+                auto face { pole->width > 0.0 ? 0.5 * pole->width : 0.5 * pole->depth( ropes[ neighbour ][ 1 ] - axis.y ) };
+                // noga bramki: jak przy kotwieniu końcowym na bramce (assemble_anchor) - uchwyty na zewnętrznej ścianie ceownika
+                // bliższego środkowemu słupowi, nie w osi kratownicy; oś wzdłuż toru prostopadle do dźwigara, czoło ½ "length"
+                // masztu, uchwyty obejmują półkę ceownika (Jan 2026-11-04)
+                auto const *mast { pole->gantry ? catalog->mast( suspension.pole_type ) : nullptr };
+                if( mast != nullptr ) {
+                    if( auto const *gantry { gantry_at_mast( suspension.pole_type, suspension.pole ) }; gantry != nullptr ) {
+                        auto const k { gantry->masts[ 0 ] == suspension.pole_type
+                                       && std::hypot( gantry->points[ 0 ][ 0 ] - axis.x, gantry->points[ 0 ][ 2 ] - axis.z ) < 0.1 ? 0 : 1 };
+                        if( false == gantry->masts[ 1 - k ].empty() ) {
+                            glm::dvec2 const beamway { gantry->points[ 1 - k ][ 0 ] - axis.x, gantry->points[ 1 - k ][ 2 ] - axis.z };
+                            if( glm::length( beamway ) > 0.1 ) {
+                                structure = glm::dvec2 { -beamway.y, beamway.x } / glm::length( beamway );
+                                if( glm::dot( structure, tomiddle ) < 0.0 ) { structure = -structure; }
+                            }
+                        }
+                    }
+                    if( mast->length > 0.0 ) { face = 0.5 * mast->length; }
+                }
                 glm::dvec3 const origin { axis.x + structure.x * face, axis.y, axis.z + structure.y * face };
                 auto const way { glm::normalize( glm::dvec2 { clamp.x - origin.x, clamp.z - origin.z } ) };
                 auto const heading { std::atan2( way.y, -way.x ) };
@@ -2306,6 +2324,11 @@ assemble_middle( scene_chain &Chain ) {
                 if( device->type( input.type ) == nullptr && false == device->types.empty() ) { input.type = device->types.front().code; }
                 input.pole = suspension.pole_type;
                 input.depth = [ pole ]( double const Height ) { return pole->width > 0.0 ? pole->width : pole->depth( Height ); };
+                if( mast != nullptr ) {
+                    // półka ceownika: 75 mm (C160-200), 85 mm (C240) - ZAŁOŻENIE jak w assemble_anchor
+                    auto const flange { mast->width >= 0.235 ? 0.085 : 0.075 };
+                    input.depth = [ flange ]( double ) { return flange; };
+                }
                 input.structure_angle = std::atan2( glm::dot( glm::dvec3 { structure.x, 0.0, structure.y }, axes[ 1 ] ), glm::dot( glm::dvec3 { structure.x, 0.0, structure.y }, axes[ 0 ] ) );
                 input.aimed = true;
                 todevice( clamp, input.messenger_target );
