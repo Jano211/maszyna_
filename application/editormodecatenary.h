@@ -103,6 +103,8 @@ struct catenary_editor
 		// another cantilever, single beam elements, turning a gantry); off: only what a usual line needs. What's set stays shown
 		bool expert{false};
 		bool stay_shift_open{false};
+		bool strut_shift_open{false}; // the bottom (strut) mount slider shown
+		bool turn_open{false};        // the turn by hand slider shown
 		// group earthing: the poles clicked one after another become the next earthing line (page 3)
 		bool earthing_building{false};
 		std::vector<std::string> earthing_poles;

@@ -113,6 +113,35 @@ int main( int, char *argv[] ) {
         check( a && b && c && std::abs( mountup - mountplain - 0.30 ) < 0.02 && text.find( " stay_shift -0.300" ) != std::string::npos
             && problems.empty() && parsed.entries.size() == 1 && parsed.entries.front().stay_shift == -0.30, "gorne mocowanie +-0,30 m (stay_shift): sklada sie, zapis i odczyt" );
     }
+    {
+        // dolne mocowanie przesunięte (strut_shift) i obrót ręczny (turn_by_hand): składa się, zapis i odczyt
+        auto const strutof = []( catenary::cantilever_result const &R ) { auto const *p { R.find( "strut" ) }; return p != nullptr ? p->part : std::string( "-" ); };
+        catenary::cantilever_result plain, down, turned;
+        auto shifted { moved };
+        auto const a { catenary_scene_probe( moved, plain ) };
+        shifted.strut_shift = -0.30;
+        auto const b { catenary_scene_probe( shifted, down ) };
+        std::printf( "  ukosnik: karta %s (uwag %zu), -0,30 %s (uwag %zu)\n", strutof( plain ).c_str(), plain.warnings.size(), strutof( down ).c_str(), down.warnings.size() );
+        for( auto const &w : down.warnings ) { std::printf( "    -: %s\n", w.c_str() ); }
+        auto const mountdown { down.values.count( "mount.strut" ) ? down.values.at( "mount.strut" ) : 0.0 }, mountplain { plain.values.count( "mount.strut" ) ? plain.values.at( "mount.strut" ) : 0.0 };
+        auto turn { moved };
+        turn.turn_by_hand = 10.0;
+        auto const c { catenary_scene_probe( turn, turned ) };
+        auto const *before { plain.find( "messenger_clamp" ) }, *after { turned.find( "messenger_clamp" ) };
+        auto const *hinge { plain.find( "strut_hinge" ) };
+        auto const expected { hinge != nullptr && before != nullptr ? ( hinge->position[ 1 ] - before->position[ 1 ] ) * std::sin( 10.0 * 3.14159265358979323846 / 180.0 ) : -1.0 };
+        auto const moved10 { before != nullptr && after != nullptr ? after->position[ 0 ] - before->position[ 0 ] : 0.0 };
+        std::printf( "  obrot reczny 10 st.: uchwyt liny przesuniety o %.3f m (oczekiwane %.3f), strut_mount %.3f -> %.3f\n", moved10, expected, mountplain, mountdown );
+        shifted.turn_by_hand = 10.0;
+        auto const text { catenary::write_suspension( shifted ) };
+        std::vector<std::string> tokens; std::istringstream words { text }; for( std::string w; words >> w; ) { tokens.push_back( w ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( tokens, "zapis", parsed, problems );
+        check( a && b && c && std::abs( mountplain - mountdown - 0.30 ) < 0.02 && std::abs( moved10 - expected ) < 0.01
+            && text.find( " strut_shift -0.300" ) != std::string::npos && text.find( " turn_by_hand 10.00" ) != std::string::npos
+            && problems.empty() && parsed.entries.size() == 1 && parsed.entries.front().strut_shift == -0.30 && parsed.entries.front().turn_by_hand == 10.0,
+            "dolne mocowanie -0,30 m (strut_shift) i obrot reczny 10 st. (turn_by_hand): sklada sie, zapis i odczyt" );
+    }
     auto wrong { moved }; wrong.card = 9999;
     check( false == catenary_scene_probe( wrong, probe ) && false == probe.warnings.empty() && errors.empty(), "proba z karta spoza katalogu: przyczyna w wyniku, nie w logu" );
     std::string message;
