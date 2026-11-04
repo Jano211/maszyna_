@@ -6779,6 +6779,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 				}
 				render_catenary_messenger_from(static_cast<std::size_t>(chain));
 				render_catenary_insulator(static_cast<std::size_t>(chain));
+				render_catenary_shared(static_cast<std::size_t>(chain));
 				render_catenary_second_net(static_cast<std::size_t>(chain));
 			}
 			if (ImGui::Button(STR_C("Remove the pole")))
@@ -6884,6 +6885,55 @@ void catenary_editor::render_catenary_insulator(std::size_t const Chain)
 	}
 	else if (slid)
 		catenary_chain_update(Chain, changed);
+}
+
+// the shared running line (parallel) of the span after the selected pole, and of the span from the start anchor at the first pole:
+// automatic (tension overlaps and wires crossing within reach of the pantograph head over switches), always or never. With it the
+// pantograph looks for the lowest wire above it all the time instead of holding on to the wire going up to an anchor
+void catenary_editor::render_catenary_shared(std::size_t const Chain)
+{
+	auto &tool{m_catenary};
+	auto const *chain{catenary_chain_get(Chain)};
+	auto const *data{tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr};
+	if (chain == nullptr || data == nullptr || data->name.empty())
+		return;
+	auto const &list{chain->suspensions};
+	auto const found{std::find(list.begin(), list.end(), data->name)};
+	if (found == list.end())
+		return;
+	std::vector<std::pair<std::string, std::string>> spans; // key of the span, its label
+	if (found == list.begin() && false == chain->anchor_start.empty())
+		spans.emplace_back("start", format(STR_C("Span from the anchor %s"), chain->anchor_start.c_str()));
+	if (found + 1 != list.end())
+		spans.emplace_back(data->name, format(STR_C("Span to %s"), (found + 1)->c_str()));
+	else if (false == chain->anchor_end.empty())
+		spans.emplace_back(data->name, format(STR_C("Span to the anchor %s"), chain->anchor_end.c_str()));
+	ImGui::PushID("shared");
+	for (auto const &[key, label] : spans)
+	{
+		auto const set{std::find_if(chain->shared.begin(), chain->shared.end(), [&](auto const &Shared) { return Shared.first == key; })};
+		int chosen{set == chain->shared.end() ? 0 : set->second ? 1 : 2};
+		char const *items[]{STR_C("automatic"), STR_C("always"), STR_C("never")};
+		ImGui::PushID(key.c_str());
+		ImGui::PushItemWidth(120.0f);
+		if (ImGui::Combo(format(STR_C("Shared running line: %s"), label.c_str()).c_str(), &chosen, items, 3))
+		{
+			auto changed{*chain};
+			changed.shared.erase(std::remove_if(changed.shared.begin(), changed.shared.end(), [&](auto const &Shared) { return Shared.first == key; }), changed.shared.end());
+			if (chosen != 0)
+				changed.shared.emplace_back(key, chosen == 1);
+			tool.undo.push_back({++tool.group, true, Chain, std::nullopt, *chain, false});
+			catenary_chain_update(Chain, changed);
+			chain = catenary_chain_get(Chain);
+		}
+		ImGui::PopItemWidth();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("The span shares the running line with the wires next to it (parallel): the pantograph looks for the lowest wire above it all the time. Automatic: in tension overlaps and where another chain's wire comes within reach of the pantograph head (switches, crossings), also in the spans to the anchors. Always: e.g. a switch the automatic doesn't catch. Never: the pantograph keeps to this wire"));
+		ImGui::PopID();
+		if (chain == nullptr)
+			break;
+	}
+	ImGui::PopID();
 }
 
 // the selected pole in the chain on the second network of its cantilever (102x: the second messenger and contact wire, 117x/118x and

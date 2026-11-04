@@ -12022,6 +12022,27 @@ msgstr "Wysięgnik obrócony ręcznie na zawiasie wokół pionu, np. tak jak wis
 msgid "deg##turnbyhand"
 msgstr "°##turnbyhand"
 
+msgid "Span from the anchor %s"
+msgstr "Przęsło od kotwienia %s"
+
+msgid "Span to %s"
+msgstr "Przęsło do %s"
+
+msgid "Span to the anchor %s"
+msgstr "Przęsło do kotwienia %s"
+
+msgid "always"
+msgstr "zawsze"
+
+msgid "never"
+msgstr "nigdy"
+
+msgid "Shared running line: %s"
+msgstr "Bieżnia wspólna: %s"
+
+msgid "The span shares the running line with the wires next to it (parallel): the pantograph looks for the lowest wire above it all the time. Automatic: in tension overlaps and where another chain's wire comes within reach of the pantograph head (switches, crossings), also in the spans to the anchors. Always: e.g. a switch the automatic doesn't catch. Never: the pantograph keeps to this wire"
+msgstr "Przęsło ma bieżnię wspólną z przewodami obok (parallel): pantograf cały czas szuka najniższego przewodu nad sobą. Samo: w przęsłach naprężenia i tam, gdzie przewód innego łańcucha wchodzi w zasięg ślizgu (rozjazdy, skrzyżowania), także w przęsłach do kotwień. Zawsze: np. rozjazd, którego automat nie złapał. Nigdy: pantograf trzyma się tego przewodu"
+
 msgid "Section insulator in the span to %s"
 msgstr "Izolator sekcyjny w przęśle do %s"
 

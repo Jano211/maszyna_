@@ -79,6 +79,8 @@ catenary_span_create( std::string const &Name, double const RangeMax, double con
             span->hvParallel = ( other->hvParallel != nullptr ? other->hvParallel : other );
             other->hvParallel = span;
         }
+        // sama ze sobą (bieżnia wspólna włączona ręcznie, bez drugiego przęsła obok): pantograf i tak szuka przewodu co klatkę
+        else if( other == span ) { span->hvParallel = span; }
     }
     auto &section { simulation::Region->section( span->location() ) };
     if( section.m_geometrycreated ) {

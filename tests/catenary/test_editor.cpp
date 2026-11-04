@@ -168,7 +168,9 @@ int main( int, char *argv[] ) {
         catenary::chain line;
         line.name = "l1"; line.power = "pwr01"; line.voltage = 3500; line.type = "YwsC120-2C"; line.state = 2;
         line.suspensions = { "s0001", "s0002", "s0003" };
+        line.shared = { { "s0002", true }, { "start", false } };   // bieżnia wspólna ręcznie (rozjazdy)
         auto const written { catenary::write_chain( line ) };
+        check( written.find( " shared s0002 on shared start off" ) != std::string::npos, "lancuch: bieznia wspolna recznie (shared) w zapisie" );
         std::vector<std::string> tokens;
         for( auto const &item : { entry } ) { (void)item; }
         auto a { entry }, b { entry }, c { entry };
