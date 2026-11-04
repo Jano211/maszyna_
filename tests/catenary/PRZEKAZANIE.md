@@ -17,10 +17,11 @@ Testy: `tests/catenary/te tests/catenary/data` (argument = katalog danych, bez n
   łańcucha `shared <podwieszenie|start> on|off` (on bez sąsiada = parallel na siebie).
 - lista „Izolatory” zamiast checkboxa 25 kV (`catenary_scene_insulator_sets`, zestawy z końcówek NNNN-<zestaw>).
 
-**Czeka na odpowiedź Jana (pytania wysłane 04.11):** (1) „dziura w rurowych rozjazdowych” – w danych 109x i 128x tylko wyk. 3/4,
-109x od 1091 (A ≥ 1,75), przy licu 4,00 A > 4,45 bez karty – która sytuacja? (2) teowniki: izolatory jak w rurowych (inne części)
-czy tylko wybór zestawu? (3) „obrót od naciągu” – co to ma być? (4) podgląd szerokości pantografu: 1,95 m czy pole pracy, na
-wysokości przewodu z przechyłką?
+**Odpowiedzi Jana 04.11 23:16 (wprowadzone):** każdy izolator wszędzie → override ról `*_insulator` w panelu (`1782366`);
+obrót od naciągu = od brakujących ciężarów (`c48d219`); rozjazdowe – nic nie przegapione, brakuje tylko „113x z łapkami 6206”
+(128x z odsuwem do słupa) – złożyć ręcznie (wysięgnik „z pizzy”); podgląd pantografu: wysokość przewodu z sieci, w osi toru, pole
+pracy + cały ślizg innym kolorem (`65f59a1`, pole pracy 1,45 m ZAŁOŻENIE). Edytor torów: 0 FPS przy patrzeniu wzdłuż dużej
+scenerii – wskazywanie toru bez odrzucania w perspektywie, poprawione.
 **Na później (pomysł Jana 04.11):** wysięgnik „z pizzy” – baza przechylny/nieprzechylny + ręcznie dokładane części (wieszaki,
 łapki, rura odciągu), tylko jedna lina i jeden układ przewodów; przyda się też na sieć zlikwidowaną i w budowie (same ukośniki
 z odciągami). Potrzebna od Jana lista baz i części dopuszczalnych do każdej.

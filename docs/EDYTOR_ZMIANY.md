@@ -18,6 +18,13 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor torów: wskazywanie toru nie przelicza całej scenerii co klatkę — commit o tym tytule
+- W widoku perspektywicznym wskazywanie toru pod kursorem próbkowało co klatkę każdy tor scenerii (do 64 rzutów na ścieżkę) –
+  patrząc wzdłuż dużej scenerii (np. Kielce → Częstochowa) klatki spadały do zera. Teraz najpierw rzut czterech punktów krzywej
+  (krzywa leży w ich otoczce): gdy prostokąt otoczki na ekranie z marginesem wskazywania mija kursor, ścieżka jest pomijana.
+- Przy okazji podgląd pantografu najpierw odrzuca ścieżki daleko od kamery tanim testem, bez liczenia długości.
+- Zmienia: `application/editormodetrackux.cpp`, `application/editormodecatenary.cpp`. Wymaga: nic.
+
 ### Edytor sieci: podgląd ślizgu pantografu nad torami — commit o tym tytule
 - Strona Druty, przełącznik „Pantograf”: nad torami do 250 m od kamery co 2 m ślizg na wysokości najniższego przewodu jezdnego,
   który by złapał (jak `vehicle_table::update_traction`), w osi toru przechylony z przechyłką. Pole pracy 1,45 m niebieskie, cały

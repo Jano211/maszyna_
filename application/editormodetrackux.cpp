@@ -99,6 +99,31 @@ bool plan_near(bezier const &Curve, glm::dvec2 const &Point, double const Reach)
 	return glm::distance(centre, Point) <= radius + Reach;
 }
 
+// whether the mouse is within Margin pixels of the screen box of the hull of the curve (its four points); a hull partly behind
+// the camera counts as near (the curve is sampled as before), wholly behind - not
+bool hull_near(screen_projection const &Projection, bezier const &Curve, glm::vec2 const &Mouse, double const Margin)
+{
+	float left{std::numeric_limits<float>::max()}, top{left}, right{-left}, bottom{-left};
+	int shown{0};
+	for (auto const *point : {&Curve.p0, &Curve.p1, &Curve.p2, &Curve.p3})
+	{
+		ImVec2 screen;
+		if (false == Projection.project(*point, screen))
+			continue;
+		++shown;
+		left = std::min(left, screen.x);
+		right = std::max(right, screen.x);
+		top = std::min(top, screen.y);
+		bottom = std::max(bottom, screen.y);
+	}
+	if (shown == 0)
+		return false;
+	if (shown < 4)
+		return true;
+	auto const margin{static_cast<float>(Margin)};
+	return Mouse.x >= left - margin && Mouse.x <= right + margin && Mouse.y >= top - margin && Mouse.y <= bottom + margin;
+}
+
 double segment_distance2(glm::vec2 const &Point, glm::vec2 const &A, glm::vec2 const &B, double &T)
 {
 	auto const ab{B - A};
@@ -131,6 +156,11 @@ editor_mode::track_hover editor_mode::track_under_cursor(TTrack const *Only, flo
 		for (int i = 0; i < static_cast<int>(track->m_paths.size()); ++i)
 		{
 			bezier const curve{track->m_paths[i]};
+			// the curve lies in the hull of its four points: when the hull on the screen (with the hover margin) misses the mouse,
+			// the path is skipped before it's sampled. In the perspective view nothing was culled and every path of the scenery
+			// was sampled (up to 64 projections) every frame - looking along a big scenery the frames dropped to zero
+			if (false == cull && Only == nullptr && false == hull_near(projection, curve, mouse, std::sqrt(best)))
+				continue;
 			// the catenary works close to the camera: the paths far away aren't looked at (in a big scenery they cost a lot)
 			if ((cull && false == plan_near(curve, plan_of(origin), reach)) ||
 			    (m_track_tab == track_tab::catenary && glm::distance(curve.point(0.5), glm::dvec3{Global.pCamera.Pos}) > curve.plan_length() * 0.5 + kCatenaryHoverRange))
