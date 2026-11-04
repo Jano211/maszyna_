@@ -1097,7 +1097,7 @@ anchors_chain( catenary::chain const &Chain, std::string const &Name, bool *Star
     if( Start != nullptr ) { *Start = start; }
     return start || Chain.anchor_end == Name || Chain.anchor_end_contact == Name;
 }
-void follow_anchor( scene_anchor const &Anchor );
+void follow_anchor( scene_anchor const &Anchor, bool Whole = true );
 void add_tube( std::vector<catenary::solid_vertex> &Triangles, std::vector<glm::dvec3> const &Points, double Radius );
 void rope_of( catenary::suspension const &Data, double *Rope );
 
@@ -4269,13 +4269,33 @@ namespace {
 
 // przęsła łańcucha z kotwieniem idą za nim: przęsło do kotwienia (położenie końców), a pozostałe przez naciąg
 // (brakujące ciężary zmieniają zwis wszystkich przęseł do kotwienia środkowego)
+// Whole: wszystkie przęsła łańcucha; inaczej tylko przęsło do tego kotwienia (zmienione położenie / wysokości, naciąg ten sam).
+// Przeciąganie wysokości suwakiem przebudowywało co klatkę cały łańcuch (solver wieszaków, linki Y w każdym przęśle) - spadek
+// klatek tylko w trakcie przesuwania (Jan 2026-11-04)
 void
-follow_anchor( scene_anchor const &Anchor ) {
+follow_anchor( scene_anchor const &Anchor, bool const Whole ) {
     for( auto &chain : Chains ) {
         if( chain.removed || chain.file != Anchor.file || Anchor.data.name.empty() ) { continue; }
-        if( false == anchors_chain( chain.data, Anchor.data.name ) ) { continue; }
-        for( std::size_t span = 0; span < chain.spans.size(); ++span ) { rebuild_span( chain, span ); }
+        bool start { false };
+        if( false == anchors_chain( chain.data, Anchor.data.name, &start ) ) { continue; }
+        if( Whole ) {
+            for( std::size_t span = 0; span < chain.spans.size(); ++span ) { rebuild_span( chain, span ); }
+            continue;
+        }
+        if( chain.spans.empty() ) { continue; }
+        auto const span { start ? std::size_t { 0 } : chain.spans.size() - 1 };
+        rebuild_span( chain, span );   // bryły kotwienia środkowego w tym przęśle (gdyby było) dokłada z zapamiętanych
     }
+}
+
+// czy po złożeniu kotwienie daje przęsłom inny naciąg niż przedtem (span_tension bierze result.tension / nominal_tension,
+// solved i grounded) albo inny zasięg (distance)
+bool
+anchor_tension_changed( scene_anchor const &Before, scene_anchor const &After ) {
+    if( Before.solved != After.solved || Before.data.name != After.data.name || Before.data.distance != After.data.distance ) { return true; }
+    if( false == After.solved ) { return false; }
+    auto const &a { Before.result }, &b { After.result };
+    return a.grounded != b.grounded || std::abs( a.tension - b.tension ) > 1e-6 || std::abs( a.nominal_tension - b.nominal_tension ) > 1e-6;
 }
 
 } // namespace
@@ -4372,10 +4392,17 @@ bool
 catenary_anchor_update( std::size_t const Index, catenary::anchor const &Data ) {
     if( Index >= Anchors.size() ) { return false; }
     auto &anchor { Anchors[ Index ] };
+    scene_anchor before;
+    before.data = anchor.data;
+    before.solved = anchor.solved && false == anchor.removed;
+    before.result.grounded = anchor.result.grounded;
+    before.result.tension = anchor.result.tension;
+    before.result.nominal_tension = anchor.result.nominal_tension;
+    auto const wasremoved { anchor.removed };
     anchor.data = Data;
     anchor.removed = false;
     assemble_anchor( anchor );
-    follow_anchor( anchor );
+    follow_anchor( anchor, wasremoved || anchor_tension_changed( before, anchor ) );
     mark_changed( anchor.file );
     return true;
 }
