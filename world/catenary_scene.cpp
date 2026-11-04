@@ -514,7 +514,11 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     // dłuższy izolator ukośnika - Jan 2026-10-17, 1232), dolny zaczep ukośnika schodzi co 0,1 m (najwyżej 0,5 m), aż uwag
     // nie będzie; zostaje najmniejsze obniżenie z najmniejszą liczbą uwag.
     std::vector<std::pair<std::string, std::vector<std::string>>> fits;
-    if( false == data.insulators.empty() ) {
+    // izolator podmieniony ręcznie w roli (override "*_insulator", Jan 2026-11-04: każdy izolator na każdym wysięgniku) - rury
+    // dobierane tak samo jak przy zestawie
+    auto const swapped { false == data.insulators.empty() || std::any_of( data.overrides.begin(), data.overrides.end(), []( std::pair<std::string, std::string> const &O ) {
+        return O.first.size() > 10 && O.first.compare( O.first.size() - 10, 10, "_insulator" ) == 0; } ) };
+    if( swapped ) {
         for( auto const *tube : { "strut", "stay", "steady" } ) {
             auto const role { scheme->roles.find( tube ) }, insulator { scheme->roles.find( std::string( tube ) + "_insulator" ) };
             auto const replaced { input.overrides.find( std::string( tube ) + "_insulator" ) };
@@ -591,7 +595,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         { catenary::cantilever_result plain; solve( input.overrides, 0.0, plain );
           for( auto const &warning : plain.warnings ) { if( warning.find( "highest mount position" ) != std::string::npos ) { ++baseline; } } }
         // obniżanie zaczepu ukośnika tylko przy podmienionych izolatorach
-        auto const steps { data.insulators.empty() ? 0 : 5 };
+        auto const steps { swapped ? 5 : 0 };
         for( int step = 0; step <= steps && best > baseline; ++step ) {
             auto const drop { 0.1 * step };
             std::vector<std::size_t> choice( fits.size(), 0 );

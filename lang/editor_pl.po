@@ -11995,6 +11995,15 @@ msgstr "Zwis przechodzi po dźwigarze na drugą stronę osi toru w tej samej odl
 msgid "Top mount moved"
 msgstr "Górne mocowanie przesunięte"
 
+msgid "Insulators of this cantilever"
+msgstr "Izolatory tego wysięgnika"
+
+msgid "%s (card)"
+msgstr "%s (z karty)"
+
+msgid "Any insulator of the catalogue in place of the one of the card (also the tube ones on the tees and the other way round); the tube or rod it sits on is taken shorter or longer to fit, as with an insulator set. Where the parts don't fit together the solver says so in the remarks"
+msgstr "Dowolny izolator z katalogu zamiast tego z karty (także rurowe na teownikach i odwrotnie); rura albo pręt, na którym siedzi, dobierany krótszy albo dłuższy, jak przy zestawie izolatorów. Gdzie części do siebie nie pasują, solver mówi o tym w uwagach"
+
 msgid "Brace 6506 (as on 102x)"
 msgstr "Zastrzał 6506 (jak w 102x)"
 

@@ -143,6 +143,17 @@ int main( int, char *argv[] ) {
             "dolne mocowanie -0,30 m (strut_shift) i obrot reczny 10 st. (turn_by_hand): sklada sie, zapis i odczyt" );
     }
     {
+        // izolator podmieniony ręcznie w roli (override): rura dobierana jak przy zestawie 25 kV
+        auto const partof = []( catenary::cantilever_result const &R, char const *Role ) { auto const *p { R.find( Role ) }; return p != nullptr ? p->part : std::string( "-" ); };
+        catenary::cantilever_result plain, swapped;
+        auto changed { moved };
+        changed.overrides.emplace_back( "strut_insulator", "7100-25" );
+        auto const a { catenary_scene_probe( moved, plain ) }, b { catenary_scene_probe( changed, swapped ) };
+        std::printf( "  izolator ukosnika recznie 7100-25: ukosnik %s -> %s, izolator %s, uwag %zu\n", partof( plain, "strut" ).c_str(), partof( swapped, "strut" ).c_str(), partof( swapped, "strut_insulator" ).c_str(), swapped.warnings.size() );
+        for( auto const &w : swapped.warnings ) { std::printf( "    %s\n", w.c_str() ); }
+        check( a && b && partof( swapped, "strut_insulator" ) == "7100-25", "izolator podmieniony recznie (override strut_insulator 7100-25): sklada sie" );
+    }
+    {
         auto const sets { catenary_scene_insulator_sets() };
         check( sets.size() == 1 && sets.front() == "25", "zestawy izolatorow do wyboru z katalogu: tylko 25 (bez zwyklego -01)" );
     }
