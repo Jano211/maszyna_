@@ -8077,6 +8077,10 @@ void catenary_editor::draw_catenary_overlay() const
 			for (auto const &path : track->m_paths)
 			{
 				bezier const curve{path};
+				// cheap first (the whole scenery every frame): the ends and the control points far from the camera
+				if (std::min({geometry::plan_distance(curve.p0, camera), geometry::plan_distance(curve.p3, camera), geometry::plan_distance(curve.point(0.5), camera)}) > kPantographRange
+				    && geometry::plan_distance(curve.p0, curve.p3) < kPantographRange)
+					continue;
 				auto const length{curve.plan_length()};
 				if (length < 0.1 || geometry::plan_distance(curve.point(0.5), camera) > kPantographRange + 0.5 * length)
 					continue;
