@@ -18,6 +18,21 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Sieć trakcyjna: mocowania na słupach bramek 311x przy ścianie nogi — commit o tym tytule
+- Co widać: wysięgniki na słupach bramek palowych 3111–3113 nie stoją już 2 cm przed ścianą nogi (z obu stron toru).
+- Dane `traction_supports.txt`: 311x `offset 0.121` → `0.101` (C200, ściana 0,100 od osi wzdłuż dźwigara, przekrój modelu na
+  wysokości mocowań); 312x `width 0.200` → `0.240` (C240, ściana 0,120; offset był dobry). `offset` wyznacza też koniec dźwigara.
+- Zmienia: `tests/catenary/data/traction_supports.txt`. Wymaga: kopia na `G:\Maszyna2510\data\` (wgrana 06.11).
+
+### Edytor sieci: słup kotwowy na główce szyny, Shift+A – kotwienie do stojącego słupa — commit o tym tytule
+- Co widać: „Zakotwicz koniec/początek łańcucha” stawia słup kotwowy na wysokości główki szyny toru przy nim. Wcześniej brał
+  wysokość z ostatniego słupa łańcucha – przy zwisie bramki to spód dźwigara, więc słup lądował kilka metrów w górze. Suwaki
+  położenia słupa kotwowego też stawiają go na główce szyny (na spadku idzie za torem). Słup już postawiony za wysoko: wystarczy
+  ruszyć suwak.
+- Shift+A: koniec łańcucha (ciągniętego albo przy zaznaczonym pierwszym/ostatnim słupie) kotwiony do stojącego słupa – LPM na
+  słup, Esc anuluje. Same A i D zostają wolne (pomyłki).
+- Zmienia: `application/editormodecatenary.cpp`, `lang/editor_pl.po`. Wymaga: nic.
+
 ### Edytor sieci: menu Widok > Sieć trakcyjna – przełączniki podglądów — commit o tym tytule
 - Co widać: w górnym menu Widok podmenu „Sieć trakcyjna” z przełącznikami wszystkiego, co rysuje nakładka sieci: słupy, bramki,
   kotwienia, przęsła, kolory przęseł wg katalogu, długości przęseł, uwagi Iet-107, odsuwy w widoku, pantograf, wstawianie (oś

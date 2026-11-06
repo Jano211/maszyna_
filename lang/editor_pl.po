@@ -11227,6 +11227,21 @@ msgstr "zaznacza kotwienie i jego łańcuch"
 msgid "removes the selected anchor"
 msgstr "usuwa zaznaczone kotwienie"
 
+msgid "anchors the end of the chain to a pole standing (LMB on it)"
+msgstr "kotwi koniec łańcucha do stojącego słupa (LPM na niego)"
+
+msgid "the first or last pole of a chain: its end anchored to a pole standing (LMB on it)"
+msgstr "pierwszy albo ostatni słup łańcucha: jego koniec kotwiony do stojącego słupa (LPM na niego)"
+
+msgid "Shift+A anchors an end of a chain: build the chain, or select its first or last pole"
+msgstr "Shift+A kotwi koniec łańcucha: ciągnij łańcuch albo zaznacz jego pierwszy lub ostatni słup"
+
+msgid "This end of the chain is anchored already"
+msgstr "Ten koniec łańcucha jest już zakotwiony"
+
+msgid "Shift+A: LMB on the pole the tensioning device goes on (Esc cancels)"
+msgstr "Shift+A: LPM na słup, na który idzie urządzenie naprężające (Esc anuluje)"
+
 msgid "The chain is ended: the next pole starts a new one"
 msgstr "Łańcuch zakończony: następny słup zaczyna nowy"
 
