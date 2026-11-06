@@ -2724,16 +2724,20 @@ void scene_walk::Render_Alpha(TTraction *Traction)
 	// McZapkie-261102: kolor zalezy od materialu i zasniedzenia
 	model_ubs.param[0] = glm::vec4(Traction->wire_color(), glm::min(1.0f, linealpha));
 
+	// up close a span drawn by the type of the catenary has solids: the wires and ropes in their real thickness and the fittings.
+	// then the lines aren't drawn - by themselves they'd show wherever they don't lie inside the solids (Jan 2026-11-06: lines by the Y)
+	auto const solid{catenary_span_solid(*Traction, Global.pCamera.Pos)};
+
 	if (m_renderpass.draw_mode == rendermode::shadows)
 		walk_shadow_material(null_handle);
 	else
 		walk_program( walk_shader::line );
 
-	walk_draw(Traction->m_geometry);
+	if (solid.wires == null_handle)
+		walk_draw(Traction->m_geometry);
 
-	// up close also the solids of a span drawn by the type of the catenary: the wires and ropes in their real thickness and the fittings.
-	// they're opaque, so they're drawn without blending and write the depth; otherwise they'd cover one another by the order they're drawn in
-	if (auto const solid{catenary_span_solid(*Traction, Global.pCamera.Pos)}; solid.wires != null_handle)
+	// the solids are opaque, so they're drawn without blending and write the depth; otherwise they'd cover one another by the order they're drawn in
+	if (solid.wires != null_handle)
 	{
 		auto const blending{walk_blending_enabled()};
 		if (m_renderpass.draw_mode != rendermode::shadows)

@@ -172,6 +172,74 @@ glm::dvec2 right_of(glm::dvec2 const &Direction)
 	return {-Direction.y, Direction.x};
 }
 
+// the signed distance of Point from the axis of the track a chain ends over (Jan 2026-11-06: the anchor pole from -30 to +30 m
+// of the axis, on it too). The track: the one nearest to Over (the wire at the last pole), or one joined to it when Point is
+// past its end. Right: the unit vector across that track at Point (+ right of the track)
+bool track_offset(glm::dvec3 const &Over, glm::dvec3 const &Point, double &Offset, glm::dvec2 &Right)
+{
+	TTrack *base{nullptr};
+	auto best{5.0};
+	for (auto *track : simulation::Paths.sequence())
+	{
+		if (track == nullptr || track->m_editorremoved || track->m_paths.empty())
+			continue;
+		for (int path = 0; path < static_cast<int>(track->m_paths.size()); ++path)
+		{
+			bezier const curve{track->m_paths[path]};
+			if (geometry::plan_distance(curve.point(0.5), Over) > curve.plan_length() * 0.5 + best)
+				continue;
+			auto const distance{geometry::plan_distance(curve.point(nearest_parameter(*track, path, Over)), Over)};
+			if (distance < best)
+			{
+				best = distance;
+				base = track;
+			}
+		}
+	}
+	if (base == nullptr)
+		return false;
+	// the base track and the ones joined to it, two deep each way: the one Point is square to (not past its end), nearest
+	std::vector<TTrack *> candidates{base};
+	auto const join = [&](TTrack *Track) {
+		if (Track != nullptr && std::find(candidates.begin(), candidates.end(), Track) == candidates.end())
+			candidates.push_back(Track);
+	};
+	for (auto *from : {base->CurrentPrev(), base->CurrentNext()})
+	{
+		if (from == nullptr)
+			continue;
+		join(from);
+		join(from->CurrentPrev());
+		join(from->CurrentNext());
+	}
+	auto found{false};
+	auto nearest{std::numeric_limits<double>::max()};
+	for (auto *track : candidates)
+	{
+		if (track == nullptr || track->m_editorremoved || track->m_paths.empty())
+			continue;
+		for (int path = 0; path < static_cast<int>(track->m_paths.size()); ++path)
+		{
+			bezier const curve{track->m_paths[path]};
+			auto const parameter{nearest_parameter(*track, path, Point)};
+			auto const axis{curve.point(parameter)};
+			auto const forward{forward_at(*track, path, parameter)};
+			auto const right{right_of(forward)};
+			auto const square{glm::dot(plan_of(Point) - plan_of(axis), right)};
+			// off the end of the path: not square to it
+			if ((parameter <= 1e-6 || parameter >= 1.0 - 1e-6) && std::abs(glm::dot(plan_of(Point) - plan_of(axis), forward)) > 0.05)
+				continue;
+			if (std::abs(square) >= nearest)
+				continue;
+			nearest = std::abs(square);
+			Offset = square;
+			Right = right;
+			found = true;
+		}
+	}
+	return found;
+}
+
 // the radius of the path over about 10 m each way from the parameter; 0 on a straight
 double path_radius(TTrack const &Track, int const Path, double const Parameter)
 {
@@ -1835,8 +1903,6 @@ void catenary_editor::catenary_take_settings(std::size_t const Index)
 	}
 	tool.insulators = data->insulators;
 	auto const decade{(data->card / 10) % 10};
-	if (data->card / 100 == 11 || data->card / 100 == 12)
-		tool.bend = (decade == 3 || decade == 4) ? 2 : 1;
 	auto const *spot{catenary_spot_of(Index)};
 	if (spot == nullptr)
 	{
@@ -1855,6 +1921,39 @@ void catenary_editor::catenary_take_settings(std::size_t const Index)
 	if (auto const *family{catenary_scene_structures().family_of(data->card)}; family != nullptr && family->toward >= 0)
 		toward = family->toward == 2 ? (data->card % 2 == 1) : family->toward == 1;
 	tool.toward = toward;
+	// "cards for": by the track, unless the card of the pole is for the other one (a straight card on a curve or the other way
+	// round) - then only for this pole (Jan 2026-11-06: 99% by the track, the next pole by the track again)
+	auto const trackcurve{spot->radius > 0.0 && spot->radius < kCurveRadius};
+	auto const *own{catenary_scene_structures().family_of(data->card)};
+	tool.bend = 0;
+	if (own != nullptr && own->curve >= 0)
+	{
+		if ((own->curve == 1) != trackcurve)
+			tool.bend = own->curve == 1 ? 2 : 1;
+	}
+	else if (data->card / 100 == 11 || data->card / 100 == 12)
+	{
+		auto const arc{decade == 3 || decade == 4};
+		if (arc != trackcurve)
+			tool.bend = arc ? 2 : 1;
+	}
+	// the family (and the card) chosen by the user stays (Jan 2026-11-06: it went back to "by the track and the stagger" with every
+	// change): the own family of the pole when the place by the track gives another one automatically, its card when the distance A
+	// gives another one in that family
+	if (own != nullptr && catalog != nullptr)
+	{
+		auto const &structures{catenary_scene_structures()};
+		auto const curve{tool.bend == 2 || (tool.bend == 0 && trackcurve)};
+		auto const automatic{catenary::pick_card(structures, *catalog, own->group, {}, 0, curve, toward, tool.execution, spot->reach)};
+		if (automatic.family == nullptr || automatic.family->id != own->id)
+			tool.catalog_family = own->id;
+		auto const bycard{catenary::pick_card(structures, *catalog, own->group, own->id, 0, curve, toward, tool.execution, spot->reach)};
+		if (bycard.scheme == nullptr || bycard.scheme->card != data->card)
+		{
+			tool.catalog_family = own->id;
+			tool.catalog_card = data->card;
+		}
+	}
 	tool.stagger = static_cast<float>(toward ? offset : -offset);
 	if (tool.stagger < 0.0f)
 		tool.wide_stagger = true; // the wires on the other side of the axis than the card: shown on the +-0.5 slider
@@ -2559,8 +2658,9 @@ void catenary_editor::catenary_place(catenary_spot const &Spot)
 	tool.spots[index].data = data;
 	tool.undo.push_back({tool.group, false, index, std::nullopt, std::nullopt, false});
 	tool.selected = -1;
-	// the swap and the span typed were for this pole
+	// the swap, the span typed and "cards for" were for this pole: the next one by the track again (Jan 2026-11-06)
 	tool.zigzag_flip = false;
+	tool.bend = 0;
 	e.m_typed.clear();
 	tool.status = format(STR_C("Pole %s with card %d execution %d placed, A = %.2f m"), data.pole_type.c_str(), Spot.card, data.execution, Spot.reach);
 	tool.status += ", " + format(Spot.toward ? STR_C("stagger %.2f m towards the pole (short cantilever)") : STR_C("stagger %.2f m away from the pole (long cantilever)"), zigzag_stagger(Spot.curve));
@@ -5078,20 +5178,29 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 				data.pole[2] = at.y;
 				edited = true;
 			}
-			// away from the track or towards it: square to the axis of the track nearest to it, at the same place along it
-			double face{0.0};
-			glm::dvec2 away{0.0};
-			if (catenary_mast_face({}, glm::dvec3{data.pole[0], data.pole[1], data.pole[2]}, face, away))
+			// away from the track or towards it, across it too (Jan 2026-11-06: -30 to +30 m, on the axis as well): square to the track
+			// the chain ends over, at the same place along it; + on the side of the last pole, - on the other side
+			double axisoffset{0.0};
+			glm::dvec2 right{0.0};
+			glm::dvec3 const over{last->at[0], last->at[1], last->at[2]};
+			if (track_offset(over, glm::dvec3{data.pole[0], data.pole[1], data.pole[2]}, axisoffset, right))
 			{
-				auto wanted{static_cast<float>(face)};
-				if (ImGui::DragFloat(STR_C("Anchor pole from the track axis (m)"), &wanted, 0.01f, 1.5f, 15.0f, "%.2f") && std::abs(wanted - face) > 1e-4)
+				double lastoffset{0.0};
+				glm::dvec2 lastright{0.0};
+				auto side{1.0};
+				if (last->has_pole && track_offset(over, glm::dvec3{last->pole[0], last->pole[1], last->pole[2]}, lastoffset, lastright) && lastoffset < 0.0)
+					side = -1.0;
+				auto const shown{axisoffset * side};
+				auto wanted{static_cast<float>(shown)};
+				if (ImGui::DragFloat(STR_C("Anchor pole from the track axis (m)"), &wanted, 0.01f, -30.0f, 30.0f, "%.2f") && std::abs(wanted - shown) > 1e-4)
 				{
-					data.pole[0] += away.x * (static_cast<double>(wanted) - face);
-					data.pole[2] += away.y * (static_cast<double>(wanted) - face);
+					auto const move{(std::clamp(static_cast<double>(wanted), -30.0, 30.0) - shown) * side};
+					data.pole[0] += right.x * move;
+					data.pole[2] += right.y * move;
 					edited = true;
 				}
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("From the axis of the nearest track to the axis of the anchor pole: it moves square to the track, away from it or towards it; the tensioning device turns after the wires. Drag or Ctrl+click to type"));
+					ImGui::SetTooltip("%s", STR_C("From the axis of the track the chain ends over to the axis of the anchor pole, -30 to +30 m: + on the side of the last pole, - across the track, 0 on its axis. It moves square to the track; the tensioning device turns after the wires. Drag or Ctrl+click to type"));
 			}
 			// a cantilever on the anchor pole (a pole which anchors one section and carries the wires of another one)
 			auto const placing{tool.anchor_cantilever == static_cast<int>(index)};
@@ -6376,17 +6485,47 @@ void catenary_editor::render_catenary_cantilever_ui()
 				for (auto const &role : scheme->roles)
 					if (auto const *part{catalog->part(role.second)}; part != nullptr && part->kind == "insulator")
 						roles.emplace_back(role.first, role.second);
-				for (auto const &part : catalog->parts())
-					if (part.second.kind == "insulator")
-						insulators.push_back(part.first);
 			}
+			// what fits in place of the insulator of the card (Jan 2026-11-06: the list of everything let people fit insulators where
+			// the fittings don't go): the tees 7010 <-> 7110 and 7020 <-> 7120 (the tubular ones never take 7110/7120); the tubular ones
+			// 7100 / 7010 / 7020 in the executions -01 (porcelain), -02 (resin) and -25 (25 kV), the ones the catalogue has
+			auto const tee{data->card / 100 == 1 || data->card / 100 == 9};
+			auto const fitting = [&](std::string const &Card) {
+				std::vector<std::string> list;
+				auto const add = [&](std::string const &Part) {
+					if (Part != Card && catalog->part(Part) != nullptr && std::find(list.begin(), list.end(), Part) == list.end())
+						list.push_back(Part);
+				};
+				auto const base{Card.substr(0, 4)};
+				if (tee)
+				{
+					static std::pair<char const *, char const *> const pairs[] = {{"7010", "7110"}, {"7020", "7120"}};
+					for (auto const &[tube, own] : pairs)
+					{
+						if (base == tube)
+							add(std::string(own) + "-01");
+						else if (base == own)
+							add(std::string(tube) + "-01");
+					}
+				}
+				else if (base == "7100" || base == "7010" || base == "7020")
+				{
+					for (auto const *execution : {"-01", "-02", "-25"})
+						add(base + execution);
+				}
+				return list;
+			};
 			if (false == roles.empty() && ImGui::TreeNode(STR_C("Insulators of this cantilever")))
 			{
 				auto const index{static_cast<std::size_t>(tool.selected)};
 				for (auto const &[role, card] : roles)
 				{
+					insulators = fitting(card);
 					auto const own{std::find_if(data->overrides.begin(), data->overrides.end(), [&](auto const &O) { return O.first == role; })};
 					auto const current{own != data->overrides.end() ? own->second : std::string()};
+					// nothing fits in its place: no list (unless an older override has to be taken back)
+					if (insulators.empty() && current.empty())
+						continue;
 					auto const shown{current.empty() ? format(STR_C("%s (card)"), card.c_str()) : current};
 					ImGui::PushItemWidth(160.0f);
 					if (ImGui::BeginCombo(role.c_str(), shown.c_str()))
@@ -6405,11 +6544,14 @@ void catenary_editor::render_catenary_cantilever_ui()
 						for (auto const &part : insulators)
 							if (ImGui::Selectable(part.c_str(), part == current))
 								pick(part);
+						// an override from before the list was narrowed (or of a part gone from the catalogue): still shown, so it can be undone
+						if (false == current.empty() && std::find(insulators.begin(), insulators.end(), current) == insulators.end())
+							ImGui::Selectable(format(STR_C("%s (doesn't fit here)"), current.c_str()).c_str(), true);
 						ImGui::EndCombo();
 					}
 					ImGui::PopItemWidth();
 					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("Any insulator of the catalogue in place of the one of the card (also the tube ones on the tees and the other way round); the tube or rod it sits on is taken shorter or longer to fit, as with an insulator set. Where the parts don't fit together the solver says so in the remarks"));
+						ImGui::SetTooltip("%s", STR_C("An insulator which fits in place of the one of the card: on the tees 7010 <-> 7110 and 7020 <-> 7120, on the tubular cantilevers 7100 / 7010 / 7020 in the execution -01 (porcelain), -02 (resin) or -25 (25 kV), if the catalogue has it; the tube or rod it sits on is taken shorter or longer to fit, as with an insulator set"));
 				}
 				ImGui::TreePop();
 			}
@@ -7833,7 +7975,8 @@ void catenary_editor::render_catenary_ui()
 	catenary_file_follow();
 	if (tool.selected < 0 && tool.bend_user.has_value())
 	{
-		tool.bend = *tool.bend_user;
+		// "cards for" of the selected pole was for it only: the next poles by the track (Jan 2026-11-06)
+		tool.bend = 0;
 		tool.bend_user.reset();
 	}
 	if (tool.continue_pending >= 0)

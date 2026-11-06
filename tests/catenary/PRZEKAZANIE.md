@@ -13,7 +13,7 @@ przęsło przebudowywane przez usunięcie i nowe dokładało fragment do banku g
 sekcji (cała sekcja na kartę co klatkę). Teraz przęsło wczytywane od nowa w miejscu (`catenary_span_reload`), banki brył z puli.
 
 **Uwagi użytkownika 06.11 – do zrobienia:**
-1. Izolatory: zawęzić wybór do pasujących. Teowniki: 7010→7110, 7020→7120 (rurowe nigdzie nie biorą 7110/7120). Rurowe:
+1. ZROBIONE 06.11 (lista „Izolatory tego wysięgnika”, w exe NIESPRAWDZONE). Izolatory: zawęzić wybór do pasujących. Teowniki: 7010→7110, 7020→7120 (rurowe nigdzie nie biorą 7110/7120). Rurowe:
    7100 / 7010 / 7020 w wykonaniu -01 → -02 (plastik, modele wkrótce) albo -25 (25 kV). Dziś lista pozwala wszystko wszędzie,
    także tam, gdzie mocowania nie pasują – ludzie będą to zmieniać bez sensu.
 2. Obrót od brakujących ciężarów „chyba nie działa” – w testach liczy się (3 ciężary → 0,17°, z mrozem 0,8°), ale tylko w
@@ -23,10 +23,12 @@ sekcji (cała sekcja na kartę co klatkę). Teraz przęsło wczytywane od nowa w
 4. Kotwienie: koncepcja zostaje (koledzy chcieli zaczynać od kotwy – użytkownik: bez sensu, za dużo sytuacji); dołożyć skróty
    klawiszowe. Dziś w trybie sieci znane: WSAD, Q/E, C, X – sprawdzić, co jeszcze zajęte.
 5. Kotwienie na osobnym słupie: słup ląduje bardzo wysoko – do ustalenia, którą drogą (przycisk) i na jakim typie słupa.
-6. Słup kotwowy: regulacja ±30 m od osi toru, łącznie z samą osią (dziś suwak 1,5–15 m).
-7. Rodzina słupa: ręcznie wybrana ma zostać, a nie wracać przy każdej zmianie do „z toru i odsuwu”. „Karty dla”: domyślnie
+6. ZROBIONE 06.11 (`track_offset`, w exe NIESPRAWDZONE). Słup kotwowy: regulacja ±30 m od osi toru, łącznie z samą osią (dziś suwak 1,5–15 m).
+7. ZROBIONE 06.11 (catenary_take_settings, w exe NIESPRAWDZONE). Rodzina słupa: ręcznie wybrana ma zostać, a nie wracać przy każdej zmianie do „z toru i odsuwu”. „Karty dla”: domyślnie
    „wg toru”; ręczny wybór tylko dla tego jednego słupa, następny znowu „wg toru”.
 8. Mocowania do bramek odstają od słupa bramki o kilka cm – sprawdzić zero modelu mocowania vs grubość ceownika w danych.
+9. ZROBIONE 06.11 (w exe NIESPRAWDZONE): linie GL_LINES przy Y z jednej strony razem z bryłami – odświeżanie dwa przęsła dalej,
+   z bliska bez linii (`scenewalk.cpp` Render_Alpha TTraction).
 
 ## START TUTAJ – 2026-11-04
 

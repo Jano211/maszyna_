@@ -11774,8 +11774,8 @@ msgstr "przesuwa słup kotwowy wzdłuż toru"
 msgid "Anchor pole from the track axis (m)"
 msgstr "Słup kotwowy od osi toru (m)"
 
-msgid "From the axis of the nearest track to the axis of the anchor pole: it moves square to the track, away from it or towards it; the tensioning device turns after the wires. Drag or Ctrl+click to type"
-msgstr "Od osi najbliższego toru do osi słupa kotwowego: słup przesuwa się prostopadle do toru, od niego albo do niego; urządzenie naprężające obraca się za drutami. Przeciągnij albo Ctrl+klik, żeby wpisać"
+msgid "From the axis of the track the chain ends over to the axis of the anchor pole, -30 to +30 m: + on the side of the last pole, - across the track, 0 on its axis. It moves square to the track; the tensioning device turns after the wires. Drag or Ctrl+click to type"
+msgstr "Od osi toru, nad którym kończy się łańcuch, do osi słupa kotwowego, od -30 do +30 m: + po stronie ostatniego słupa, - po drugiej stronie toru, 0 w osi toru. Słup przesuwa się prostopadle do toru; urządzenie naprężające obraca się za drutami. Przeciągnij albo Ctrl+klik, żeby wpisać"
 
 msgid "Stop placing the cantilever"
 msgstr "Przerwij stawianie wysięgnika"
@@ -12007,8 +12007,11 @@ msgstr "Izolatory tego wysięgnika"
 msgid "%s (card)"
 msgstr "%s (z karty)"
 
-msgid "Any insulator of the catalogue in place of the one of the card (also the tube ones on the tees and the other way round); the tube or rod it sits on is taken shorter or longer to fit, as with an insulator set. Where the parts don't fit together the solver says so in the remarks"
-msgstr "Dowolny izolator z katalogu zamiast tego z karty (także rurowe na teownikach i odwrotnie); rura albo pręt, na którym siedzi, dobierany krótszy albo dłuższy, jak przy zestawie izolatorów. Gdzie części do siebie nie pasują, solver mówi o tym w uwagach"
+msgid "An insulator which fits in place of the one of the card: on the tees 7010 <-> 7110 and 7020 <-> 7120, on the tubular cantilevers 7100 / 7010 / 7020 in the execution -01 (porcelain), -02 (resin) or -25 (25 kV), if the catalogue has it; the tube or rod it sits on is taken shorter or longer to fit, as with an insulator set"
+msgstr "Izolator, który pasuje w miejsce tego z karty: na teownikach 7010 <-> 7110 i 7020 <-> 7120, na wysięgnikach rurowych 7100 / 7010 / 7020 w wykonaniu -01 (porcelana), -02 (tworzywo) albo -25 (25 kV), o ile jest w katalogu; rura albo pręt, na którym siedzi, dobierany krótszy albo dłuższy, jak przy zestawie izolatorów"
+
+msgid "%s (doesn't fit here)"
+msgstr "%s (tu nie pasuje)"
 
 msgid "Brace 6506 (as on 102x)"
 msgstr "Zastrzał 6506 (jak w 102x)"

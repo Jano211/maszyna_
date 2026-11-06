@@ -18,6 +18,34 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Sieć trakcyjna: linie przęsła nie wystają z brył przy linkach Y — commit o tym tytule
+- Co widać: z bliska przy niektórych podwieszeniach Y z jednej strony wystawały linie (GL_LINES) obok brył drutów.
+- Przyczyna: kształt przęsła (zwis, połówka linki Y) zależy od sąsiada, a połówka Y sąsiada od jego drugiego sąsiada. Po zmianie
+  odświeżane były linie tylko najbliższych sąsiadów – przęsło dwa dalej zostawało ze starą połówką Y, a bryły liczone są na świeżo.
+- Teraz: linie odświeżane dwa przęsła w każdą stronę (`refresh_around`); gdy przęsło ma bryły (z bliska), linii się nie rysuje.
+- Zmienia: `world/catenary_scene_objects.cpp`, `rendering/common/scenewalk.cpp`. Wymaga: nic.
+
+### Edytor sieci: rodzina wybrana ręcznie zostaje, „Karty dla” domyślnie wg toru — commit o tym tytule
+- Co widać: zaznaczony słup z rodziną (albo kartą) inną niż ta, którą miejsce przy torze daje samo, pokazuje w panelu swoją
+  rodzinę i kartę – zmiana innego ustawienia już ich nie cofa do „wg toru i odsuwu” / „wg A”.
+- „Karty dla”: przy zaznaczeniu „wg toru”, chyba że karta słupa jest na drugą wersję (karta prostej na łuku albo odwrotnie).
+  Po odznaczeniu i po postawieniu słupa wraca na „wg toru” – ręczny wybór dotyczy tylko tego jednego słupa.
+- Zmienia: `application/editormodecatenary.cpp` (catenary_take_settings, catenary_place, render_catenary_ui). Wymaga: nic.
+
+### Edytor sieci: słup kotwowy od -30 do +30 m od osi toru — commit o tym tytule
+- Co widać: suwak „Słup kotwowy od osi toru” w panelu kotwienia ma zakres -30…+30 m, także 0 (słup w osi toru). Plus – po
+  stronie ostatniego słupa łańcucha, minus – po drugiej stronie toru.
+- Odległość liczona od toru, nad którym kończy się łańcuch (najbliższy przewodowi przy ostatnim słupie, albo dołączony do niego,
+  gdy słup kotwowy jest za jego końcem), a nie od najbliższego toru – suwak nie skacze, gdy słup przechodzi nad sąsiednimi torami.
+- Zmienia: `application/editormodecatenary.cpp`, `lang/editor_pl.po`. Wymaga: nic.
+
+### Edytor sieci: izolatory wysięgnika tylko pasujące — commit o tym tytule
+- Co widać: w „Izolatory tego wysięgnika” przy każdym izolatorze z karty tylko te, które tam pasują: teowniki 7010 ↔ 7110,
+  7020 ↔ 7120; rurowe 7100 / 7010 / 7020 w wykonaniu -01, -02 (tworzywo) albo -25 (25 kV) – te, które są w katalogu (-02
+  pojawi się samo po dopisaniu części). Izolator bez zamiennika nie ma listy.
+- Override sprzed zmiany, który tu nie pasuje, widać na liście jako „(tu nie pasuje)” – można wrócić do karty.
+- Zmienia: `application/editormodecatenary.cpp`, `lang/editor_pl.po`. Wymaga: nic.
+
 ### Sieć trakcyjna: przęsło przebudowywane w miejscu, bez przesyłania całej sekcji na kartę — commit o tym tytule
 - Co widać: suwaki kotwienia (wysokość rolek, odległość słupa) i przeciąganie słupów nie zbijają klatek.
 - Przyczyna: przebudowa przęsła usuwała je i robiła nowe. Nowy fragment w banku geometrii sekcji (i opróżnienie starego) w
