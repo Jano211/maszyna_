@@ -1903,8 +1903,6 @@ void catenary_editor::catenary_take_settings(std::size_t const Index)
 	}
 	tool.insulators = data->insulators;
 	auto const decade{(data->card / 10) % 10};
-	if (data->card / 100 == 11 || data->card / 100 == 12)
-		tool.bend = (decade == 3 || decade == 4) ? 2 : 1;
 	auto const *spot{catenary_spot_of(Index)};
 	if (spot == nullptr)
 	{
@@ -1923,6 +1921,39 @@ void catenary_editor::catenary_take_settings(std::size_t const Index)
 	if (auto const *family{catenary_scene_structures().family_of(data->card)}; family != nullptr && family->toward >= 0)
 		toward = family->toward == 2 ? (data->card % 2 == 1) : family->toward == 1;
 	tool.toward = toward;
+	// "cards for": by the track, unless the card of the pole is for the other one (a straight card on a curve or the other way
+	// round) - then only for this pole (Jan 2026-11-06: 99% by the track, the next pole by the track again)
+	auto const trackcurve{spot->radius > 0.0 && spot->radius < kCurveRadius};
+	auto const *own{catenary_scene_structures().family_of(data->card)};
+	tool.bend = 0;
+	if (own != nullptr && own->curve >= 0)
+	{
+		if ((own->curve == 1) != trackcurve)
+			tool.bend = own->curve == 1 ? 2 : 1;
+	}
+	else if (data->card / 100 == 11 || data->card / 100 == 12)
+	{
+		auto const arc{decade == 3 || decade == 4};
+		if (arc != trackcurve)
+			tool.bend = arc ? 2 : 1;
+	}
+	// the family (and the card) chosen by the user stays (Jan 2026-11-06: it went back to "by the track and the stagger" with every
+	// change): the own family of the pole when the place by the track gives another one automatically, its card when the distance A
+	// gives another one in that family
+	if (own != nullptr && catalog != nullptr)
+	{
+		auto const &structures{catenary_scene_structures()};
+		auto const curve{tool.bend == 2 || (tool.bend == 0 && trackcurve)};
+		auto const automatic{catenary::pick_card(structures, *catalog, own->group, {}, 0, curve, toward, tool.execution, spot->reach)};
+		if (automatic.family == nullptr || automatic.family->id != own->id)
+			tool.catalog_family = own->id;
+		auto const bycard{catenary::pick_card(structures, *catalog, own->group, own->id, 0, curve, toward, tool.execution, spot->reach)};
+		if (bycard.scheme == nullptr || bycard.scheme->card != data->card)
+		{
+			tool.catalog_family = own->id;
+			tool.catalog_card = data->card;
+		}
+	}
 	tool.stagger = static_cast<float>(toward ? offset : -offset);
 	if (tool.stagger < 0.0f)
 		tool.wide_stagger = true; // the wires on the other side of the axis than the card: shown on the +-0.5 slider
@@ -2627,8 +2658,9 @@ void catenary_editor::catenary_place(catenary_spot const &Spot)
 	tool.spots[index].data = data;
 	tool.undo.push_back({tool.group, false, index, std::nullopt, std::nullopt, false});
 	tool.selected = -1;
-	// the swap and the span typed were for this pole
+	// the swap, the span typed and "cards for" were for this pole: the next one by the track again (Jan 2026-11-06)
 	tool.zigzag_flip = false;
+	tool.bend = 0;
 	e.m_typed.clear();
 	tool.status = format(STR_C("Pole %s with card %d execution %d placed, A = %.2f m"), data.pole_type.c_str(), Spot.card, data.execution, Spot.reach);
 	tool.status += ", " + format(Spot.toward ? STR_C("stagger %.2f m towards the pole (short cantilever)") : STR_C("stagger %.2f m away from the pole (long cantilever)"), zigzag_stagger(Spot.curve));
@@ -7943,7 +7975,8 @@ void catenary_editor::render_catenary_ui()
 	catenary_file_follow();
 	if (tool.selected < 0 && tool.bend_user.has_value())
 	{
-		tool.bend = *tool.bend_user;
+		// "cards for" of the selected pole was for it only: the next poles by the track (Jan 2026-11-06)
+		tool.bend = 0;
 		tool.bend_user.reset();
 	}
 	if (tool.continue_pending >= 0)

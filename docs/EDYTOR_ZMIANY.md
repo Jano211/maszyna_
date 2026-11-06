@@ -18,6 +18,13 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: rodzina wybrana ręcznie zostaje, „Karty dla” domyślnie wg toru — commit o tym tytule
+- Co widać: zaznaczony słup z rodziną (albo kartą) inną niż ta, którą miejsce przy torze daje samo, pokazuje w panelu swoją
+  rodzinę i kartę – zmiana innego ustawienia już ich nie cofa do „wg toru i odsuwu” / „wg A”.
+- „Karty dla”: przy zaznaczeniu „wg toru”, chyba że karta słupa jest na drugą wersję (karta prostej na łuku albo odwrotnie).
+  Po odznaczeniu i po postawieniu słupa wraca na „wg toru” – ręczny wybór dotyczy tylko tego jednego słupa.
+- Zmienia: `application/editormodecatenary.cpp` (catenary_take_settings, catenary_place, render_catenary_ui). Wymaga: nic.
+
 ### Edytor sieci: słup kotwowy od -30 do +30 m od osi toru — commit o tym tytule
 - Co widać: suwak „Słup kotwowy od osi toru” w panelu kotwienia ma zakres -30…+30 m, także 0 (słup w osi toru). Plus – po
   stronie ostatniego słupa łańcucha, minus – po drugiej stronie toru.

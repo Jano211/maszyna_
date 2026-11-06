@@ -24,7 +24,7 @@ sekcji (cała sekcja na kartę co klatkę). Teraz przęsło wczytywane od nowa w
    klawiszowe. Dziś w trybie sieci znane: WSAD, Q/E, C, X – sprawdzić, co jeszcze zajęte.
 5. Kotwienie na osobnym słupie: słup ląduje bardzo wysoko – do ustalenia, którą drogą (przycisk) i na jakim typie słupa.
 6. ZROBIONE 06.11 (`track_offset`, w exe NIESPRAWDZONE). Słup kotwowy: regulacja ±30 m od osi toru, łącznie z samą osią (dziś suwak 1,5–15 m).
-7. Rodzina słupa: ręcznie wybrana ma zostać, a nie wracać przy każdej zmianie do „z toru i odsuwu”. „Karty dla”: domyślnie
+7. ZROBIONE 06.11 (catenary_take_settings, w exe NIESPRAWDZONE). Rodzina słupa: ręcznie wybrana ma zostać, a nie wracać przy każdej zmianie do „z toru i odsuwu”. „Karty dla”: domyślnie
    „wg toru”; ręczny wybór tylko dla tego jednego słupa, następny znowu „wg toru”.
 8. Mocowania do bramek odstają od słupa bramki o kilka cm – sprawdzić zero modelu mocowania vs grubość ceownika w danych.
 
