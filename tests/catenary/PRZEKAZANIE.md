@@ -23,10 +23,19 @@ sekcji (cała sekcja na kartę co klatkę). Teraz przęsło wczytywane od nowa w
 4. Kotwienie: koncepcja zostaje (koledzy chcieli zaczynać od kotwy – użytkownik: bez sensu, za dużo sytuacji); dołożyć skróty
    klawiszowe. Dziś w trybie sieci znane: WSAD, Q/E, C, X – sprawdzić, co jeszcze zajęte.
 5. Kotwienie na osobnym słupie: słup ląduje bardzo wysoko – do ustalenia, którą drogą (przycisk) i na jakim typie słupa.
+   Kod tworzenia (catenary_anchor_create) bierze wysokość z ostatniego słupa (`pole[1]`), przeciąganie – z główki szyny; nic
+   oczywistego. Czeka na odpowiedź użytkownika.
+10. Skróty: w trybie sieci zajęte bez modyfikatorów: Esc, C (dalej łańcuch; bez zaznaczenia – zakładka Plan), X, Insert, M,
+   cyfry (rozpiętość), Del, F (fokus), K (podział toru), End, O, Q/W/E/R (gizmo), F1–F7; litery zakładek toru L G T N U H B P V J;
+   WSAD/QE latają kamerą tylko z PPM. Wolne: A, D, I, S, Y, Z (bez Ctrl). Propozycja dla kotwienia czeka na decyzję.
 6. ZROBIONE 06.11 (`track_offset`, w exe NIESPRAWDZONE). Słup kotwowy: regulacja ±30 m od osi toru, łącznie z samą osią (dziś suwak 1,5–15 m).
 7. ZROBIONE 06.11 (catenary_take_settings, w exe NIESPRAWDZONE). Rodzina słupa: ręcznie wybrana ma zostać, a nie wracać przy każdej zmianie do „z toru i odsuwu”. „Karty dla”: domyślnie
    „wg toru”; ręczny wybór tylko dla tego jednego słupa, następny znowu „wg toru”.
-8. Mocowania do bramek odstają od słupa bramki o kilka cm – sprawdzić zero modelu mocowania vs grubość ceownika w danych.
+8. Mocowania do bramek odstają od słupa bramki o kilka cm – sprawdzone 06.11 na modelach z G: (skrypt bbox t3d): noga 3031 to
+   dwa C240 (środniki na ±0,30 wzdłuż dźwigara, półki do ±0,217, krawędzie półek ±0,12 wzdłuż toru), 3032 ±0,07. Mocowania
+   4610/4620/4630-04: płaszczyzna przylegania na y = 0, zaczepy za półką do +0,041, szerokość 0,55. Solver stawia mocowanie na
+   offset 0,121 / 0,071 od osi nogi = krawędź półek + 1 mm. Z danych i modeli luz 1 mm – kilka cm musi być z ustawienia nogi
+   w scenerii (punkt słupa vs przesunięcie dźwigara `offset`?). Czeka na: która bramka, która noga, w którą stronę szczelina.
 9. ZROBIONE 06.11 (w exe NIESPRAWDZONE): linie GL_LINES przy Y z jednej strony razem z bryłami – odświeżanie dwa przęsła dalej,
    z bliska bez linii (`scenewalk.cpp` Render_Alpha TTraction).
 
