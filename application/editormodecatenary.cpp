@@ -647,6 +647,54 @@ int const kStateValues[] = {0, 2, 4, 1};
 
 } // namespace
 
+// what the overlay of the catenary tool draws (Jan 2026-11-06: the views were hard to find, Iet-107 and the pantograph above all):
+// View > Catenary at the top of the editor, the panel checkboxes switch the same ones; for the session. The selected and the
+// hovered things are drawn always, without them the tool can't be worked
+struct catenary_view_flags
+{
+	bool poles{true}; // the marks of the poles (card under the selected and the hovered one)
+	bool gantries{true}; // the masts and the bottom of the beam, with its length
+	bool anchors{true}; // the tensioning devices: from the pole to the pulley, the weights
+	bool spans{true}; // the spans as lines between the poles
+	bool span_colours{true}; // their colour by the limit of the catalogue: red over it
+	bool span_lengths{true}; // their length (and limit, radius) written at their middle
+	bool remarks{true}; // the poles with remarks of Iet-107 ringed (selected chain)
+	bool staggers{true}; // the staggers written at the poles of the selected chain
+	bool pantograph{false}; // the pantograph head over the tracks around the camera
+	bool placing{true}; // what a click puts: the track axis, the span counter
+};
+catenary_view_flags CatenaryView;
+
+// View > Catenary (editormode.cpp render_view_menu): a free function, so that editormode.h needn't change for it
+void catenary_view_menu()
+{
+	if (false == ImGui::BeginMenu(STR_C("Catenary")))
+		return;
+	auto const item = [](char const *Label, bool &Flag, char const *Tip) {
+		ImGui::MenuItem(Label, nullptr, &Flag);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", Tip);
+	};
+	item(STR_C("Poles"), CatenaryView.poles, STR_C("The marks of the poles; the selected and the hovered one are drawn always"));
+	item(STR_C("Gantries"), CatenaryView.gantries, STR_C("The masts and the bottom of the beam of the gantries, with the length of the beam"));
+	item(STR_C("Anchors"), CatenaryView.anchors, STR_C("The tensioning devices: from the pole to the pulley and the weights"));
+	ImGui::Separator();
+	item(STR_C("Spans"), CatenaryView.spans, STR_C("The spans as lines between the poles; the selected chain is drawn always"));
+	item(STR_C("Span colours by the catalogue"), CatenaryView.span_colours, STR_C("Red over the limit of the catalogue (with the checks on), green within it; off: all of one colour"));
+	item(STR_C("Span lengths"), CatenaryView.span_lengths, STR_C("The length of each span with its limit and the radius, at its middle"));
+	ImGui::Separator();
+	item(STR_C("Iet-107 remarks"), CatenaryView.remarks, STR_C("The poles of the selected chain with remarks of Iet-107 ringed"));
+	item(STR_C("Staggers in the view"), CatenaryView.staggers, STR_C("The staggers written at the poles of the selected chain"));
+	item(STR_C("Pantograph"), CatenaryView.pantograph, STR_C("Over the tracks around the camera the pantograph head as it goes: at the height of the contact wire above it, tilted with the cant. The working range of the head in blue, the whole head (with the horns) grey; where the wire runs out of the working range red"));
+	item(STR_C("Placing: track axis and span counter"), CatenaryView.placing, STR_C("Where a click puts a pole: the axis of the track it goes by and the length of the span from the last pole"));
+	ImGui::Separator();
+	if (ImGui::MenuItem(STR_C("Show all")))
+		CatenaryView = catenary_view_flags{true, true, true, true, true, true, true, true, true, true};
+	if (ImGui::MenuItem(STR_C("Hide all")))
+		CatenaryView = catenary_view_flags{false, false, false, false, false, false, false, false, false, false};
+	ImGui::EndMenu();
+}
+
 void catenary_editor::catenary_scan()
 {
 	auto &tool{m_catenary};
@@ -5840,7 +5888,7 @@ void catenary_editor::render_catenary_zigzag_ui()
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%s", STR_C("The remarks of Iet-107 to the chains and the spans over their limit in red. Off: nothing is checked (unusual layouts, poles placed by the orthophoto)"));
 	ImGui::SameLine();
-	ImGui::Checkbox(STR_C("Pantograph"), &tool.pantograph);
+	ImGui::Checkbox(STR_C("Pantograph"), &CatenaryView.pantograph);
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%s", STR_C("Over the tracks around the camera the pantograph head as it goes: at the height of the contact wire above it, tilted with the cant. The working range of the head in blue, the whole head (with the horns) grey; where the wire runs out of the working range red"));
 	ImGui::SameLine();
@@ -5965,7 +6013,7 @@ void catenary_editor::render_catenary_chain_report(std::size_t const Chain)
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%s", STR_C("Every pole keeps its side of the track (its short or long cantilever), only the stagger is set as for the zigzag on the Poles page; the poles by switches and in tension overlaps stay as they are. The poles stay where they stand, the cards follow the distance A"));
 	ImGui::SameLine();
-	ImGui::Checkbox(STR_C("Staggers in the view"), &tool.show_staggers);
+	ImGui::Checkbox(STR_C("Staggers in the view"), &CatenaryView.staggers);
 	if (report.issues.empty())
 	{
 		ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1.0f), "%s", STR_C("No remarks"));
@@ -8095,6 +8143,8 @@ void catenary_editor::draw_catenary_overlay() const
 		auto const selected{static_cast<int>(index) == tool.gantry_selected};
 		auto const hovered{is_intent(e.m_intent, intent_detail::gantry) && e.m_intent.index == static_cast<int>(index)};
 		auto const broken{catenary_gantry_parts(index) == 0};
+		if (false == CatenaryView.gantries && false == selected && false == hovered)
+			continue;
 		auto const colour{selected ? overlay_color::selected : hovered ? overlay_color::highlight : broken ? overlay_color::invalid : IM_COL32(255, 160, 60, 170)};
 		projection.line(drawlist, from, to, colour, selected || hovered ? 3.0f : 1.5f);
 		for (int mast = 0; mast < 2; ++mast)
@@ -8136,6 +8186,8 @@ void catenary_editor::draw_catenary_overlay() const
 		auto const broken{catenary_scene_parts(index) == 0};
 		auto const byswitch{catenary_switch_error(index)};
 		auto const last{static_cast<int>(index) == tool.last && tool.chaining};
+		if (false == CatenaryView.poles && false == selected && false == hovered && false == last)
+			continue;
 		auto const colour{selected ? overlay_color::selected : hovered ? overlay_color::highlight : broken || byswitch ? overlay_color::invalid : last ? overlay_color::grip : IM_COL32(255, 210, 60, 150)};
 		draw_pole(*data, byswitch && false == selected ? overlay_color::invalid : colour, selected || hovered || last || byswitch ? 3.0f : 1.5f);
 		ImVec2 head;
@@ -8155,6 +8207,8 @@ void catenary_editor::draw_catenary_overlay() const
 			continue;
 		auto const selected{static_cast<int>(index) == tool.anchor_selected};
 		auto const hovered{is_intent(e.m_intent, intent_detail::anchor) && e.m_intent.index == static_cast<int>(index)};
+		if (false == CatenaryView.anchors && false == selected && false == hovered)
+			continue;
 		double shape[4][3];
 		ImVec2 head;
 		if (false == catenary_anchor_shape(index, shape))
@@ -8201,7 +8255,7 @@ void catenary_editor::draw_catenary_overlay() const
 	}
 	// the pantograph over the tracks: at the height of the lowest contact wire it would take (as vehicle_table::update_traction:
 	// the wire crossing the plane of the pantograph across the track, within the head), tilted with the cant of the track
-	if (tool.pantograph)
+	if (CatenaryView.pantograph)
 	{
 		std::vector<TTraction const *> wires;
 		for (auto const *traction : simulation::Traction.sequence())
@@ -8309,12 +8363,14 @@ void catenary_editor::draw_catenary_overlay() const
 	{
 		auto const a{wire_of(*catenary_scene_get(span.from))};
 		auto const b{wire_of(*catenary_scene_get(span.to))};
-		auto const over{tool.checks && span.limit > 0.0 && span.length > span.limit + 0.05};
 		auto const chosen{span.chain >= 0 && (span.chain == tool.chain_selected || (is_intent(e.m_intent, intent_detail::chain) && e.m_intent.index == span.chain))};
+		if (false == CatenaryView.spans && false == chosen)
+			continue;
+		auto const over{CatenaryView.span_colours && tool.checks && span.limit > 0.0 && span.length > span.limit + 0.05};
 		auto const colour{over ? overlay_color::invalid : chosen ? overlay_color::selected : span.chain >= 0 ? IM_COL32(90, 230, 120, 200) : IM_COL32(90, 230, 120, 110)};
 		projection.line(drawlist, a, b, colour, over || chosen ? 2.5f : 1.2f);
 		ImVec2 middle;
-		if (projection.project(0.5 * (a + b), middle))
+		if (CatenaryView.span_lengths && projection.project(0.5 * (a + b), middle))
 		{
 			auto const label{span.limit > 0.0 ? format("%.1f / %.0f m", span.length, span.limit) : format("%.1f m", span.length)};
 			auto const text{span.radius > 0.0 && span.radius < kCurveRadius ? label + format("  R %.0f", span.radius) : label};
@@ -8341,9 +8397,9 @@ void catenary_editor::draw_catenary_overlay() const
 				ImVec2 point;
 				if (false == projection.project(wire_of(*data), point))
 					continue;
-				if (remarks)
+				if (remarks && CatenaryView.remarks)
 					drawlist->AddCircle(point, 9.0f, colour, 16, 2.0f);
-				if (tool.show_staggers)
+				if (CatenaryView.staggers)
 				{
 					auto const text{format(offset >= 0.0 ? STR_C("%.2f to the pole") : STR_C("%.2f from the pole"), std::abs(offset))};
 					drawlist->AddText(ImVec2(point.x + 7.0f, point.y + 4.0f), colour, text.c_str());
@@ -8360,7 +8416,7 @@ void catenary_editor::draw_catenary_overlay() const
 		if (shown)
 		{
 			// the axis of the track the pole goes by, about 120 m each way along its path, at the rail heads
-			if (spot.track != nullptr && spot.path < static_cast<int>(spot.track->m_paths.size()))
+			if (CatenaryView.placing && spot.track != nullptr && spot.path < static_cast<int>(spot.track->m_paths.size()))
 			{
 				bezier const axis{spot.track->m_paths[spot.path]};
 				auto const length{std::max(axis.plan_length(), 1.0)};
@@ -8397,7 +8453,7 @@ void catenary_editor::draw_catenary_overlay() const
 						drawlist->AddText(ImVec2(point.x + 6.0f, point.y - 14.0f), overlay_color::grip, format(STR_C("into the span %s - %s"), a->name.c_str(), b->name.c_str()).c_str());
 				}
 			}
-			else if (auto const *previous{last_pole_near(wire_of(spot.data))}; previous != nullptr)
+			else if (auto const *previous{CatenaryView.placing ? last_pole_near(wire_of(spot.data)) : nullptr}; previous != nullptr)
 			{
 				// the counter of the span from the last pole: its length against the recommended and the longest one, and against
 				// the span before (Iet-107 4.6.1.2: neighbouring spans no more than 10 % apart)

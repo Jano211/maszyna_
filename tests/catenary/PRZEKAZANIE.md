@@ -18,7 +18,7 @@ sekcji (cała sekcja na kartę co klatkę). Teraz przęsło wczytywane od nowa w
    także tam, gdzie mocowania nie pasują – ludzie będą to zmieniać bez sensu.
 2. Obrót od brakujących ciężarów „chyba nie działa” – w testach liczy się (3 ciężary → 0,17°, z mrozem 0,8°), ale tylko w
    łańcuchu z kotwieniem środkowym i rośnie z odległością od środkowego. Ustalić z użytkownikiem, na czym sprawdzał.
-3. Przełączniki do WSZYSTKICH wizualizacji, obiektów pomocniczych i podświetleń sieci (kolory przęseł od długości, same długości,
+3. ZROBIONE 06.11 (`catenary_view_menu`, w exe NIESPRAWDZONE; zapis w ustawieniach – jeszcze nie). Przełączniki do WSZYSTKICH wizualizacji, obiektów pomocniczych i podświetleń sieci (kolory przęseł od długości, same długości,
    przęsła, Iet-107, pantograf…) – w górnym menu Widok, podmenu „Sieć trakcyjna”.
 4. Kotwienie: koncepcja zostaje (koledzy chcieli zaczynać od kotwy – użytkownik: bez sensu, za dużo sytuacji); dołożyć skróty
    klawiszowe. Dziś w trybie sieci znane: WSAD, Q/E, C, X – sprawdzić, co jeszcze zajęte.

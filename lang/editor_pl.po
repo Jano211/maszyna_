@@ -4145,6 +4145,54 @@ msgstr "Co robią uchwyty gizma na zaznaczeniu przy przeciąganiu; z Ctrl warto�
 msgid "View"
 msgstr "Widok"
 
+msgid "Spans"
+msgstr "Przęsła"
+
+msgid "Span colours by the catalogue"
+msgstr "Kolory przęseł wg katalogu"
+
+msgid "Span lengths"
+msgstr "Długości przęseł"
+
+msgid "Iet-107 remarks"
+msgstr "Uwagi Iet-107"
+
+msgid "Placing: track axis and span counter"
+msgstr "Wstawianie: oś toru i licznik przęsła"
+
+msgid "Show all"
+msgstr "Pokaż wszystko"
+
+msgid "Hide all"
+msgstr "Ukryj wszystko"
+
+msgid "The marks of the poles; the selected and the hovered one are drawn always"
+msgstr "Znaczniki słupów; zaznaczony i wskazany rysują się zawsze"
+
+msgid "The masts and the bottom of the beam of the gantries, with the length of the beam"
+msgstr "Maszty i spód dźwigara bramek, z długością dźwigara"
+
+msgid "The tensioning devices: from the pole to the pulley and the weights"
+msgstr "Urządzenia naprężające: od słupa do rolki i ciężary"
+
+msgid "The spans as lines between the poles; the selected chain is drawn always"
+msgstr "Przęsła jako linie między słupami; zaznaczony łańcuch rysuje się zawsze"
+
+msgid "Red over the limit of the catalogue (with the checks on), green within it; off: all of one colour"
+msgstr "Czerwone ponad granicą z katalogu (przy włączonym sprawdzaniu), zielone w granicy; wyłączone: wszystkie w jednym kolorze"
+
+msgid "The length of each span with its limit and the radius, at its middle"
+msgstr "Długość każdego przęsła z granicą i promieniem, w jego połowie"
+
+msgid "The poles of the selected chain with remarks of Iet-107 ringed"
+msgstr "Słupy zaznaczonego łańcucha z uwagami Iet-107 w kółkach"
+
+msgid "The staggers written at the poles of the selected chain"
+msgstr "Odsuwy wypisane przy słupach zaznaczonego łańcucha"
+
+msgid "Where a click puts a pole: the axis of the track it goes by and the length of the span from the last pole"
+msgstr "Gdzie klik wstawi słup: oś toru, przy którym stanie, i długość przęsła od ostatniego słupa"
+
 msgid "Weather and time"
 msgstr "Pogoda i czas"
 

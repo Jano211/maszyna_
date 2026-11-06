@@ -18,6 +18,15 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: menu Widok > Sieć trakcyjna – przełączniki podglądów — commit o tym tytule
+- Co widać: w górnym menu Widok podmenu „Sieć trakcyjna” z przełącznikami wszystkiego, co rysuje nakładka sieci: słupy, bramki,
+  kotwienia, przęsła, kolory przęseł wg katalogu, długości przęseł, uwagi Iet-107, odsuwy w widoku, pantograf, wstawianie (oś
+  toru i licznik przęsła); „Pokaż wszystko” / „Ukryj wszystko”. Zaznaczone i wskazane rzeczy rysują się zawsze.
+- Checkboxy „Pantograf” i „Odsuwy w widoku” w panelu przełączają to samo co menu. Na czas sesji (bez zapisu w ustawieniach).
+- Menu to wolna funkcja `catenary_view_menu()` z `editormodecatenary.cpp` – bez zmiany `editormode.h` (przebudowa tylko dwóch
+  plików). Pola `pantograph` i `show_staggers` w `editormodecatenary.h` już nieużywane (do usunięcia przy okazji).
+- Zmienia: `application/editormodecatenary.cpp`, `application/editormode.cpp`, `lang/editor_pl.po`. Wymaga: nic.
+
 ### Sieć trakcyjna: linie przęsła nie wystają z brył przy linkach Y — commit o tym tytule
 - Co widać: z bliska przy niektórych podwieszeniach Y z jednej strony wystawały linie (GL_LINES) obok brył drutów.
 - Przyczyna: kształt przęsła (zwis, połówka linki Y) zależy od sąsiada, a połówka Y sąsiada od jego drugiego sąsiada. Po zmianie

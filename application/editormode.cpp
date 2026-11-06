@@ -3830,6 +3830,9 @@ void editor_mode::render_orthophoto_window()
     ImGui::End();
 }
 
+// View > Catenary: what the overlay of the catenary tool draws (application/editormodecatenary.cpp)
+void catenary_view_menu();
+
 void editor_mode::render_view_menu()
 {
     if (false == ImGui::BeginMenu(STR_C("View")))
@@ -3852,6 +3855,7 @@ void editor_mode::render_view_menu()
         m_gauge.open = !m_gauge.open;
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("%s", STR_C("Checks which models enter the structure gauge of the tracks and the clearance over the roads (skrajnia budowli)"));
+    catenary_view_menu();
     ImGui::Separator();
     ImGui::MenuItem(STR_C("Weather and time"), nullptr, &m_environment_open);
     if (ImGui::IsItemHovered())
