@@ -18,6 +18,13 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: izolatory wysięgnika tylko pasujące — commit o tym tytule
+- Co widać: w „Izolatory tego wysięgnika” przy każdym izolatorze z karty tylko te, które tam pasują: teowniki 7010 ↔ 7110,
+  7020 ↔ 7120; rurowe 7100 / 7010 / 7020 w wykonaniu -01, -02 (tworzywo) albo -25 (25 kV) – te, które są w katalogu (-02
+  pojawi się samo po dopisaniu części). Izolator bez zamiennika nie ma listy.
+- Override sprzed zmiany, który tu nie pasuje, widać na liście jako „(tu nie pasuje)” – można wrócić do karty.
+- Zmienia: `application/editormodecatenary.cpp`, `lang/editor_pl.po`. Wymaga: nic.
+
 ### Sieć trakcyjna: przęsło przebudowywane w miejscu, bez przesyłania całej sekcji na kartę — commit o tym tytule
 - Co widać: suwaki kotwienia (wysokość rolek, odległość słupa) i przeciąganie słupów nie zbijają klatek.
 - Przyczyna: przebudowa przęsła usuwała je i robiła nowe. Nowy fragment w banku geometrii sekcji (i opróżnienie starego) w

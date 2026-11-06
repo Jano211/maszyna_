@@ -6376,17 +6376,47 @@ void catenary_editor::render_catenary_cantilever_ui()
 				for (auto const &role : scheme->roles)
 					if (auto const *part{catalog->part(role.second)}; part != nullptr && part->kind == "insulator")
 						roles.emplace_back(role.first, role.second);
-				for (auto const &part : catalog->parts())
-					if (part.second.kind == "insulator")
-						insulators.push_back(part.first);
 			}
+			// what fits in place of the insulator of the card (Jan 2026-11-06: the list of everything let people fit insulators where
+			// the fittings don't go): the tees 7010 <-> 7110 and 7020 <-> 7120 (the tubular ones never take 7110/7120); the tubular ones
+			// 7100 / 7010 / 7020 in the executions -01 (porcelain), -02 (resin) and -25 (25 kV), the ones the catalogue has
+			auto const tee{data->card / 100 == 1 || data->card / 100 == 9};
+			auto const fitting = [&](std::string const &Card) {
+				std::vector<std::string> list;
+				auto const add = [&](std::string const &Part) {
+					if (Part != Card && catalog->part(Part) != nullptr && std::find(list.begin(), list.end(), Part) == list.end())
+						list.push_back(Part);
+				};
+				auto const base{Card.substr(0, 4)};
+				if (tee)
+				{
+					static std::pair<char const *, char const *> const pairs[] = {{"7010", "7110"}, {"7020", "7120"}};
+					for (auto const &[tube, own] : pairs)
+					{
+						if (base == tube)
+							add(std::string(own) + "-01");
+						else if (base == own)
+							add(std::string(tube) + "-01");
+					}
+				}
+				else if (base == "7100" || base == "7010" || base == "7020")
+				{
+					for (auto const *execution : {"-01", "-02", "-25"})
+						add(base + execution);
+				}
+				return list;
+			};
 			if (false == roles.empty() && ImGui::TreeNode(STR_C("Insulators of this cantilever")))
 			{
 				auto const index{static_cast<std::size_t>(tool.selected)};
 				for (auto const &[role, card] : roles)
 				{
+					insulators = fitting(card);
 					auto const own{std::find_if(data->overrides.begin(), data->overrides.end(), [&](auto const &O) { return O.first == role; })};
 					auto const current{own != data->overrides.end() ? own->second : std::string()};
+					// nothing fits in its place: no list (unless an older override has to be taken back)
+					if (insulators.empty() && current.empty())
+						continue;
 					auto const shown{current.empty() ? format(STR_C("%s (card)"), card.c_str()) : current};
 					ImGui::PushItemWidth(160.0f);
 					if (ImGui::BeginCombo(role.c_str(), shown.c_str()))
@@ -6405,11 +6435,14 @@ void catenary_editor::render_catenary_cantilever_ui()
 						for (auto const &part : insulators)
 							if (ImGui::Selectable(part.c_str(), part == current))
 								pick(part);
+						// an override from before the list was narrowed (or of a part gone from the catalogue): still shown, so it can be undone
+						if (false == current.empty() && std::find(insulators.begin(), insulators.end(), current) == insulators.end())
+							ImGui::Selectable(format(STR_C("%s (doesn't fit here)"), current.c_str()).c_str(), true);
 						ImGui::EndCombo();
 					}
 					ImGui::PopItemWidth();
 					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("Any insulator of the catalogue in place of the one of the card (also the tube ones on the tees and the other way round); the tube or rod it sits on is taken shorter or longer to fit, as with an insulator set. Where the parts don't fit together the solver says so in the remarks"));
+						ImGui::SetTooltip("%s", STR_C("An insulator which fits in place of the one of the card: on the tees 7010 <-> 7110 and 7020 <-> 7120, on the tubular cantilevers 7100 / 7010 / 7020 in the execution -01 (porcelain), -02 (resin) or -25 (25 kV), if the catalogue has it; the tube or rod it sits on is taken shorter or longer to fit, as with an insulator set"));
 				}
 				ImGui::TreePop();
 			}

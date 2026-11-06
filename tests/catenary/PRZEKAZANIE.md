@@ -13,7 +13,7 @@ przęsło przebudowywane przez usunięcie i nowe dokładało fragment do banku g
 sekcji (cała sekcja na kartę co klatkę). Teraz przęsło wczytywane od nowa w miejscu (`catenary_span_reload`), banki brył z puli.
 
 **Uwagi użytkownika 06.11 – do zrobienia:**
-1. Izolatory: zawęzić wybór do pasujących. Teowniki: 7010→7110, 7020→7120 (rurowe nigdzie nie biorą 7110/7120). Rurowe:
+1. ZROBIONE 06.11 (lista „Izolatory tego wysięgnika”, w exe NIESPRAWDZONE). Izolatory: zawęzić wybór do pasujących. Teowniki: 7010→7110, 7020→7120 (rurowe nigdzie nie biorą 7110/7120). Rurowe:
    7100 / 7010 / 7020 w wykonaniu -01 → -02 (plastik, modele wkrótce) albo -25 (25 kV). Dziś lista pozwala wszystko wszędzie,
    także tam, gdzie mocowania nie pasują – ludzie będą to zmieniać bez sensu.
 2. Obrót od brakujących ciężarów „chyba nie działa” – w testach liczy się (3 ciężary → 0,17°, z mrozem 0,8°), ale tylko w
