@@ -27,3 +27,22 @@ TTraction *catenary_span_create( std::string const &Name, double, double, std::s
     return span;
 }
 void catenary_span_delete( TTraction *Span ) { ++mock_deleted_spans; delete Span; }
+// jak w exe: przęsło wczytane od nowa w miejscu; treść zapisana tak jak przy nowym przęśle, punkty i bieżnia z niej.
+// Bieżnia wspólna inna niż była - false, przęsło do usunięcia i zrobienia od nowa (jak w exe)
+int mock_reloaded_spans { 0 };
+bool catenary_span_reload( TTraction *Span, std::string const &Name, std::string const &Body ) {
+    if( Span == nullptr || Span->m_name != Name ) { return false; }
+    std::string parallel;
+    if( auto const at { Body.find( " parallel " ) }; at != std::string::npos ) { std::istringstream words { Body.substr( at + 10 ) }; words >> parallel; }
+    if( parallel != Span->asParallel ) { return false; }
+    mock_span_bodies.push_back( Body );
+    mock_span_names.push_back( Name );
+    std::istringstream lines { Body };
+    std::string line;
+    std::getline( lines, line );
+    auto const point = [ & ]( glm::dvec3 &P ) { if( std::getline( lines, line ) ) { std::istringstream words { line }; words >> P.x >> P.y >> P.z; } };
+    point( Span->pPoint1 );
+    point( Span->pPoint2 );
+    ++mock_reloaded_spans;
+    return true;
+}

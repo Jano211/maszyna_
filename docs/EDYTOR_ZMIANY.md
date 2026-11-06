@@ -14,6 +14,21 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
   pliku rozwiązuje się, biorąc obie strony. Nowe wpisy idą przy pokrewnych tekstach, więc konfliktów będzie mniej.
 - Zmiana pól w `application/editormode.h` oznacza przebudowę prawie całego edytora (ok. 30 min).
 
+## 2026-11-06
+
+Commity na `siec-gl46`.
+
+### Sieć trakcyjna: przęsło przebudowywane w miejscu, bez przesyłania całej sekcji na kartę — commit o tym tytule
+- Co widać: suwaki kotwienia (wysokość rolek, odległość słupa) i przeciąganie słupów nie zbijają klatek.
+- Przyczyna: przebudowa przęsła usuwała je i robiła nowe. Nowy fragment w banku geometrii sekcji (i opróżnienie starego) w
+  rendererze GL 4.6 kasuje bufor całej sekcji – co klatkę szła na kartę cała sekcja (tory, druty, linie). Do tego każde nowe
+  przęsło zakładało nowy bank brył, a banków nikt nie usuwa.
+- Teraz `catenary_span_reload` (world/catenary_scene_objects.cpp) wczytuje istniejące przęsło od nowa: ten sam obiekt, jego
+  fragment linii zastąpiony (przy tej samej liczbie wierzchołków na kartę idzie tylko on), bank brył zostaje. Gdy przęsło
+  przechodzi do innej sekcji, zmienia nazwę, bieżnię wspólną albo zasilacz – po staremu (usunięcie i nowe).
+- Banki brył usuniętych przęseł wracają do puli i są brane przez następne.
+- Zmienia: `world/catenary_scene.cpp`, `world/catenary_scene_objects.cpp`, `world/catenary_span.cpp`, test `te`. Wymaga: nic.
+
 ## 2026-11-04
 
 Commity na `siec-gl46`.
