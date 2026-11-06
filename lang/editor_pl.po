@@ -11774,8 +11774,8 @@ msgstr "przesuwa słup kotwowy wzdłuż toru"
 msgid "Anchor pole from the track axis (m)"
 msgstr "Słup kotwowy od osi toru (m)"
 
-msgid "From the axis of the nearest track to the axis of the anchor pole: it moves square to the track, away from it or towards it; the tensioning device turns after the wires. Drag or Ctrl+click to type"
-msgstr "Od osi najbliższego toru do osi słupa kotwowego: słup przesuwa się prostopadle do toru, od niego albo do niego; urządzenie naprężające obraca się za drutami. Przeciągnij albo Ctrl+klik, żeby wpisać"
+msgid "From the axis of the track the chain ends over to the axis of the anchor pole, -30 to +30 m: + on the side of the last pole, - across the track, 0 on its axis. It moves square to the track; the tensioning device turns after the wires. Drag or Ctrl+click to type"
+msgstr "Od osi toru, nad którym kończy się łańcuch, do osi słupa kotwowego, od -30 do +30 m: + po stronie ostatniego słupa, - po drugiej stronie toru, 0 w osi toru. Słup przesuwa się prostopadle do toru; urządzenie naprężające obraca się za drutami. Przeciągnij albo Ctrl+klik, żeby wpisać"
 
 msgid "Stop placing the cantilever"
 msgstr "Przerwij stawianie wysięgnika"

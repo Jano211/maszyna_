@@ -172,6 +172,74 @@ glm::dvec2 right_of(glm::dvec2 const &Direction)
 	return {-Direction.y, Direction.x};
 }
 
+// the signed distance of Point from the axis of the track a chain ends over (Jan 2026-11-06: the anchor pole from -30 to +30 m
+// of the axis, on it too). The track: the one nearest to Over (the wire at the last pole), or one joined to it when Point is
+// past its end. Right: the unit vector across that track at Point (+ right of the track)
+bool track_offset(glm::dvec3 const &Over, glm::dvec3 const &Point, double &Offset, glm::dvec2 &Right)
+{
+	TTrack *base{nullptr};
+	auto best{5.0};
+	for (auto *track : simulation::Paths.sequence())
+	{
+		if (track == nullptr || track->m_editorremoved || track->m_paths.empty())
+			continue;
+		for (int path = 0; path < static_cast<int>(track->m_paths.size()); ++path)
+		{
+			bezier const curve{track->m_paths[path]};
+			if (geometry::plan_distance(curve.point(0.5), Over) > curve.plan_length() * 0.5 + best)
+				continue;
+			auto const distance{geometry::plan_distance(curve.point(nearest_parameter(*track, path, Over)), Over)};
+			if (distance < best)
+			{
+				best = distance;
+				base = track;
+			}
+		}
+	}
+	if (base == nullptr)
+		return false;
+	// the base track and the ones joined to it, two deep each way: the one Point is square to (not past its end), nearest
+	std::vector<TTrack *> candidates{base};
+	auto const join = [&](TTrack *Track) {
+		if (Track != nullptr && std::find(candidates.begin(), candidates.end(), Track) == candidates.end())
+			candidates.push_back(Track);
+	};
+	for (auto *from : {base->CurrentPrev(), base->CurrentNext()})
+	{
+		if (from == nullptr)
+			continue;
+		join(from);
+		join(from->CurrentPrev());
+		join(from->CurrentNext());
+	}
+	auto found{false};
+	auto nearest{std::numeric_limits<double>::max()};
+	for (auto *track : candidates)
+	{
+		if (track == nullptr || track->m_editorremoved || track->m_paths.empty())
+			continue;
+		for (int path = 0; path < static_cast<int>(track->m_paths.size()); ++path)
+		{
+			bezier const curve{track->m_paths[path]};
+			auto const parameter{nearest_parameter(*track, path, Point)};
+			auto const axis{curve.point(parameter)};
+			auto const forward{forward_at(*track, path, parameter)};
+			auto const right{right_of(forward)};
+			auto const square{glm::dot(plan_of(Point) - plan_of(axis), right)};
+			// off the end of the path: not square to it
+			if ((parameter <= 1e-6 || parameter >= 1.0 - 1e-6) && std::abs(glm::dot(plan_of(Point) - plan_of(axis), forward)) > 0.05)
+				continue;
+			if (std::abs(square) >= nearest)
+				continue;
+			nearest = std::abs(square);
+			Offset = square;
+			Right = right;
+			found = true;
+		}
+	}
+	return found;
+}
+
 // the radius of the path over about 10 m each way from the parameter; 0 on a straight
 double path_radius(TTrack const &Track, int const Path, double const Parameter)
 {
@@ -5078,20 +5146,29 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 				data.pole[2] = at.y;
 				edited = true;
 			}
-			// away from the track or towards it: square to the axis of the track nearest to it, at the same place along it
-			double face{0.0};
-			glm::dvec2 away{0.0};
-			if (catenary_mast_face({}, glm::dvec3{data.pole[0], data.pole[1], data.pole[2]}, face, away))
+			// away from the track or towards it, across it too (Jan 2026-11-06: -30 to +30 m, on the axis as well): square to the track
+			// the chain ends over, at the same place along it; + on the side of the last pole, - on the other side
+			double axisoffset{0.0};
+			glm::dvec2 right{0.0};
+			glm::dvec3 const over{last->at[0], last->at[1], last->at[2]};
+			if (track_offset(over, glm::dvec3{data.pole[0], data.pole[1], data.pole[2]}, axisoffset, right))
 			{
-				auto wanted{static_cast<float>(face)};
-				if (ImGui::DragFloat(STR_C("Anchor pole from the track axis (m)"), &wanted, 0.01f, 1.5f, 15.0f, "%.2f") && std::abs(wanted - face) > 1e-4)
+				double lastoffset{0.0};
+				glm::dvec2 lastright{0.0};
+				auto side{1.0};
+				if (last->has_pole && track_offset(over, glm::dvec3{last->pole[0], last->pole[1], last->pole[2]}, lastoffset, lastright) && lastoffset < 0.0)
+					side = -1.0;
+				auto const shown{axisoffset * side};
+				auto wanted{static_cast<float>(shown)};
+				if (ImGui::DragFloat(STR_C("Anchor pole from the track axis (m)"), &wanted, 0.01f, -30.0f, 30.0f, "%.2f") && std::abs(wanted - shown) > 1e-4)
 				{
-					data.pole[0] += away.x * (static_cast<double>(wanted) - face);
-					data.pole[2] += away.y * (static_cast<double>(wanted) - face);
+					auto const move{(std::clamp(static_cast<double>(wanted), -30.0, 30.0) - shown) * side};
+					data.pole[0] += right.x * move;
+					data.pole[2] += right.y * move;
 					edited = true;
 				}
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("From the axis of the nearest track to the axis of the anchor pole: it moves square to the track, away from it or towards it; the tensioning device turns after the wires. Drag or Ctrl+click to type"));
+					ImGui::SetTooltip("%s", STR_C("From the axis of the track the chain ends over to the axis of the anchor pole, -30 to +30 m: + on the side of the last pole, - across the track, 0 on its axis. It moves square to the track; the tensioning device turns after the wires. Drag or Ctrl+click to type"));
 			}
 			// a cantilever on the anchor pole (a pole which anchors one section and carries the wires of another one)
 			auto const placing{tool.anchor_cantilever == static_cast<int>(index)};

@@ -18,6 +18,13 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: słup kotwowy od -30 do +30 m od osi toru — commit o tym tytule
+- Co widać: suwak „Słup kotwowy od osi toru” w panelu kotwienia ma zakres -30…+30 m, także 0 (słup w osi toru). Plus – po
+  stronie ostatniego słupa łańcucha, minus – po drugiej stronie toru.
+- Odległość liczona od toru, nad którym kończy się łańcuch (najbliższy przewodowi przy ostatnim słupie, albo dołączony do niego,
+  gdy słup kotwowy jest za jego końcem), a nie od najbliższego toru – suwak nie skacze, gdy słup przechodzi nad sąsiednimi torami.
+- Zmienia: `application/editormodecatenary.cpp`, `lang/editor_pl.po`. Wymaga: nic.
+
 ### Edytor sieci: izolatory wysięgnika tylko pasujące — commit o tym tytule
 - Co widać: w „Izolatory tego wysięgnika” przy każdym izolatorze z karty tylko te, które tam pasują: teowniki 7010 ↔ 7110,
   7020 ↔ 7120; rurowe 7100 / 7010 / 7020 w wykonaniu -01, -02 (tworzywo) albo -25 (25 kV) – te, które są w katalogu (-02
