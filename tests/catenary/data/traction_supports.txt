@@ -144,12 +144,12 @@ mast 3038-1 model siec_trakcyjna/slupy/3038-1 width 0.140 length 0.600 height 8.
 mast 3038-2 model siec_trakcyjna/slupy/3038-2 width 0.140 length 0.600 height 8.86 mount 7.55 7.95 offset 0.071 end strut 4610-04 stay 4620-04 steady 4630-04 endmast
 mast 3038-3 model siec_trakcyjna/slupy/3038-3 width 0.140 length 0.600 height 8.86 mount 7.55 7.95 offset 0.071 end strut 4610-04 stay 4620-04 steady 4630-04 endmast
 mast 3038-4 model siec_trakcyjna/slupy/3038-4 width 0.140 length 0.600 height 8.86 mount 7.55 7.95 offset 0.071 end strut 4610-04 stay 4620-04 steady 4630-04 endmast
-mast 3111 model siec_trakcyjna/slupy/3111 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through strut 4610-04 stay 4620-04 steady 4630-04 endmast
-mast 3112 model siec_trakcyjna/slupy/3112 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through strut 4610-04 stay 4620-04 steady 4630-04 endmast
-mast 3113 model siec_trakcyjna/slupy/3113 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through strut 4610-04 stay 4620-04 steady 4630-04 endmast
-mast 3121 model siec_trakcyjna/slupy/3121 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through strut 4610-04 stay 4620-04 steady 4630-04 endmast
-mast 3122 model siec_trakcyjna/slupy/3122 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through strut 4610-04 stay 4620-04 steady 4630-04 endmast
-mast 3123 model siec_trakcyjna/slupy/3123 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through strut 4610-04 stay 4620-04 steady 4630-04 endmast
+mast 3111 model siec_trakcyjna/slupy/3111 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.101 through strut 4610-04 stay 4620-04 steady 4630-04 endmast   // C200: sciana nogi 0,100 od osi wzdluz dzwigara (model, przekroj na wys. mocowan) - bylo 0.121 jak 3031, mocowania 2 cm w strone toru (2026-11-06)
+mast 3112 model siec_trakcyjna/slupy/3112 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.101 through strut 4610-04 stay 4620-04 steady 4630-04 endmast   // C200: sciana nogi 0,100 od osi wzdluz dzwigara (model, przekroj na wys. mocowan) - bylo 0.121 jak 3031, mocowania 2 cm w strone toru (2026-11-06)
+mast 3113 model siec_trakcyjna/slupy/3113 width 0.200 length 0.600 height 9.00 mount 7.65 8.05 offset 0.101 through strut 4610-04 stay 4620-04 steady 4630-04 endmast   // C200: sciana nogi 0,100 od osi wzdluz dzwigara (model, przekroj na wys. mocowan) - bylo 0.121 jak 3031, mocowania 2 cm w strone toru (2026-11-06)
+mast 3121 model siec_trakcyjna/slupy/3121 width 0.240 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through strut 4610-04 stay 4620-04 steady 4630-04 endmast   // C240 (model: sciana 0,120 od osi), bylo width 0.200 (2026-11-06)
+mast 3122 model siec_trakcyjna/slupy/3122 width 0.240 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through strut 4610-04 stay 4620-04 steady 4630-04 endmast   // C240 (model: sciana 0,120 od osi), bylo width 0.200 (2026-11-06)
+mast 3123 model siec_trakcyjna/slupy/3123 width 0.240 length 0.600 height 9.00 mount 7.65 8.05 offset 0.121 through strut 4610-04 stay 4620-04 steady 4630-04 endmast   // C240 (model: sciana 0,120 od osi), bylo width 0.200 (2026-11-06)
 beam E90 model siec_trakcyjna/dzwigary/9m span 9.0 drop 4850 endbeam
 beam E91 model siec_trakcyjna/dzwigary/9.1m span 9.1 drop 4850 endbeam
 beam E92 model siec_trakcyjna/dzwigary/9.2m span 9.2 drop 4850 endbeam
