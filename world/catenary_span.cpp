@@ -225,6 +225,25 @@ release( gfx::geometry_handle const &Geometry ) {
     GfxRenderer->Replace( empty, userdata, Geometry, GL_TRIANGLES );
 }
 
+// banki brył przęseł usuniętych albo wczytanych od nowa, do ponownego użycia. Menedżer banków nie usuwa banków, a edytor
+// przy przeciąganiu suwaka robił przęsło od nowa co klatkę - każde z własnym, nowym bankiem (2026-11-06)
+std::vector<gfx::geometrybank_handle> SolidBanks;
+
+// bryły przęsła opróżnione; bank zostaje przy opisie (Keep) albo wraca do puli
+void
+give_back_solid( catenary_span &Span, bool const Keep ) {
+    if( Span.solidloaded ) {
+        release( Span.solid.wires );
+        release( Span.solid.fittings );
+        release( Span.solid.rope );
+    }
+    Span.solid = {};
+    Span.solidloaded = false;
+    if( Keep || Span.solidbank == null_handle ) { return; }
+    SolidBanks.push_back( Span.solidbank );
+    Span.solidbank = {};
+}
+
 // wygląd metalu: [ metal: miedź, aluminium ][ przewód, osprzęt ][ stan: nowa, przejściowa, czarna, zaśniedziała ]
 // osprzęt sieci miedzianej jest z brązu albo mosiądzu. Czarna (Jan 2026-11-01): matowa, prawie bez połysku - wartości na oko
 catenary_metal Metals[ 2 ][ 2 ][ 4 ] {
@@ -283,11 +302,21 @@ catenary_span_metal( TTraction const &Traction, bool const Fitting ) {
 void
 catenary_span_assign( TTraction &Traction, std::string const &Symbol, double const Messenger, double const Contact, glm::dvec3 const *Rope2, bool const *Rope2set, double const *Spread, double const *Pull ) {
 
+    // przęsło wczytane od nowa (edytor, catenary_span_reload): bank brył przechodzi na nowy opis, bryły zrobią się od nowa
+    gfx::geometrybank_handle bank;
+    if( Traction.m_catenaryspan ) {
+        give_back_solid( *Traction.m_catenaryspan, true );
+        bank = Traction.m_catenaryspan->solidbank;
+    }
     Traction.m_catenaryspan.reset();
-    if( Symbol.empty() ) { return; }
+    if( Symbol.empty() ) {
+        if( bank != null_handle ) { SolidBanks.push_back( bank ); }
+        return;
+    }
 
     auto span { std::make_shared<catenary_span>() };
     span->symbol = Symbol;
+    span->solidbank = bank;
     for( int end = 0; end < 2 && Rope2 != nullptr && Rope2set != nullptr; ++end ) {
         span->rope2set[ end ] = Rope2set[ end ];
         span->rope2[ end ] = catenary::vec3 { Rope2[ end ].x, Rope2[ end ].y, Rope2[ end ].z };
@@ -400,7 +429,13 @@ catenary_span_solid( TTraction &Traction, glm::dvec3 const &Camera ) {
     catenary::build_solid( *definition( Traction ), geometry, wires, fittings );
     if( wires.empty() ) { return {}; }
     if( span.solidbank == null_handle ) {
-        span.solidbank = GfxRenderer->Create_Bank();
+        if( false == SolidBanks.empty() ) {
+            span.solidbank = SolidBanks.back();
+            SolidBanks.pop_back();
+        }
+        else {
+            span.solidbank = GfxRenderer->Create_Bank();
+        }
     }
     // każde ponowne wczytanie tworzy nowe fragmenty w banku tego przęsła; poprzednie zostały opróżnione przy zwalnianiu
     gfx::userdata_array userdata;
@@ -453,7 +488,7 @@ catenary_span_refresh( TTraction &Traction ) {
 // zwalnia linie i bryły usuwanego przęsła
 void
 catenary_span_release( TTraction &Traction ) {
-    drop_solid( Traction );
+    if( Traction.m_catenaryspan ) { give_back_solid( *Traction.m_catenaryspan, false ); }
     release( Traction.m_geometry );
 }
 

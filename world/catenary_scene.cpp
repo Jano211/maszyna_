@@ -45,6 +45,8 @@ void catenary_part_delete( TAnimModel *Model );
 // Link: od razu połączyć z sąsiednimi przęsłami i zasilaczem (po inicjalizacji scenerii; wcześniej robi to InitTraction)
 TTraction *catenary_span_create( std::string const &Name, double RangeMax, double RangeMin, std::string const &Body, bool Link );
 void catenary_span_delete( TTraction *Span );
+// przęsło po inicjalizacji wczytane od nowa w miejscu (ten sam obiekt i fragment geometrii); false - trzeba je usunąć i zrobić od nowa
+bool catenary_span_reload( TTraction *Span, std::string const &Name, std::string const &Body );
 
 namespace {
 
@@ -2858,13 +2860,19 @@ rebuild_span( scene_chain &Chain, std::size_t const Span ) {
 void
 rebuild_span_only( scene_chain &Chain, std::size_t const Span ) {
     if( Span >= Chain.spans.size() ) { return; }
-    if( Chain.spans[ Span ] != nullptr ) {
-        catenary_span_delete( Chain.spans[ Span ] );
-        Chain.spans[ Span ] = nullptr;
-    }
     auto const body { span_body( Chain, Span ) };
-    if( body.empty() ) { return; }
-    Chain.spans[ Span ] = catenary_span_create( span_name( Chain, Span ), Chain.data.range_max, Chain.data.range_min, body, Initialized );
+    // przęsło już stoi (edytor): wczytane od nowa w miejscu, bez nowego fragmentu w banku geometrii sekcji
+    // (to w GL 4.6 przesyłało całą sekcję na kartę co klatkę przy przeciąganiu suwaka - Jan 2026-11-06)
+    auto const reloaded { Initialized && false == body.empty() && Chain.spans[ Span ] != nullptr
+                       && catenary_span_reload( Chain.spans[ Span ], span_name( Chain, Span ), body ) };
+    if( false == reloaded ) {
+        if( Chain.spans[ Span ] != nullptr ) {
+            catenary_span_delete( Chain.spans[ Span ] );
+            Chain.spans[ Span ] = nullptr;
+        }
+        if( body.empty() ) { return; }
+        Chain.spans[ Span ] = catenary_span_create( span_name( Chain, Span ), Chain.data.range_max, Chain.data.range_min, body, Initialized );
+    }
     // przęsło do kotwienia rysuje z bliska jego linę (bryła proceduralna urządzenia naprężającego)
     if( auto *span { Chain.spans[ Span ] }; span != nullptr ) {
         std::vector<catenary::solid_vertex> rope;

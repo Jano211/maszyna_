@@ -2,7 +2,33 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – 2026-11-04 (najnowsze)
+## START TUTAJ – 2026-11-06 (najnowsze)
+
+**Sprawdzone przez użytkownika w exe 06.11:** kotwienie środkowe na ceowniku nogi bramki – działa; `strut_shift` i `turn_by_hand`
+– działają; lista izolatorów działa (ale do zawężenia, niżej); podgląd ślizgu pantografu – jest (szukał go). Iet-107 i pozostałe
+podglądy też trudno znaleźć – stąd przełączniki w menu Widok.
+
+**Zrobione 06.11 (w exe NIESPRAWDZONE):** suwaki kotwienia dalej zbijały klatki mimo `37e003a` – przyczyna w rendererze:
+przęsło przebudowywane przez usunięcie i nowe dokładało fragment do banku geometrii sekcji, a GL 4.6 kasuje wtedy bufor całej
+sekcji (cała sekcja na kartę co klatkę). Teraz przęsło wczytywane od nowa w miejscu (`catenary_span_reload`), banki brył z puli.
+
+**Uwagi użytkownika 06.11 – do zrobienia:**
+1. Izolatory: zawęzić wybór do pasujących. Teowniki: 7010→7110, 7020→7120 (rurowe nigdzie nie biorą 7110/7120). Rurowe:
+   7100 / 7010 / 7020 w wykonaniu -01 → -02 (plastik, modele wkrótce) albo -25 (25 kV). Dziś lista pozwala wszystko wszędzie,
+   także tam, gdzie mocowania nie pasują – ludzie będą to zmieniać bez sensu.
+2. Obrót od brakujących ciężarów „chyba nie działa” – w testach liczy się (3 ciężary → 0,17°, z mrozem 0,8°), ale tylko w
+   łańcuchu z kotwieniem środkowym i rośnie z odległością od środkowego. Ustalić z użytkownikiem, na czym sprawdzał.
+3. Przełączniki do WSZYSTKICH wizualizacji, obiektów pomocniczych i podświetleń sieci (kolory przęseł od długości, same długości,
+   przęsła, Iet-107, pantograf…) – w górnym menu Widok, podmenu „Sieć trakcyjna”.
+4. Kotwienie: koncepcja zostaje (koledzy chcieli zaczynać od kotwy – użytkownik: bez sensu, za dużo sytuacji); dołożyć skróty
+   klawiszowe. Dziś w trybie sieci znane: WSAD, Q/E, C, X – sprawdzić, co jeszcze zajęte.
+5. Kotwienie na osobnym słupie: słup ląduje bardzo wysoko – do ustalenia, którą drogą (przycisk) i na jakim typie słupa.
+6. Słup kotwowy: regulacja ±30 m od osi toru, łącznie z samą osią (dziś suwak 1,5–15 m).
+7. Rodzina słupa: ręcznie wybrana ma zostać, a nie wracać przy każdej zmianie do „z toru i odsuwu”. „Karty dla”: domyślnie
+   „wg toru”; ręczny wybór tylko dla tego jednego słupa, następny znowu „wg toru”.
+8. Mocowania do bramek odstają od słupa bramki o kilka cm – sprawdzić zero modelu mocowania vs grubość ceownika w danych.
+
+## START TUTAJ – 2026-11-04
 
 **Sposób pracy od 04.11 (Jan: „sieciowe ficzery dawaj bez osobnych branchy”):** wszystko z sieci commitem prosto na `siec-gl46`
 → push → merge do `wszystko-gl46` → push. `funkcja/*` już nie zakładać. W płytkim klonie `git fetch origin wszystko-gl46` NIE

@@ -25,6 +25,7 @@ void ErrorLog( std::string const &Message ) { errors.push_back( Message ); }
 void WriteLog( const char *Message ) { logs.emplace_back( Message ); }
 extern int mock_deleted_parts;
 extern int mock_deleted_spans;
+extern int mock_reloaded_spans;
 extern std::vector<std::string> mock_span_bodies, mock_span_names;
 
 int failures { 0 };
@@ -216,11 +217,11 @@ int main( int, char *argv[] ) {
         check( mock_span_bodies.front().find( "pwr01 3500.0 4500.0 0.0100 cu 3.00 2" ) == 0 && mock_span_bodies.front().find( "type YwsC120-2C endtraction" ) != std::string::npos
             && mock_span_bodies.front().find( "0.687 5.800 100.247\n0.087 5.800 160.000\n0.687 7.500 100.247\n0.087 7.500 160.000" ) != std::string::npos, "przeslo: zasilanie, stan, punkty drutu i liny, typ" );
         // przesunięcie środkowego słupa: dwa przęsła przy nim od nowa
-        mock_span_bodies.clear();
+        mock_span_bodies.clear(); mock_reloaded_spans = 0;
         auto moved2 { *catenary_scene_get( 1 ) };
         moved2.at[ 0 ] = moved2.rope[ 0 ] = -0.3;
         catenary_scene_update( 1, moved2 );
-        check( mock_deleted_spans == 2 && mock_span_bodies.size() == 2 && mock_span_bodies.front().find( "-0.300 5.800 160.000" ) != std::string::npos, "przesuniety slup: oba przesla przy nim od nowa" );
+        check( mock_deleted_spans + mock_reloaded_spans == 2 && mock_span_bodies.size() == 2 && mock_span_bodies.front().find( "-0.300 5.800 160.000" ) != std::string::npos, "przesuniety slup: oba przesla przy nim od nowa (w miejscu albo usuniete)" );
         std::size_t position { 0 };
         check( catenary_chain_of( 1, position ) == 0 && position == 1 && catenary_chain_members( 0 ).size() == 3, "slup w lancuchu: miejsce 2 z 3" );
         // zmiana typu całego łańcucha jednym wpisem

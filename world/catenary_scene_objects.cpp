@@ -13,6 +13,7 @@ http://mozilla.org/MPL/2.0/.
 #include "stdafx.h"
 
 #include "model/AnimModel.h"
+#include "rendering/renderer.h"
 #include "scene/scene.h"
 #include "scene/scenelayers.h"
 #include "simulation/simulation.h"
@@ -89,6 +90,44 @@ catenary_span_create( std::string const &Name, double const RangeMax, double con
     // sąsiedzi mają teraz z tej strony przęsło (np. wspólną linkę Y): ich linie i bryły od nowa
     for( auto *neighbour : neighbours ) { catenary_span_refresh( *neighbour ); }
     return span;
+}
+
+// przęsło już stojące w scenerii wczytane od nowa z nowej treści, bez usuwania obiektu: zostaje jego fragment linii w banku
+// sekcji, bank brył i połączenia z sąsiadami. Usunięcie i nowe przęsło dokładały fragment do banku geometrii sekcji, a to w
+// rendererze GL 4.6 kasuje bufor całej sekcji i wysyła ją na kartę od nowa - przy suwaku w edytorze co klatkę (2026-11-06).
+// Teraz na kartę idzie tylko fragment tego przęsła (gdy liczba wierzchołków ta sama).
+// false: tak się nie da (inna sekcja, inna nazwa, inna bieżnia wspólna albo zasilacz, przęsło po staremu) - przęsło jest
+// wtedy wczytane i zarejestrowane z nową treścią, ale trzeba je usunąć i zrobić od nowa (catenary_span_delete / _create)
+bool
+catenary_span_reload( TTraction *Span, std::string const &Name, std::string const &Body ) {
+
+    if( Span == nullptr || Span->m_geometry == null_handle || Span->name() != Name ) { return false; }
+    auto const location { Span->location() };
+    if( false == simulation::Region->point_inside( location ) ) { return false; }
+    auto *const section { &simulation::Region->section( location ) };
+    auto const parallel { Span->asParallel };
+    auto const supply { Span->asPowerSupplyName };
+    // końce przed zmianą wyrejestrowane (katalog przęseł w komórkach jest po końcach)
+    simulation::Region->erase_and_unregister( Span );
+    Span->asParallel.clear();
+    cParser parser( Body );
+    Span->Load( &parser, glm::dvec3() );
+    simulation::Region->insert_and_register( Span );
+    if( false == simulation::Region->point_inside( Span->location() )
+     || &simulation::Region->section( Span->location() ) != section
+     || Span->asParallel != parallel
+     || Span->asPowerSupplyName != supply ) {
+        return false;
+    }
+    gfx::vertex_array vertices;
+    if( false == catenary_span_lines( *Span, vertices ) ) { return false; }
+    gfx::userdata_array userdata;
+    GfxRenderer->Replace( vertices, userdata, Span->m_geometry, GL_LINES );
+    // sąsiedzi: wspólna linka Y i końce zależą od tego przęsła
+    for( auto *neighbour : Span->hvNext ) {
+        if( neighbour != nullptr ) { catenary_span_refresh( *neighbour ); }
+    }
+    return true;
 }
 
 void
