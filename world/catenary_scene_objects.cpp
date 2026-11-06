@@ -42,6 +42,24 @@ catenary_part_delete( TAnimModel *Model ) {
     simulation::State.delete_model( Model );
 }
 
+// przęsła obok zmienionego: linie od nowa. Dwa przęsła w każdą stronę – kształt przęsła (zwis, połówka linki Y) zależy od sąsiada,
+// a połówka Y sąsiada od jego drugiego sąsiada; z jednym poziomem linie przęsła dwa dalej zostawały ze starą połówką Y i wystawały
+// z brył policzonych na świeżo (Jan 2026-11-06: „GL_LINES przy Y z jednej strony”)
+static void
+refresh_around( std::vector<TTraction *> const &Neighbours, TTraction const *Changed ) {
+    std::vector<TTraction *> done;
+    auto const refresh = [ & ]( TTraction *Span ) {
+        if( Span == nullptr || Span == Changed || std::find( done.begin(), done.end(), Span ) != done.end() ) { return; }
+        done.push_back( Span );
+        catenary_span_refresh( *Span );
+    };
+    for( auto *neighbour : Neighbours ) { refresh( neighbour ); }
+    for( auto *neighbour : Neighbours ) {
+        if( neighbour == nullptr ) { continue; }
+        for( auto *further : neighbour->hvNext ) { refresh( further ); }
+    }
+}
+
 // przęsło łańcucha jako zwykły TTraction, wczytany z treści wpisu node traction. Bez warstwy scenerii: zapis scenerii
 // w edytorze go nie przepisuje, przęsła łańcucha zapisują się w pliku sieci jako jeden wpis
 TTraction *
@@ -88,7 +106,7 @@ catenary_span_create( std::string const &Name, double const RangeMax, double con
         span->create_geometry( section.m_geometrybank );
     }
     // sąsiedzi mają teraz z tej strony przęsło (np. wspólną linkę Y): ich linie i bryły od nowa
-    for( auto *neighbour : neighbours ) { catenary_span_refresh( *neighbour ); }
+    refresh_around( neighbours, span );
     return span;
 }
 
@@ -124,9 +142,7 @@ catenary_span_reload( TTraction *Span, std::string const &Name, std::string cons
     gfx::userdata_array userdata;
     GfxRenderer->Replace( vertices, userdata, Span->m_geometry, GL_LINES );
     // sąsiedzi: wspólna linka Y i końce zależą od tego przęsła
-    for( auto *neighbour : Span->hvNext ) {
-        if( neighbour != nullptr ) { catenary_span_refresh( *neighbour ); }
-    }
+    refresh_around( { Span->hvNext[ 0 ], Span->hvNext[ 1 ] }, Span );
     return true;
 }
 
@@ -147,7 +163,7 @@ catenary_span_delete( TTraction *Span ) {
         }
         neighbours.push_back( neighbour );
     }
-    for( auto *neighbour : neighbours ) { catenary_span_refresh( *neighbour ); }
+    refresh_around( neighbours, Span );
     // z kółka bieżni wspólnej: poprzednik wskazuje dalej za usuwanym (a gdy zostaje sam - na nic)
     if( Span->hvParallel != nullptr ) {
         auto *previous { Span->hvParallel };
