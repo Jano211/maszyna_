@@ -175,7 +175,7 @@ glm::dvec2 right_of(glm::dvec2 const &Direction)
 // the signed distance of Point from the axis of the track a chain ends over (Jan 2026-11-06: the anchor pole from -30 to +30 m
 // of the axis, on it too). The track: the one nearest to Over (the wire at the last pole), or one joined to it when Point is
 // past its end. Right: the unit vector across that track at Point (+ right of the track)
-bool track_offset(glm::dvec3 const &Over, glm::dvec3 const &Point, double &Offset, glm::dvec2 &Right)
+bool track_offset(glm::dvec3 const &Over, glm::dvec3 const &Point, double &Offset, glm::dvec2 &Right, double *Rail = nullptr)
 {
 	TTrack *base{nullptr};
 	auto best{5.0};
@@ -234,6 +234,8 @@ bool track_offset(glm::dvec3 const &Over, glm::dvec3 const &Point, double &Offse
 			nearest = std::abs(square);
 			Offset = square;
 			Right = right;
+			if (Rail != nullptr)
+				*Rail = axis.y + kRailTop;
 			found = true;
 		}
 	}
@@ -5002,6 +5004,14 @@ bool catenary_editor::catenary_anchor_create(std::size_t const Chain, bool const
 		data.pole[0] = at.x;
 		data.pole[1] = last->has_pole ? last->pole[1] : last->at[1] - static_cast<double>(tool.height);
 		data.pole[2] = at.y;
+		// the foot at the rail heads of the track there (Jan 2026-11-06: by a drop of a gantry the last "pole" is the bottom of the beam,
+		// and the anchor pole stood that high)
+		{
+			double offset{0.0}, rail{0.0};
+			glm::dvec2 right{0.0};
+			if (track_offset(glm::dvec3{last->at[0], last->at[1], last->at[2]}, glm::dvec3{data.pole[0], data.pole[1], data.pole[2]}, offset, right, &rail))
+				data.pole[1] = rail;
+		}
 	}
 	std::copy(std::begin(last->at), std::end(last->at), data.toward);
 	// from the middle anchor: half of the chain, by default
@@ -5249,6 +5259,14 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 				}
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("%s", STR_C("From the axis of the track the chain ends over to the axis of the anchor pole, -30 to +30 m: + on the side of the last pole, - across the track, 0 on its axis. It moves square to the track; the tensioning device turns after the wires. Drag or Ctrl+click to type"));
+			}
+			// moved: the foot at the rail heads of the track there (on a grade the height changes along it)
+			if (edited)
+			{
+				double axisoffset{0.0}, rail{0.0};
+				glm::dvec2 across{0.0};
+				if (track_offset(glm::dvec3{last->at[0], last->at[1], last->at[2]}, glm::dvec3{data.pole[0], data.pole[1], data.pole[2]}, axisoffset, across, &rail))
+					data.pole[1] = rail;
 			}
 			// a cantilever on the anchor pole (a pole which anchors one section and carries the wires of another one)
 			auto const placing{tool.anchor_cantilever == static_cast<int>(index)};
@@ -9075,7 +9093,10 @@ void catenary_editor::catenary_key_hints(std::vector<key_hint> &Hints) const
 	if (m_catenary.page != 0 || m_catenary.pole_insert)
 		Hints.push_back({"LMB under a span", "puts the pole into the chain between the two poles"});
 	if (m_catenary.chaining && m_catenary.last >= 0 && m_catenary.selected < 0)
+	{
 		Hints.push_back({"Esc", "ends the chain: the next pole starts a new one"});
+		Hints.push_back({"Shift+A", "anchors the end of the chain to a pole standing (LMB on it)"});
+	}
 	if (m_catenary.selected < 0 && m_catenary.page == 0)
 	{
 		Hints.push_back({"X", "swaps the next pole: short <-> long cantilever"});
@@ -9086,6 +9107,7 @@ void catenary_editor::catenary_key_hints(std::vector<key_hint> &Hints) const
 		if (m_catenary.umbrella_from >= 0)
 			Hints.push_back({"LMB by the other track", "the second cantilever of the umbrella on this pole"});
 		Hints.push_back({"C", "the chain goes on from the selected pole"});
+		Hints.push_back({"Shift+A", "the first or last pole of a chain: its end anchored to a pole standing (LMB on it)"});
 		Hints.push_back({"X", "swaps the selected pole: short <-> long cantilever"});
 		Hints.push_back({"Del", "removes the selected pole"});
 		Hints.push_back({"Esc", "lets go of the selected pole"});
@@ -9098,7 +9120,53 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 {
 	auto &tool{m_catenary};
 	// not while the camera flies (the right button held: the letters move it)
-	if (Action != GLFW_PRESS || (Mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT | GLFW_MOD_SHIFT)) != 0 || ImGui::GetIO().WantTextInput || ImGui::GetIO().MouseDown[1])
+	if (Action != GLFW_PRESS || ImGui::GetIO().WantTextInput || ImGui::GetIO().MouseDown[1])
+		return false;
+	// Shift+A: the end of a chain anchored to a pole already standing, picked with LMB (Jan 2026-11-06: A alone - too many
+	// misclicks). The end: the one being drawn out while building a chain, otherwise the end at the selected pole
+	if (Key == GLFW_KEY_A && Mods == GLFW_MOD_SHIFT)
+	{
+		int chain{-1};
+		bool start{false};
+		if (tool.chaining && tool.chain >= 0 && catenary_chain_get(static_cast<std::size_t>(tool.chain)) != nullptr)
+		{
+			chain = tool.chain;
+			start = false == tool.append;
+		}
+		else if (tool.selected >= 0)
+		{
+			std::size_t position{0};
+			auto const found{catenary_chain_of(static_cast<std::size_t>(tool.selected), position)};
+			auto const members{found >= 0 ? catenary_chain_members(static_cast<std::size_t>(found)) : std::vector<std::size_t>{}};
+			if (members.size() >= 2 && members.front() == static_cast<std::size_t>(tool.selected))
+			{
+				chain = found;
+				start = true;
+			}
+			else if (members.size() >= 2 && members.back() == static_cast<std::size_t>(tool.selected))
+			{
+				chain = found;
+				start = false;
+			}
+		}
+		auto const *data{chain >= 0 ? catenary_chain_get(static_cast<std::size_t>(chain)) : nullptr};
+		if (data == nullptr)
+			tool.status = STR("Shift+A anchors an end of a chain: build the chain, or select its first or last pole");
+		else if (catenary_anchor_of(*data, catenary_chain_file(static_cast<std::size_t>(chain)), start) < catenary_anchor_size())
+			tool.status = STR("This end of the chain is anchored already");
+		else
+		{
+			tool.anchor_pick = chain;
+			tool.anchor_pick_start = start;
+			tool.anchor_pick_contact = false;
+			tool.connect_from = -1;
+			tool.umbrella_from = -1;
+			tool.selected = -1;
+			tool.status = STR("Shift+A: LMB on the pole the tensioning device goes on (Esc cancels)");
+		}
+		return true;
+	}
+	if ((Mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT | GLFW_MOD_SHIFT)) != 0)
 		return false;
 	if (Key == GLFW_KEY_ESCAPE)
 	{
