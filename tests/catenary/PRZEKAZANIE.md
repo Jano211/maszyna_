@@ -2,22 +2,57 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – 2026-11-07 (najnowsze)
+## START TUTAJ – 2026-11-07 (najnowsze) – zrzutka na nowy czat
 
-**Zrobione 07.11 (w exe NIESPRAWDZONE):** wykonania pod liczbę przewodów jezdnych sieci (EDYTOR_ZMIANY.md 07.11). Pivoty `wire`
-w modelach ramion 62xx leżą wszystkie w X = 0 (użytkownik myślał, że w dwuprzewodowych są przesunięte) – podział zrobiony po
-szerokości modeli, potwierdzony przez użytkownika: `arms 1` / `arms 2` w `traction_catalog.txt`. Stojące słupy: tylko uwaga i
-przyciski (decyzja użytkownika). Generator `gen_cantilevers.py` jest ROZJECHANY z `traction_cantilevers.txt` (ok. 117 linii
-ręcznych dopisków: 4490-01, `rules pulloff_drop`, `assembly brace`, odciągi 0311–0324) – przed jakimkolwiek generowaniem przenieść
-je do generatora.
+**Jak pracujemy (bez zmian):** wszystko z sieci commitem prosto na `siec-gl46` → push → merge do `wszystko-gl46` → push (płytki klon:
+fetch z refspec `+refs/heads/wszystko-gl46:refs/remotes/origin/wszystko-gl46`). Notatki w tym samym commicie co kod. Dane na
+`G:\Maszyna2510\data\`, tłumaczenia na `G:\Maszyna2510\lang\editor_pl.po` – w CRLF, zawsze z nowego folderu w outputs, przed
+zapisem porównać kopię z dysku z repo (`tr -d '\r'` + diff), po zapisie md5. Testy: `sh tests/catenary/build.sh`, uruchamiać
+z katalogiem danych (`tests/catenary/data`; `tt` – bez argumentu albo ze ścieżką zakończoną `/`) – 07.11 cały zestaw OK
+(t, ts, tsc, tc, te, tk, tt). Składnię plików exe sprawdzać `g++ -fsyntax-only` z atrapami nagłówków (glm, GLFW, OpenAL w scratchpadzie).
+Kod sieci na `siec-gl46` = na `wszystko-gl46` (różnią się tylko Track.cpp/.h – bujanie). ZADANIA.md bywa nieaktualne – przed
+mówieniem „tego nie ma” sprawdzić w kodzie (użytkownik się wkurza).
 
-Też 07.11: współczynnik B (rozpiętość wg odsuwów, `span_kind_of`), przęsła pochyłe sprawdzone (solver OK, test w `t`), stare
-testy `t`/`tsc` poprawione – cały zestaw OK (`tt` bez argumentu albo z ukośnikiem na końcu ścieżki), strona Słupy w sekcjach
-(kopia sprzed zmiany nie w repo – historia gita). Lico: przyciski szlak/stacja/rozjazd już były. Walidacje peronu/kozła i
-automatyczne lico – użytkownik: tylko 4,00 m przy rozjazdach (zrobione, `switch_face`); walidacji kozła NIE robimy (użytkownik 07.11: zapis
-nagminnie ignorowany, za kozłem często stoją słupy); walidacje peronu – edytor nie wie, gdzie peron, czeka.
-Pary rozjazdowe tej samej długości (6203-1111 w 127x i 0179, 6206-1111 w 128x, 0180, 0184, 6206-1212 w 0197, 6207-0303 w 0159,
-0173) – użytkownik: „jedną, zawsze jedną” → `arms 1` (dwie łapki na jednej sieci z jednym jezdnym).
+**Zrobione 06–07.11 (w exe NIESPRAWDZONE, chyba że zaznaczono), opisy w docs/EDYTOR_ZMIANY.md:**
+- Przęsło przebudowywane w miejscu (`catenary_span_reload`, pula banków brył) – suwaki kotwienia bez zbijania FPS (GL 4.6 kasował
+  bufor całej sekcji przy każdym nowym przęśle).
+- Linie GL_LINES przy Y: odświeżanie sąsiadów dwa przęsła dalej, z bliska tylko bryły.
+- Izolatory wysięgnika tylko pasujące (teowniki 7010↔7110, 7020↔7120; rurowe 7100/7010/7020 w -01/-02/-25).
+- Słup kotwowy: suwak -30…+30 m od osi toru (także 0), stopa na główce szyny (był wysoko, gdy ostatni słup był zwisem bramki).
+- Shift+A: kotwienie końca łańcucha do stojącego słupa (same A i D – nie, pomyłki).
+- Rodzina/karta wybrana ręcznie zostaje; „Karty dla” wg toru, ręczny wybór tylko dla jednego słupa.
+- Menu Widok > Sieć trakcyjna: przełączniki wszystkich podglądów (na sesję, bez zapisu w ustawieniach).
+- Dane: 311x offset 0.101 (C200), 312x width 0.240 – mocowania na nogach bramek palowych nie odstają.
+- Wykonania pod liczbę przewodów jezdnych sieci: `arms 1|2` w `traction_catalog.txt` (948/948 zestawów opisanych; pary rozjazdowe
+  tej samej długości – zawsze jeden jezdny), filtr w liście wykonań i w `pick_card(..., Contacts)`, uwaga + przyciski przy stojących.
+  Pivoty `wire` w modelach 62xx leżą wszystkie w X = 0 – podział po szerokości modeli (użytkownik potwierdził).
+- Współczynnik B (Głowacki 15.2): rozpiętość na prostej wg odsuwów obu końców, raport łańcucha i kolor w widoku (`span_kind_of`).
+- Przęsła pochyłe 1,70 ↔ 1,30: solver liczył dobrze, test w `t`. Stare oczekiwania testów `t` i `tsc` poprawione.
+- Strona Słupy w zwijanych sekcjach (Gotowe/Usuń na górze; Słup i karta, Odsuw i strona, Łańcuch; zwinięte: Drugi wysięgnik,
+  Regulacje, Izolatory i tekstury). Lico 4,00 m przy rozjeździe samo (`switch_face`).
+- Sprawdzone przez użytkownika w exe (06.11): kotwienie środkowe na ceowniku, strut_shift, obrót ręczny, lista izolatorów, podgląd pantografu.
+
+**Decyzje użytkownika (nie wracać):** walidacji „słup ≥ 50 m za kozłem” nie robimy (zapis nagminnie ignorowany); lico automatycznie
+tylko 4,00 przy rozjazdach (szlak/stacja – nie); stojące słupy z niezgodnym wykonaniem – tylko uwaga, bez automatu; koncepcja
+kotwienia zostaje (koledzy chcieli zaczynać od kotwy – nie).
+
+**Otwarte, kod:**
+- Generator `etap0/gen_cantilevers.py` ROZJECHANY z `traction_cantilevers.txt` (ok. 117 linii ręcznych dopisków: 4490-01,
+  `rules pulloff_drop`, `assembly brace`, odciągi 0311–0324) – przenieść do generatora, zanim ktoś go puści.
+- Skrzyżowania przewodów nad rozjazdami z ogranicznikiem (przęsło rozjazdowe nad szlakowym, ciągnie je przy uniesieniu) – nie zaczęte.
+- Walidacje peronowe (słup z odciągiem na peronie, skrajnia 3/4 m) – edytor nie wie, gdzie peron: zapytać, jak wykrywać.
+- Zapis przełączników Widok > Sieć trakcyjna w EditorSettings (zmiana editorSettings.hpp – długa przebudowa).
+- Obrót od brakujących ciężarów: użytkownik „chyba nie działa” – działa tylko w łańcuchu z kotwieniem środkowym (w teście 0,17° przy
+  3 ciężarach); nie potwierdził, na czym sprawdzał.
+- Duże: panel „Konstrukcje wsporcze”, dobowa temperatura, zerwanie kotwienia, linie WN/SN/nN (następny temat po sieci), przed PR
+  do mastera – czyszczenie imion i ścieżek.
+- Czeka na modele/dane od użytkownika: kotwienie 0454, konsoleta 4580, mocowania 0455, LPN-y w kodzie, wysięgnik „z pizzy”.
+
+**Poza repo (07.11):** plugin Substance Paintera `maszyna_brud.py` (brud #3F3832 z Dirt, rdza Rust Coarse #5D3F32 z Metal Edge Wear
+tylko na metalu przez Compare Mask, User0 = maska odbić na 0, 4 warianty + eksport new/used/old/extreme) – wysłany użytkownikowi,
+w repo go nie ma. Użytkownik nadpisał roczny projekt .spp sieci (maski się przemieszały, autozapisu brak) – do sprawdzenia
+„Poprzednie wersje” Windows / stara siatka fbx; AO do przepieczenia (Only Same Mesh Name, krótszy zasięg). Mógł chcieć kopię .spp
+przed pierwszym zapisem w sesji (plik 3 GB – tylko jedna/dwie kopie) – nie zdecydował.
 
 ## START TUTAJ – 2026-11-06
 
