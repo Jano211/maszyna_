@@ -14,7 +14,8 @@ je do generatora.
 Też 07.11: współczynnik B (rozpiętość wg odsuwów, `span_kind_of`), przęsła pochyłe sprawdzone (solver OK, test w `t`), stare
 testy `t`/`tsc` poprawione – cały zestaw OK (`tt` bez argumentu albo z ukośnikiem na końcu ścieżki), strona Słupy w sekcjach
 (kopia sprzed zmiany nie w repo – historia gita). Lico: przyciski szlak/stacja/rozjazd już były. Walidacje peronu/kozła i
-automatyczne lico – edytor nie wie, gdzie peron i kozioł: do ustalenia z użytkownikiem, jak to wykrywać.
+automatyczne lico – użytkownik: tylko 4,00 m przy rozjazdach (zrobione, `switch_face`); walidacje peronu i kozła (50 m w przedłużeniu
+osi toru za kozłem – GLOWACKI.md l. 229, Wytyczne 4.3.17) – edytor nie wie, gdzie peron i kozioł, czeka.
 Pary rozjazdowe tej samej długości (6203-1111 w 127x i 0179, 6206-1111 w 128x, 0180, 0184, 6206-1212 w 0197, 6207-0303 w 0159,
 0173) – użytkownik: „jedną, zawsze jedną” → `arms 1` (dwie łapki na jednej sieci z jednym jezdnym).
 

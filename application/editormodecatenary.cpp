@@ -873,6 +873,13 @@ bool catenary_editor::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3
 	// 102x, 0120, 0160, 070x, 079x - 0) gives it to the new poles: the family is known once the card is picked, so composed again with it
 	auto const stagger{zigzag_stagger(Spot.curve)};
 	catenary_compose(Spot, m_catenary.clearance, stagger, Spot.toward);
+	// by a switch the face 4.00 m from the track axis (WTP), new poles by themselves; the panel's face counts where it's more
+	auto face{m_catenary.clearance};
+	if (Placing && m_catenary.switch_face && m_catenary.page == 0 && m_catenary.gantry_selected < 0 && Spot.by_switch && face < kSwitchFace - 0.005f)
+	{
+		face = kSwitchFace;
+		catenary_compose(Spot, face, stagger, Spot.toward);
+	}
 	if (Placing)
 	{
 		auto const &structures{catenary_scene_structures()};
@@ -880,7 +887,7 @@ bool catenary_editor::catenary_spot_at(TTrack &Track, int const Path, glm::dvec3
 		auto const *group{structures.group(m_catenary.catalog_group)};
 		auto const own{family != nullptr && family->stagger >= 0.0 ? family->stagger : group != nullptr ? group->stagger : -1.0};
 		if (false == m_catenary.stagger_own && own >= 0.0 && std::abs(own - stagger) > 1e-4)
-			catenary_compose(Spot, m_catenary.clearance, own, Spot.toward);
+			catenary_compose(Spot, face, own, Spot.toward);
 	}
 	// a gantry is selected: the cantilever hangs on a drop on its beam
 	glm::dvec3 from, to;
@@ -1935,7 +1942,7 @@ std::string catenary_editor::catenary_intent_label(catenary_spot const &Spot) co
 	if (Spot.switch_error)
 		label += "\n" + format(STR_C("ERROR: pole %s doesn't stand by a switch, take a steel one"), Spot.data.pole_type.c_str());
 	// the face of a pole by a switch: 4.00 m from the track axis (on a line 2.50, in a station 2.20)
-	if (Spot.by_switch && m_catenary.page == 0 && m_catenary.gantry_selected < 0 && m_catenary.clearance < kSwitchFace - 0.005f)
+	if (Spot.by_switch && m_catenary.page == 0 && m_catenary.gantry_selected < 0 && m_catenary.clearance < kSwitchFace - 0.005f && (false == m_catenary.switch_face || m_catenary.selected >= 0))
 		label += "\n" + format(STR_C("by a switch: the face of the pole %.2f m from the track axis (%.2f m here)"), kSwitchFace, m_catenary.clearance);
 	if (m_catenary.zigzag)
 	{
@@ -6604,6 +6611,12 @@ void catenary_editor::render_catenary_cantilever_ui()
 			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("The face of the pole from the track axis: 2.50 m on a line, 2.20 m in a station, 4.00 m by a switch"));
+			if (tool.selected < 0)
+			{
+				ImGui::Checkbox(STR_C("4.00 m by a switch by itself"), &tool.switch_face);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("A new pole by a switch (by the track of a switch or close to it) gets the face 4.00 m from the track axis whatever is set above; elsewhere the face set above"));
+			}
 		}
 		std::string const bendnames[] = {STR("by the track"), STR("straight"), STR("arc")};
 		char const *const bends[] = {bendnames[0].c_str(), bendnames[1].c_str(), bendnames[2].c_str()};

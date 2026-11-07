@@ -18,6 +18,12 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: lico 4,00 m przy rozjeździe samo — commit o tym tytule
+- Co widać: nowy słup przy rozjeździe (na torze rozjazdu albo do 8 m od niego) dostaje lico 4,00 m od osi toru, nawet gdy w panelu
+  jest 2,50 / 2,20; gdzie indziej – lico z panelu. Przełącznik „4,00 m przy rozjeździe samo” pod przyciskami lica (domyślnie wł.).
+  Stojących słupów nie rusza; uwaga „przy rozjeździe lico 4,00” przy kursorze tylko, gdy automat wyłączony.
+- Zmienia: `application/editormodecatenary.h/.cpp`, `lang/editor_pl.po`. Wymaga: nic.
+
 ### Edytor sieci: strona Słupy w sekcjach — commit o tym tytule
 - Co widać: zaznaczony słup – na górze „Gotowe” i „Usuń słup”, karta, wykonanie, uwagi solvera i liczby przewodów; niżej zwijane
   sekcje w kolejności pracy: „Słup i karta” (słup, lico, karty, grupa/rodzina/karta/wykonanie, wysokość, hk, zestaw izolatorów,
