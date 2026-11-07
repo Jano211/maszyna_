@@ -84,6 +84,10 @@ public:
 	// the ballast of the railway drawn in the top view
 	bool top_ballast() const { return m_top_ballast; }
 	void top_ballast(bool Show) { m_top_ballast = Show; }
+	// View > Catenary: the switched views as name=0/1;… (empty: the defaults of the tool); the tool reads and writes it itself,
+	// so that a new view needs no change here
+	std::string const &catenary_view() const { return m_catenary_view; }
+	void catenary_view(std::string const &Views) { m_catenary_view = Views; }
 
 private:
 	movement_scheme m_movement{movement_scheme::wsad};
@@ -102,6 +106,7 @@ private:
 	bool m_terrain_offer{true};
 	bool m_track_tools_more{false};
 	bool m_top_ballast{true};
+	std::string m_catenary_view;
 };
 
 // global editor settings instance
