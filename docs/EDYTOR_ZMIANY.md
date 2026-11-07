@@ -18,6 +18,15 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: strona Słupy w sekcjach — commit o tym tytule
+- Co widać: zaznaczony słup – na górze „Gotowe” i „Usuń słup”, karta, wykonanie, uwagi solvera i liczby przewodów; niżej zwijane
+  sekcje w kolejności pracy: „Słup i karta” (słup, lico, karty, grupa/rodzina/karta/wykonanie, wysokość, hk, zestaw izolatorów,
+  długość zwisu, odciąg wielotorowy), „Odsuw i strona”, „Łańcuch” (zawieszanie, kopiowanie, zygzak łańcucha, uwagi Iet-107, sama lina,
+  izolator sekcyjny, bieżnia wspólna, druga sieć, przeniesienie do pliku); zwinięte: „Drugi wysięgnik” (parasol, rozstawione),
+  „Regulacje” (mocowania, obrót, przechył, zastrzał – w tytule „ustawione”, gdy coś jest), „Izolatory i tekstury”.
+- Nowy słup: „Nowy słup”, „Zygzak”, „Plik i łańcuch”. Stan zwinięcia pamięta ImGui.
+- Zachowanie bez zmian – te same kontrolki, inna kolejność. Zmienia: `application/editormodecatenary.cpp`, `lang/editor_pl.po`.
+
 ### Edytor sieci: rozpiętość przęsła wg odsuwów na jego końcach (współczynnik B) — commit o tym tytule
 - Co widać: na prostej (przy zygzaku Iet-107) przęsło liczone wg odsuwów przewodu przy obu słupach (Głowacki 15.2, wzór
   8-4/8-5: rozpiętość ~ √B). Rozpiętość nominalna typu sieci = przęsło normalne (0 / 0,18, 0,30 / 0,18: B 3,24). Odsuwy

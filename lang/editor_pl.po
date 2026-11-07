@@ -10918,6 +10918,42 @@ msgstr "wykonanie %d"
 msgid "Execution: from the distance A (the band of the card)"
 msgstr "Wykonanie: z odległości A (pasmo karty)"
 
+msgid "Pole and card"
+msgstr "Słup i karta"
+
+msgid "New pole"
+msgstr "Nowy słup"
+
+msgid "Stagger and side"
+msgstr "Odsuw i strona"
+
+msgid "Zigzag"
+msgstr "Zygzak"
+
+msgid "File and chain"
+msgstr "Plik i łańcuch"
+
+msgid "Chain"
+msgstr "Łańcuch"
+
+msgid "Second cantilever: spread###second"
+msgstr "Drugi wysięgnik: rozstawione###second"
+
+msgid "Second cantilever: umbrella###second"
+msgstr "Drugi wysięgnik: parasol###second"
+
+msgid "Second cantilever###second"
+msgstr "Drugi wysięgnik###second"
+
+msgid "Adjustments (set)###adjustments"
+msgstr "Regulacje (ustawione)###adjustments"
+
+msgid "Adjustments###adjustments"
+msgstr "Regulacje###adjustments"
+
+msgid "Insulators and skins"
+msgstr "Izolatory i tekstury"
+
 msgid "Only the executions for one contact wire: the network has one"
 msgstr "Tylko wykonania na jeden przewód jezdny: sieć ma jeden"
 
