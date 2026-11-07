@@ -24,8 +24,8 @@ Commity na `siec-gl46`.
   przewodów: czerwona uwaga w widoku i w panelu słupa (przycisk „Wykonanie N”), w panelu łańcucha licznik i przycisk „Wykonania
   łańcucha pod jego sieć”. Samo nic się nie zmienia.
 - Dane: `traction_catalog.txt`, wpisy `arms <1|2> <zestawy>` (po szerokości modeli ramion wzdłuż toru: wąskie – jeden, szerokie
-  i pary różnej długości – dwa). Pary rozjazdowe tej samej długości (6203-1111, 6206-1111, 6206-1212, 6207-0303) jeszcze
-  nieopisane – pasują do każdej sieci. Karty bez ramion (120x) też.
+  i pary różnej długości – dwa). Pary rozjazdowe tej samej długości (6203-1111, 6206-1111, 6206-1212, 6207-0303) – dwie łapki
+  na jednej sieci, zawsze jeden przewód jezdny (użytkownik 07.11). Karty bez ramion (120x) pasują do każdej sieci.
 - `pick_card(..., Contacts)`: wykonania z ramionami na inną liczbę przewodów pomijane; gdy żadne nie pasuje – komunikat.
 - Dobór innego wykonania tej samej karty: najpierw ten sam zestaw ramion (6201-01 ↔ 6201-02), potem ta sama hk – ZAŁOŻENIE.
 - Zmienia: `world/catenary_catalog.h/.cpp` (przebudowa kilku plików przez `catenary_scene.h`), `application/editormodecatenary.h/.cpp`,
