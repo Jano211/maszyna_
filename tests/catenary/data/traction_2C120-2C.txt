@@ -1,0 +1,30 @@
+{
+traction_code: 11
+symbol: 2C120-2C
+
+// siec CMK z lat 70. (P. Koroblowski, "Siec trakcyjna linii CMK", tablica 1); kod 11 jak w 13-0002 (Kolprojekt 1978).
+// Nowszy artykul ma pierwszenstwo przed 13-0002 (tam jezdne 2x120). Po modernizacji = 2C120-2C-3 (jezdne 2x1059, przesla 65 m)
+
+// przewody jezdne (nazwa przewodu z pliku traction_tables.txt)
+contact_wire_num: 2
+contact_wire: Djp100
+contact_tension: 1906           // daN, lacznie (2x953)
+contact_wire_spacing: 0.08      // m; jak w 2C120-2C-3/-4
+
+// liny nosne; naciag laczny obu lin w daN (2x1588)
+catenary_wire_num: 2
+catenary_wire: L120
+catenary_tension: 3176
+catenary_stack: 0.04            // m - jak w 2C120-2C-3
+
+// dolna lina nosna przy podwieszeniu w Y - ZALOZENIE jak w 2C120-2C-3 (ta sama siec przed modernizacja; artykul Y nie podaje)
+y_wire: L120
+y_tension: 1588
+y_length: 51 22  0 14           // pary: od rozpietosci [m], dlugosc Y [m]
+
+// wieszaki - ZALOZENIE jak w 2C120-2C-3
+hanger_table: 11
+hanger_mass: 0.5
+
+height: 1.70                    // m, wysokosc konstrukcyjna (13-0002)
+}

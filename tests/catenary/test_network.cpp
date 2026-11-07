@@ -371,10 +371,11 @@ int main( int argc, char *argv[] ) {
     // 2C120-2C-1 (DTR PLK 2024): liny 1600 + 500 daN, dolna przechodzi w Y 14 m od przesel 36 m; przesla 30-65 m licza sie i rysuja
     {
         bool good { true };
-        auto const *type { registry.find( "2C120-2C-1" ) };
-        good = type != nullptr;
-        if( good ) {
-            for( double const span : { 30.0, 36.0, 50.0, 65.0 } ) {
+        for( auto const &[ symbol, longest ] : { std::pair<char const *, double> { "2C120-2C-1", 65.0 }, { "2C120-2C", 70.0 } } ) {
+        auto const *type { registry.find( symbol ) };
+        good = good && type != nullptr;
+        if( type != nullptr ) {
+            for( double const span : { 30.0, 36.0, 50.0, longest } ) {
                 catenary::span_points points { { 0, 5.6, 0 }, { span, 5.6, 0 }, { 0, 7.3, 0 }, { span, 7.3, 0 } };
                 std::vector<catenary::vec3> lines; std::string error;
                 auto const built { catenary::build_span_lines( *type, registry.hanger_gaps( type->hanger_table, span ), points, 0.04, lines, error ) };
@@ -384,12 +385,13 @@ int main( int argc, char *argv[] ) {
                 double lowest { 1e9 };
                 for( auto const &point : lines ) { if( point.y < 6.0 ) { lowest = std::min( lowest, point.y ); } }
                 if( false == built || false == finite || 5.6 - lowest > 0.05 ) {
-                    std::printf( "  2C120-2C-1 %.0f m: %s %s, zwis przewodu %.3f\n", span, built ? "zbudowane" : "nie", error.c_str(), 5.6 - lowest );
+                    std::printf( "  %s %.0f m: %s %s, zwis przewodu %.3f\n", symbol, span, built ? "zbudowane" : "nie", error.c_str(), 5.6 - lowest );
                     good = false;
                 }
             }
         }
-        std::printf( "2C120-2C-1: przesla 30-65 m z liną Y 500 daN: %s\n", good ? "OK" : "BLAD" );
+        }
+        std::printf( "2C120-2C-1 (30-65 m, Y 500 daN) i 2C120-2C (30-70 m): %s\n", good ? "OK" : "BLAD" );
         failed = failed || !good;
     }
     // skrzyzowanie nad rozjazdem (33-0561): ogranicznik tylko, gdy drugi przewod wyzej o (0; 3 cm); dwa przewody jezdne - jeden ogranicznik

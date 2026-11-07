@@ -14,6 +14,7 @@ network YC120-2C as 3
 network SKB70-C as 10
 network YpC120-2C as 26
 network YpC95-2C as 26
+network 2C120-2C as 32            // liny 2x1588 jak 2C120-2C-3, przewody 2x953 (-3: 2x1059) - ZALOZENIE
 network 2C120-2C-1 as 35          // dwie liny 1600 + 500, przewody 2x700 daN (DTR 2024) - najblizej 2C120-2C-4 (2860 / 1906); ZALOZENIE
 
 // 33-0011-1 tablica montazowa urzadzenia naprezajacego cala siec, rolki rownolegle (tom 1 s. 12). bn 1,75 / sn 2,25 przy +10 °C,
