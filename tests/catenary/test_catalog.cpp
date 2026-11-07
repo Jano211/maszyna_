@@ -69,6 +69,7 @@ int main( int, char *argv[] ) {
             if( catalog.arms_contacts( arms->second ) > 0 ) { ++described; } else { ++missing; }
         }
         std::printf( "  karty z ramionami: %zu opisanych, %zu bez opisu liczby przewodow\n", described, missing );
+        check( missing == 0 && catalog.arms_contacts( "6206-1111" ) == 1, "kazdy zestaw ramion kart ma liczbe przewodow, pary rozjazdowe - jeden" );
     }
     std::printf( failures == 0 ? "wszystko OK\n" : "BLEDY: %d\n", failures );
     return failures;

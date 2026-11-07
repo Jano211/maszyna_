@@ -22,9 +22,10 @@
 
 // ===================================================================================================================
 // zestawy ramion: jeden albo dwa przewody jezdne (Jan 2026-11-07, po szerokosci modeli wzdluz toru: waskie +-0,04 m - jeden,
-// szerokie +-0,12-0,18 m i pary roznej dlugosci - dwa). Pary rozjazdowe tej samej dlugosci (6203-1111, 6206-1111, 6206-1212,
-// 6207-0303) jeszcze nieopisane - do ustalenia z uzytkownikiem
+// szerokie +-0,12-0,18 m i pary roznej dlugosci - dwa). Pary rozjazdowe tej samej dlugosci (dwie lapki na jednej sieci) - zawsze
+// jeden przewod jezdny (Jan 2026-11-07)
 arms 1 6201-01 6201-03 6202-01 6203-01 6206-01 6206-02 6207-03 6208-03 6209-03
+arms 1 6203-1111 6206-1111 6206-1212 6207-0303
 arms 2 6201-02 6201-04 6204-02 6205-02 6209-02 6207-12 6208-12
 
 category through : Podwieszenia przelotowe

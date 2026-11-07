@@ -11,8 +11,8 @@ przyciski (decyzja użytkownika). Generator `gen_cantilevers.py` jest ROZJECHANY
 ręcznych dopisków: 4490-01, `rules pulloff_drop`, `assembly brace`, odciągi 0311–0324) – przed jakimkolwiek generowaniem przenieść
 je do generatora.
 
-**Czeka na użytkownika:** pary rozjazdowe tej samej długości (6203-1111 w 127x i 0179, 6206-1111 w 128x, 0180, 0184, 6206-1212
-w 0197, 6207-0303 w 0159, 0173) – dla sieci z jednym, dwoma czy obu? Pytał, co znaczą nazwy 1111/1212/0303.
+Pary rozjazdowe tej samej długości (6203-1111 w 127x i 0179, 6206-1111 w 128x, 0180, 0184, 6206-1212 w 0197, 6207-0303 w 0159,
+0173) – użytkownik: „jedną, zawsze jedną” → `arms 1` (dwie łapki na jednej sieci z jednym jezdnym).
 
 ## START TUTAJ – 2026-11-06
 
