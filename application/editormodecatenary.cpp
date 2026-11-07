@@ -983,6 +983,127 @@ std::string catenary_editor::panel_network() const
 	return tool.networks.empty() ? std::string{} : tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
 }
 
+int catenary_editor::network_contacts(std::string const &Network) const
+{
+	auto const *definition{Network.empty() ? nullptr : catenary::types().find(Network)};
+	return definition != nullptr ? definition->type.contact_count : 0;
+}
+
+int catenary_editor::new_pole_contacts() const
+{
+	auto const &tool{m_catenary};
+	if (auto const *chain{tool.chaining && tool.chain >= 0 ? catenary_chain_get(static_cast<std::size_t>(tool.chain)) : nullptr}; chain != nullptr && false == chain->type.empty())
+		return network_contacts(chain->type);
+	return network_contacts(panel_network());
+}
+
+int catenary_editor::compose_contacts() const
+{
+	// the selected pole is composed again: by the network of its chain; otherwise a new pole
+	auto const &tool{m_catenary};
+	if (tool.selected >= 0)
+	{
+		std::size_t position{0};
+		auto const chain{catenary_chain_of(static_cast<std::size_t>(tool.selected), position)};
+		if (auto const *data{chain >= 0 ? catenary_chain_get(static_cast<std::size_t>(chain)) : nullptr}; data != nullptr && false == data->type.empty())
+			return network_contacts(data->type);
+	}
+	return new_pole_contacts();
+}
+
+std::map<std::size_t, int> catenary_editor::pole_contacts() const
+{
+	std::map<std::size_t, int> result;
+	for (std::size_t chain = 0; chain < catenary_chain_size(); ++chain)
+	{
+		auto const *data{catenary_chain_get(chain)};
+		auto const contacts{data != nullptr ? network_contacts(data->type) : 0};
+		if (contacts <= 0)
+			continue;
+		for (auto const member : catenary_chain_members(chain))
+			result[member] = contacts;
+	}
+	return result;
+}
+
+int catenary_editor::pole_holds(catenary::suspension const &Data) const
+{
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *scheme{catalog != nullptr && Data.card > 0 ? catalog->scheme(Data.card, Data.execution) : nullptr};
+	if (scheme == nullptr)
+		return 0;
+	// the arm set swapped by hand on this pole counts, not the one of the card
+	if (auto const own{std::find_if(Data.overrides.begin(), Data.overrides.end(), [](auto const &O) { return O.first == "arms"; })}; own != Data.overrides.end())
+		return catenary_scene_structures().arms_contacts(own->second);
+	return catenary_scene_structures().contacts_of(*scheme);
+}
+
+int catenary_editor::execution_for(catenary::suspension const &Data, int const Contacts) const
+{
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *now{catalog != nullptr && Data.card > 0 ? catalog->scheme(Data.card, Data.execution) : nullptr};
+	if (catalog == nullptr || Contacts <= 0)
+		return 0;
+	auto const &structures{catenary_scene_structures()};
+	auto const arms_of = [](catenary::cantilever_scheme const *Scheme) {
+		auto const found{Scheme != nullptr ? Scheme->roles.find("arms") : decltype(Scheme->roles.end()){}};
+		return Scheme != nullptr && found != Scheme->roles.end() ? found->second : std::string{};
+	};
+	auto const ownarms{arms_of(now)};
+	// ASSUMPTION: the closest execution is the one with arms of the same set (6201-01 <-> 6201-02), then of the same hk
+	int best{0}, bestscore{-1};
+	for (auto const &entry : catalog->schemes())
+	{
+		if (entry.first.first != Data.card || entry.first.second == Data.execution)
+			continue;
+		if (structures.contacts_of(entry.second) != Contacts)
+			continue;
+		auto score{0};
+		auto const arms{arms_of(&entry.second)};
+		if (false == ownarms.empty() && arms.size() >= 4 && ownarms.compare(0, 4, arms, 0, 4) == 0)
+			score += 2;
+		if (now != nullptr && std::abs(entry.second.height - now->height) < 1e-3)
+			score += 1;
+		if (score > bestscore || (score == bestscore && entry.first.second < best))
+		{
+			best = entry.first.second;
+			bestscore = score;
+		}
+	}
+	return best;
+}
+
+std::size_t catenary_editor::catenary_chain_contacts_fix(std::size_t const Chain)
+{
+	auto &tool{m_catenary};
+	auto const *chain{catenary_chain_get(Chain)};
+	auto const contacts{chain != nullptr ? network_contacts(chain->type) : 0};
+	if (contacts <= 0)
+		return 0;
+	std::size_t changed{0};
+	auto const group{++tool.group};
+	for (auto const member : catenary_chain_members(Chain))
+	{
+		auto const *data{catenary_scene_get(member)};
+		if (data == nullptr)
+			continue;
+		auto const holds{pole_holds(*data)};
+		if (holds <= 0 || holds == contacts)
+			continue;
+		auto const execution{execution_for(*data, contacts)};
+		if (execution <= 0)
+			continue;
+		auto fixed{*data};
+		fixed.execution = execution;
+		tool.undo.push_back({group, false, member, *data, std::nullopt, false});
+		catenary_scene_update(member, fixed);
+		tool.spots.erase(member);
+		++changed;
+	}
+	tool.probed = false;
+	return changed;
+}
+
 double catenary_editor::span_limit_at(std::string const &Network, double const Radius) const
 {
 	auto const &tool{m_catenary};
@@ -1661,7 +1782,7 @@ void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearan
 	Spot.execution_changed = false;
 	if (described)
 	{
-		auto const pick{catenary::pick_card(structures, *catalog, tool.catalog_group, tool.catalog_family, tool.catalog_card, Spot.curve, Toward, tool.execution, Spot.reach)};
+		auto const pick{catenary::pick_card(structures, *catalog, tool.catalog_group, tool.catalog_family, tool.catalog_card, Spot.curve, Toward, tool.execution, Spot.reach, compose_contacts())};
 		scheme = pick.scheme;
 		if (pick.family != nullptr)
 			Spot.family = pick.family->id;
@@ -1696,7 +1817,9 @@ void catenary_editor::catenary_compose(catenary_spot &Spot, double const Clearan
 	if (scheme == nullptr)
 	{
 		if (described)
-			Spot.problem = pickproblem.find("no group") == 0 ? pickproblem : format(STR_C("No card of the group for A = %.2f m"), Spot.reach);
+			Spot.problem = pickproblem.find("no group") == 0 ? pickproblem
+			             : pickproblem.find("no execution of the card holds") == 0 ? std::string(compose_contacts() == 1 ? STR_C("No execution of the card with arms for one contact wire (the network of the chain has one): take another group or network") : STR_C("No execution of the card with arms for two contact wires (the network of the chain has two): take another group or network"))
+			             : format(STR_C("No card of the group for A = %.2f m"), Spot.reach);
 		else
 			Spot.problem = format(STR_C("No card %d0-%d9 in execution %d for A = %.2f m (cards cover A 1.45-4.45 m, not all of them are in every family)"), decade / 10, decade / 10, tool.execution, Spot.reach);
 		return;
@@ -1994,10 +2117,10 @@ void catenary_editor::catenary_take_settings(std::size_t const Index)
 	{
 		auto const &structures{catenary_scene_structures()};
 		auto const curve{tool.bend == 2 || (tool.bend == 0 && trackcurve)};
-		auto const automatic{catenary::pick_card(structures, *catalog, own->group, {}, 0, curve, toward, tool.execution, spot->reach)};
+		auto const automatic{catenary::pick_card(structures, *catalog, own->group, {}, 0, curve, toward, tool.execution, spot->reach, compose_contacts())};
 		if (automatic.family == nullptr || automatic.family->id != own->id)
 			tool.catalog_family = own->id;
-		auto const bycard{catenary::pick_card(structures, *catalog, own->group, own->id, 0, curve, toward, tool.execution, spot->reach)};
+		auto const bycard{catenary::pick_card(structures, *catalog, own->group, own->id, 0, curve, toward, tool.execution, spot->reach, compose_contacts())};
 		if (bycard.scheme == nullptr || bycard.scheme->card != data->card)
 		{
 			tool.catalog_family = own->id;
@@ -4791,6 +4914,28 @@ void catenary_editor::render_catenary_chain_ui()
 	ImGui::PopItemWidth();
 	if (changed && chain != nullptr)
 		catenary_chain_apply();
+	// poles of the chain with arms for another count of contact wires than its network has: a remark and one button for all
+	if (chain != nullptr)
+	{
+		auto const contacts{network_contacts(chain->type)};
+		std::size_t wrong{0};
+		if (contacts > 0)
+			for (auto const member : catenary_chain_members(static_cast<std::size_t>(tool.chain_selected)))
+				if (auto const *data{catenary_scene_get(member)}; data != nullptr)
+					if (auto const holds{pole_holds(*data)}; holds > 0 && holds != contacts)
+						++wrong;
+		if (wrong > 0)
+		{
+			ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.3f, 1.0f), "%s", format(contacts == 1 ? STR_C("%zu poles with arms for two contact wires, the network has one") : STR_C("%zu poles with arms for one contact wire, the network has two"), wrong).c_str());
+			if (ImGui::Button(STR_C("Executions of the chain to its network")))
+			{
+				auto const count{catenary_chain_contacts_fix(static_cast<std::size_t>(tool.chain_selected))};
+				tool.status = format(STR_C("%zu poles got the execution for the contact wires of the network (Ctrl+Z takes it back)"), count);
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Every pole of the chain whose arms hold another count of contact wires than the network gets the same card in the execution which fits (the same arm set and hk first); poles whose card has none stay with the remark"));
+		}
+	}
 	if (chain != nullptr)
 	{
 		if (ImGui::Button(STR_C("Continue the chain from its end")))
@@ -5703,6 +5848,37 @@ bool catenary_editor::render_catenary_catalog_ui()
 	// the execution: chosen, or from the band A
 	if (group != nullptr && group->execution_user)
 	{
+		// only the executions with arms for as many contact wires as the network has (Jan 2026-11-07); an execution whose cards have
+		// no arms or arms not described fits any network
+		auto const contacts{compose_contacts()};
+		auto const fits = [&](int const Execution) {
+			if (contacts <= 0 || catalog == nullptr)
+				return true;
+			auto any{false};
+			for (auto const &candidate : structures.families())
+			{
+				if (candidate.group != group->id)
+					continue;
+				for (auto const card : candidate.cards)
+					if (auto const *scheme{catalog->scheme(card, Execution)}; scheme != nullptr)
+					{
+						auto const holds{structures.contacts_of(*scheme)};
+						if (holds == 0 || holds == contacts)
+							return true;
+						any = true;
+					}
+			}
+			return false == any;
+		};
+		// a new pole: the execution of the panel goes to one which fits (the selected pole keeps its own, with a remark)
+		if (tool.selected < 0 && false == fits(tool.execution))
+			for (auto const &execution : group->executions)
+				if (fits(execution.first))
+				{
+					tool.execution = execution.first;
+					changed = true;
+					break;
+				}
 		std::string current{format(STR_C("execution %d"), tool.execution)};
 		for (auto const &execution : group->executions)
 			if (execution.first == tool.execution)
@@ -5710,13 +5886,15 @@ bool catenary_editor::render_catenary_catalog_ui()
 		if (ImGui::BeginCombo(STR_C("Execution"), current.c_str()))
 		{
 			for (auto const &execution : group->executions)
-				if (ImGui::Selectable(execution.second.c_str(), execution.first == tool.execution))
+				if (fits(execution.first) && ImGui::Selectable(execution.second.c_str(), execution.first == tool.execution))
 				{
 					tool.execution = execution.first;
 					changed = true;
 				}
 			ImGui::EndCombo();
 		}
+		if (ImGui::IsItemHovered() && contacts > 0)
+			ImGui::SetTooltip("%s", contacts == 1 ? STR_C("Only the executions for one contact wire: the network has one") : STR_C("Only the executions for two contact wires: the network has two"));
 	}
 	else if (group != nullptr)
 		ImGui::TextDisabled("%s", STR_C("Execution: from the distance A (the band of the card)"));
@@ -6327,6 +6505,34 @@ void catenary_editor::render_catenary_cantilever_ui()
 	else
 	{
 		ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Selected pole (%s): changes apply to it at once"), catenary_scene_file_of(static_cast<std::size_t>(tool.selected)).c_str()).c_str());
+		// arms for another count of contact wires than the network of its chain has (Jan 2026-11-07: a remark, nothing changes by itself)
+		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr)
+		{
+			auto const contacts{compose_contacts()};
+			auto const holds{contacts > 0 ? pole_holds(*data) : 0};
+			if (holds > 0 && holds != contacts)
+			{
+				ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.3f, 1.0f), "%s", holds == 1 ? STR_C("Execution with arms for one contact wire, the network of the chain has two") : STR_C("Execution with arms for two contact wires, the network of the chain has one"));
+				auto const execution{execution_for(*data, contacts)};
+				if (execution > 0)
+				{
+					ImGui::SameLine();
+					if (ImGui::SmallButton(format(STR_C("Execution %d"), execution).c_str()))
+					{
+						auto fixed{*data};
+						fixed.execution = execution;
+						tool.undo.push_back({++tool.group, false, static_cast<std::size_t>(tool.selected), *data, std::nullopt, false});
+						catenary_scene_update(static_cast<std::size_t>(tool.selected), fixed);
+						catenary_take_settings(static_cast<std::size_t>(tool.selected));
+						tool.probed = false;
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("The same card in the execution whose arms hold as many contact wires as the network has"));
+				}
+				else
+					ImGui::TextDisabled("%s", STR_C("The card has no execution for that many contact wires"));
+			}
+		}
 		render_catenary_move_ui();
 		render_catenary_pull_ui();
 	}
@@ -8194,6 +8400,8 @@ void catenary_editor::draw_catenary_overlay() const
 				drawlist->AddText(middle, overlay_color::marked, format("%s  %.1f m", beam.c_str(), glm::length(plan_of(second) - plan_of(first))).c_str());
 		}
 	}
+	// the poles of the chains: how many contact wires their network has (an execution for another count is a remark)
+	auto const wanted{pole_contacts()};
 	for (std::size_t index = 0; index < catenary_scene_size(); ++index)
 	{
 		auto const *data{catenary_scene_get(index)};
@@ -8202,7 +8410,10 @@ void catenary_editor::draw_catenary_overlay() const
 		auto const selected{static_cast<int>(index) == tool.selected};
 		auto const hovered{is_intent(e.m_intent, intent_detail::select) && e.m_intent.index == static_cast<int>(index)};
 		auto const broken{catenary_scene_parts(index) == 0};
-		auto const byswitch{catenary_switch_error(index)};
+		auto const contacts{wanted.count(index) > 0 ? wanted.at(index) : 0};
+		auto const holds{contacts > 0 ? pole_holds(*data) : 0};
+		auto const wires{holds > 0 && holds != contacts};
+		auto const byswitch{catenary_switch_error(index) || wires};
 		auto const last{static_cast<int>(index) == tool.last && tool.chaining};
 		if (false == CatenaryView.poles && false == selected && false == hovered && false == last)
 			continue;
@@ -8212,8 +8423,10 @@ void catenary_editor::draw_catenary_overlay() const
 		if ((selected || hovered || broken || byswitch) && projection.project(pole_of(*data) + glm::dvec3{0.0, pole_top(*data) + 0.3, 0.0}, head))
 		{
 			auto label{format("%d-%d", data->card, data->execution) + (broken ? std::string{"  "} + STR("doesn't assemble") : std::string{})};
-			if (byswitch)
+			if (catenary_switch_error(index))
 				label += "  " + format(STR_C("%s by a switch"), data->pole_type.c_str());
+			if (wires)
+				label += "  " + std::string(holds == 1 ? STR_C("arms for one contact wire, the network has two") : STR_C("arms for two contact wires, the network has one"));
 			drawlist->AddText(ImVec2(head.x + 6.0f, head.y - 6.0f), colour, label.c_str());
 		}
 	}

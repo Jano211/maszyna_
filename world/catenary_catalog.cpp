@@ -98,6 +98,15 @@ void structure_catalog::parse( std::vector<std::string> const &Lines, std::strin
             catch( ... ) { report( "bad execution number" ); }
             continue;
         }
+        if( keyword == "arms" ) {
+            // arms <liczba przewodów jezdnych> <zestaw ramion> [<zestaw> ...]
+            int contacts { 0 };
+            try { contacts = words.size() >= 3 ? std::stoi( words[ 1 ] ) : 0; }
+            catch( ... ) { contacts = 0; }
+            if( contacts < 1 || contacts > 2 ) { report( "\"arms\" needs the number of contact wires (1 or 2) and the arm sets" ); continue; }
+            for( std::size_t k = 2; k < words.size(); ++k ) { m_arms[ words[ k ] ] = contacts; }
+            continue;
+        }
         if( words.size() < 2 ) { report( "\"" + keyword + "\" without an id" ); continue; }
         auto const &id { words[ 1 ] };
         if( keyword == "category" ) {
@@ -204,8 +213,18 @@ catalog_polegroup const *structure_catalog::polegroup_of( std::string const &Pol
     return nullptr;
 }
 
+int structure_catalog::arms_contacts( std::string const &Part ) const {
+    auto const found { m_arms.find( Part ) };
+    return found != m_arms.end() ? found->second : 0;
+}
+
+int structure_catalog::contacts_of( cantilever_scheme const &Scheme ) const {
+    auto const arms { Scheme.roles.find( "arms" ) };
+    return arms != Scheme.roles.end() ? arms_contacts( arms->second ) : 0;
+}
+
 catalog_pick pick_card( structure_catalog const &Catalog, cantilever_catalog const &Cantilevers, std::string const &Group, std::string const &Family,
-    int const Card, bool const Curve, bool const Toward, int const Execution, double const Reach ) {
+    int const Card, bool const Curve, bool const Toward, int const Execution, double const Reach, int const Contacts ) {
 
     catalog_pick result;
     auto const *group { Catalog.group( Group ) };
@@ -223,6 +242,11 @@ catalog_pick pick_card( structure_catalog const &Catalog, cantilever_catalog con
             cantilever_scheme const *other { nullptr };
             for( auto const &entry : Cantilevers.schemes() ) {
                 if( entry.first.first != card || false == in_band( entry.second ) ) { continue; }
+                // ramiona na inną liczbę przewodów jezdnych niż sieć: to wykonanie nie wchodzi w grę
+                if( Contacts > 0 ) {
+                    auto const holds { Catalog.contacts_of( entry.second ) };
+                    if( holds > 0 && holds != Contacts ) { continue; }
+                }
                 if( false == group->execution_user || entry.second.execution == Execution ) {
                     Pick.family = &Candidate;
                     Pick.scheme = &entry.second;
@@ -257,6 +281,10 @@ catalog_pick pick_card( structure_catalog const &Catalog, cantilever_catalog con
         char text[ 32 ];
         std::snprintf( text, sizeof( text ), "%.2f", Reach );
         result.problem = std::string( "no card of the group covers A = " ) + text + " m" + ( Family.empty() ? std::string( Curve ? " on a curve" : " on a straight" ) + ( Toward ? ", wires towards the pole" : ", wires away from the pole" ) : std::string() );
+        // bez filtra liczby przewodów karta by była: brakuje tylko wykonania z ramionami na tyle przewodów, ile ma sieć
+        if( Contacts > 0 && pick_card( Catalog, Cantilevers, Group, Family, Card, Curve, Toward, Execution, Reach, 0 ).scheme != nullptr ) {
+            result.problem = std::string( "no execution of the card holds " ) + ( Contacts == 1 ? "one contact wire" : "two contact wires" ) + " (the network of the chain has that many)";
+        }
     }
     return result;
 }

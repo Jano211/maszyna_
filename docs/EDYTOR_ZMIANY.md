@@ -14,6 +14,23 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
   pliku rozwiązuje się, biorąc obie strony. Nowe wpisy idą przy pokrewnych tekstach, więc konfliktów będzie mniej.
 - Zmiana pól w `application/editormode.h` oznacza przebudowę prawie całego edytora (ok. 30 min).
 
+## 2026-11-07
+
+Commity na `siec-gl46`.
+
+### Edytor sieci: wykonania wysięgników pod liczbę przewodów jezdnych sieci — commit o tym tytule
+- Co widać: lista „Wykonanie” pokazuje tylko wykonania z ramionami na tyle przewodów jezdnych, ile ma sieć łańcucha (albo panelu
+  przy nowym łańcuchu); przy zmianie sieci wykonanie panelu przechodzi na pasujące. Słupy już stojące z ramionami na inną liczbę
+  przewodów: czerwona uwaga w widoku i w panelu słupa (przycisk „Wykonanie N”), w panelu łańcucha licznik i przycisk „Wykonania
+  łańcucha pod jego sieć”. Samo nic się nie zmienia.
+- Dane: `traction_catalog.txt`, wpisy `arms <1|2> <zestawy>` (po szerokości modeli ramion wzdłuż toru: wąskie – jeden, szerokie
+  i pary różnej długości – dwa). Pary rozjazdowe tej samej długości (6203-1111, 6206-1111, 6206-1212, 6207-0303) jeszcze
+  nieopisane – pasują do każdej sieci. Karty bez ramion (120x) też.
+- `pick_card(..., Contacts)`: wykonania z ramionami na inną liczbę przewodów pomijane; gdy żadne nie pasuje – komunikat.
+- Dobór innego wykonania tej samej karty: najpierw ten sam zestaw ramion (6201-01 ↔ 6201-02), potem ta sama hk – ZAŁOŻENIE.
+- Zmienia: `world/catenary_catalog.h/.cpp` (przebudowa kilku plików przez `catenary_scene.h`), `application/editormodecatenary.h/.cpp`,
+  `lang/editor_pl.po`, `tests/catenary/data/traction_catalog.txt`, test `tk`. Wymaga: oba pliki na G: (wgrane).
+
 ## 2026-11-06
 
 Commity na `siec-gl46`.

@@ -10918,6 +10918,54 @@ msgstr "wykonanie %d"
 msgid "Execution: from the distance A (the band of the card)"
 msgstr "Wykonanie: z odległości A (pasmo karty)"
 
+msgid "Only the executions for one contact wire: the network has one"
+msgstr "Tylko wykonania na jeden przewód jezdny: sieć ma jeden"
+
+msgid "Only the executions for two contact wires: the network has two"
+msgstr "Tylko wykonania na dwa przewody jezdne: sieć ma dwa"
+
+msgid "arms for one contact wire, the network has two"
+msgstr "ramiona na jeden przewód jezdny, sieć ma dwa"
+
+msgid "arms for two contact wires, the network has one"
+msgstr "ramiona na dwa przewody jezdne, sieć ma jeden"
+
+msgid "Execution with arms for one contact wire, the network of the chain has two"
+msgstr "Wykonanie z ramionami na jeden przewód jezdny, sieć łańcucha ma dwa"
+
+msgid "Execution with arms for two contact wires, the network of the chain has one"
+msgstr "Wykonanie z ramionami na dwa przewody jezdne, sieć łańcucha ma jeden"
+
+msgid "Execution %d"
+msgstr "Wykonanie %d"
+
+msgid "The same card in the execution whose arms hold as many contact wires as the network has"
+msgstr "Ta sama karta w wykonaniu, którego ramiona trzymają tyle przewodów jezdnych, ile ma sieć"
+
+msgid "The card has no execution for that many contact wires"
+msgstr "Karta nie ma wykonania na tyle przewodów jezdnych"
+
+msgid "%zu poles with arms for two contact wires, the network has one"
+msgstr "%zu słupów z ramionami na dwa przewody jezdne, sieć ma jeden"
+
+msgid "%zu poles with arms for one contact wire, the network has two"
+msgstr "%zu słupów z ramionami na jeden przewód jezdny, sieć ma dwa"
+
+msgid "Executions of the chain to its network"
+msgstr "Wykonania łańcucha pod jego sieć"
+
+msgid "Every pole of the chain whose arms hold another count of contact wires than the network gets the same card in the execution which fits (the same arm set and hk first); poles whose card has none stay with the remark"
+msgstr "Każdy słup łańcucha, którego ramiona trzymają inną liczbę przewodów jezdnych niż sieć, dostaje tę samą kartę w pasującym wykonaniu (najpierw ten sam zestaw ramion i hk); słupy, których karta takiego nie ma, zostają z uwagą"
+
+msgid "%zu poles got the execution for the contact wires of the network (Ctrl+Z takes it back)"
+msgstr "%zu słupów dostało wykonanie pod przewody jezdne sieci (Ctrl+Z cofa)"
+
+msgid "No execution of the card with arms for one contact wire (the network of the chain has one): take another group or network"
+msgstr "Karta nie ma wykonania z ramionami na jeden przewód jezdny (sieć łańcucha ma jeden): weź inną grupę albo sieć"
+
+msgid "No execution of the card with arms for two contact wires (the network of the chain has two): take another group or network"
+msgstr "Karta nie ma wykonania z ramionami na dwa przewody jezdne (sieć łańcucha ma dwa): weź inną grupę albo sieć"
+
 msgid ", on piles"
 msgstr ", na palach"
 

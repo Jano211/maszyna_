@@ -15,9 +15,18 @@
 //       image  - obrazek wysiegnika (na pozniej)
 //   polegroup <id> [foundation piles|cast] [site line|station|platform] poles <nazwy slupow> : <tytul>
 //   text <opis>   - dopisuje opis do ostatniego wpisu (mozna kilka linii)
+//   arms <1|2> <zestawy ramion> - ile przewodow jezdnych trzymaja zestawy ramion (rola "arms" kart); edytor proponuje tylko
+//       wykonania z ramionami na tyle przewodow, ile ma siec lancucha, a przy stojacych slupach zglasza niezgodnosc.
+//       Zestawy nieopisane (i karty bez ramion: teowniki, 120x) pasuja do kazdej sieci
 // Tytuly i opisy ze znakiem zapytania (?) to odczytanie z danych, a nie z katalogu - DO SPRAWDZENIA przez uzytkownika.
 
 // ===================================================================================================================
+// zestawy ramion: jeden albo dwa przewody jezdne (Jan 2026-11-07, po szerokosci modeli wzdluz toru: waskie +-0,04 m - jeden,
+// szerokie +-0,12-0,18 m i pary roznej dlugosci - dwa). Pary rozjazdowe tej samej dlugosci (6203-1111, 6206-1111, 6206-1212,
+// 6207-0303) jeszcze nieopisane - do ustalenia z uzytkownikiem
+arms 1 6201-01 6201-03 6202-01 6203-01 6206-01 6206-02 6207-03 6208-03 6209-03
+arms 2 6201-02 6201-04 6204-02 6205-02 6209-02 6207-12 6208-12
+
 category through : Podwieszenia przelotowe
 text Zwykłe podwieszenie na szlaku i stacji: wysięgnik trzyma linę nośną i przewody jezdne jednej sieci.
 category tension : Przęsła naprężenia, przerwy izolacyjne, dwie sieci

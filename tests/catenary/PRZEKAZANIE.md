@@ -2,7 +2,19 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – 2026-11-06 (najnowsze)
+## START TUTAJ – 2026-11-07 (najnowsze)
+
+**Zrobione 07.11 (w exe NIESPRAWDZONE):** wykonania pod liczbę przewodów jezdnych sieci (EDYTOR_ZMIANY.md 07.11). Pivoty `wire`
+w modelach ramion 62xx leżą wszystkie w X = 0 (użytkownik myślał, że w dwuprzewodowych są przesunięte) – podział zrobiony po
+szerokości modeli, potwierdzony przez użytkownika: `arms 1` / `arms 2` w `traction_catalog.txt`. Stojące słupy: tylko uwaga i
+przyciski (decyzja użytkownika). Generator `gen_cantilevers.py` jest ROZJECHANY z `traction_cantilevers.txt` (ok. 117 linii
+ręcznych dopisków: 4490-01, `rules pulloff_drop`, `assembly brace`, odciągi 0311–0324) – przed jakimkolwiek generowaniem przenieść
+je do generatora.
+
+**Czeka na użytkownika:** pary rozjazdowe tej samej długości (6203-1111 w 127x i 0179, 6206-1111 w 128x, 0180, 0184, 6206-1212
+w 0197, 6207-0303 w 0159, 0173) – dla sieci z jednym, dwoma czy obu? Pytał, co znaczą nazwy 1111/1212/0303.
+
+## START TUTAJ – 2026-11-06
 
 **Sprawdzone przez użytkownika w exe 06.11:** kotwienie środkowe na ceowniku nogi bramki – działa; `strut_shift` i `turn_by_hand`
 – działają; lista izolatorów działa (ale do zawężenia, niżej); podgląd ślizgu pantografu – jest (szukał go). Iet-107 i pozostałe
