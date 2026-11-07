@@ -2006,6 +2006,154 @@ for card, (assembly, reg, arms, steadies) in sorted(TEE01.items()):
 w()
 # mocowania do slupow i slupy sa w data/traction_supports.txt - plik reczny, generator go nie pisze (Jan 2026-10-21)
 
+# ---- dopiski przeniesione z recznie poprawianego data/traction_cantilevers.txt (2026-11-07) ----------------------------
+# Do 2026-11-07 te fragmenty byly dopisywane recznie do wygenerowanego pliku; tu wstawiane w te same miejsca, wzgledem linii
+# kotwicy (cala linia, musi wystapic w wyniku dokladnie raz). Nowe rzeczy dopisywac wyzej, w zwyklym kodzie generatora,
+# a nie do pliku wynikowego.
+EXTRA = [
+    # lina ciegla 4490-01 kotwien (Jan 2026-10-24)
+    ('after', 'part 4490-00 kind cord length 1.0000 endpart   // linka uniwersalna (nie z katalogu): model 1 m od zera do punktu "end", skalowana wzdluz Z', [
+        'part 4490-01 kind cord length 1.0000 endpart   // lina ciegla 4490 kotwien (Jan 2026-10-24): 1 m od zera do "end", srednica 12 mm, skalowana tylko wzdluz Z',
+    ]),
+    # odciagi sieci: rules pulloff_drop (Glowacki rys. 13.7)
+    ('after', 'rules cord_clamp_inset 0.0200 umbrella_spread 0.1000 endrules', [
+        '// odciagi sieci: obnizenie uchwytu slupowego pod przewod jezdny b [m] od odleglosci uchwytu od osi toru a [m] (Glowacki rys. 13.7)',
+        'rules pulloff_drop 8 2.20 0.140 2.25 0.150 2.30 0.155 2.35 0.160 2.40 0.170 2.45 0.180 2.50 0.190 2.55 0.200 endrules',
+    ]),
+    # zastrzal 6506 dokladany do wysiegnikow rurowych (assembly brace, Jan 2026-11-01)
+    ('before', '// jak swing_vee, z drugim zestawem ramion od slupa do tego samego przewodu (109x)', [
+        '// zastrzal 6506 (jak w 102x) dokladany do innych wysiegnikow rurowych na zyczenie wpisu (Jan 2026-11-01): role link (6506-01),',
+        '// link_clamp (4760-01), link_cord_clamp (4210-02) z nadpisan podwieszenia. Plaskownik pionowo od obejmy 4210 na wysiegu',
+        '// pomocniczym do uchwytu 4760 na ukosniku, tam gdzie odstep miedzy nimi pasuje; od punktu ramion, punkt na wysiegu pomocniczym',
+        '// dociagany (wysieg pomocniczy moze isc skosnie). Solver wola to zlozenie po zwyklym; gdy sie nie zlozy - wysiegnik bez zastrzalu',
+        'assembly brace',
+        '  point link_foot registration',
+        '  repeat 6 link_foot',
+        '    shift link_top link_foot 0 link_cord_clamp.eye+link.length',
+        '    level strut link_clamp link_top -link_clamp.eye',
+        '    side link_high strut strut.link_clamp -link_clamp.eye',
+        '    shift link_low link_high 0 -link.length',
+        '    project steady link_cord_clamp link_low steady.length 0',
+        '    point link_foot steady@steady.link_cord_clamp',
+        '  endrepeat',
+        '  place link_cord_clamp steady@steady.link_cord_clamp steady.up +z',
+        '  line link_line link_low toward link_high',
+        '  place link link_low link_line +y',
+        '  place link_clamp strut@strut.link_clamp strut.down -z',
+        'endassembly',
+        '',
+    ]),
+    # odciagi sieci: zlozenia pulloff* (karty 0311-0326)
+    ('before', '// 0169: ramiona specjalne 6207-3 na linie 9814-3 z izolatora 7120 na slupie, linki z luku ramion do liny nosnej', [
+        '// ---- odciagi sieci (dzial 0300, karty 0311-0324; Glowacki rys. 13.3-13.7) --------------------------------------------',
+        '// Odciag ustala tylko odsuw sieci, nie niesie jej ciezaru. Lina odciagowa (9811-3, Cu 35) od uchwytu na slupie (4630 jak wysieg',
+        '// pomocniczy; obnizony pod przewod jezdny o b z rules pulloff_drop) przez uchwyt ramion 4270 do liny nosnej, ramiona odciagowe od uchwytu',
+        '// do przewodu jezdnego. Zero ukladu w przewodzie jezdnym; lina nosna w miejscu odciagu - z przesla (zwis calej rozpietosci).',
+        '// ZALOZENIA: lina zalamuje sie w uchwycie 4270 (prosto slup-uchwyt, prosto uchwyt-lina nosna); 4270 zerem w osi liny, os liny po Y',
+        '// modelu; koncowka liny na linie nosnej (6303-7, zaciski 5270-3) i kausze 6301-3 - bez modeli. Odciag bez slupa (wielotorowy, "pull_from"):',
+        '// steady_mount = poczatek liny na odciagu sasiedniego toru, upper_mount (podwojny) - gorna lina tamtego.',
+        'assembly pulloff',
+        '  shift arms_side wire 1 0',
+        '  setarms arms arms_side',
+        '  line rope_line steady_mount toward arms_holder',
+        '  point rope_eye steady_mount',
+        '  armropes rope rope_eye',
+        '  place ?rope_holder arms_holder rope_line -y',
+        '  stretch rope_end arms_holder messenger +z',
+        'endassembly',
+        '// z izolacja (0312, 0314): izolator 7020-1 przy slupie',
+        'assembly pulloff_insulated',
+        '  shift arms_side wire 1 0',
+        '  setarms arms arms_side',
+        '  line rope_line steady_mount toward arms_holder',
+        '  place rope_insulator steady_mount rope_line -y',
+        '  point rope_eye rope_line@rope_insulator.length',
+        '  armropes rope rope_eye',
+        '  place ?rope_holder arms_holder rope_line -y',
+        '  stretch rope_end arms_holder messenger +z',
+        '  roll rope_insulator -',
+        'endassembly',
+        '// podwojny (0321-0324): gorna lina z drugiego uchwytu (na wysokosci liny nosnej) do liny nosnej, dolna do uchwytu ramion, ukosna lina od',
+        '// liny nosnej do uchwytu ramion, pionowy lacznik miedzy linami 0,9 m od slupa (ZALOZENIE: polozenie lacznika z rysunku karty, na oko)',
+        'assembly pulloff_double',
+        '  shift arms_side wire 1 0',
+        '  setarms arms arms_side',
+        '  line rope_line steady_mount toward arms_holder',
+        '  point rope_eye steady_mount',
+        '  armropes rope rope_eye',
+        '  place ?rope_holder arms_holder rope_line -y',
+        '  stretch rope_end arms_holder messenger +z',
+        '  line upper_line upper_mount toward messenger',
+        '  stretch rope_upper upper_mount messenger +z',
+        '  point tie_low rope_line@0.9',
+        '  project upper_line tie_at tie_low 10 0',
+        '  stretch rope_tie tie_low upper_line@upper_line.tie_at +z',
+        'endassembly',
+        'assembly pulloff_double_insulated',
+        '  shift arms_side wire 1 0',
+        '  setarms arms arms_side',
+        '  line rope_line steady_mount toward arms_holder',
+        '  place rope_insulator steady_mount rope_line -y',
+        '  point rope_eye rope_line@rope_insulator.length',
+        '  armropes rope rope_eye',
+        '  place ?rope_holder arms_holder rope_line -y',
+        '  stretch rope_end arms_holder messenger +z',
+        '  line upper_line upper_mount toward messenger',
+        '  place upper_insulator upper_mount upper_line -y',
+        '  point upper_eye upper_line@upper_insulator.length',
+        '  stretch rope_upper upper_eye messenger +z',
+        '  point tie_low rope_line@0.9',
+        '  project upper_line tie_at tie_low 10 0',
+        '  stretch rope_tie tie_low upper_line@upper_line.tie_at +z',
+        '  roll rope_insulator -',
+        '  roll upper_insulator -',
+        'endassembly',
+        '',
+    ]),
+    # odciagi sieci: czesci 9811-03, 4270 i schematy 0311-0326
+    ('after', 'scheme 169 4 reach 2.6500 3.1000 height 1.3000 registration ropex mount steady 0.1000 assembly aux_rope role rope_insulator 7120-01 role rope 9814-03 role arms 6207-03 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme', [
+        '// odciagi sieci: lina 9811-3 (Cu 35, ok. 7,5 mm) modelem linki jak 9814-3; uchwyt ramion na linie 4270 (-1 jedno ramie, -2 para)',
+        'part 9811-03 kind cord length 1.0000 model 4490-00 girth 1.9000 endpart   // ZALOZENIE: model i grubosc jak 9814-3',
+        'part 4270-01 kind clamp endpart   // ZALOZENIE: zero w osi liny odciagowej, lina wzdluz Y modelu (do sprawdzenia w modelu)',
+        'part 4270-02 kind clamp endpart',
+        'scheme 311 1 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 endscheme',
+        'scheme 311 2 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff role rope 9811-03 role rope_end 9811-03 role arms 6202-01 role rope_holder 4270-01 endscheme',
+        'scheme 312 1 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff_insulated role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 role rope_insulator 7020-01 endscheme',
+        'scheme 312 2 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff_insulated role rope 9811-03 role rope_end 9811-03 role arms 6202-01 role rope_holder 4270-01 role rope_insulator 7020-01 endscheme',
+        'scheme 313 1 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff role rope 9811-03 role rope_end 9811-03 role arms 6205-02 role rope_holder 4270-02 endscheme',
+        'scheme 313 2 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff role rope 9811-03 role rope_end 9811-03 role arms 6203-01 role rope_holder 4270-01 endscheme',
+        'scheme 314 1 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff_insulated role rope 9811-03 role rope_end 9811-03 role arms 6205-02 role rope_holder 4270-02 role rope_insulator 7020-01 endscheme',
+        'scheme 314 2 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff_insulated role rope 9811-03 role rope_end 9811-03 role arms 6203-01 role rope_holder 4270-01 role rope_insulator 7020-01 endscheme',
+        'scheme 321 1 reach 1.0000 55.0000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 role rope_upper 9811-03 role rope_tie 9811-03 endscheme',
+        'scheme 321 2 reach 1.0000 55.0000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double role rope 9811-03 role rope_end 9811-03 role arms 6202-01 role rope_holder 4270-01 role rope_upper 9811-03 role rope_tie 9811-03 endscheme',
+        'scheme 322 1 reach 1.0000 55.0000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double_insulated role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 role rope_insulator 7020-01 role rope_upper 9811-03 role rope_tie 9811-03 role upper_insulator 7020-01 endscheme',
+        'scheme 322 2 reach 1.0000 55.0000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double_insulated role rope 9811-03 role rope_end 9811-03 role arms 6202-01 role rope_holder 4270-01 role rope_insulator 7020-01 role rope_upper 9811-03 role rope_tie 9811-03 role upper_insulator 7020-01 endscheme',
+        'scheme 323 1 reach 1.0000 55.0000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double role rope 9811-03 role rope_end 9811-03 role arms 6205-02 role rope_holder 4270-02 role rope_upper 9811-03 role rope_tie 9811-03 endscheme',
+        'scheme 323 2 reach 1.0000 55.0000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double role rope 9811-03 role rope_end 9811-03 role arms 6203-01 role rope_holder 4270-01 role rope_upper 9811-03 role rope_tie 9811-03 endscheme',
+        'scheme 324 1 reach 1.0000 55.0000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double_insulated role rope 9811-03 role rope_end 9811-03 role arms 6205-02 role rope_holder 4270-02 role rope_insulator 7020-01 role rope_upper 9811-03 role rope_tie 9811-03 role upper_insulator 7020-01 endscheme',
+        'scheme 324 2 reach 1.0000 55.0000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double_insulated role rope 9811-03 role rope_end 9811-03 role arms 6203-01 role rope_holder 4270-01 role rope_insulator 7020-01 role rope_upper 9811-03 role rope_tie 9811-03 role upper_insulator 7020-01 endscheme',
+        '// odciagi posrednie (wielotorowe): to samo zlozenie co koncowe; lina idzie dalej do odciagu na sasiednim torze (wpis "pull_from" tamtego),',
+        '// na linie nosnej zacisk 5640-1 zamiast koncowki 6303-7 (bez modeli). Ramiona tylko proste (karty 0315/0316, 0325/0326)',
+        'scheme 315 1 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 endscheme',
+        'scheme 315 2 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff role rope 9811-03 role rope_end 9811-03 role arms 6202-01 role rope_holder 4270-01 endscheme',
+        'scheme 316 1 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff_insulated role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 role rope_insulator 7020-01 endscheme',
+        'scheme 316 2 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff_insulated role rope 9811-03 role rope_end 9811-03 role arms 6202-01 role rope_holder 4270-01 role rope_insulator 7020-01 endscheme',
+        'scheme 325 1 reach 1.0000 55.0000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 role rope_upper 9811-03 role rope_tie 9811-03 endscheme',
+        'scheme 325 2 reach 1.0000 55.0000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double role rope 9811-03 role rope_end 9811-03 role arms 6202-01 role rope_holder 4270-01 role rope_upper 9811-03 role rope_tie 9811-03 endscheme',
+        'scheme 326 1 reach 1.0000 55.0000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double_insulated role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 role rope_insulator 7020-01 role rope_upper 9811-03 role rope_tie 9811-03 role upper_insulator 7020-01 endscheme',
+        'scheme 326 2 reach 1.0000 55.0000 height 0.9000 registration ropex pulloff mount steady 0.0000 mount upper 0.9000 assembly pulloff_double_insulated role rope 9811-03 role rope_end 9811-03 role arms 6202-01 role rope_holder 4270-01 role rope_insulator 7020-01 role rope_upper 9811-03 role rope_tie 9811-03 role upper_insulator 7020-01 endscheme',
+    ]),
+]
+
+_lines = out.getvalue().split('\r\n')
+for where, anchor, block in EXTRA:
+    at = [i for i, s in enumerate(_lines) if s == anchor]
+    if len(at) != 1:
+        raise SystemExit('dopisek: linia kotwicy %d razy w wyniku: %s' % (len(at), anchor[:80]))
+    i = at[0] + (1 if where == 'after' else 0)
+    _lines[i:i] = block
+out = io.StringIO('\r\n'.join(_lines))
+
 open('data/traction_cantilevers.txt', 'w', encoding='utf-8', newline='').write(out.getvalue())
 open('cantilever_ref.txt', 'w', encoding='utf-8', newline='').write(ref.getvalue())
 print('schematow: %d, zestawow ramion: %d' % (len(K), len(groups)))
