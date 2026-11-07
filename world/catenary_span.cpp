@@ -24,6 +24,7 @@ http://mozilla.org/MPL/2.0/.
 #include <sstream>
 
 catenary_settings CatenarySettings;
+catenary_crossing_candidates CatenaryCrossingCandidates { nullptr };
 
 // stan przęsła rysowanego wg typu sieci
 struct catenary_span {
@@ -428,6 +429,20 @@ catenary_span_solid( TTraction &Traction, glm::dvec3 const &Camera ) {
     std::vector<catenary::solid_vertex> wires, fittings;
     catenary::build_solid( *definition( Traction ), geometry, wires, fittings );
     if( wires.empty() ) { return {}; }
+    // ogranicznik na skrzyżowaniu nad rozjazdem (33-0561): na tym przęśle, gdy przewód drugiego idzie nad nim wyżej o 0-3 cm
+    if( CatenaryCrossingCandidates != nullptr ) {
+        auto const radius { 0.5 * catenary::wire_diameter( definition( Traction )->contact_wire ) };
+        for( auto *other : CatenaryCrossingCandidates( Traction ) ) {
+            if( other == nullptr || other == &Traction || definition( *other ) == nullptr ) { continue; }
+            catenary::span_geometry othergeometry;
+            if( false == build( *other, othergeometry ) ) { continue; }
+            std::vector<catenary::crossing_point> crossings;
+            catenary::find_crossings( geometry, othergeometry, crossings );
+            for( auto const &crossing : crossings ) {
+                catenary::build_crossing_limiter( crossing, radius, wires, fittings );
+            }
+        }
+    }
     if( span.solidbank == null_handle ) {
         if( false == SolidBanks.empty() ) {
             span.solidbank = SolidBanks.back();

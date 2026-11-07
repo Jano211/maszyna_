@@ -162,6 +162,25 @@ struct solid_vertex {
 // Przewody i osprzęt są osobno, bo rysowane są z różnych materiałów
 void build_solid( network_definition const &Definition, span_geometry const &Geometry, std::vector<solid_vertex> &Wires, std::vector<solid_vertex> &Fittings );
 
+// skrzyżowanie przewodów jezdnych dwóch przęseł nad rozjazdem (karta 33-0561 „połączenia mechaniczne rozjazdu”): przewód
+// drugiego przęsła przechodzi nad przewodem tego wyżej o więcej niż 0, ale mniej niż kCrossingLimiterGap (np. 5,40 i 5,41 m).
+// Na dolnym przewodzie zakłada się ogranicznik: dwa zaciski 5380-1 w odstępie ~1,80 m i nad nimi 2,0 m przewodu jezdnego
+// (9871-1 przy Djp 100, 9871-3 przy Djp 150). Górny przewód przechodzi między dolnym a tym odcinkiem, więc uniesienie
+// któregokolwiek pantografem podnosi oba
+double constexpr kCrossingLimiterGap { 0.03 };
+struct crossing_point {
+    vec3 position;      // punkt na dolnym przewodzie (tego przęsła) pod skrzyżowaniem
+    vec3 along;         // kierunek dolnego przewodu, poziomy, jednostkowy
+    double gap { 0.0 }; // m, o ile przewód drugiego przęsła jest wyżej
+};
+// skrzyżowania przewodów jezdnych tego przęsła (Mine) z przewodami drugiego (Other), w których drugie idzie wyżej o (0, kCrossingLimiterGap).
+// Skrzyżowania bliżej siebie niż 2,0 m (dwa przewody jezdne w sieci: przy skosie 1:9 punkty rozchodzą się o ok. 0,7 m) łączone
+// w jedno, w środku między nimi (ZAŁOŻENIE: jeden ogranicznik na sieć dwuprzewodową - do potwierdzenia)
+void find_crossings( span_geometry const &Mine, span_geometry const &Other, std::vector<crossing_point> &Output );
+// bryły ogranicznika na skrzyżowaniu: odcinek przewodu (Wires) o promieniu przewodu jezdnego Radius i zaciski (Fittings).
+// ZASTĘPCZE: zaciski 5380-1 jako prostopadłościany do czasu modeli, odcinek nad dolnym przewodem tak, żeby przeszedł nad górnym
+void build_crossing_limiter( crossing_point const &Crossing, double Radius, std::vector<solid_vertex> &Wires, std::vector<solid_vertex> &Fittings );
+
 // średnica przewodu: z tabeli, a gdy jej tam nie ma, oszacowana z masy jak dla linki miedzianej
 double wire_diameter( wire_data const &Wire );
 
