@@ -113,6 +113,7 @@ struct catenary_editor
 		int bend{0}; // 0: from the track, 1: straight, 2: curve
 		float stagger{0.30f};
 		float clearance{2.50f}; // from the axis of the track to the face of the pole
+		bool switch_face{true}; // new poles by a switch get the face 4.00 m from the track axis by themselves (Jan 2026-11-07)
 		float height{5.60f}; // of the contact wires over the rails
 		float system_height{0.0f}; // hk: of the messenger over the contact wires; 0 = the card's
 		std::string insulators; // the insulator set of new cantilevers ("": the usual, "25": 25 kV; later plastic)

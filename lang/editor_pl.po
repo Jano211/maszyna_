@@ -12154,6 +12154,12 @@ msgstr "rozjazd 4,00"
 msgid "The face of the pole from the track axis: 2.50 m on a line, 2.20 m in a station, 4.00 m by a switch"
 msgstr "Lico słupa od osi toru: 2,50 m na szlaku, 2,20 m na stacji, 4,00 m przy rozjeździe"
 
+msgid "4.00 m by a switch by itself"
+msgstr "4,00 m przy rozjeździe samo"
+
+msgid "A new pole by a switch (by the track of a switch or close to it) gets the face 4.00 m from the track axis whatever is set above; elsewhere the face set above"
+msgstr "Nowy słup przy rozjeździe (przy torze rozjazdu albo blisko niego) dostaje lico 4,00 m od osi toru niezależnie od ustawienia wyżej; gdzie indziej – lico ustawione wyżej"
+
 msgid "Drop to the other side of the track"
 msgstr "Zwis na drugą stronę toru"
 
