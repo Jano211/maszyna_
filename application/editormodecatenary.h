@@ -257,6 +257,13 @@ struct catenary_editor
 	std::optional<bool> zigzag_toward(catenary_spot const &Spot) const;
 	// the offset of the wires of the suspension from the axis of its track (with the lean of a superelevated track), + towards its pole
 	bool stagger_of(std::size_t const Index, double &Offset) const;
+	// the span by the staggers of its ends (B of Glowacki 15.2; 3.24 the normal one): B and its name, none for the normal one
+	struct span_kind
+	{
+		double b{3.24};
+		char const *text{nullptr};
+	};
+	span_kind span_kind_of(std::size_t From, std::size_t To) const;
 	// the same, as a side of the axis: + on the right of Right
 	bool lateral_of(std::size_t const Index, glm::dvec2 const &Right, double &Lateral) const;
 	// the span the next pole gets from the last one by the step or the digits typed (0: where the cursor is), at a radius there

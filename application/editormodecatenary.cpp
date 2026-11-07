@@ -1263,6 +1263,32 @@ bool catenary_editor::lateral_of(std::size_t const Index, glm::dvec2 const &Righ
 	return true;
 }
 
+// the span by the staggers at its ends (Glowacki 15.2, formula 8-4/8-5: the span on a straight goes with the root of B, which
+// depends on the staggers only): the nominal span of the network is the normal one (0 / 0.18, 0.30 / 0.18: B 3.24); 0 / 0.30
+// "limited" B 2.68, 0.30 alternately "conditionally allowed" B 3.6, both 0 "the largest" B 4 (the last resort). Jan 2026-11-07
+catenary_editor::span_kind catenary_editor::span_kind_of(std::size_t const From, std::size_t const To) const
+{
+	span_kind kind;
+	auto const *a{catenary_scene_get(From)};
+	auto const *b{catenary_scene_get(To)};
+	if (m_catenary.speed_class == 1 || a == nullptr || b == nullptr || false == a->has_at || false == b->has_at)
+		return kind;
+	auto const chord{plan_of(wire_of(*b)) - plan_of(wire_of(*a))};
+	auto const length{glm::length(chord)};
+	double za{0.0}, zb{0.0};
+	if (length < 1.0 || false == lateral_of(From, right_of(chord / length), za) || false == lateral_of(To, right_of(chord / length), zb))
+		return kind;
+	auto const size = [](double const Z) { return std::abs(Z) < 0.09 ? 0 : std::abs(Z) < 0.24 ? 1 : 2; }; // 0, 0.18, 0.30
+	auto const sa{size(za)}, sb{size(zb)};
+	if (sa == 0 && sb == 0)
+		kind = {4.0, STR_C("the largest (both staggers 0, B 4: the last resort)")};
+	else if ((sa == 0 && sb == 2) || (sa == 2 && sb == 0))
+		kind = {2.68, STR_C("limited (staggers 0 / 0.30, B 2.68)")};
+	else if (sa == 2 && sb == 2 && (za > 0.0) != (zb > 0.0))
+		kind = {3.6, STR_C("conditionally allowed (staggers 0.30 alternately, B 3.6)")};
+	return kind;
+}
+
 bool catenary_editor::stagger_of(std::size_t const Index, double &Offset) const
 {
 	auto const *spot{catenary_spot_view(Index)};
@@ -2591,8 +2617,16 @@ catenary_editor::chain_report const &catenary_editor::catenary_chain_report(std:
 			continue;
 		auto const radius{span_radius(*a, *b, length)};
 		auto const bent{radius > 0.0 && radius < kCurveRadius};
-		if (auto const limit{span_limit_at(network, bent ? radius : 0.0)}; limit > 0.0 && length > limit + 0.05)
-			add(members[k + 1], format(STR_C("Span %s - %s: %.1f m, longer than the %.1f m allowed there"), named(members[k]).c_str(), named(members[k + 1]).c_str(), length, limit), true);
+		auto const kind{bent ? span_kind{} : span_kind_of(members[k], members[k + 1])};
+		if (auto const limit{span_limit_at(network, bent ? radius : 0.0)}; limit > 0.0)
+		{
+			auto const allowed{limit * std::sqrt(kind.b / 3.24)};
+			if (length > allowed + 0.05)
+				add(members[k + 1], kind.text != nullptr ? format(STR_C("Span %s - %s: %.1f m, longer than the %.1f m a span %s allows (Glowacki 15.2)"), named(members[k]).c_str(), named(members[k + 1]).c_str(), length, allowed, kind.text)
+				                                         : format(STR_C("Span %s - %s: %.1f m, longer than the %.1f m allowed there"), named(members[k]).c_str(), named(members[k + 1]).c_str(), length, limit), true);
+			else if (kind.b > 3.24 && length > limit + 0.05)
+				add(members[k + 1], format(STR_C("Span %s - %s: %.1f m, over the normal %.1f m - only as a span %s (Glowacki 15.2)"), named(members[k]).c_str(), named(members[k + 1]).c_str(), length, limit, kind.text), false);
+		}
 		auto const *sa{catenary_spot_view(members[k])};
 		auto const *sb{catenary_spot_view(members[k + 1])};
 		if (sa == nullptr || sb == nullptr)
@@ -8597,13 +8631,17 @@ void catenary_editor::draw_catenary_overlay() const
 		auto const chosen{span.chain >= 0 && (span.chain == tool.chain_selected || (is_intent(e.m_intent, intent_detail::chain) && e.m_intent.index == span.chain))};
 		if (false == CatenaryView.spans && false == chosen)
 			continue;
-		auto const over{CatenaryView.span_colours && tool.checks && span.limit > 0.0 && span.length > span.limit + 0.05};
+		// on a straight the limit by the staggers at both ends (B, Glowacki 15.2)
+		auto limit{span.limit};
+		if (limit > 0.0 && tool.zigzag && (span.radius <= 0.0 || span.radius >= kCurveRadius))
+			limit *= std::sqrt(span_kind_of(span.from, span.to).b / 3.24);
+		auto const over{CatenaryView.span_colours && tool.checks && limit > 0.0 && span.length > limit + 0.05};
 		auto const colour{over ? overlay_color::invalid : chosen ? overlay_color::selected : span.chain >= 0 ? IM_COL32(90, 230, 120, 200) : IM_COL32(90, 230, 120, 110)};
 		projection.line(drawlist, a, b, colour, over || chosen ? 2.5f : 1.2f);
 		ImVec2 middle;
 		if (CatenaryView.span_lengths && projection.project(0.5 * (a + b), middle))
 		{
-			auto const label{span.limit > 0.0 ? format("%.1f / %.0f m", span.length, span.limit) : format("%.1f m", span.length)};
+			auto const label{limit > 0.0 ? format("%.1f / %.0f m", span.length, limit) : format("%.1f m", span.length)};
 			auto const text{span.radius > 0.0 && span.radius < kCurveRadius ? label + format("  R %.0f", span.radius) : label};
 			drawlist->AddText(ImVec2(middle.x + 4.0f, middle.y + 2.0f), colour, text.c_str());
 		}

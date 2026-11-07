@@ -8,6 +8,7 @@
 #include "utilities/Globals.h"
 #include "utilities/Logs.h"
 #include "utilities/parser.h"
+#include <algorithm>
 #include <cstdio>
 
 mock_renderer Renderer, *GfxRenderer { &Renderer };
@@ -61,7 +62,9 @@ int main( int, char *argv[] ) {
     catenary_scene_load( points );
     catenary_scene_resolve();
     auto const &created { simulation::State.created };
-    auto assembled { errors.size() == 1 && created.size() == 32 && logs.size() >= 3 && logs.back().find( "2 cantilever(s) assembled from 32 part(s)" ) != std::string::npos };
+    // podsumowanie składania gdziekolwiek w logu (błąd karty 9999 bywa zgłaszany po nim)
+    auto const summary { std::any_of( logs.begin(), logs.end(), []( std::string const &Line ) { return Line.find( "2 cantilever(s) assembled from 32 part(s)" ) != std::string::npos; } ) };
+    auto assembled { errors.size() == 1 && created.size() == 32 && logs.size() >= 3 && summary };
     if( created.size() == 32 ) { // 2 x (13 wysięgnika + 3 ramion)
         // pierwszy wysięgnik: izolator ukośnika 2,35 m od przewodów po stronie -X, 10 cm pod przewodem;
         // drugi: to samo po stronie +Z. uchwyt liny nośnej stoi w osi liny, 1,7 m nad przewodem
@@ -75,7 +78,8 @@ int main( int, char *argv[] ) {
             && std::abs( first->position.x - ( 0.087 - 2.35 ) ) < 1e-6 && std::abs( first->position.y - 5.7 ) < 1e-6 && std::abs( first->position.z - 170.247 ) < 1e-6
             && std::abs( second->position.x - 10.0 ) < 1e-6 && std::abs( second->position.z - 102.7 ) < 1e-6
             && std::abs( clamp->position.x - 10.0 ) < 1e-6 && std::abs( clamp->position.y - 7.5 ) < 1e-6 && std::abs( clamp->position.z - 100.0 ) < 1e-6
-            && first->entry.find( "node 1000.0 0.0 none model 0 0 0 0 siec_trakcyjna/components/7100-01.t3d none angles " ) == 0
+            // od 2026-11-01 (45fb061) części wysięgnika mają wymienną teksturę siec_trakcyjna/siec
+            && first->entry.find( "node 1000.0 0.0 none model 0 0 0 0 siec_trakcyjna/components/7100-01.t3d siec_trakcyjna/siec angles " ) == 0
             && second->entry.find( "node 800.0 " ) == 0;
         std::printf( "  %s\n  %s\n", first ? first->entry.c_str() : "?", created[ 12 ].entry.c_str() );
     }
