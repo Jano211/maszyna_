@@ -269,7 +269,7 @@ Te rzeczy są w danych jako ZAŁOŻENIE albo czekają na obejrzenie w grze. Odha
 - [x] Szablony przęseł naprężenia (31.10): wszystkie karty 0060, 0062, 0068, 0078 tomu 1 + 0060-36/37 (Kolprojekt 2010) w `traction_overlaps.txt`, w edytorze (strona Druty) wybór karty, LPM w miejscu K1 stawia całość; „izolowane” przy wstawianiu i potem w panelu łańcucha (`isolated start|end`). W exe niesprawdzone
 - [ ] Szablony przęseł: odsuwy na łukach z tablic 0027-3 / 0027-10 (dziś z 0,20 na oko), kotwienia rozdzielone 7,00 / 6,30 (dziś jedno urządzenie na wysokości przewodów), modele izolatorów (bryły zastępcze)
 - [x] Przęsła pochyłe (hk 1,70 ↔ 1,30) – sprawdzić liczenie wieszaków – solver OK, test w `t` (2026-11-07)
-- [ ] Walidacje: słup z odciągiem w peronie, skrajnia peronowa 3/4 m (słup ≥ 50 m za kozłem – NIE robimy, Jan 2026-11-07: zapis w terenie nagminnie ignorowany)
+- ~~Walidacje peronowe (słup z odciągiem w peronie, skrajnia 3/4 m, słup ≥ 50 m za kozłem)~~ – NIE robimy (2026-11-07: budujący odróżni sam)
 
 **Przed merge do mastera MaSzyny**
 

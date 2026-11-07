@@ -113,6 +113,8 @@ bool editorSettings::load()
 			m_track_tools_more = (value == "1");
 		else if (key == "top_ballast")
 			m_top_ballast = (value == "1");
+		else if (key == "catenary_view")
+			m_catenary_view = value;
 		else if (key == "nmt_shallower")
 			parse(value, m_nmt_shallower);
 		else if (key.rfind("terrain_brush_", 0) == 0)
@@ -195,6 +197,8 @@ bool editorSettings::save()
 	stream << "terrain_offer " << (m_terrain_offer ? 1 : 0) << "\n";
 	stream << "track_tools_all " << (m_track_tools_more ? 1 : 0) << "\n";
 	stream << "top_ballast " << (m_top_ballast ? 1 : 0) << "\n";
+	if (false == m_catenary_view.empty())
+		stream << "catenary_view " << m_catenary_view << "\n";
 	stream << "nmt_shallower " << m_nmt_shallower << "\n";
 	for (auto const &brush : m_terrain_brushes)
 		stream << "terrain_brush_" << brush.first << " " << brush.second.first << ";" << brush.second.second << "\n";

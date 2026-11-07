@@ -18,6 +18,13 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: podglądy z menu Widok zapamiętywane — commit o tym tytule
+- Co widać: przełączniki Widok > Sieć trakcyjna (słupy, bramki, kotwienia, przęsła, kolory, długości, Iet-107, odsuwy, pantograf,
+  stawianie) i te same pola w panelu zostają po wyjściu z edytora i ponownym uruchomieniu – w pliku ustawień edytora wiersz
+  `catenary_view poles=1;gantries=1;…`. Brak wiersza albo brak nazwy w nim – wartość domyślna.
+- Zmienia: `editor/editorSettings.hpp/.cpp` (nowe pole – przebudowa plików, które go wciągają), `application/editormodecatenary.cpp`.
+  Wymaga: commit „menu Widok > Sieć trakcyjna” (06.11).
+
 ### Edytor sieci: lico 4,00 m przy rozjeździe samo — commit o tym tytule
 - Co widać: nowy słup przy rozjeździe (na torze rozjazdu albo do 8 m od niego) dostaje lico 4,00 m od osi toru, nawet gdy w panelu
   jest 2,50 / 2,20; gdzie indziej – lico z panelu. Przełącznik „4,00 m przy rozjeździe samo” pod przyciskami lica (domyślnie wł.).

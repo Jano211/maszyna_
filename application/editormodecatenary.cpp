@@ -667,9 +667,82 @@ struct catenary_view_flags
 };
 catenary_view_flags CatenaryView;
 
+namespace
+{
+// the views by the names they're kept under in the editor settings; a name missing there keeps its default,
+// so a view added later starts as it's set in catenary_view_flags
+std::pair<char const *, bool catenary_view_flags::*> const kViewNames[] = {
+	{"poles", &catenary_view_flags::poles},
+	{"gantries", &catenary_view_flags::gantries},
+	{"anchors", &catenary_view_flags::anchors},
+	{"spans", &catenary_view_flags::spans},
+	{"span_colours", &catenary_view_flags::span_colours},
+	{"span_lengths", &catenary_view_flags::span_lengths},
+	{"remarks", &catenary_view_flags::remarks},
+	{"staggers", &catenary_view_flags::staggers},
+	{"pantograph", &catenary_view_flags::pantograph},
+	{"placing", &catenary_view_flags::placing},
+};
+
+std::string catenary_view_text(catenary_view_flags const &Views)
+{
+	std::string text;
+	for (auto const &view : kViewNames)
+	{
+		if (false == text.empty())
+			text += ';';
+		text += view.first;
+		text += (Views.*view.second) ? "=1" : "=0";
+	}
+	return text;
+}
+
+void catenary_view_read(std::string const &Text, catenary_view_flags &Views)
+{
+	std::size_t start{0};
+	while (start < Text.size())
+	{
+		auto end{Text.find(';', start)};
+		if (end == std::string::npos)
+			end = Text.size();
+		auto const item{Text.substr(start, end - start)};
+		start = end + 1;
+		auto const equal{item.find('=')};
+		if (equal == std::string::npos)
+			continue;
+		auto const name{item.substr(0, equal)};
+		for (auto const &view : kViewNames)
+			if (name == view.first)
+				Views.*view.second = (item.substr(equal + 1) == "1");
+	}
+}
+} // namespace
+
+// the switches kept in the editor settings (Jan 2026-11-07): read on the first call, written when any of them changed;
+// called from the menu, the panel and the overlay, so a change from either place lands at once
+void catenary_view_sync()
+{
+	static bool read{false};
+	static std::string kept;
+	if (false == read)
+	{
+		read = true;
+		catenary_view_read(EditorSettings.catenary_view(), CatenaryView);
+		kept = catenary_view_text(CatenaryView);
+		return;
+	}
+	auto const now{catenary_view_text(CatenaryView)};
+	if (now == kept)
+		return;
+	kept = now;
+	EditorSettings.catenary_view(now);
+	EditorSettings.save();
+}
+
 // View > Catenary (editormode.cpp render_view_menu): a free function, so that editormode.h needn't change for it
 void catenary_view_menu()
 {
+	catenary_view_sync();
 	if (false == ImGui::BeginMenu(STR_C("Catenary")))
 		return;
 	auto const item = [](char const *Label, bool &Flag, char const *Tip) {
@@ -695,6 +768,7 @@ void catenary_view_menu()
 	if (ImGui::MenuItem(STR_C("Hide all")))
 		CatenaryView = catenary_view_flags{false, false, false, false, false, false, false, false, false, false};
 	ImGui::EndMenu();
+	catenary_view_sync();
 }
 
 void catenary_editor::catenary_scan()
@@ -8442,6 +8516,7 @@ void catenary_editor::render_catenary_ui()
 
 void catenary_editor::draw_catenary_overlay() const
 {
+	catenary_view_sync();
 	auto const &tool{m_catenary};
 	screen_projection const projection;
 	auto *drawlist{ImGui::GetBackgroundDrawList(ImGui::GetMainViewport())};

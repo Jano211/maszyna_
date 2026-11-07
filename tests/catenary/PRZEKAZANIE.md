@@ -2,6 +2,24 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-07 po południu (najnowsze)
+
+**Zrobione 07.11 po południu:**
+- Przełączniki Widok > Sieć trakcyjna zapisywane w ustawieniach edytora (`catenary_view name=0/1;…` w editorSettings; zmiana
+  editorSettings.hpp – przebudowa ok. 20 plików). Odczyt przy pierwszym rysowaniu/menu, zapis przy każdej zmianie
+  (`catenary_view_sync`). Nowy podgląd: dopisać pole w `catenary_view_flags` i nazwę w `kViewNames` – stare ustawienia go nie znają,
+  więc startuje z domyślnej. W exe NIESPRAWDZONE.
+- Generator `etap0/gen_cantilevers.py` znowu daje plik identyczny z `data/traction_cantilevers.txt` (po zdjęciu CR): ręczne dopiski
+  (4490-01, `rules pulloff_drop`, `assembly brace`, odciągi 0311–0326) przeniesione do listy `EXTRA` na końcu generatora, wstawiane
+  względem linii kotwic. Nowe rzeczy pisać w kodzie generatora, nie w pliku wynikowym. Generator pisze CRLF, plik w repo jest w LF.
+
+**Decyzje 07.11:** walidacji peronowych NIE robimy („budujący odróżni sam”) – skreślone. Obrót od brakujących ciężarów
+sprawdzany przez użytkownika na łańcuchach BEZ kotwienia środkowego – tam z założenia się nie liczy (ustalenie 31.10); czeka na
+sprawdzenie na łańcuchu z kotwieniem środkowym.
+
+**Skrzyżowania przewodów nad rozjazdami (ogranicznik):** nie zaczęte – czeka na odpowiedzi użytkownika (karta 0331/0333 z tomu 1,
+model ogranicznika, wykrywanie miejsca skrzyżowania, wysokości obu przewodów).
+
 ## START TUTAJ – 2026-11-07 (najnowsze) – zrzutka na nowy czat
 
 **Jak pracujemy (bez zmian):** wszystko z sieci commitem prosto na `siec-gl46` → push → merge do `wszystko-gl46` → push (płytki klon:
@@ -37,11 +55,11 @@ tylko 4,00 przy rozjazdach (szlak/stacja – nie); stojące słupy z niezgodnym 
 kotwienia zostaje (koledzy chcieli zaczynać od kotwy – nie).
 
 **Otwarte, kod:**
-- Generator `etap0/gen_cantilevers.py` ROZJECHANY z `traction_cantilevers.txt` (ok. 117 linii ręcznych dopisków: 4490-01,
+- ZROBIONE 07.11 po południu: generator `etap0/gen_cantilevers.py` był ROZJECHANY z `traction_cantilevers.txt` (ok. 117 linii ręcznych dopisków: 4490-01,
   `rules pulloff_drop`, `assembly brace`, odciągi 0311–0324) – przenieść do generatora, zanim ktoś go puści.
 - Skrzyżowania przewodów nad rozjazdami z ogranicznikiem (przęsło rozjazdowe nad szlakowym, ciągnie je przy uniesieniu) – nie zaczęte.
-- Walidacje peronowe (słup z odciągiem na peronie, skrajnia 3/4 m) – edytor nie wie, gdzie peron: zapytać, jak wykrywać.
-- Zapis przełączników Widok > Sieć trakcyjna w EditorSettings (zmiana editorSettings.hpp – długa przebudowa).
+- ~~Walidacje peronowe~~ – nie robimy (użytkownik 07.11).
+- ZROBIONE 07.11 po południu: zapis przełączników Widok > Sieć trakcyjna w EditorSettings.
 - Obrót od brakujących ciężarów: użytkownik „chyba nie działa” – działa tylko w łańcuchu z kotwieniem środkowym (w teście 0,17° przy
   3 ciężarach); nie potwierdził, na czym sprawdzał.
 - Duże: panel „Konstrukcje wsporcze”, dobowa temperatura, zerwanie kotwienia, linie WN/SN/nN (następny temat po sieci), przed PR
