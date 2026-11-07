@@ -12,6 +12,7 @@ http://mozilla.org/MPL/2.0/.
 // z opisami po ludzku, żeby wstawiający wiedział, co wstawia. Z rodziny i odległości od słupa (pasmo A) wybierana jest karta.
 // Kod niezależny od reszty symulatora (C++17, tylko biblioteka standardowa).
 #pragma once
+#include <map>
 #include <string>
 #include <vector>
 
@@ -79,6 +80,11 @@ public:
     catalog_family const *family_of( int Card ) const;
     // grupa słupów, do której należy słup; nullptr gdy żadna
     catalog_polegroup const *polegroup_of( std::string const &Pole ) const;
+    // ile przewodów jezdnych trzyma zestaw ramion (wpis "arms <n> <części>"); 0 - nieopisany
+    int arms_contacts( std::string const &Part ) const;
+    // ile przewodów jezdnych trzyma karta-wykonanie (po jej zestawie ramion, rola "arms"); 0 - nie wiadomo (bez ramion
+    // albo zestaw nieopisany): pasuje do każdej sieci
+    int contacts_of( cantilever_scheme const &Scheme ) const;
     bool empty() const { return m_groups.empty(); }
 
 private:
@@ -86,6 +92,7 @@ private:
     std::vector<catalog_group> m_groups;
     std::vector<catalog_family> m_families;
     std::vector<catalog_polegroup> m_polegroups;
+    std::map<std::string, int> m_arms;  // zestaw ramion -> liczba przewodów jezdnych
 };
 
 // wynik doboru karty
@@ -98,8 +105,9 @@ struct catalog_pick {
 
 // dobór karty z grupy: rodzina pasująca do łuku i odsuwu (albo Family, gdy niepusta), w niej pierwsza karta, której pasmo A
 // obejmuje Reach - wykonanie Execution, gdy wykonanie wybiera użytkownik (a gdy takiego nie ma, inne z tym pasmem),
-// w przeciwnym razie dowolne z tym pasmem. Card > 0: tylko ta karta
+// w przeciwnym razie dowolne z tym pasmem. Card > 0: tylko ta karta.
+// Contacts > 0: liczba przewodów jezdnych sieci - wykonania z ramionami na inną liczbę są pomijane (Jan 2026-11-07)
 catalog_pick pick_card( structure_catalog const &Catalog, cantilever_catalog const &Cantilevers, std::string const &Group, std::string const &Family,
-    int Card, bool Curve, bool Toward, int Execution, double Reach );
+    int Card, bool Curve, bool Toward, int Execution, double Reach, int Contacts = 0 );
 
 } // namespace catenary

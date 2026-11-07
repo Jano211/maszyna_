@@ -232,6 +232,17 @@ struct catenary_editor
 	double span_curve_stagger() const;
 	// the network type chosen in the panel
 	std::string panel_network() const;
+	// contact wires (Jan 2026-11-07): of a network type (0: unknown), of the network new poles get (the chain being built, or the
+	// panel), of the poles of every chain (pole -> its chain's count), held by the card and execution of a pole (0: unknown, fits all)
+	int network_contacts(std::string const &Network) const;
+	int new_pole_contacts() const;
+	int compose_contacts() const;
+	std::map<std::size_t, int> pole_contacts() const;
+	int pole_holds(catenary::suspension const &Data) const;
+	// the execution of the same card whose arms hold Contacts wires (the same arm set family and hk first); 0: none
+	int execution_for(catenary::suspension const &Data, int Contacts) const;
+	// executions of the poles of a chain to the count of its network; returns how many changed
+	std::size_t catenary_chain_contacts_fix(std::size_t Chain);
 	// the longest span of the network allowed on a curve of this radius (0: straight): the table of the network
 	// (traction_layout.txt), above 160 km/h no more than 62 +4 m (Iet-107 7.4.3.1), on a curve the wires tangent to the track
 	// axis in the middle of the span (3.4.4.4); 0 when nothing is known
