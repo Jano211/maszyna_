@@ -33,6 +33,14 @@ przeciwwiatrowe, 163 0561, 164 0565 dodatkowy przewód jezdny z podwieszeniem, 1
 167 0570 wieszaki stałe przewodzące, 168 0571 pojedyncze, 169 0572 podwójne, 170 0576 krótkie, 171 0577 ślizgowe, 172 0579 wieszak Y,
 173 0587 podwieszenia Y (lina 120), 174 0588 (lina 150). (0570–0572 i 0579 z dopiskiem „2CS150 patrz karta zamian”.)
 
+**Sieć 2C120-2C-1 (07.11 wieczór):** `data/traction_2C120-2C-1.txt` (kod 14) z DTR PLK 2024
+(`E:\SYF\INNE\PDF\Katalog ESN\5._DOKUMENTACJA_TECHNICZNO-RUCHOWA_DLA_SIECI_TRAKCYJNEJ_TYPU__2C120-2C-1.pdf`, tekstowy PDF):
+przęsło max 65 m, Y 14 m od przęseł ≥ 36 m („scalony układ lin nośnych” – dolna lina w Y), liny 1600 + 500 daN, przewody 2×700,
+hk 1,70, zwis wstępny 0, odsuw 0,30 prosta / 0,40 łuki / 0,15 przęsła naprężenia, v max 140. W starym Kolprojekcie 13-0002
+(kolprojekt1.pdf s. 11) jest też kod 11 2C120-2C (2×120 jezdne, 2×1589 / 2×953) – pliku nie robiono. ZAŁOŻENIA: 500 daN to lina
+dolna (Y); tablica wieszaków 11, masa wieszaka, odstęp lin i y_junction_drop jak w -3/-4; kotwienia „as 35”. Layout `span 65 65`.
+Wgrane na G: (md5 zgodne). Test w `t`. Inne DTR-y leżą obok w tym folderze (np. 4_TOM_V_.pdf, Belos, STANMAR – dopisane 07.11).
+
 ## START TUTAJ – 2026-11-07 (najnowsze) – zrzutka na nowy czat
 
 **Jak pracujemy (bez zmian):** wszystko z sieci commitem prosto na `siec-gl46` → push → merge do `wszystko-gl46` → push (płytki klon:

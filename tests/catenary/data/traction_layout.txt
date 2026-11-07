@@ -26,6 +26,7 @@ span YwsC120-2C     70 66
 span YwsC120-2C-M   62 62
 span 2C120-2C-3     65 62
 span 2C120-2C-4     62 62
+span 2C120-2C-1     65 65   // DTR 2C120-2C-1 (PLK 2024): przeslo max 65 m, bez podzialu na strefy wiatrowe
 span YC150-2CS150   65 65
 span YC120-2CS150   62 62
 

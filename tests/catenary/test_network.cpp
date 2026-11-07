@@ -368,6 +368,30 @@ int main( int argc, char *argv[] ) {
         std::printf( "przeslo pochyle 1,70 -> 1,30: wieszaki liniowo -0,40 m: %s\n", good ? "OK" : "BLAD" );
         failed = failed || !good;
     }
+    // 2C120-2C-1 (DTR PLK 2024): liny 1600 + 500 daN, dolna przechodzi w Y 14 m od przesel 36 m; przesla 30-65 m licza sie i rysuja
+    {
+        bool good { true };
+        auto const *type { registry.find( "2C120-2C-1" ) };
+        good = type != nullptr;
+        if( good ) {
+            for( double const span : { 30.0, 36.0, 50.0, 65.0 } ) {
+                catenary::span_points points { { 0, 5.6, 0 }, { span, 5.6, 0 }, { 0, 7.3, 0 }, { span, 7.3, 0 } };
+                std::vector<catenary::vec3> lines; std::string error;
+                auto const built { catenary::build_span_lines( *type, registry.hanger_gaps( type->hanger_table, span ), points, 0.04, lines, error ) };
+                bool finite { true };
+                for( auto const &point : lines ) { finite = finite && std::isfinite( point.x + point.y + point.z ); }
+                // najnizszy punkt przewodu jezdnego: zwis wstepny 0, wiec przewod prawie poziomy (do 5 cm)
+                double lowest { 1e9 };
+                for( auto const &point : lines ) { if( point.y < 6.0 ) { lowest = std::min( lowest, point.y ); } }
+                if( false == built || false == finite || 5.6 - lowest > 0.05 ) {
+                    std::printf( "  2C120-2C-1 %.0f m: %s %s, zwis przewodu %.3f\n", span, built ? "zbudowane" : "nie", error.c_str(), 5.6 - lowest );
+                    good = false;
+                }
+            }
+        }
+        std::printf( "2C120-2C-1: przesla 30-65 m z liną Y 500 daN: %s\n", good ? "OK" : "BLAD" );
+        failed = failed || !good;
+    }
     // skrzyzowanie nad rozjazdem (33-0561): ogranicznik tylko, gdy drugi przewod wyzej o (0; 3 cm); dwa przewody jezdne - jeden ogranicznik
     {
         using catenary::element_kind;
