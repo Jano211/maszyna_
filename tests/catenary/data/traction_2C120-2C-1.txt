@@ -1,0 +1,31 @@
+{
+traction_code: 14
+symbol: 2C120-2C-1
+
+// Dokumentacja Techniczno-Ruchowa sieci 2C120-2C-1 (PKP PLK, 2024, zal. 5), metryka p. 3.1; kod 14 jak w 13-0002 (Kolprojekt 1978)
+
+// przewody jezdne (nazwa przewodu z pliku traction_tables.txt)
+contact_wire_num: 2
+contact_wire: Djp100
+contact_tension: 1400           // daN, lacznie (DTR: Fb 2x700)
+contact_wire_spacing: 0.08      // m; jak w 2C120-2C-3/-4
+
+// liny nosne; naciag laczny obu lin w daN (DTR: Fa 1600 + 500)
+catenary_wire_num: 2
+catenary_wire: L120
+catenary_tension: 2100
+catenary_stack: 0.04            // m, odstep pionowy lin - ZALOZENIE jak w 2C120-2C-3/-4
+
+// dolna lina nosna przy podwieszeniu przechodzi w Y ("scalony uklad lin nosnych"): naciag tej liny 500 daN (DTR: Fa 1600 + 500,
+// ZALOZENIE: 500 to lina dolna, przechodzaca w Y). Y 14 m, zawieszenie uelastycznione w przeslach >= 36 m (DTR p. 3.1 poz. 2, 5)
+y_wire: L120
+y_tension: 500
+y_length: 36 14                 // pary: od rozpietosci [m], dlugosc Y [m]; krotsze przesla bez Y
+y_junction_drop: 0.04           // m - ZALOZENIE jak w 2C120-2C-4
+
+// wieszaki - ZALOZENIE jak w 2C120-2C-3/-4 (DTR tablicy nie podaje): wieszaki przewodzace Cu 10 mm2 (DTR p. 3.3 h)
+hanger_table: 11
+hanger_mass: 0.5
+
+height: 1.70                    // m, wysokosc konstrukcyjna (DTR p. 3.2 b)
+}
