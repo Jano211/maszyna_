@@ -11,6 +11,10 @@ przyciski (decyzja użytkownika). Generator `gen_cantilevers.py` jest ROZJECHANY
 ręcznych dopisków: 4490-01, `rules pulloff_drop`, `assembly brace`, odciągi 0311–0324) – przed jakimkolwiek generowaniem przenieść
 je do generatora.
 
+Też 07.11: współczynnik B (rozpiętość wg odsuwów, `span_kind_of`), przęsła pochyłe sprawdzone (solver OK, test w `t`), stare
+testy `t`/`tsc` poprawione – cały zestaw OK (`tt` bez argumentu albo z ukośnikiem na końcu ścieżki), strona Słupy w sekcjach
+(kopia sprzed zmiany nie w repo – historia gita). Lico: przyciski szlak/stacja/rozjazd już były. Walidacje peronu/kozła i
+automatyczne lico – edytor nie wie, gdzie peron i kozioł: do ustalenia z użytkownikiem, jak to wykrywać.
 Pary rozjazdowe tej samej długości (6203-1111 w 127x i 0179, 6206-1111 w 128x, 0180, 0184, 6206-1212 w 0197, 6207-0303 w 0159,
 0173) – użytkownik: „jedną, zawsze jedną” → `arms 1` (dwie łapki na jednej sieci z jednym jezdnym).
 

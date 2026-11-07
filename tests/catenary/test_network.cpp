@@ -89,8 +89,9 @@ int main( int argc, char *argv[] ) {
             auto const built { catenary::build_span_lines( *definition, gaps, points, 0.04, lines, error ) };
             bool finite { true };
             for( auto const &point : lines ) { finite = finite && std::isfinite( point.x + point.y + point.z ); }
-            // 95 m przy tej wysokości liny to przęsło niewykonalne: ma zostać odrzucone z opisem, a nie narysowane
-            auto const expected { span < 90.0 };
+            // 95 m przy tej wysokości liny to przęsło niewykonalne; od 2026-10-30 (22b187d) i tak się rysuje: najpierw bez linek Y,
+            // potem jako odcinek bez wieszaków, lina podciągnięta nad przewód - zamiast rysowania po staremu
+            auto const expected { true };
             auto const good { built == expected && finite && std::abs( sum - span ) < 1e-6 && largest < 4.6 && ( built || false == error.empty() ) };
             std::printf( "przeslo %6.2f m: wieszakow %2zu, najwiekszy odstep %.2f m, odcinkow %3zu  %s %s\n",
                 span, gaps.size() - 1, largest, built ? lines.size() / 2 : 0, good ? "OK" : "BLAD", error.c_str() );
@@ -337,6 +338,34 @@ int main( int argc, char *argv[] ) {
         auto const *old { registry.find( "stary-format" ) };
         auto const good { missing == nullptr && old == nullptr && afterfirst == before + 1 && false == repeated && errors > afterfirst };
         std::printf( "bledne typy odrzucone i zgloszone raz: %s\n", good ? "OK" : "BLAD" );
+        failed = failed || !good;
+    }
+    // przęsło pochyłe (hk 1,70 przy jednym podwieszeniu, 1,30 przy drugim; Głowacki 15.2: tablica 1,30 = tablica 1,70 - 0,40):
+    // wieszaki = wieszaki przęsła 1,70 minus 0,40 liniowo wzdłuż przęsła, żaden krótszy niż 0,20 m
+    {
+        registry.directory( argc > 1 ? argv[ 1 ] : "tests/catenary/data" );
+        auto good { true };
+        for( auto const *symbol : { "C120-2C", "YC120-2C" } ) {
+            auto const *definition { registry.find( symbol ) };
+            if( definition == nullptr ) { good = false; continue; }
+            auto const solve = [ & ]( double const H0, double const H1, catenary::span_solution &Solution ) {
+                catenary::span_points points;
+                points.contact_start = { 0.0, 5.6, 0.0 };
+                points.contact_end = { 0.0, 5.6, 60.0 };
+                points.messenger_start = { 0.0, 5.6 + H0, 0.0 };
+                points.messenger_end = { 0.0, 5.6 + H1, 60.0 };
+                std::string error;
+                return catenary::solve_span_points( *definition, registry.hanger_gaps( definition->hanger_table, 60.0 ), points, false, false, Solution, error );
+            };
+            catenary::span_solution flat, sloped;
+            if( false == solve( 1.70, 1.70, flat ) || false == solve( 1.70, 1.30, sloped ) || flat.result.hangers.size() != sloped.result.hangers.size() ) { good = false; continue; }
+            for( std::size_t k = 0; k < sloped.result.hangers.size(); ++k ) {
+                auto const &h { sloped.result.hangers[ k ] };
+                auto const expected { flat.result.hangers[ k ].length - 0.40 * h.x / 60.0 };
+                if( std::abs( h.length - expected ) > 0.005 || h.length < 0.20 ) { good = false; }
+            }
+        }
+        std::printf( "przeslo pochyle 1,70 -> 1,30: wieszaki liniowo -0,40 m: %s\n", good ? "OK" : "BLAD" );
         failed = failed || !good;
     }
     return failed ? 1 : 0;

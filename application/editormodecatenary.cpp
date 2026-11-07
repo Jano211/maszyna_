@@ -1263,6 +1263,32 @@ bool catenary_editor::lateral_of(std::size_t const Index, glm::dvec2 const &Righ
 	return true;
 }
 
+// the span by the staggers at its ends (Glowacki 15.2, formula 8-4/8-5: the span on a straight goes with the root of B, which
+// depends on the staggers only): the nominal span of the network is the normal one (0 / 0.18, 0.30 / 0.18: B 3.24); 0 / 0.30
+// "limited" B 2.68, 0.30 alternately "conditionally allowed" B 3.6, both 0 "the largest" B 4 (the last resort). Jan 2026-11-07
+catenary_editor::span_kind catenary_editor::span_kind_of(std::size_t const From, std::size_t const To) const
+{
+	span_kind kind;
+	auto const *a{catenary_scene_get(From)};
+	auto const *b{catenary_scene_get(To)};
+	if (m_catenary.speed_class == 1 || a == nullptr || b == nullptr || false == a->has_at || false == b->has_at)
+		return kind;
+	auto const chord{plan_of(wire_of(*b)) - plan_of(wire_of(*a))};
+	auto const length{glm::length(chord)};
+	double za{0.0}, zb{0.0};
+	if (length < 1.0 || false == lateral_of(From, right_of(chord / length), za) || false == lateral_of(To, right_of(chord / length), zb))
+		return kind;
+	auto const size = [](double const Z) { return std::abs(Z) < 0.09 ? 0 : std::abs(Z) < 0.24 ? 1 : 2; }; // 0, 0.18, 0.30
+	auto const sa{size(za)}, sb{size(zb)};
+	if (sa == 0 && sb == 0)
+		kind = {4.0, STR_C("the largest (both staggers 0, B 4: the last resort)")};
+	else if ((sa == 0 && sb == 2) || (sa == 2 && sb == 0))
+		kind = {2.68, STR_C("limited (staggers 0 / 0.30, B 2.68)")};
+	else if (sa == 2 && sb == 2 && (za > 0.0) != (zb > 0.0))
+		kind = {3.6, STR_C("conditionally allowed (staggers 0.30 alternately, B 3.6)")};
+	return kind;
+}
+
 bool catenary_editor::stagger_of(std::size_t const Index, double &Offset) const
 {
 	auto const *spot{catenary_spot_view(Index)};
@@ -2591,8 +2617,16 @@ catenary_editor::chain_report const &catenary_editor::catenary_chain_report(std:
 			continue;
 		auto const radius{span_radius(*a, *b, length)};
 		auto const bent{radius > 0.0 && radius < kCurveRadius};
-		if (auto const limit{span_limit_at(network, bent ? radius : 0.0)}; limit > 0.0 && length > limit + 0.05)
-			add(members[k + 1], format(STR_C("Span %s - %s: %.1f m, longer than the %.1f m allowed there"), named(members[k]).c_str(), named(members[k + 1]).c_str(), length, limit), true);
+		auto const kind{bent ? span_kind{} : span_kind_of(members[k], members[k + 1])};
+		if (auto const limit{span_limit_at(network, bent ? radius : 0.0)}; limit > 0.0)
+		{
+			auto const allowed{limit * std::sqrt(kind.b / 3.24)};
+			if (length > allowed + 0.05)
+				add(members[k + 1], kind.text != nullptr ? format(STR_C("Span %s - %s: %.1f m, longer than the %.1f m a span %s allows (Glowacki 15.2)"), named(members[k]).c_str(), named(members[k + 1]).c_str(), length, allowed, kind.text)
+				                                         : format(STR_C("Span %s - %s: %.1f m, longer than the %.1f m allowed there"), named(members[k]).c_str(), named(members[k + 1]).c_str(), length, limit), true);
+			else if (kind.b > 3.24 && length > limit + 0.05)
+				add(members[k + 1], format(STR_C("Span %s - %s: %.1f m, over the normal %.1f m - only as a span %s (Glowacki 15.2)"), named(members[k]).c_str(), named(members[k + 1]).c_str(), length, limit, kind.text), false);
+		}
 		auto const *sa{catenary_spot_view(members[k])};
 		auto const *sb{catenary_spot_view(members[k + 1])};
 		if (sa == nullptr || sb == nullptr)
@@ -6458,53 +6492,43 @@ void catenary_editor::render_catenary_move_ui()
 // the settings of the cantilevers (the next ones placed, or the selected one) and the selected pole
 void catenary_editor::render_catenary_cantilever_ui()
 {
+	// the page of the poles in sections, in the order of the work (Jan 2026-11-07: "more user friendly"): what the pole is (card),
+	// where its wires go, its chain; the rarer things (a second cantilever, adjustments, insulators and skins) folded
 	auto &tool{m_catenary};
 	auto const *catalog{catenary_scene_catalog()};
 	auto changed{false};
-	ImGui::PushItemWidth(180.0f);
-	if (tool.selected < 0)
+	// the selected pole: what it is and what's wrong with it, done / remove at the top
+	if (tool.selected >= 0)
 	{
-		if (ImGui::InputText(STR_C("Catenary file"), tool.file, sizeof(tool.file)))
+		auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))};
+		if (data == nullptr)
 		{
-			tool.file_own = true;
-			catenary_file_store(false);
+			tool.selected = -1;
+			return;
 		}
-		if (ImGui::IsItemDeactivatedAfterEdit())
-			catenary_file_store(true);
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("Where the new poles go: by default the file of the active layer, as its node entries (node ... suspension / chain / gantry / anchor), saved with the scenery. Another file name makes a catenary file of its own, included with catenary <file> endcatenary from the file of the active layer"));
-		if (tool.file_own)
-		{
-			ImGui::SameLine();
-			if (ImGui::SmallButton(STR_C("by the layer")))
-			{
-				tool.file_own = false;
-				catenary_file_store(true);
-			}
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("The catenary file follows the active layer again"));
-		}
-		{
-			// where it ends up: straight in the file of a layer, or a catenary file of its own and the layer whose file includes it
-			if (catenary_scene_file_inline(tool.file))
-				ImGui::TextDisabled("%s", STR_C("node entries in this scenery file (layer), saved with the scenery"));
-			else
-			{
-				auto const layer{static_cast<scene::layer_handle>(catenary_scene_file_layer(tool.file))};
-				auto const files{catenary_scene_files()};
-				auto const known{std::find(files.begin(), files.end(), std::string{tool.file}) != files.end()};
-				auto const fresh{catenary_scene_new_files()};
-				auto const created{known && std::find(fresh.begin(), fresh.end(), std::string{tool.file}) != fresh.end()};
-				auto const layername{scene::Layers.valid(layer) ? scene::Layers.layer(layer).name : std::string{}};
-				if (false == layername.empty())
-					ImGui::TextDisabled("%s", format(known && false == created ? STR_C("catenary file included by %s") : STR_C("catenary file of its own: the save writes it and its directive into %s"), layername.c_str()).c_str());
-			}
-		}
-		render_catenary_chain_state();
-	}
-	else
-	{
 		ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Selected pole (%s): changes apply to it at once"), catenary_scene_file_of(static_cast<std::size_t>(tool.selected)).c_str()).c_str());
+		if (ImGui::Button(STR_C("Done")))
+		{
+			tool.selected = -1;
+			return;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button(STR_C("Remove the pole")))
+		{
+			catenary_delete_selected();
+			return;
+		}
+		if (false == tool.probed)
+		{
+			tool.probe_good = catenary_scene_probe(*data, tool.probe);
+			tool.probed = true;
+		}
+		auto const *spot{catenary_spot_of(static_cast<std::size_t>(tool.selected))};
+		ImGui::Text("%s", format(STR_C("Card %d execution %d, A = %.2f m, %zu parts"), data->card, data->execution, spot != nullptr ? spot->reach : 0.0, catenary_scene_parts(static_cast<std::size_t>(tool.selected))).c_str());
+		if (false == tool.probe_good)
+			ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.3f, 1.0f), "%s", STR_C("The cantilever doesn't assemble:"));
+		for (auto const &warning : tool.probe.warnings)
+			ImGui::TextWrapped("- %s", warning.c_str());
 		// arms for another count of contact wires than the network of its chain has (Jan 2026-11-07: a remark, nothing changes by itself)
 		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr)
 		{
@@ -6533,528 +6557,206 @@ void catenary_editor::render_catenary_cantilever_ui()
 					ImGui::TextDisabled("%s", STR_C("The card has no execution for that many contact wires"));
 			}
 		}
-		render_catenary_move_ui();
-		render_catenary_pull_ui();
 	}
-
-	// on the gantries the drop or the mast is the pole, its distance is the one of the gantry
-	if (tool.page == 0)
+	ImGui::PushItemWidth(180.0f);
+	// what the pole is: the pole, its face from the track, the card from the catalogue, the height of the wires
+	if (ImGui::CollapsingHeader(tool.selected >= 0 ? STR_C("Pole and card") : STR_C("New pole"), ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if (ImGui::BeginCombo(STR_C("Pole"), tool.poles[std::clamp(tool.pole, 0, static_cast<int>(tool.poles.size()) - 1)].c_str()))
+		// on the gantries the drop or the mast is the pole, its distance is the one of the gantry
+		if (tool.page == 0)
 		{
-			if (grouped_items(tool.poles, tool.pole, {}, {}, [&](std::string const &Name) { catenary_preview_image(Name, 160.0f); }))
-				changed = true;
-			ImGui::EndCombo();
-		}
-		if (ImGui::IsItemHovered())
-		{
-			ImGui::BeginTooltip();
-			catenary_preview_image(tool.poles[std::clamp(tool.pole, 0, static_cast<int>(tool.poles.size()) - 1)], 160.0f);
-			ImGui::EndTooltip();
-		}
-		// pull-offs: the pole can stand far away from the track (a long pull-off rope, Jan 2026-11-01: up to 50 m)
-		auto const *catalogued{catenary_scene_structures().group(tool.catalog_group)};
-		auto const pulling{catalogued != nullptr && catalogued->category == "pulloff"};
-		changed |= ImGui::SliderFloat(STR_C("Face of the pole from the track axis (m)"), &tool.clearance, 1.60f, pulling ? 50.0f : 4.50f, "%.2f", pulling ? ImGuiSliderFlags_Logarithmic : ImGuiSliderFlags_None);
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("Structure gauge 2.20 or 2.50 m by the catalogue (card 0007); drag it and the cantilever follows, the card changes with band A. Ctrl+click types a value"));
-		// the usual faces: a line, a station, by a switch
-		struct face_choice
-		{
-			char const *label;
-			float face;
-		};
-		face_choice const faces[]{{STR_C("line 2.50"), 2.50f}, {STR_C("station 2.20"), 2.20f}, {STR_C("switch 4.00"), kSwitchFace}};
-		for (std::size_t index = 0; index < std::size(faces); ++index)
-		{
-			if (index > 0)
-				ImGui::SameLine();
-			ImGui::PushID(static_cast<int>(index));
-			if (ImGui::SmallButton(faces[index].label))
+			if (ImGui::BeginCombo(STR_C("Pole"), tool.poles[std::clamp(tool.pole, 0, static_cast<int>(tool.poles.size()) - 1)].c_str()))
 			{
-				tool.clearance = faces[index].face;
-				changed = true;
-			}
-			ImGui::PopID();
-		}
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("The face of the pole from the track axis: 2.50 m on a line, 2.20 m in a station, 4.00 m by a switch"));
-	}
-	if (tool.selected >= 0)
-	{
-		// the selected pole: its own stagger
-		changed |= catenary_stagger_slider(tool);
-		if (auto const *spot{catenary_spot_of(static_cast<std::size_t>(tool.selected))}; spot != nullptr && tool.zigzag && false == tool.wide_stagger)
-		{
-			auto const curve{track_curve(*spot) && spot->inward != 0};
-			if (tool.stagger > zigzag_limit(curve) + 0.005f)
-				ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s", format(STR_C("Iet-107 allows up to %.2f m here"), zigzag_limit(curve)).c_str());
-		}
-		if (ImGui::Checkbox(STR_C("Wires towards the pole"), &tool.toward))
-			changed = true;
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("Towards the pole: a short cantilever; away from it: a long one. On a straight the wires zigzag, on a curve they go to its outside"));
-		ImGui::SameLine();
-		if (ImGui::Button(STR_C("Swap short / long (X)")))
-			catenary_flip();
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("The wires of this pole to the other side of the track axis: the short cantilever becomes a long one or the other way round; the pole stays where it stands"));
-		if (ImGui::Button(STR_C("Over to another track")))
-		{
-			tool.retrack = tool.selected;
-			tool.status = STR("LMB by the track the cantilever is for (Esc cancels)");
-		}
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("The cantilever goes by another track, e.g. at a turnout from the diverging track to the main one: the pole stays, the card, the stagger and the dragging along go by the clicked track"));
-		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole)
-		{
-			auto const *catalog{catenary_scene_catalog()};
-			auto const *own{catalog != nullptr ? catalog->pole(data->pole_type) : nullptr};
-			if (own != nullptr && false == own->drop.empty())
-			{
-				auto const umbrella{pole_sharers(static_cast<std::size_t>(tool.selected)).size() > 1};
-				ImGui::BeginDisabled(umbrella);
-				if (ImGui::Button(STR_C("Drop to the other side of the track")))
-					catenary_drop_flip(static_cast<std::size_t>(tool.selected));
-				ImGui::EndDisabled();
-				if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-					ImGui::SetTooltip("%s", umbrella ? STR_C("An umbrella hangs on this drop: break it up first") : STR_C("The drop goes over to the other side of the track axis at the same distance from it, along the beam; the wires stay where they are, so the cantilever goes from short to long or back and the card is chosen anew"));
-			}
-		}
-		// the top mount of a tubular cantilever moved up or down: the solver takes a shorter or a longer stay tube or rod
-		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && (tool.expert || data->stay_shift != 0.0) && data->has_pole && (data->card / 100 == 7 || data->card / 100 == 10 || data->card / 100 == 11 || data->card / 100 == 12))
-		{
-			auto const index{static_cast<std::size_t>(tool.selected)};
-			auto enabled{data->stay_shift != 0.0 || tool.stay_shift_open};
-			if (ImGui::Checkbox(STR_C("Top mount moved"), &enabled))
-			{
-				tool.stay_shift_open = enabled;
-				if (false == enabled && data->stay_shift != 0.0)
-				{
-					auto changed{*data};
-					changed.stay_shift = 0.0;
-					tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
-					catenary_scene_update(index, changed);
-					tool.probed = false;
-				}
+				if (grouped_items(tool.poles, tool.pole, {}, {}, [&](std::string const &Name) { catenary_preview_image(Name, 160.0f); }))
+					changed = true;
+				ImGui::EndCombo();
 			}
 			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("The top (stay) mount up or down from the card by up to 0.50 m, e.g. where something is in the way on the pole; the stay tube or rod is taken shorter or longer to fit"));
-			if (enabled)
 			{
-				ImGui::SameLine();
-				auto shift{static_cast<float>(data->stay_shift)};
-				ImGui::PushItemWidth(160.0f);
-				if (ImGui::SliderFloat(STR_C("m##stayshift"), &shift, -0.50f, 0.50f, "%+.2f"))
-				{
-					shift = std::round(shift * 100.0f) / 100.0f;
-					auto changed{*data};
-					changed.stay_shift = shift;
-					// one drag of the slider is taken back at once
-					if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
-					{
-						tool.shift_group = ++tool.group;
-						tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
-					}
-					catenary_scene_update(index, changed);
-					tool.probed = false;
-				}
-				ImGui::PopItemWidth();
+				ImGui::BeginTooltip();
+				catenary_preview_image(tool.poles[std::clamp(tool.pole, 0, static_cast<int>(tool.poles.size()) - 1)], 160.0f);
+				ImGui::EndTooltip();
 			}
-		}
-		// the bottom (strut) mount of a tubular cantilever moved up or down: the solver takes a shorter or a longer strut tube
-		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && (tool.expert || data->strut_shift != 0.0) && data->has_pole && (data->card / 100 == 7 || data->card / 100 == 10 || data->card / 100 == 11 || data->card / 100 == 12))
-		{
-			auto const index{static_cast<std::size_t>(tool.selected)};
-			auto enabled{data->strut_shift != 0.0 || tool.strut_shift_open};
-			if (ImGui::Checkbox(STR_C("Bottom mount moved"), &enabled))
-			{
-				tool.strut_shift_open = enabled;
-				if (false == enabled && data->strut_shift != 0.0)
-				{
-					auto changed{*data};
-					changed.strut_shift = 0.0;
-					tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
-					catenary_scene_update(index, changed);
-					tool.probed = false;
-				}
-			}
+			// pull-offs: the pole can stand far away from the track (a long pull-off rope, Jan 2026-11-01: up to 50 m)
+			auto const *catalogued{catenary_scene_structures().group(tool.catalog_group)};
+			auto const pulling{catalogued != nullptr && catalogued->category == "pulloff"};
+			changed |= ImGui::SliderFloat(STR_C("Face of the pole from the track axis (m)"), &tool.clearance, 1.60f, pulling ? 50.0f : 4.50f, "%.2f", pulling ? ImGuiSliderFlags_Logarithmic : ImGuiSliderFlags_None);
 			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("The bottom (strut) mount up or down from the card by up to 0.50 m, e.g. where something is in the way on the pole; the strut tube is taken shorter or longer to fit"));
-			if (enabled)
+				ImGui::SetTooltip("%s", STR_C("Structure gauge 2.20 or 2.50 m by the catalogue (card 0007); drag it and the cantilever follows, the card changes with band A. Ctrl+click types a value"));
+			// the usual faces: a line, a station, by a switch
+			struct face_choice
 			{
-				ImGui::SameLine();
-				auto shift{static_cast<float>(data->strut_shift)};
-				ImGui::PushItemWidth(160.0f);
-				if (ImGui::SliderFloat(STR_C("m##strutshift"), &shift, -0.50f, 0.50f, "%+.2f"))
-				{
-					shift = std::round(shift * 100.0f) / 100.0f;
-					auto changed{*data};
-					changed.strut_shift = shift;
-					// one drag of the slider is taken back at once
-					if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
-					{
-						tool.shift_group = ++tool.group;
-						tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
-					}
-					catenary_scene_update(index, changed);
-					tool.probed = false;
-				}
-				ImGui::PopItemWidth();
-			}
-		}
-		// the cantilever turned by hand on its hinge (on top of the turn from the temperature)
-		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole)
-		{
-			auto const index{static_cast<std::size_t>(tool.selected)};
-			auto const swing{catenary_scene_swing(index)};
-			auto enabled{data->turn_by_hand != 0.0 || tool.turn_open};
-			if (ImGui::Checkbox(STR_C("Turned by hand"), &enabled))
-			{
-				tool.turn_open = enabled;
-				if (false == enabled && data->turn_by_hand != 0.0)
-				{
-					auto changed{*data};
-					changed.turn_by_hand = 0.0;
-					tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
-					catenary_scene_update(index, changed);
-					tool.probed = false;
-				}
-			}
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip(STR_C("The cantilever turned on its hinge about the vertical by hand, e.g. as it hangs on the ground; added to the turn from the temperature (by the middle anchor). Now in all: %.1f deg"), swing);
-			if (enabled)
-			{
-				ImGui::SameLine();
-				auto turn{static_cast<float>(data->turn_by_hand)};
-				ImGui::PushItemWidth(160.0f);
-				if (ImGui::SliderFloat(STR_C("deg##turnbyhand"), &turn, -30.0f, 30.0f, "%+.1f"))
-				{
-					turn = std::round(turn * 2.0f) / 2.0f;
-					auto changed{*data};
-					changed.turn_by_hand = turn;
-					if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
-					{
-						tool.shift_group = ++tool.group;
-						tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
-					}
-					catenary_scene_update(index, changed);
-					tool.probed = false;
-				}
-				ImGui::PopItemWidth();
-			}
-		}
-		// every insulator of the cantilever swapped by hand for any insulator of the catalogue (Jan 2026-11-04: every insulator possible
-		// everywhere): override of its role; the tubes are fitted to its length as with an insulator set
-		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->card > 0)
-		{
-			auto const *catalog{catenary_scene_catalog()};
-			auto const *scheme{catalog != nullptr ? catalog->scheme(data->card, data->execution) : nullptr};
-			std::vector<std::pair<std::string, std::string>> roles; // insulator role, the part of the card
-			std::vector<std::string> insulators;
-			if (scheme != nullptr)
-			{
-				for (auto const &role : scheme->roles)
-					if (auto const *part{catalog->part(role.second)}; part != nullptr && part->kind == "insulator")
-						roles.emplace_back(role.first, role.second);
-			}
-			// what fits in place of the insulator of the card (Jan 2026-11-06: the list of everything let people fit insulators where
-			// the fittings don't go): the tees 7010 <-> 7110 and 7020 <-> 7120 (the tubular ones never take 7110/7120); the tubular ones
-			// 7100 / 7010 / 7020 in the executions -01 (porcelain), -02 (resin) and -25 (25 kV), the ones the catalogue has
-			auto const tee{data->card / 100 == 1 || data->card / 100 == 9};
-			auto const fitting = [&](std::string const &Card) {
-				std::vector<std::string> list;
-				auto const add = [&](std::string const &Part) {
-					if (Part != Card && catalog->part(Part) != nullptr && std::find(list.begin(), list.end(), Part) == list.end())
-						list.push_back(Part);
-				};
-				auto const base{Card.substr(0, 4)};
-				if (tee)
-				{
-					static std::pair<char const *, char const *> const pairs[] = {{"7010", "7110"}, {"7020", "7120"}};
-					for (auto const &[tube, own] : pairs)
-					{
-						if (base == tube)
-							add(std::string(own) + "-01");
-						else if (base == own)
-							add(std::string(tube) + "-01");
-					}
-				}
-				else if (base == "7100" || base == "7010" || base == "7020")
-				{
-					for (auto const *execution : {"-01", "-02", "-25"})
-						add(base + execution);
-				}
-				return list;
+				char const *label;
+				float face;
 			};
-			if (false == roles.empty() && ImGui::TreeNode(STR_C("Insulators of this cantilever")))
+			face_choice const faces[]{{STR_C("line 2.50"), 2.50f}, {STR_C("station 2.20"), 2.20f}, {STR_C("switch 4.00"), kSwitchFace}};
+			for (std::size_t index = 0; index < std::size(faces); ++index)
 			{
-				auto const index{static_cast<std::size_t>(tool.selected)};
-				for (auto const &[role, card] : roles)
+				if (index > 0)
+					ImGui::SameLine();
+				ImGui::PushID(static_cast<int>(index));
+				if (ImGui::SmallButton(faces[index].label))
 				{
-					insulators = fitting(card);
-					auto const own{std::find_if(data->overrides.begin(), data->overrides.end(), [&](auto const &O) { return O.first == role; })};
-					auto const current{own != data->overrides.end() ? own->second : std::string()};
-					// nothing fits in its place: no list (unless an older override has to be taken back)
-					if (insulators.empty() && current.empty())
-						continue;
-					auto const shown{current.empty() ? format(STR_C("%s (card)"), card.c_str()) : current};
-					ImGui::PushItemWidth(160.0f);
-					if (ImGui::BeginCombo(role.c_str(), shown.c_str()))
-					{
-						auto pick = [&](std::string const &Part) {
-							auto changed{*data};
-							std::erase_if(changed.overrides, [&](std::pair<std::string, std::string> const &O) { return O.first == role; });
-							if (false == Part.empty())
-								changed.overrides.emplace_back(role, Part);
-							tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
-							catenary_scene_update(index, changed);
-							tool.probed = false;
-						};
-						if (ImGui::Selectable(format(STR_C("%s (card)"), card.c_str()).c_str(), current.empty()))
-							pick({});
-						for (auto const &part : insulators)
-							if (ImGui::Selectable(part.c_str(), part == current))
-								pick(part);
-						// an override from before the list was narrowed (or of a part gone from the catalogue): still shown, so it can be undone
-						if (false == current.empty() && std::find(insulators.begin(), insulators.end(), current) == insulators.end())
-							ImGui::Selectable(format(STR_C("%s (doesn't fit here)"), current.c_str()).c_str(), true);
-						ImGui::EndCombo();
-					}
-					ImGui::PopItemWidth();
-					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("An insulator which fits in place of the one of the card: on the tees 7010 <-> 7110 and 7020 <-> 7120, on the tubular cantilevers 7100 / 7010 / 7020 in the execution -01 (porcelain), -02 (resin) or -25 (25 kV), if the catalogue has it; the tube or rod it sits on is taken shorter or longer to fit, as with an insulator set"));
+					tool.clearance = faces[index].face;
+					changed = true;
 				}
-				ImGui::TreePop();
-			}
-		}
-		// the brace 6506 (as on 102x) on another tubular cantilever; 102x has it of its own
-		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole
-			&& (data->card / 100 == 7 || data->card / 100 == 10 || data->card / 100 == 11 || data->card / 100 == 12) && data->card / 10 != 102)
-		{
-			auto const index{static_cast<std::size_t>(tool.selected)};
-			auto braced{has_brace(*data)};
-			if (ImGui::Checkbox(STR_C("Brace 6506 (as on 102x)"), &braced))
-			{
-				auto changed{*data};
-				set_brace(changed, braced);
-				tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
-				catenary_scene_update(index, changed);
-				tool.probed = false;
-				tool.status = braced ? STR("Brace 6506 added") : STR("Brace 6506 taken off");
-				// where the flat bar doesn't fit between the strut and the steady arm the solver leaves it out: say so at once
-				if (catenary::cantilever_result tried; braced && catenary_scene_probe(changed, tried) && nullptr == tried.find("link"))
-					tool.status = STR("The brace 6506 doesn't fit on this cantilever (the strut doesn't come within 0.24 m of the steady arm along its length): the entry keeps it, the cantilever goes without it");
+				ImGui::PopID();
 			}
 			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("The flat bar 6506 from the clamp 4210 on the steady arm up to the clamp 4760 on the strut, as on the cantilevers 102x; it goes where the gap between them fits. It doesn't fit on 70x, 73x, 74x, 77x, 78x, 1110, 1120, 1130, 1140, 1210-1240, 1260, 1280 (the strut doesn't come close enough to the steady arm)"));
+				ImGui::SetTooltip("%s", STR_C("The face of the pole from the track axis: 2.50 m on a line, 2.20 m in a station, 4.00 m by a switch"));
 		}
-		// the lean of the pole across the track (with its mounts, the cantilever goes to them); umbrellas, spread cantilevers and gantry
-		// masts stand upright
-		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole && data->umbrella.empty() && false == data->shared_pole)
+		std::string const bendnames[] = {STR("by the track"), STR("straight"), STR("arc")};
+		char const *const bends[] = {bendnames[0].c_str(), bendnames[1].c_str(), bendnames[2].c_str()};
+		if (ImGui::Combo(STR_C("Cards for"), &tool.bend, bends, 3))
+			changed = true;
+		if (false == catenary_scene_structures().empty())
+			changed |= render_catenary_catalog_ui();
+		else
 		{
-			auto const *catalog{catenary_scene_catalog()};
-			auto const *own{catalog != nullptr ? catalog->pole(data->pole_type) : nullptr};
-			if (own != nullptr && false == own->gantry && own->drop.empty())
+			if (ImGui::Checkbox(STR_C("Swinging cantilever (11xx)"), &tool.swinging))
+				changed = true;
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Off: the fixed ones (12xx)"));
+			if (ImGui::BeginCombo(STR_C("Execution"), STR(kExecutions[std::clamp(tool.execution, 1, 5) - 1]).c_str()))
 			{
-				auto const index{static_cast<std::size_t>(tool.selected)};
-				auto lean{static_cast<float>(data->lean)};
-				ImGui::PushItemWidth(160.0f);
-				// the expert mode: up to +-10 deg (lines in a bad state, the wires barely hang; Jan 2026-10-31), otherwise +-1.5
-				auto const limit{tool.expert || std::abs(lean) > 1.5f ? 10.0f : 1.5f};
-				if (ImGui::SliderFloat(STR_C("Lean of the pole towards the track (deg)"), &lean, -limit, limit, "%+.2f"))
-				{
-					lean = std::round(lean * 20.0f) / 20.0f;
-					auto changed{*data};
-					changed.lean = lean;
-					if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
+				for (int i = 1; i <= 5; ++i)
+					if (ImGui::Selectable(STR(kExecutions[i - 1]).c_str(), i == tool.execution))
 					{
-						tool.shift_group = ++tool.group;
-						tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
+						tool.execution = i;
+						changed = true;
 					}
-					catenary_scene_update(index, changed);
-					tool.probed = false;
-				}
-				ImGui::PopItemWidth();
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("A pole is seldom quite upright: it leans a little, the mounts with it, the cantilever is assembled to them. + towards the track. Ctrl+click types a value"));
+				ImGui::EndCombo();
 			}
 		}
-		// the skins: one for the whole cantilever (all its parts - no new tube on an old cantilever), one for the pole
-		if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr)
+		changed |= ImGui::SliderFloat(STR_C("Contact wires over the rails (m)"), &tool.height, 4.90f, 6.50f, "%.2f");
+		if (tool.expert || tool.system_height > 0.0f)
 		{
-			auto const *catalog{catenary_scene_catalog()};
-			auto const *own{catalog != nullptr && data->has_pole ? catalog->pole(data->pole_type) : nullptr};
-			auto const index{static_cast<std::size_t>(tool.selected)};
-			auto const skin_combo = [&](char const *Label, std::string const &Current, std::string const &Default, std::vector<std::string> const &Choices, std::string &Chosen) {
-				auto picked{false};
-				if (ImGui::BeginCombo(Label, (Current.empty() ? format(STR_C("default (%s)"), Default.c_str()) : Current).c_str()))
-				{
-					if (ImGui::Selectable(format(STR_C("default (%s)"), Default.c_str()).c_str(), Current.empty()))
+			// the system height (hk): from the card, or set by hand
+			auto own{tool.system_height > 0.0f};
+			if (ImGui::Checkbox(STR_C("Own system height"), &own))
+			{
+				tool.system_height = own ? 1.70f : 0.0f;
+				changed = true;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Off: the system height of the card (1.70 / 1.30 ...). On: the messenger at the height set here over the contact wires; the stay mount goes with it, the solver warns when the cantilever can't take it"));
+			if (own)
+			{
+				ImGui::SameLine();
+				ImGui::PushItemWidth(100.0f);
+				changed |= ImGui::SliderFloat(STR_C("hk (m)"), &tool.system_height, 0.25f, 2.50f, "%.2f");
+				ImGui::PopItemWidth();
+			}
+		}
+		// the insulator set: the usual ceramic ones, or a set from the cantilever catalogue (parts NNNN-<set>: 25 kV, later plastic)
+		{
+			auto const sets{catenary_scene_insulator_sets()};
+			auto const label = [](std::string const &Set) { return Set.empty() ? std::string(STR("usual")) : Set == "25" ? std::string(STR("25 kV")) : Set; };
+			ImGui::PushItemWidth(160.0f);
+			if (ImGui::BeginCombo(STR_C("Insulators##cantilever"), label(tool.insulators).c_str()))
+			{
+				std::vector<std::string> choices{std::string()};
+				choices.insert(choices.end(), sets.begin(), sets.end());
+				if (false == tool.insulators.empty() && std::find(sets.begin(), sets.end(), tool.insulators) == sets.end())
+					choices.push_back(tool.insulators); // a set of the entry the catalogue doesn't have (kept as it is)
+				for (auto const &set : choices)
+					if (ImGui::Selectable(label(set).c_str(), set == tool.insulators))
 					{
-						Chosen.clear();
-						picked = true;
+						tool.insulators = set;
+						changed = true;
 					}
-					for (auto const &choice : Choices)
-						if (ImGui::Selectable(choice.c_str(), choice == Current))
+				ImGui::EndCombo();
+			}
+			ImGui::PopItemWidth();
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("The insulators of the cantilever: the usual ones or another set where the catalogue has its parts (NNNN-25: 25 kV). A part without its version in the set stays as it is (the log says which); the tees have their own 7110/7120"));
+		}
+		// the wind zone needs the papers of the line (where which zone is): the expert mode only
+		if (tool.expert)
+		{
+			ImGui::RadioButton(STR_C("Wind zone I"), &tool.zone, 1);
+			ImGui::SameLine();
+			ImGui::RadioButton(STR_C("Wind zone II"), &tool.zone, 2);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Only the nominal span: the recommended distance of the next pole and the limit in the remarks of Iet-107 (traction_layout.txt)"));
+		}
+		if (tool.networks.empty())
+			ImGui::TextDisabled("%s", STR_C("No data/traction_layout.txt: the spans aren't checked"));
+		if (auto const *data{tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr}; data != nullptr)
+		{
+			// a drop on a gantry: another length of it
+			if (auto const *own{catalog->pole(data->pole_type)}; own != nullptr && false == own->drop.empty())
+			{
+				ImGui::PushItemWidth(160.0f);
+				if (ImGui::BeginCombo(STR_C("Drop of the pole"), data->pole_type.c_str()))
+				{
+					for (auto const &pole : catalog->poles())
+						if (catalog->drops_interchangeable(pole.second.drop, own->drop) && ImGui::Selectable(format("%s  %.1f m", pole.first.c_str(), pole.second.length).c_str(), pole.first == data->pole_type))
 						{
-							Chosen = choice;
-							picked = true;
+							auto changed{*data};
+							changed.pole_type = pole.first;
+							tool.undo.push_back({++tool.group, false, static_cast<std::size_t>(tool.selected), *data, std::nullopt, false});
+							catenary_scene_update(static_cast<std::size_t>(tool.selected), changed);
+							if (auto found{tool.spots.find(static_cast<std::size_t>(tool.selected))}; found != tool.spots.end())
+								found->second.data = changed;
+							tool.probed = false;
 						}
 					ImGui::EndCombo();
 				}
-				return picked;
-			};
-			ImGui::PushItemWidth(220.0f);
-			std::string chosen;
-			if (skin_combo(STR_C("Cantilever skin"), data->skin.compare(0, 19, "siec_trakcyjna/siec") == 0 ? data->skin : std::string{}, "siec_trakcyjna/siec", catenary_skins("siec"), chosen))
+				ImGui::PopItemWidth();
+			}
+		}
+		if (tool.selected >= 0)
+			render_catenary_pull_ui();
+	}
+	// where the wires go: the stagger and the side of the track; for new poles the zigzag
+	if (tool.selected >= 0)
+	{
+		if (ImGui::CollapsingHeader(STR_C("Stagger and side"), ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			// the selected pole: its own stagger
+			changed |= catenary_stagger_slider(tool);
+			if (auto const *spot{catenary_spot_of(static_cast<std::size_t>(tool.selected))}; spot != nullptr && tool.zigzag && false == tool.wide_stagger)
 			{
-				auto changed{*data};
-				changed.skin = chosen;
-				tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
-				catenary_scene_update(index, changed);
+				auto const curve{track_curve(*spot) && spot->inward != 0};
+				if (tool.stagger > zigzag_limit(curve) + 0.005f)
+					ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s", format(STR_C("Iet-107 allows up to %.2f m here"), zigzag_limit(curve)).c_str());
+			}
+			if (ImGui::Checkbox(STR_C("Wires towards the pole"), &tool.toward))
+				changed = true;
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Towards the pole: a short cantilever; away from it: a long one. On a straight the wires zigzag, on a curve they go to its outside"));
+			ImGui::SameLine();
+			if (ImGui::Button(STR_C("Swap short / long (X)")))
+				catenary_flip();
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("The wires of this pole to the other side of the track axis: the short cantilever becomes a long one or the other way round; the pole stays where it stands"));
+			if (ImGui::Button(STR_C("Over to another track")))
+			{
+				tool.retrack = tool.selected;
+				tool.status = STR("LMB by the track the cantilever is for (Esc cancels)");
 			}
 			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C("All the parts of the cantilever, the mounts and the insulators take this one texture (textures/siec_trakcyjna/siec*)"));
-			// a drop takes the texture of its gantry; another one can be picked (Jan 2026-11-01)
-			if (own != nullptr && false == own->drop.empty())
+				ImGui::SetTooltip("%s", STR_C("The cantilever goes by another track, e.g. at a turnout from the diverging track to the main one: the pole stays, the card, the stagger and the dragging along go by the clicked track"));
+			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole)
 			{
-				std::vector<std::string> choices(std::begin(kGantrySkins), std::end(kGantrySkins));
-				for (auto const &extra : catenary_skins("bramki"))
-					if (std::find(choices.begin(), choices.end(), extra) == choices.end())
-						choices.push_back(extra);
-				// an old entry has the texture of the gantry in the cantilever skin
-				auto const legacy{data->skin.compare(0, 19, "siec_trakcyjna/siec") != 0 ? data->skin : std::string{}};
-				if (skin_combo(STR_C("Drop skin"), data->pole_skin, legacy.empty() ? STR("like the gantry") : legacy, choices, chosen))
+				auto const *catalog{catenary_scene_catalog()};
+				auto const *own{catalog != nullptr ? catalog->pole(data->pole_type) : nullptr};
+				if (own != nullptr && false == own->drop.empty())
 				{
-					auto changed{*data};
-					changed.pole_skin = chosen;
-					if (false == legacy.empty())
-						changed.skin.clear();
-					tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
-					catenary_scene_update(index, changed);
+					auto const umbrella{pole_sharers(static_cast<std::size_t>(tool.selected)).size() > 1};
+					ImGui::BeginDisabled(umbrella);
+					if (ImGui::Button(STR_C("Drop to the other side of the track")))
+						catenary_drop_flip(static_cast<std::size_t>(tool.selected));
+					ImGui::EndDisabled();
+					if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+						ImGui::SetTooltip("%s", umbrella ? STR_C("An umbrella hangs on this drop: break it up first") : STR_C("The drop goes over to the other side of the track axis at the same distance from it, along the beam; the wires stay where they are, so the cantilever goes from short to long or back and the card is chosen anew"));
 				}
-			}
-			if (own != nullptr && false == own->gantry && own->drop.empty() && false == data->shared_pole)
-			{
-				// the variants of the pole's family: 161x_new_gray... for 1611-11
-				auto const family{data->pole_type.size() >= 3 ? data->pole_type.substr(0, 3) + "x" : data->pole_type};
-				auto choices{catenary_skins(family)};
-				for (auto const &extra : catenary_skins(data->pole_type.substr(0, 4)))
-					if (std::find(choices.begin(), choices.end(), extra) == choices.end())
-						choices.push_back(extra);
-				if (skin_combo(STR_C("Pole skin"), data->pole_skin, own->skin.empty() ? std::string("none") : own->skin, choices, chosen))
-				{
-					auto changed{*data};
-					changed.pole_skin = chosen;
-					tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
-					catenary_scene_update(index, changed);
-				}
-			}
-			ImGui::PopItemWidth();
-			// the whole chain alike: its poles, cantilevers and anchors
-			std::size_t position{0};
-			if (auto const chain{catenary_chain_of(index, position)}; chain >= 0 && ImGui::SmallButton(STR_C("These skins on the whole chain")))
-			{
-				++tool.group;
-				std::size_t count{0};
-				for (auto const member : catenary_chain_members(static_cast<std::size_t>(chain)))
-				{
-					auto const *other{catenary_scene_get(member)};
-					if (other == nullptr || member == index || (other->skin == data->skin && other->pole_skin == data->pole_skin))
-						continue;
-					auto changed{*other};
-					changed.skin = data->skin;
-					// a pole of another family keeps its own
-					if (other->pole_type.substr(0, 3) == data->pole_type.substr(0, 3))
-						changed.pole_skin = data->pole_skin;
-					tool.undo.push_back({tool.group, false, member, *other, std::nullopt, false});
-					catenary_scene_update(member, changed);
-					++count;
-				}
-				tool.status = format(STR_C("Skins of %d poles of the chain changed (Ctrl+Z takes it back)"), static_cast<int>(count));
 			}
 		}
 	}
-	else
+	else if (ImGui::CollapsingHeader(STR_C("Zigzag"), ImGuiTreeNodeFlags_DefaultOpen))
 		render_catenary_zigzag_ui();
-	std::string const bendnames[] = {STR("by the track"), STR("straight"), STR("arc")};
-	char const *const bends[] = {bendnames[0].c_str(), bendnames[1].c_str(), bendnames[2].c_str()};
-	if (ImGui::Combo(STR_C("Cards for"), &tool.bend, bends, 3))
-		changed = true;
-	if (false == catenary_scene_structures().empty())
-		changed |= render_catenary_catalog_ui();
-	else
-	{
-		if (ImGui::Checkbox(STR_C("Swinging cantilever (11xx)"), &tool.swinging))
-			changed = true;
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("Off: the fixed ones (12xx)"));
-		if (ImGui::BeginCombo(STR_C("Execution"), STR(kExecutions[std::clamp(tool.execution, 1, 5) - 1]).c_str()))
-		{
-			for (int i = 1; i <= 5; ++i)
-				if (ImGui::Selectable(STR(kExecutions[i - 1]).c_str(), i == tool.execution))
-				{
-					tool.execution = i;
-					changed = true;
-				}
-			ImGui::EndCombo();
-		}
-	}
-	changed |= ImGui::SliderFloat(STR_C("Contact wires over the rails (m)"), &tool.height, 4.90f, 6.50f, "%.2f");
-	if (tool.expert || tool.system_height > 0.0f)
-	{
-		// the system height (hk): from the card, or set by hand
-		auto own{tool.system_height > 0.0f};
-		if (ImGui::Checkbox(STR_C("Own system height"), &own))
-		{
-			tool.system_height = own ? 1.70f : 0.0f;
-			changed = true;
-		}
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("Off: the system height of the card (1.70 / 1.30 ...). On: the messenger at the height set here over the contact wires; the stay mount goes with it, the solver warns when the cantilever can't take it"));
-		if (own)
-		{
-			ImGui::SameLine();
-			ImGui::PushItemWidth(100.0f);
-			changed |= ImGui::SliderFloat(STR_C("hk (m)"), &tool.system_height, 0.25f, 2.50f, "%.2f");
-			ImGui::PopItemWidth();
-		}
-	}
-	// the insulator set: the usual ceramic ones, or a set from the cantilever catalogue (parts NNNN-<set>: 25 kV, later plastic)
-	{
-		auto const sets{catenary_scene_insulator_sets()};
-		auto const label = [](std::string const &Set) { return Set.empty() ? std::string(STR("usual")) : Set == "25" ? std::string(STR("25 kV")) : Set; };
-		ImGui::PushItemWidth(160.0f);
-		if (ImGui::BeginCombo(STR_C("Insulators##cantilever"), label(tool.insulators).c_str()))
-		{
-			std::vector<std::string> choices{std::string()};
-			choices.insert(choices.end(), sets.begin(), sets.end());
-			if (false == tool.insulators.empty() && std::find(sets.begin(), sets.end(), tool.insulators) == sets.end())
-				choices.push_back(tool.insulators); // a set of the entry the catalogue doesn't have (kept as it is)
-			for (auto const &set : choices)
-				if (ImGui::Selectable(label(set).c_str(), set == tool.insulators))
-				{
-					tool.insulators = set;
-					changed = true;
-				}
-			ImGui::EndCombo();
-		}
-		ImGui::PopItemWidth();
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("The insulators of the cantilever: the usual ones or another set where the catalogue has its parts (NNNN-25: 25 kV). A part without its version in the set stays as it is (the log says which); the tees have their own 7110/7120"));
-	}
-	// the wind zone needs the papers of the line (where which zone is): the expert mode only
-	if (tool.expert)
-	{
-		ImGui::RadioButton(STR_C("Wind zone I"), &tool.zone, 1);
-		ImGui::SameLine();
-		ImGui::RadioButton(STR_C("Wind zone II"), &tool.zone, 2);
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("Only the nominal span: the recommended distance of the next pole and the limit in the remarks of Iet-107 (traction_layout.txt)"));
-	}
-	if (tool.networks.empty())
-		ImGui::TextDisabled("%s", STR_C("No data/traction_layout.txt: the spans aren't checked"));
 	ImGui::PopItemWidth();
 
 	// the selected pole follows the settings at once
@@ -7106,48 +6808,60 @@ void catenary_editor::render_catenary_cantilever_ui()
 				tool.status = spot.problem;
 		}
 	}
-	if (tool.selected >= 0)
+	// new poles: where they go (file) and the chain they make
+	if (tool.selected < 0)
 	{
-		auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))};
-		if (data == nullptr)
-			tool.selected = -1;
-		else
+		if (ImGui::CollapsingHeader(STR_C("File and chain"), ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			if (false == tool.probed)
+			ImGui::PushItemWidth(180.0f);
+			if (ImGui::InputText(STR_C("Catenary file"), tool.file, sizeof(tool.file)))
 			{
-				tool.probe_good = catenary_scene_probe(*data, tool.probe);
-				tool.probed = true;
+				tool.file_own = true;
+				catenary_file_store(false);
 			}
-			auto const *spot{catenary_spot_of(static_cast<std::size_t>(tool.selected))};
-			ImGui::Text("%s", format(STR_C("Card %d execution %d, A = %.2f m, %zu parts"), data->card, data->execution, spot != nullptr ? spot->reach : 0.0, catenary_scene_parts(static_cast<std::size_t>(tool.selected))).c_str());
-			if (false == tool.probe_good)
-				ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.3f, 1.0f), "%s", STR_C("The cantilever doesn't assemble:"));
-			for (auto const &warning : tool.probe.warnings)
-				ImGui::TextWrapped("- %s", warning.c_str());
-			// a drop on a gantry: another length of it
-			if (auto const *own{catalog->pole(data->pole_type)}; own != nullptr && false == own->drop.empty())
+			if (ImGui::IsItemDeactivatedAfterEdit())
+				catenary_file_store(true);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Where the new poles go: by default the file of the active layer, as its node entries (node ... suspension / chain / gantry / anchor), saved with the scenery. Another file name makes a catenary file of its own, included with catenary <file> endcatenary from the file of the active layer"));
+			if (tool.file_own)
 			{
-				ImGui::PushItemWidth(160.0f);
-				if (ImGui::BeginCombo(STR_C("Drop of the pole"), data->pole_type.c_str()))
+				ImGui::SameLine();
+				if (ImGui::SmallButton(STR_C("by the layer")))
 				{
-					for (auto const &pole : catalog->poles())
-						if (catalog->drops_interchangeable(pole.second.drop, own->drop) && ImGui::Selectable(format("%s  %.1f m", pole.first.c_str(), pole.second.length).c_str(), pole.first == data->pole_type))
-						{
-							auto changed{*data};
-							changed.pole_type = pole.first;
-							tool.undo.push_back({++tool.group, false, static_cast<std::size_t>(tool.selected), *data, std::nullopt, false});
-							catenary_scene_update(static_cast<std::size_t>(tool.selected), changed);
-							if (auto found{tool.spots.find(static_cast<std::size_t>(tool.selected))}; found != tool.spots.end())
-								found->second.data = changed;
-							tool.probed = false;
-						}
-					ImGui::EndCombo();
+					tool.file_own = false;
+					catenary_file_store(true);
 				}
-				ImGui::PopItemWidth();
-				data = catenary_scene_get(static_cast<std::size_t>(tool.selected));
-				if (data == nullptr)
-					return;
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("The catenary file follows the active layer again"));
 			}
+			{
+				// where it ends up: straight in the file of a layer, or a catenary file of its own and the layer whose file includes it
+				if (catenary_scene_file_inline(tool.file))
+					ImGui::TextDisabled("%s", STR_C("node entries in this scenery file (layer), saved with the scenery"));
+				else
+				{
+					auto const layer{static_cast<scene::layer_handle>(catenary_scene_file_layer(tool.file))};
+					auto const files{catenary_scene_files()};
+					auto const known{std::find(files.begin(), files.end(), std::string{tool.file}) != files.end()};
+					auto const fresh{catenary_scene_new_files()};
+					auto const created{known && std::find(fresh.begin(), fresh.end(), std::string{tool.file}) != fresh.end()};
+					auto const layername{scene::Layers.valid(layer) ? scene::Layers.layer(layer).name : std::string{}};
+					if (false == layername.empty())
+						ImGui::TextDisabled("%s", format(known && false == created ? STR_C("catenary file included by %s") : STR_C("catenary file of its own: the save writes it and its directive into %s"), layername.c_str()).c_str());
+				}
+			}
+			render_catenary_chain_state();
+			ImGui::PopItemWidth();
+		}
+		return;
+	}
+	auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))};
+	if (data == nullptr)
+		return;
+	// the chain of the pole: hanging the wires on, copying, its zigzag and remarks, what the chain does at this pole
+	if (ImGui::CollapsingHeader(STR_C("Chain"), ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		{
 			// the wires from this pole to others already standing
 			if (ImGui::Button(tool.connect_from >= 0 ? STR_C("Stop hanging the wires") : STR_C("Hang the wires to another pole")))
 			{
@@ -7156,66 +6870,6 @@ void catenary_editor::render_catenary_cantilever_ui()
 			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("Joins this pole with the poles clicked after it: it goes on the chain at its end, a new chain of the two, or two chains become one"));
-			// an umbrella: the second cantilever on this pole (or drop), to the track on its other side
-			if (data->umbrella.empty())
-			{
-				if (ImGui::Button(tool.umbrella_from >= 0 ? STR_C("Stop the umbrella") : STR_C("Umbrella: a cantilever to the other track")))
-				{
-					tool.umbrella_from = tool.umbrella_from >= 0 ? -1 : tool.selected;
-					tool.connect_from = -1;
-					tool.anchor_pick = -1;
-					tool.status = tool.umbrella_from >= 0 ? STR("LMB by the track on the other side of the pole: the second cantilever goes on this pole, with the settings of the panel") : std::string{};
-				}
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("Two cantilevers on one pole or drop, to the tracks on both sides of it; on adjustable mounts (band round the pole) they share the double mounts 4640-4670 at one height"));
-				auto const *ownscheme{catalog->scheme(data->card, data->execution)};
-				auto const steadyonly{ownscheme != nullptr && ownscheme->roles.count("strut") == 0 && ownscheme->roles.count("stay") == 0};
-				if (auto const *own{catalog->pole(data->pole_type)}; tool.expert && own != nullptr && (steadyonly ? false == own->steady_console.empty() : false == own->console.empty()))
-				{
-					ImGui::SameLine();
-					if (ImGui::Button(STR_C("Spread cantilevers")))
-					{
-						catenary_spread_create(static_cast<std::size_t>(tool.selected));
-						data = tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr;
-						if (data == nullptr)
-							return;
-					}
-					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("Two cantilevers to this track on consoles 4890 (cards 0517/0518), 1.19 m apart along it: this one goes onto the first mount, the second onto the other; each can then hold any chain or only its messenger or its wires"));
-				}
-			}
-			else
-			{
-				std::string partner;
-				for (std::size_t index = 0; index < catenary_scene_size(); ++index)
-					if (auto const *other{catenary_scene_get(index)}; other != nullptr && static_cast<int>(index) != tool.selected && other->umbrella == data->umbrella)
-						partner = other->name;
-				ImGui::TextUnformatted(format(data->has_spread ? STR_C("Spread cantilevers %s with %s") : STR_C("Umbrella %s with %s"), data->umbrella.c_str(), partner.empty() ? "-" : partner.c_str()).c_str());
-				if (data->has_spread && tool.expert)
-				{
-					// a third one on the same pole, in its axis on its own mounts (messenger only by the spread ones holding the wires)
-					if (ImGui::SmallButton(STR_C("A cantilever in the axis of the pole")))
-					{
-						catenary_third_create(static_cast<std::size_t>(tool.selected));
-						data = tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr;
-						if (data == nullptr)
-							return;
-					}
-					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("A third cantilever to this track on the same pole, in its axis on the usual mounts (move them apart from the consoles by hand if they meet); the pole stays one"));
-					ImGui::SameLine();
-				}
-				ImGui::SameLine();
-				if (ImGui::SmallButton(STR_C("Separate")))
-				{
-					catenary_umbrella_break(static_cast<std::size_t>(tool.selected));
-					data = catenary_scene_get(static_cast<std::size_t>(tool.selected));
-					if (data == nullptr)
-						return;
-				}
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("The two cantilevers stay where they are, each on its own single mounts"));
-			}
 			render_catenary_chain_state();
 			// copying to the neighbours in the chain
 			std::size_t position{0};
@@ -7279,12 +6933,445 @@ void catenary_editor::render_catenary_cantilever_ui()
 				render_catenary_shared(static_cast<std::size_t>(chain));
 				render_catenary_second_net(static_cast<std::size_t>(chain));
 			}
-			if (ImGui::Button(STR_C("Remove the pole")))
-				catenary_delete_selected();
-			ImGui::SameLine();
-			if (ImGui::Button(STR_C("Done")))
-				tool.selected = -1;
+			render_catenary_move_ui();
 		}
+	}
+	data = catenary_scene_get(static_cast<std::size_t>(tool.selected));
+	if (data == nullptr)
+		return;
+	// a second cantilever on the pole: umbrella, spread cantilevers
+	if (ImGui::CollapsingHeader(false == data->umbrella.empty() ? (data->has_spread ? STR_C("Second cantilever: spread###second") : STR_C("Second cantilever: umbrella###second")) : STR_C("Second cantilever###second")))
+	{
+		{
+			// an umbrella: the second cantilever on this pole (or drop), to the track on its other side
+			if (data->umbrella.empty())
+			{
+				if (ImGui::Button(tool.umbrella_from >= 0 ? STR_C("Stop the umbrella") : STR_C("Umbrella: a cantilever to the other track")))
+				{
+					tool.umbrella_from = tool.umbrella_from >= 0 ? -1 : tool.selected;
+					tool.connect_from = -1;
+					tool.anchor_pick = -1;
+					tool.status = tool.umbrella_from >= 0 ? STR("LMB by the track on the other side of the pole: the second cantilever goes on this pole, with the settings of the panel") : std::string{};
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("Two cantilevers on one pole or drop, to the tracks on both sides of it; on adjustable mounts (band round the pole) they share the double mounts 4640-4670 at one height"));
+				auto const *ownscheme{catalog->scheme(data->card, data->execution)};
+				auto const steadyonly{ownscheme != nullptr && ownscheme->roles.count("strut") == 0 && ownscheme->roles.count("stay") == 0};
+				if (auto const *own{catalog->pole(data->pole_type)}; tool.expert && own != nullptr && (steadyonly ? false == own->steady_console.empty() : false == own->console.empty()))
+				{
+					ImGui::SameLine();
+					if (ImGui::Button(STR_C("Spread cantilevers")))
+					{
+						catenary_spread_create(static_cast<std::size_t>(tool.selected));
+						data = tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr;
+						if (data == nullptr)
+							return;
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("Two cantilevers to this track on consoles 4890 (cards 0517/0518), 1.19 m apart along it: this one goes onto the first mount, the second onto the other; each can then hold any chain or only its messenger or its wires"));
+				}
+			}
+			else
+			{
+				std::string partner;
+				for (std::size_t index = 0; index < catenary_scene_size(); ++index)
+					if (auto const *other{catenary_scene_get(index)}; other != nullptr && static_cast<int>(index) != tool.selected && other->umbrella == data->umbrella)
+						partner = other->name;
+				ImGui::TextUnformatted(format(data->has_spread ? STR_C("Spread cantilevers %s with %s") : STR_C("Umbrella %s with %s"), data->umbrella.c_str(), partner.empty() ? "-" : partner.c_str()).c_str());
+				if (data->has_spread && tool.expert)
+				{
+					// a third one on the same pole, in its axis on its own mounts (messenger only by the spread ones holding the wires)
+					if (ImGui::SmallButton(STR_C("A cantilever in the axis of the pole")))
+					{
+						catenary_third_create(static_cast<std::size_t>(tool.selected));
+						data = tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr;
+						if (data == nullptr)
+							return;
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("A third cantilever to this track on the same pole, in its axis on the usual mounts (move them apart from the consoles by hand if they meet); the pole stays one"));
+					ImGui::SameLine();
+				}
+				ImGui::SameLine();
+				if (ImGui::SmallButton(STR_C("Separate")))
+				{
+					catenary_umbrella_break(static_cast<std::size_t>(tool.selected));
+					data = catenary_scene_get(static_cast<std::size_t>(tool.selected));
+					if (data == nullptr)
+						return;
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("The two cantilevers stay where they are, each on its own single mounts"));
+			}
+		}
+	}
+	data = catenary_scene_get(static_cast<std::size_t>(tool.selected));
+	if (data == nullptr)
+		return;
+	// the adjustments of the cantilever and the pole: folded, the title says when one of them is set
+	{
+		auto const set{data->stay_shift != 0.0 || data->strut_shift != 0.0 || data->turn_by_hand != 0.0 || data->lean != 0.0 || has_brace(*data)};
+		if (ImGui::CollapsingHeader(set ? STR_C("Adjustments (set)###adjustments") : STR_C("Adjustments###adjustments")))
+		{
+			// the top mount of a tubular cantilever moved up or down: the solver takes a shorter or a longer stay tube or rod
+			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && (tool.expert || data->stay_shift != 0.0) && data->has_pole && (data->card / 100 == 7 || data->card / 100 == 10 || data->card / 100 == 11 || data->card / 100 == 12))
+			{
+				auto const index{static_cast<std::size_t>(tool.selected)};
+				auto enabled{data->stay_shift != 0.0 || tool.stay_shift_open};
+				if (ImGui::Checkbox(STR_C("Top mount moved"), &enabled))
+				{
+					tool.stay_shift_open = enabled;
+					if (false == enabled && data->stay_shift != 0.0)
+					{
+						auto changed{*data};
+						changed.stay_shift = 0.0;
+						tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+						catenary_scene_update(index, changed);
+						tool.probed = false;
+					}
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("The top (stay) mount up or down from the card by up to 0.50 m, e.g. where something is in the way on the pole; the stay tube or rod is taken shorter or longer to fit"));
+				if (enabled)
+				{
+					ImGui::SameLine();
+					auto shift{static_cast<float>(data->stay_shift)};
+					ImGui::PushItemWidth(160.0f);
+					if (ImGui::SliderFloat(STR_C("m##stayshift"), &shift, -0.50f, 0.50f, "%+.2f"))
+					{
+						shift = std::round(shift * 100.0f) / 100.0f;
+						auto changed{*data};
+						changed.stay_shift = shift;
+						// one drag of the slider is taken back at once
+						if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
+						{
+							tool.shift_group = ++tool.group;
+							tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
+						}
+						catenary_scene_update(index, changed);
+						tool.probed = false;
+					}
+					ImGui::PopItemWidth();
+				}
+			}
+			// the bottom (strut) mount of a tubular cantilever moved up or down: the solver takes a shorter or a longer strut tube
+			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && (tool.expert || data->strut_shift != 0.0) && data->has_pole && (data->card / 100 == 7 || data->card / 100 == 10 || data->card / 100 == 11 || data->card / 100 == 12))
+			{
+				auto const index{static_cast<std::size_t>(tool.selected)};
+				auto enabled{data->strut_shift != 0.0 || tool.strut_shift_open};
+				if (ImGui::Checkbox(STR_C("Bottom mount moved"), &enabled))
+				{
+					tool.strut_shift_open = enabled;
+					if (false == enabled && data->strut_shift != 0.0)
+					{
+						auto changed{*data};
+						changed.strut_shift = 0.0;
+						tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+						catenary_scene_update(index, changed);
+						tool.probed = false;
+					}
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("The bottom (strut) mount up or down from the card by up to 0.50 m, e.g. where something is in the way on the pole; the strut tube is taken shorter or longer to fit"));
+				if (enabled)
+				{
+					ImGui::SameLine();
+					auto shift{static_cast<float>(data->strut_shift)};
+					ImGui::PushItemWidth(160.0f);
+					if (ImGui::SliderFloat(STR_C("m##strutshift"), &shift, -0.50f, 0.50f, "%+.2f"))
+					{
+						shift = std::round(shift * 100.0f) / 100.0f;
+						auto changed{*data};
+						changed.strut_shift = shift;
+						// one drag of the slider is taken back at once
+						if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
+						{
+							tool.shift_group = ++tool.group;
+							tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
+						}
+						catenary_scene_update(index, changed);
+						tool.probed = false;
+					}
+					ImGui::PopItemWidth();
+				}
+			}
+			// the cantilever turned by hand on its hinge (on top of the turn from the temperature)
+			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole)
+			{
+				auto const index{static_cast<std::size_t>(tool.selected)};
+				auto const swing{catenary_scene_swing(index)};
+				auto enabled{data->turn_by_hand != 0.0 || tool.turn_open};
+				if (ImGui::Checkbox(STR_C("Turned by hand"), &enabled))
+				{
+					tool.turn_open = enabled;
+					if (false == enabled && data->turn_by_hand != 0.0)
+					{
+						auto changed{*data};
+						changed.turn_by_hand = 0.0;
+						tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+						catenary_scene_update(index, changed);
+						tool.probed = false;
+					}
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip(STR_C("The cantilever turned on its hinge about the vertical by hand, e.g. as it hangs on the ground; added to the turn from the temperature (by the middle anchor). Now in all: %.1f deg"), swing);
+				if (enabled)
+				{
+					ImGui::SameLine();
+					auto turn{static_cast<float>(data->turn_by_hand)};
+					ImGui::PushItemWidth(160.0f);
+					if (ImGui::SliderFloat(STR_C("deg##turnbyhand"), &turn, -30.0f, 30.0f, "%+.1f"))
+					{
+						turn = std::round(turn * 2.0f) / 2.0f;
+						auto changed{*data};
+						changed.turn_by_hand = turn;
+						if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
+						{
+							tool.shift_group = ++tool.group;
+							tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
+						}
+						catenary_scene_update(index, changed);
+						tool.probed = false;
+					}
+					ImGui::PopItemWidth();
+				}
+			}
+			// the lean of the pole across the track (with its mounts, the cantilever goes to them); umbrellas, spread cantilevers and gantry
+			// masts stand upright
+			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole && data->umbrella.empty() && false == data->shared_pole)
+			{
+				auto const *catalog{catenary_scene_catalog()};
+				auto const *own{catalog != nullptr ? catalog->pole(data->pole_type) : nullptr};
+				if (own != nullptr && false == own->gantry && own->drop.empty())
+				{
+					auto const index{static_cast<std::size_t>(tool.selected)};
+					auto lean{static_cast<float>(data->lean)};
+					ImGui::PushItemWidth(160.0f);
+					// the expert mode: up to +-10 deg (lines in a bad state, the wires barely hang; Jan 2026-10-31), otherwise +-1.5
+					auto const limit{tool.expert || std::abs(lean) > 1.5f ? 10.0f : 1.5f};
+					if (ImGui::SliderFloat(STR_C("Lean of the pole towards the track (deg)"), &lean, -limit, limit, "%+.2f"))
+					{
+						lean = std::round(lean * 20.0f) / 20.0f;
+						auto changed{*data};
+						changed.lean = lean;
+						if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
+						{
+							tool.shift_group = ++tool.group;
+							tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
+						}
+						catenary_scene_update(index, changed);
+						tool.probed = false;
+					}
+					ImGui::PopItemWidth();
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("A pole is seldom quite upright: it leans a little, the mounts with it, the cantilever is assembled to them. + towards the track. Ctrl+click types a value"));
+				}
+			}
+			// the brace 6506 (as on 102x) on another tubular cantilever; 102x has it of its own
+			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole
+				&& (data->card / 100 == 7 || data->card / 100 == 10 || data->card / 100 == 11 || data->card / 100 == 12) && data->card / 10 != 102)
+			{
+				auto const index{static_cast<std::size_t>(tool.selected)};
+				auto braced{has_brace(*data)};
+				if (ImGui::Checkbox(STR_C("Brace 6506 (as on 102x)"), &braced))
+				{
+					auto changed{*data};
+					set_brace(changed, braced);
+					tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+					catenary_scene_update(index, changed);
+					tool.probed = false;
+					tool.status = braced ? STR("Brace 6506 added") : STR("Brace 6506 taken off");
+					// where the flat bar doesn't fit between the strut and the steady arm the solver leaves it out: say so at once
+					if (catenary::cantilever_result tried; braced && catenary_scene_probe(changed, tried) && nullptr == tried.find("link"))
+						tool.status = STR("The brace 6506 doesn't fit on this cantilever (the strut doesn't come within 0.24 m of the steady arm along its length): the entry keeps it, the cantilever goes without it");
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("The flat bar 6506 from the clamp 4210 on the steady arm up to the clamp 4760 on the strut, as on the cantilevers 102x; it goes where the gap between them fits. It doesn't fit on 70x, 73x, 74x, 77x, 78x, 1110, 1120, 1130, 1140, 1210-1240, 1260, 1280 (the strut doesn't come close enough to the steady arm)"));
+			}
+		}
+	}
+	// the insulators of the cantilever and the textures
+	if (ImGui::CollapsingHeader(STR_C("Insulators and skins")))
+	{
+			// every insulator of the cantilever swapped by hand for any insulator of the catalogue (Jan 2026-11-04: every insulator possible
+			// everywhere): override of its role; the tubes are fitted to its length as with an insulator set
+			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->card > 0)
+			{
+				auto const *catalog{catenary_scene_catalog()};
+				auto const *scheme{catalog != nullptr ? catalog->scheme(data->card, data->execution) : nullptr};
+				std::vector<std::pair<std::string, std::string>> roles; // insulator role, the part of the card
+				std::vector<std::string> insulators;
+				if (scheme != nullptr)
+				{
+					for (auto const &role : scheme->roles)
+						if (auto const *part{catalog->part(role.second)}; part != nullptr && part->kind == "insulator")
+							roles.emplace_back(role.first, role.second);
+				}
+				// what fits in place of the insulator of the card (Jan 2026-11-06: the list of everything let people fit insulators where
+				// the fittings don't go): the tees 7010 <-> 7110 and 7020 <-> 7120 (the tubular ones never take 7110/7120); the tubular ones
+				// 7100 / 7010 / 7020 in the executions -01 (porcelain), -02 (resin) and -25 (25 kV), the ones the catalogue has
+				auto const tee{data->card / 100 == 1 || data->card / 100 == 9};
+				auto const fitting = [&](std::string const &Card) {
+					std::vector<std::string> list;
+					auto const add = [&](std::string const &Part) {
+						if (Part != Card && catalog->part(Part) != nullptr && std::find(list.begin(), list.end(), Part) == list.end())
+							list.push_back(Part);
+					};
+					auto const base{Card.substr(0, 4)};
+					if (tee)
+					{
+						static std::pair<char const *, char const *> const pairs[] = {{"7010", "7110"}, {"7020", "7120"}};
+						for (auto const &[tube, own] : pairs)
+						{
+							if (base == tube)
+								add(std::string(own) + "-01");
+							else if (base == own)
+								add(std::string(tube) + "-01");
+						}
+					}
+					else if (base == "7100" || base == "7010" || base == "7020")
+					{
+						for (auto const *execution : {"-01", "-02", "-25"})
+							add(base + execution);
+					}
+					return list;
+				};
+				if (false == roles.empty() && ImGui::TreeNode(STR_C("Insulators of this cantilever")))
+				{
+					auto const index{static_cast<std::size_t>(tool.selected)};
+					for (auto const &[role, card] : roles)
+					{
+						insulators = fitting(card);
+						auto const own{std::find_if(data->overrides.begin(), data->overrides.end(), [&](auto const &O) { return O.first == role; })};
+						auto const current{own != data->overrides.end() ? own->second : std::string()};
+						// nothing fits in its place: no list (unless an older override has to be taken back)
+						if (insulators.empty() && current.empty())
+							continue;
+						auto const shown{current.empty() ? format(STR_C("%s (card)"), card.c_str()) : current};
+						ImGui::PushItemWidth(160.0f);
+						if (ImGui::BeginCombo(role.c_str(), shown.c_str()))
+						{
+							auto pick = [&](std::string const &Part) {
+								auto changed{*data};
+								std::erase_if(changed.overrides, [&](std::pair<std::string, std::string> const &O) { return O.first == role; });
+								if (false == Part.empty())
+									changed.overrides.emplace_back(role, Part);
+								tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+								catenary_scene_update(index, changed);
+								tool.probed = false;
+							};
+							if (ImGui::Selectable(format(STR_C("%s (card)"), card.c_str()).c_str(), current.empty()))
+								pick({});
+							for (auto const &part : insulators)
+								if (ImGui::Selectable(part.c_str(), part == current))
+									pick(part);
+							// an override from before the list was narrowed (or of a part gone from the catalogue): still shown, so it can be undone
+							if (false == current.empty() && std::find(insulators.begin(), insulators.end(), current) == insulators.end())
+								ImGui::Selectable(format(STR_C("%s (doesn't fit here)"), current.c_str()).c_str(), true);
+							ImGui::EndCombo();
+						}
+						ImGui::PopItemWidth();
+						if (ImGui::IsItemHovered())
+							ImGui::SetTooltip("%s", STR_C("An insulator which fits in place of the one of the card: on the tees 7010 <-> 7110 and 7020 <-> 7120, on the tubular cantilevers 7100 / 7010 / 7020 in the execution -01 (porcelain), -02 (resin) or -25 (25 kV), if the catalogue has it; the tube or rod it sits on is taken shorter or longer to fit, as with an insulator set"));
+					}
+					ImGui::TreePop();
+				}
+			}
+			// the skins: one for the whole cantilever (all its parts - no new tube on an old cantilever), one for the pole
+			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr)
+			{
+				auto const *catalog{catenary_scene_catalog()};
+				auto const *own{catalog != nullptr && data->has_pole ? catalog->pole(data->pole_type) : nullptr};
+				auto const index{static_cast<std::size_t>(tool.selected)};
+				auto const skin_combo = [&](char const *Label, std::string const &Current, std::string const &Default, std::vector<std::string> const &Choices, std::string &Chosen) {
+					auto picked{false};
+					if (ImGui::BeginCombo(Label, (Current.empty() ? format(STR_C("default (%s)"), Default.c_str()) : Current).c_str()))
+					{
+						if (ImGui::Selectable(format(STR_C("default (%s)"), Default.c_str()).c_str(), Current.empty()))
+						{
+							Chosen.clear();
+							picked = true;
+						}
+						for (auto const &choice : Choices)
+							if (ImGui::Selectable(choice.c_str(), choice == Current))
+							{
+								Chosen = choice;
+								picked = true;
+							}
+						ImGui::EndCombo();
+					}
+					return picked;
+				};
+				ImGui::PushItemWidth(220.0f);
+				std::string chosen;
+				if (skin_combo(STR_C("Cantilever skin"), data->skin.compare(0, 19, "siec_trakcyjna/siec") == 0 ? data->skin : std::string{}, "siec_trakcyjna/siec", catenary_skins("siec"), chosen))
+				{
+					auto changed{*data};
+					changed.skin = chosen;
+					tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+					catenary_scene_update(index, changed);
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("All the parts of the cantilever, the mounts and the insulators take this one texture (textures/siec_trakcyjna/siec*)"));
+				// a drop takes the texture of its gantry; another one can be picked (Jan 2026-11-01)
+				if (own != nullptr && false == own->drop.empty())
+				{
+					std::vector<std::string> choices(std::begin(kGantrySkins), std::end(kGantrySkins));
+					for (auto const &extra : catenary_skins("bramki"))
+						if (std::find(choices.begin(), choices.end(), extra) == choices.end())
+							choices.push_back(extra);
+					// an old entry has the texture of the gantry in the cantilever skin
+					auto const legacy{data->skin.compare(0, 19, "siec_trakcyjna/siec") != 0 ? data->skin : std::string{}};
+					if (skin_combo(STR_C("Drop skin"), data->pole_skin, legacy.empty() ? STR("like the gantry") : legacy, choices, chosen))
+					{
+						auto changed{*data};
+						changed.pole_skin = chosen;
+						if (false == legacy.empty())
+							changed.skin.clear();
+						tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+						catenary_scene_update(index, changed);
+					}
+				}
+				if (own != nullptr && false == own->gantry && own->drop.empty() && false == data->shared_pole)
+				{
+					// the variants of the pole's family: 161x_new_gray... for 1611-11
+					auto const family{data->pole_type.size() >= 3 ? data->pole_type.substr(0, 3) + "x" : data->pole_type};
+					auto choices{catenary_skins(family)};
+					for (auto const &extra : catenary_skins(data->pole_type.substr(0, 4)))
+						if (std::find(choices.begin(), choices.end(), extra) == choices.end())
+							choices.push_back(extra);
+					if (skin_combo(STR_C("Pole skin"), data->pole_skin, own->skin.empty() ? std::string("none") : own->skin, choices, chosen))
+					{
+						auto changed{*data};
+						changed.pole_skin = chosen;
+						tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+						catenary_scene_update(index, changed);
+					}
+				}
+				ImGui::PopItemWidth();
+				// the whole chain alike: its poles, cantilevers and anchors
+				std::size_t position{0};
+				if (auto const chain{catenary_chain_of(index, position)}; chain >= 0 && ImGui::SmallButton(STR_C("These skins on the whole chain")))
+				{
+					++tool.group;
+					std::size_t count{0};
+					for (auto const member : catenary_chain_members(static_cast<std::size_t>(chain)))
+					{
+						auto const *other{catenary_scene_get(member)};
+						if (other == nullptr || member == index || (other->skin == data->skin && other->pole_skin == data->pole_skin))
+							continue;
+						auto changed{*other};
+						changed.skin = data->skin;
+						// a pole of another family keeps its own
+						if (other->pole_type.substr(0, 3) == data->pole_type.substr(0, 3))
+							changed.pole_skin = data->pole_skin;
+						tool.undo.push_back({tool.group, false, member, *other, std::nullopt, false});
+						catenary_scene_update(member, changed);
+						++count;
+					}
+					tool.status = format(STR_C("Skins of %d poles of the chain changed (Ctrl+Z takes it back)"), static_cast<int>(count));
+				}
+			}
 	}
 }
 
@@ -8597,13 +8684,17 @@ void catenary_editor::draw_catenary_overlay() const
 		auto const chosen{span.chain >= 0 && (span.chain == tool.chain_selected || (is_intent(e.m_intent, intent_detail::chain) && e.m_intent.index == span.chain))};
 		if (false == CatenaryView.spans && false == chosen)
 			continue;
-		auto const over{CatenaryView.span_colours && tool.checks && span.limit > 0.0 && span.length > span.limit + 0.05};
+		// on a straight the limit by the staggers at both ends (B, Glowacki 15.2)
+		auto limit{span.limit};
+		if (limit > 0.0 && tool.zigzag && (span.radius <= 0.0 || span.radius >= kCurveRadius))
+			limit *= std::sqrt(span_kind_of(span.from, span.to).b / 3.24);
+		auto const over{CatenaryView.span_colours && tool.checks && limit > 0.0 && span.length > limit + 0.05};
 		auto const colour{over ? overlay_color::invalid : chosen ? overlay_color::selected : span.chain >= 0 ? IM_COL32(90, 230, 120, 200) : IM_COL32(90, 230, 120, 110)};
 		projection.line(drawlist, a, b, colour, over || chosen ? 2.5f : 1.2f);
 		ImVec2 middle;
 		if (CatenaryView.span_lengths && projection.project(0.5 * (a + b), middle))
 		{
-			auto const label{span.limit > 0.0 ? format("%.1f / %.0f m", span.length, span.limit) : format("%.1f m", span.length)};
+			auto const label{limit > 0.0 ? format("%.1f / %.0f m", span.length, limit) : format("%.1f m", span.length)};
 			auto const text{span.radius > 0.0 && span.radius < kCurveRadius ? label + format("  R %.0f", span.radius) : label};
 			drawlist->AddText(ImVec2(middle.x + 4.0f, middle.y + 2.0f), colour, text.c_str());
 		}

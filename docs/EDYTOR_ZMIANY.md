@@ -18,6 +18,25 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Edytor sieci: strona Słupy w sekcjach — commit o tym tytule
+- Co widać: zaznaczony słup – na górze „Gotowe” i „Usuń słup”, karta, wykonanie, uwagi solvera i liczby przewodów; niżej zwijane
+  sekcje w kolejności pracy: „Słup i karta” (słup, lico, karty, grupa/rodzina/karta/wykonanie, wysokość, hk, zestaw izolatorów,
+  długość zwisu, odciąg wielotorowy), „Odsuw i strona”, „Łańcuch” (zawieszanie, kopiowanie, zygzak łańcucha, uwagi Iet-107, sama lina,
+  izolator sekcyjny, bieżnia wspólna, druga sieć, przeniesienie do pliku); zwinięte: „Drugi wysięgnik” (parasol, rozstawione),
+  „Regulacje” (mocowania, obrót, przechył, zastrzał – w tytule „ustawione”, gdy coś jest), „Izolatory i tekstury”.
+- Nowy słup: „Nowy słup”, „Zygzak”, „Plik i łańcuch”. Stan zwinięcia pamięta ImGui.
+- Zachowanie bez zmian – te same kontrolki, inna kolejność. Zmienia: `application/editormodecatenary.cpp`, `lang/editor_pl.po`.
+
+### Edytor sieci: rozpiętość przęsła wg odsuwów na jego końcach (współczynnik B) — commit o tym tytule
+- Co widać: na prostej (przy zygzaku Iet-107) przęsło liczone wg odsuwów przewodu przy obu słupach (Głowacki 15.2, wzór
+  8-4/8-5: rozpiętość ~ √B). Rozpiętość nominalna typu sieci = przęsło normalne (0 / 0,18, 0,30 / 0,18: B 3,24). Odsuwy
+  0 / 0,30 (ograniczone, B 2,68) – limit ×0,91, uwaga-błąd; 0,30 przemiennie (B 3,6, ×1,054) i oba 0 (B 4, ×1,11) – dłuższe niż
+  nominalne bez błędu, ale z uwagą „tylko jako przęsło warunkowe / maksymalne”. Kolor i opis przęsła w widoku z tym samym limitem.
+- Odsuw: 0 (< 0,09), 0,18 (< 0,24), 0,30 – ZAŁOŻENIE progów. Na łuku i przy 62 m (kl. prędkości) bez zmian.
+- Testy: przęsło pochyłe 1,70 → 1,30 (wieszaki = tablica 1,70 − 0,40 liniowo, solver już tak liczy – sprawdzone) w `t`; stare
+  oczekiwania w `t` (95 m rysowane od 30.10) i `tsc` (tekstura siec od 01.11, kolejność logu) poprawione – wszystkie testy OK.
+- Zmienia: `application/editormodecatenary.h/.cpp`, `lang/editor_pl.po`, testy. Wymaga: nic.
+
 ### Edytor sieci: wykonania wysięgników pod liczbę przewodów jezdnych sieci — commit o tym tytule
 - Co widać: lista „Wykonanie” pokazuje tylko wykonania z ramionami na tyle przewodów jezdnych, ile ma sieć łańcucha (albo panelu
   przy nowym łańcuchu); przy zmianie sieci wykonanie panelu przechodzi na pasujące. Słupy już stojące z ramionami na inną liczbę

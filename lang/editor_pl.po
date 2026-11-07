@@ -10918,6 +10918,42 @@ msgstr "wykonanie %d"
 msgid "Execution: from the distance A (the band of the card)"
 msgstr "Wykonanie: z odległości A (pasmo karty)"
 
+msgid "Pole and card"
+msgstr "Słup i karta"
+
+msgid "New pole"
+msgstr "Nowy słup"
+
+msgid "Stagger and side"
+msgstr "Odsuw i strona"
+
+msgid "Zigzag"
+msgstr "Zygzak"
+
+msgid "File and chain"
+msgstr "Plik i łańcuch"
+
+msgid "Chain"
+msgstr "Łańcuch"
+
+msgid "Second cantilever: spread###second"
+msgstr "Drugi wysięgnik: rozstawione###second"
+
+msgid "Second cantilever: umbrella###second"
+msgstr "Drugi wysięgnik: parasol###second"
+
+msgid "Second cantilever###second"
+msgstr "Drugi wysięgnik###second"
+
+msgid "Adjustments (set)###adjustments"
+msgstr "Regulacje (ustawione)###adjustments"
+
+msgid "Adjustments###adjustments"
+msgstr "Regulacje###adjustments"
+
+msgid "Insulators and skins"
+msgstr "Izolatory i tekstury"
+
 msgid "Only the executions for one contact wire: the network has one"
 msgstr "Tylko wykonania na jeden przewód jezdny: sieć ma jeden"
 
@@ -11747,6 +11783,21 @@ msgstr "%s: na łuku przewody idą na zewnątrz łuku (Iet-107 3.3.4.4)"
 
 msgid "Span %s - %s: %.1f m, longer than the %.1f m allowed there"
 msgstr "Przęsło %s - %s: %.1f m, dłuższe niż dopuszczalne tam %.1f m"
+
+msgid "the largest (both staggers 0, B 4: the last resort)"
+msgstr "maksymalne (oba odsuwy 0, B 4: ostateczność)"
+
+msgid "limited (staggers 0 / 0.30, B 2.68)"
+msgstr "ograniczone (odsuwy 0 / 0,30, B 2,68)"
+
+msgid "conditionally allowed (staggers 0.30 alternately, B 3.6)"
+msgstr "warunkowo dopuszczalne (odsuwy 0,30 przemiennie, B 3,6)"
+
+msgid "Span %s - %s: %.1f m, longer than the %.1f m a span %s allows (Glowacki 15.2)"
+msgstr "Przęsło %s - %s: %.1f m, dłuższe niż %.1f m, na które pozwala przęsło %s (Głowacki 15.2)"
+
+msgid "Span %s - %s: %.1f m, over the normal %.1f m - only as a span %s (Glowacki 15.2)"
+msgstr "Przęsło %s - %s: %.1f m, ponad normalne %.1f m - tylko jako przęsło %s (Głowacki 15.2)"
 
 msgid "Span %s - %s: %.1f m, outside 62 +-4 m (Iet-107 7.4.3.1)"
 msgstr "Przęsło %s - %s: %.1f m, poza 62 ±4 m (Iet-107 7.4.3.1)"

@@ -121,8 +121,7 @@ struct catenary_editor
 		int selected{-1};
 		// chains: the poles placed one after another are joined by spans
 		bool stagger_own{false}; // the stagger slider moved since the group / family was chosen: it counts, not the stagger of the catalogue
-		bool checks{true};
-		bool pantograph{false}; // over the tracks around the camera: the pantograph head at the height of the contact wire // the remarks of Iet-107 and the spans over their limit in red (off: no checks, Jan 2026-10-30)
+		bool checks{true}; // the remarks of Iet-107 and the spans over their limit in red (off: no checks, Jan 2026-10-30)
 		bool pole_insert{true}; // the Poles page: LMB by a track places a pole; off - the poles are only selected and changed
 		bool chaining{true};
 		int continue_pending{-1}; // the chain goes on from this pole, from the next frame of the panel (the button is in the middle of it)
@@ -201,7 +200,6 @@ struct catenary_editor
 		// the span of the next pole from the last one: 0 where the cursor is, 1 the recommended one, 2 the length set here
 		int span_step{0};
 		float span_length{60.0f};
-		bool show_staggers{true}; // the staggers written at the poles of the selected chain
 		std::optional<int> bend_user; // "cards for" as the user had it before a pole was selected (the pole's own while it is)
 		bool file_own{false}; // the catenary file was given by the user: it doesn't follow the active layer
 	};
@@ -257,6 +255,13 @@ struct catenary_editor
 	std::optional<bool> zigzag_toward(catenary_spot const &Spot) const;
 	// the offset of the wires of the suspension from the axis of its track (with the lean of a superelevated track), + towards its pole
 	bool stagger_of(std::size_t const Index, double &Offset) const;
+	// the span by the staggers of its ends (B of Glowacki 15.2; 3.24 the normal one): B and its name, none for the normal one
+	struct span_kind
+	{
+		double b{3.24};
+		char const *text{nullptr};
+	};
+	span_kind span_kind_of(std::size_t From, std::size_t To) const;
 	// the same, as a side of the axis: + on the right of Right
 	bool lateral_of(std::size_t const Index, glm::dvec2 const &Right, double &Lateral) const;
 	// the span the next pole gets from the last one by the step or the digits typed (0: where the cursor is), at a radius there
