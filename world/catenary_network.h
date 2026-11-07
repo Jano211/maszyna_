@@ -174,8 +174,8 @@ struct crossing_point {
     double gap { 0.0 }; // m, o ile przewód drugiego przęsła jest wyżej
 };
 // skrzyżowania przewodów jezdnych tego przęsła (Mine) z przewodami drugiego (Other), w których drugie idzie wyżej o (0, kCrossingLimiterGap).
-// Skrzyżowania bliżej siebie niż 2,0 m (dwa przewody jezdne w sieci: przy skosie 1:9 punkty rozchodzą się o ok. 0,7 m) łączone
-// w jedno, w środku między nimi (ZAŁOŻENIE: jeden ogranicznik na sieć dwuprzewodową - do potwierdzenia)
+// Ogranicznik osobny na każdym dolnym przewodzie; przecięcia tego samego dolnego przewodu z dwoma górnymi (do 2 m wzdłuż, ok. 0,7 m
+// przy skosie 1:9) łączone w jedno, w środku między nimi
 void find_crossings( span_geometry const &Mine, span_geometry const &Other, std::vector<crossing_point> &Output );
 // bryły ogranicznika na skrzyżowaniu: odcinek przewodu (Wires) o promieniu przewodu jezdnego Radius i zaciski (Fittings).
 // ZASTĘPCZE: zaciski 5380-1 jako prostopadłościany do czasu modeli, odcinek nad dolnym przewodem tak, żeby przeszedł nad górnym
