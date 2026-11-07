@@ -39,7 +39,24 @@ przęsło max 65 m, Y 14 m od przęseł ≥ 36 m („scalony układ lin nośnych
 hk 1,70, zwis wstępny 0, odsuw 0,30 prosta / 0,40 łuki / 0,15 przęsła naprężenia, v max 140. W starym Kolprojekcie 13-0002
 (kolprojekt1.pdf s. 11) jest też kod 11 2C120-2C (2×120 jezdne, 2×1589 / 2×953) – pliku nie robiono. ZAŁOŻENIA: 500 daN to lina
 dolna (Y); tablica wieszaków 11, masa wieszaka, odstęp lin i y_junction_drop jak w -3/-4; kotwienia „as 35”. Layout `span 65 65`.
-Wgrane na G: (md5 zgodne). Test w `t`. Inne DTR-y leżą obok w tym folderze (np. 4_TOM_V_.pdf, Belos, STANMAR – dopisane 07.11).
+Wgrane na G: (md5 zgodne). Test w `t`.
+
+**Nowe PDF-y w `E:\SYF\INNE\PDF\Katalog ESN` (dorzucone 07.11, przejrzane):**
+- `iLPNAFL6-70mm2-1.pdf` (Strunobet, 29 s., skany + tabele) – katalog podwieszeń LPN AFL6 do 70 mm² na słupach ETG/ETGw: ETG1/2/3
+  (8,2 m) i ETGw (9,2 m) = przelotowy / krzyżowy-kotwienia środkowego / kotwowy; głowice 440×320, 505×365, 555×375; średnica
+  przy podstawie 300/356/356, w wierzchołku 177/233/233 (w: 162/218/218), stożek −15 mm/m. DOKUMENTACJA DO LPN-ÓW.
+- `4_TOM_V_.pdf` – Standardy Techniczne PLK tom V (elektroenergetyka nietrakcyjna, ≤ 250 km/h): wymagania LPN (3×AFL6, wspólne
+  konstrukcje z siecią trakcyjną, strona prowadzenia), oświetlenie, uziemienia – tekstowy.
+- `zal.-2-Projekt-Wykonawczy_Trakcja-i-LPN-Topola-Tarchaly_v2-1.pdf` – projekt wykonawczy 2025, linia 355 (st. Topola Osiedle,
+  p.o. Tarchały Wielkie): sieć trakcyjna i LPN 3×AFL6-35, tekst + rysunki – przykład z życia (plany, zestawienia).
+- `BN_79_9317_118.pdf` – BN-79/9317-18 konstrukcje mocujące do dźwigarów bramek (kotwienia przewodów), 4 odmiany do kątowników
+  45/50/60/75 – skan, OCR słaby.
+- `Koroblowski.pdf` – artykuł o sieci CMK 2C120-2C (kod 11): jezdne 2×Cu100 2×953 daN, liny 2×Cu120 2×1588 daN, przęsło 70 m,
+  zwis wstępny 0(~1)‰; modernizacja do 2C120-2C-3 (jezdne 2×1059 daN, przęsła 65 m). Uwaga: 13-0002 (1978) podaje jezdne 2×120.
+- `Prezentcja_seminarium_IK_marzec_2017.pdf` – problemy sieci typu ciężkiego (zdjęcia), `SKMet-2.pdf` – instrukcja utrzymania
+  sieci SKM Trójmiasto (tekst: kotwienia, izolatory, wieszaki, tolerancje).
+- Katalogi producentów osprzętu (zdjęcia/rysunki do modeli): `Katalog_A4_Belos_PKP_Web.pdf` (tekst), `osprzet-sieci-trakcji-
+  kolejowej-STANMAR.pdf`, `Katalog-produktow-dla-PKP.pdf` (ZPRE), `Katalog_kolejowy_2025_kompresja.pdf` – bez warstwy tekstu.
 
 ## START TUTAJ – 2026-11-07 (najnowsze) – zrzutka na nowy czat
 
