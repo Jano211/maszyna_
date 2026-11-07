@@ -41,6 +41,11 @@ hk 1,70, zwis wstępny 0, odsuw 0,30 prosta / 0,40 łuki / 0,15 przęsła naprę
 dolna (Y); tablica wieszaków 11, masa wieszaka, odstęp lin i y_junction_drop jak w -3/-4; kotwienia „as 35”. Layout `span 65 65`.
 Wgrane na G: (md5 zgodne). Test w `t`.
 
+**Sieć 2C120-2C (kod 11, 07.11 23:00):** `data/traction_2C120-2C.txt` wg Koroblowskiego (nowsze papiery mają pierwszeństwo –
+zasada użytkownika): jezdne 2×Cu100 2×953, liny 2×Cu120 2×1588, przęsło 70 m (layout 70 70). ZAŁOŻENIA: Y 22 m / 14 m, wieszaki
+i odstęp lin jak 2C120-2C-3 (ta sama sieć przed modernizacją); kotwienia „as 32”. Wgrane na G:, test w `t`.
+**Zasada (użytkownik 07.11):** przy rozbieżnych źródłach brać nowsze papiery. LPN ze Strunobetu na razie niepotrzebny – brak modeli.
+
 **Nowe PDF-y w `E:\SYF\INNE\PDF\Katalog ESN` (dorzucone 07.11, przejrzane):**
 - `iLPNAFL6-70mm2-1.pdf` (Strunobet, 29 s., skany + tabele) – katalog podwieszeń LPN AFL6 do 70 mm² na słupach ETG/ETGw: ETG1/2/3
   (8,2 m) i ETGw (9,2 m) = przelotowy / krzyżowy-kotwienia środkowego / kotwowy; głowice 440×320, 505×365, 555×375; średnica
