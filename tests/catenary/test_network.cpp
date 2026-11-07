@@ -399,16 +399,16 @@ int main( int argc, char *argv[] ) {
         catenary::find_crossings( main, line( -30.0, -3.0, 30.0, 3.0, 5.40, 0.0 ), found );
         catenary::find_crossings( main, line( -30.0, -3.0, 30.0, 3.0, 5.45, 0.0 ), found );
         good = good && found.empty();
-        // dwa przewody jezdne (8 cm) na obu: cztery przeciecia, jeden ogranicznik
+        // dwa przewody jezdne (8 cm) na obu: cztery przeciecia, po jednym ograniczniku na kazdym dolnym przewodzie, na nim
         catenary::find_crossings( line( -30.0, 0.0, 30.0, 0.0, 5.40, 0.08 ), line( -30.0, -3.0, 30.0, 3.0, 5.42, 0.08 ), found );
-        good = good && found.size() == 1;
+        good = good && found.size() == 2 && std::abs( std::abs( found[ 0 ].position.z ) - 0.04 ) < 1e-6 && std::abs( found[ 1 ].position.z + found[ 0 ].position.z ) < 1e-6;
         // bryly: odcinek 2,0 m nad przewodem, zaciski pod nim
         std::vector<catenary::solid_vertex> wires, fittings;
         if( false == found.empty() ) { catenary::build_crossing_limiter( found[ 0 ], 0.006, wires, fittings ); }
         double low { 1e9 }, high { -1e9 }, xmin { 1e9 }, xmax { -1e9 };
         for( auto const &v : wires ) { low = std::min( low, v.position.y ); high = std::max( high, v.position.y ); xmin = std::min( xmin, v.position.x ); xmax = std::max( xmax, v.position.x ); }
         good = good && false == fittings.empty() && std::abs( ( xmax - xmin ) - 2.0 ) < 1e-6 && low > 5.40 + 0.03 + 0.006 - 1e-9;
-        std::printf( "skrzyzowanie nad rozjazdem (33-0561): ogranicznik przy 1 cm, bez przy 0 i 5 cm, jeden na dwa przewody: %s\n", good ? "OK" : "BLAD" );
+        std::printf( "skrzyzowanie nad rozjazdem (33-0561): ogranicznik przy 1 cm, bez przy 0 i 5 cm, po jednym na przewod: %s\n", good ? "OK" : "BLAD" );
         failed = failed || !good;
     }
     return failed ? 1 : 0;

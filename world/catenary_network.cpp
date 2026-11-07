@@ -633,7 +633,9 @@ void find_crossings( span_geometry const &Mine, span_geometry const &Other, std:
             found.push_back( { mine, { ax / length, 0.0, az / length }, gap } );
         }
     }
-    // dwa przewody jezdne w sieci krzyżują się z dwoma drugiej: kilka punktów w odstępie rozstawu - jeden ogranicznik
+    // każdy dolny przewód jezdny ma swój ogranicznik (Jan 2026-11-07: „osobny na każdym przewodzie chyba”). Dwa górne przewody
+    // przecinają ten sam dolny w odstępie ok. 0,7 m (skos 1:9, rozstaw 8 cm) - jeden ogranicznik na nim, odcinek 2 m obejmuje oba.
+    // Ten sam dolny przewód: punkty do 2 m od siebie wzdłuż i do 2 cm w bok od jego kierunku (przewody sieci są 8 cm od siebie)
     std::vector<bool> taken( found.size(), false );
     for( std::size_t i = 0; i < found.size(); ++i ) {
         if( taken[ i ] ) { continue; }
@@ -642,7 +644,9 @@ void find_crossings( span_geometry const &Mine, span_geometry const &Other, std:
         auto gap { found[ i ].gap };
         int count { 1 };
         for( std::size_t j = i + 1; j < found.size(); ++j ) {
-            if( taken[ j ] || norm( found[ j ].position - found[ i ].position ) > 2.0 ) { continue; }
+            auto const offset { found[ j ].position - found[ i ].position };
+            auto const aside { std::abs( along.x * offset.z - along.z * offset.x ) };
+            if( taken[ j ] || norm( offset ) > 2.0 || aside > 0.02 ) { continue; }
             taken[ j ] = true;
             sum = sum + found[ j ].position;
             gap = std::max( gap, found[ j ].gap );

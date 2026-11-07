@@ -24,8 +24,8 @@ jest wtedy, gdy przewody przęseł krzyżują się w planie z różnicą wysoko�
 `catenary::find_crossings` + `build_crossing_limiter` (catenary_network), rysuje przęsło DOLNE w swoich bryłach
 (`catenary_span_solid`), kandydatów podaje scena (`CatenaryCrossingCandidates` ← `crossing_candidates` w catenary_scene.cpp),
 partnerzy odświeżani przy reload/create/delete przęsła. ZASTĘPCZE: zaciski 5380 jako prostopadłościany (klocki od użytkownika
-wkrótce), oś odcinka nad dolnym przewodem o 3 cm + 2 promienie. ZAŁOŻENIE do potwierdzenia: przy dwóch przewodach jezdnych
-jeden ogranicznik na skrzyżowanie (punkty w promieniu 2 m łączone, odcinek w środku między przewodami). Test w `t`.
+wkrótce), oś odcinka nad dolnym przewodem o 3 cm + 2 promienie. Przy dwóch przewodach jezdnych osobny
+ogranicznik na każdym dolnym przewodzie (użytkownik 07.11: „chyba” – niepewne). Test w `t`.
 Na koniec (RKPD): 0568 uchwyty odległościowe przewodów na rozjeździe + karty podwieszeń RKPD w okolicy 0080 – „pierdolnięte
 konstrukcje”, użytkownik nie wie, czy to się gdzieś stosuje.
 Strony tomu 1 grupy 05xx od 0552: 161 0552 rozpórka przeciwwiatrowa wysięgnika rurowego, 162 0553 linowe zabezpieczenia
