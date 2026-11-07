@@ -606,4 +606,67 @@ void build_solid( network_definition const &Definition, span_geometry const &Geo
     }
 }
 
+
+void find_crossings( span_geometry const &Mine, span_geometry const &Other, std::vector<crossing_point> &Output ) {
+
+    std::vector<crossing_point> found;
+    for( auto const &a : Mine.elements ) {
+        if( a.kind != element_kind::contact ) { continue; }
+        auto const ax { a.to.x - a.from.x }, az { a.to.z - a.from.z };
+        for( auto const &b : Other.elements ) {
+            if( b.kind != element_kind::contact ) { continue; }
+            auto const bx { b.to.x - b.from.x }, bz { b.to.z - b.from.z };
+            // przecięcie odcinków w planie (x, z)
+            auto const denominator { ax * bz - az * bx };
+            if( std::abs( denominator ) < 1e-9 ) { continue; } // równoległe: to nie skrzyżowanie
+            auto const cx { b.from.x - a.from.x }, cz { b.from.z - a.from.z };
+            auto const t { ( cx * bz - cz * bx ) / denominator };
+            auto const u { ( cx * az - cz * ax ) / denominator };
+            if( t < 0.0 || t > 1.0 || u < 0.0 || u > 1.0 ) { continue; }
+            auto const mine { a.from + ( a.to - a.from ) * t };
+            auto const other { b.from + ( b.to - b.from ) * u };
+            auto const gap { other.y - mine.y };
+            // drugi przewód wyżej o więcej niż 0 (z dokładnością do 0,1 mm), ale mniej niż kCrossingLimiterGap
+            if( gap <= 1e-4 || gap >= kCrossingLimiterGap ) { continue; }
+            auto const length { std::sqrt( ax * ax + az * az ) };
+            if( length < 1e-6 ) { continue; }
+            found.push_back( { mine, { ax / length, 0.0, az / length }, gap } );
+        }
+    }
+    // dwa przewody jezdne w sieci krzyżują się z dwoma drugiej: kilka punktów w odstępie rozstawu - jeden ogranicznik
+    std::vector<bool> taken( found.size(), false );
+    for( std::size_t i = 0; i < found.size(); ++i ) {
+        if( taken[ i ] ) { continue; }
+        vec3 sum { found[ i ].position };
+        auto along { found[ i ].along };
+        auto gap { found[ i ].gap };
+        int count { 1 };
+        for( std::size_t j = i + 1; j < found.size(); ++j ) {
+            if( taken[ j ] || norm( found[ j ].position - found[ i ].position ) > 2.0 ) { continue; }
+            taken[ j ] = true;
+            sum = sum + found[ j ].position;
+            gap = std::max( gap, found[ j ].gap );
+            ++count;
+        }
+        Output.push_back( { sum * ( 1.0 / count ), along, gap } );
+    }
+}
+
+void build_crossing_limiter( crossing_point const &Crossing, double const Radius, std::vector<solid_vertex> &Wires, std::vector<solid_vertex> &Fittings ) {
+
+    // ZAŁOŻENIE do czasu modelu 5380-1: oś odcinka nad osią dolnego przewodu o kCrossingLimiterGap + 2 promienie, tak że spód odcinka
+    // jest nad wierzchem górnego przewodu przy największej dopuszczalnej różnicy wysokości
+    auto const lift { kCrossingLimiterGap + 2.0 * Radius };
+    auto const &along { Crossing.along };
+    auto top { Crossing.position };
+    top.y += lift;
+    // odcinek 2,0 m przewodu jezdnego (poz. 2/3 karty), wzdłuż dolnego przewodu
+    add_prism( Wires, top - along * 1.0, top + along * 1.0, Radius, 6 );
+    // zaciski 5380-1 (poz. 1) w odstępie ~1,80 m: od dolnego przewodu do odcinka
+    for( double const side : { -0.9, 0.9 } ) {
+        auto center { Crossing.position + along * side };
+        center.y += 0.5 * lift;
+        add_box( Fittings, center, along, 0.08, 0.04, lift + 2.0 * Radius );
+    }
+}
 } // namespace catenary

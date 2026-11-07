@@ -17,8 +17,21 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 sprawdzany przez użytkownika na łańcuchach BEZ kotwienia środkowego – tam z założenia się nie liczy (ustalenie 31.10); czeka na
 sprawdzenie na łańcuchu z kotwieniem środkowym.
 
-**Skrzyżowania przewodów nad rozjazdami (ogranicznik):** nie zaczęte – czeka na odpowiedzi użytkownika (karta 0331/0333 z tomu 1,
-model ogranicznika, wykrywanie miejsca skrzyżowania, wysokości obu przewodów).
+**Skrzyżowania przewodów nad rozjazdami – ogranicznik 33-0561 (07.11, w exe NIESPRAWDZONE):** karta 0561 „połączenia mechaniczne
+rozjazdu” (tom 1 `z- KATALOG 1 -z.pdf` s. 163): poz. 1 zacisk 5380-1 ×2 w odstępie ~1800, poz. 2/3 przewód jezdny 2,0 m (9871-1
+wyk. 1 Djp 100, 9871-3 wyk. 2 Djp 150). 0331/0333 to ograniczniki na mosty i dziwne konstrukcje – nie to. Użytkownik: skrzyżowanie
+jest wtedy, gdy przewody przęseł krzyżują się w planie z różnicą wysokości > 0 i < 3 cm (np. 5,40 / 5,41). Kod:
+`catenary::find_crossings` + `build_crossing_limiter` (catenary_network), rysuje przęsło DOLNE w swoich bryłach
+(`catenary_span_solid`), kandydatów podaje scena (`CatenaryCrossingCandidates` ← `crossing_candidates` w catenary_scene.cpp),
+partnerzy odświeżani przy reload/create/delete przęsła. ZASTĘPCZE: zaciski 5380 jako prostopadłościany (klocki od użytkownika
+wkrótce), oś odcinka nad dolnym przewodem o 3 cm + 2 promienie. ZAŁOŻENIE do potwierdzenia: przy dwóch przewodach jezdnych
+jeden ogranicznik na skrzyżowanie (punkty w promieniu 2 m łączone, odcinek w środku między przewodami). Test w `t`.
+Na koniec (RKPD): 0568 uchwyty odległościowe przewodów na rozjeździe + karty podwieszeń RKPD w okolicy 0080 – „pierdolnięte
+konstrukcje”, użytkownik nie wie, czy to się gdzieś stosuje.
+Strony tomu 1 grupy 05xx od 0552: 161 0552 rozpórka przeciwwiatrowa wysięgnika rurowego, 162 0553 linowe zabezpieczenia
+przeciwwiatrowe, 163 0561, 164 0565 dodatkowy przewód jezdny z podwieszeniem, 165 0567 prowadnice izolatora sekcyjnego, 166 0568,
+167 0570 wieszaki stałe przewodzące, 168 0571 pojedyncze, 169 0572 podwójne, 170 0576 krótkie, 171 0577 ślizgowe, 172 0579 wieszak Y,
+173 0587 podwieszenia Y (lina 120), 174 0588 (lina 150). (0570–0572 i 0579 z dopiskiem „2CS150 patrz karta zamian”.)
 
 ## START TUTAJ – 2026-11-07 (najnowsze) – zrzutka na nowy czat
 
@@ -57,7 +70,7 @@ kotwienia zostaje (koledzy chcieli zaczynać od kotwy – nie).
 **Otwarte, kod:**
 - ZROBIONE 07.11 po południu: generator `etap0/gen_cantilevers.py` był ROZJECHANY z `traction_cantilevers.txt` (ok. 117 linii ręcznych dopisków: 4490-01,
   `rules pulloff_drop`, `assembly brace`, odciągi 0311–0324) – przenieść do generatora, zanim ktoś go puści.
-- Skrzyżowania przewodów nad rozjazdami z ogranicznikiem (przęsło rozjazdowe nad szlakowym, ciągnie je przy uniesieniu) – nie zaczęte.
+- Skrzyżowania przewodów nad rozjazdami z ogranicznikiem – ZROBIONE 07.11 po południu (33-0561, zaciski zastępcze; wyżej).
 - ~~Walidacje peronowe~~ – nie robimy (użytkownik 07.11).
 - ZROBIONE 07.11 po południu: zapis przełączników Widok > Sieć trakcyjna w EditorSettings.
 - Obrót od brakujących ciężarów: użytkownik „chyba nie działa” – działa tylko w łańcuchu z kotwieniem środkowym (w teście 0,17° przy

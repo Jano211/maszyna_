@@ -18,6 +18,13 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Sieć trakcyjna: ogranicznik na skrzyżowaniu przewodów nad rozjazdem (33-0561) — commit o tym tytule
+- Co widać: tam, gdzie przewód jezdny jednego przęsła przechodzi w planie nad przewodem drugiego wyżej o więcej niż 0 i mniej niż
+  3 cm, na dolnym przewodzie z bliska widać ogranicznik: 2,0 m przewodu jezdnego nad nim na dwóch zaciskach w odstępie 1,80 m.
+  Zaciski na razie jako bryły zastępcze. Nic nie trzeba wpisywać – wykrywane samo z przebiegu przewodów.
+- Zmienia: `world/catenary_network.h/.cpp`, `world/catenary_span.h/.cpp`, `world/catenary_scene.cpp`,
+  `world/catenary_scene_objects.cpp`, test w `tests/catenary/test_network.cpp`. Wymaga: nic.
+
 ### Edytor sieci: podglądy z menu Widok zapamiętywane — commit o tym tytule
 - Co widać: przełączniki Widok > Sieć trakcyjna (słupy, bramki, kotwienia, przęsła, kolory, długości, Iet-107, odsuwy, pantograf,
   stawianie) i te same pola w panelu zostają po wyjściu z edytora i ponownym uruchomieniu – w pliku ustawień edytora wiersz

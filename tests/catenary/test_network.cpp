@@ -368,5 +368,48 @@ int main( int argc, char *argv[] ) {
         std::printf( "przeslo pochyle 1,70 -> 1,30: wieszaki liniowo -0,40 m: %s\n", good ? "OK" : "BLAD" );
         failed = failed || !good;
     }
+    // skrzyzowanie nad rozjazdem (33-0561): ogranicznik tylko, gdy drugi przewod wyzej o (0; 3 cm); dwa przewody jezdne - jeden ogranicznik
+    {
+        using catenary::element_kind;
+        auto const line = []( double X0, double Z0, double X1, double Z1, double Y, double Spacing ) {
+            catenary::span_geometry g;
+            // dwa przewody jezdne w rozstawie Spacing, w bok od osi (poziomo, prostopadle do przebiegu)
+            auto const dx { X1 - X0 }, dz { Z1 - Z0 };
+            auto const l { std::sqrt( dx * dx + dz * dz ) };
+            auto const sx { -dz / l * 0.5 * Spacing }, sz { dx / l * 0.5 * Spacing };
+            for( double side : { -1.0, 1.0 } ) {
+                if( Spacing == 0.0 && side > 0.0 ) { break; }
+                g.elements.push_back( { { X0 + side * sx, Y, Z0 + side * sz }, { X1 + side * sx, Y, Z1 + side * sz }, element_kind::contact } );
+            }
+            g.elements.push_back( { { X0, Y + 1.7, Z0 }, { X1, Y + 1.7, Z1 }, element_kind::messenger } );
+            return g;
+        };
+        bool good { true };
+        auto const main { line( -30.0, 0.0, 30.0, 0.0, 5.40, 0.0 ) };
+        std::vector<catenary::crossing_point> found;
+        // rozjazdowy pod katem, 1 cm wyzej: jeden ogranicznik w (0, 0)
+        catenary::find_crossings( main, line( -30.0, -3.0, 30.0, 3.0, 5.41, 0.0 ), found );
+        good = good && found.size() == 1 && std::abs( found[ 0 ].position.x ) < 1e-6 && std::abs( found[ 0 ].gap - 0.01 ) < 1e-9;
+        // z drugiej strony: rozjazdowy nie jest dolnym - nic
+        found.clear();
+        catenary::find_crossings( line( -30.0, -3.0, 30.0, 3.0, 5.41, 0.0 ), main, found );
+        good = good && found.empty();
+        // rowno (0) i 5 cm (>= 3 cm): nic
+        found.clear();
+        catenary::find_crossings( main, line( -30.0, -3.0, 30.0, 3.0, 5.40, 0.0 ), found );
+        catenary::find_crossings( main, line( -30.0, -3.0, 30.0, 3.0, 5.45, 0.0 ), found );
+        good = good && found.empty();
+        // dwa przewody jezdne (8 cm) na obu: cztery przeciecia, jeden ogranicznik
+        catenary::find_crossings( line( -30.0, 0.0, 30.0, 0.0, 5.40, 0.08 ), line( -30.0, -3.0, 30.0, 3.0, 5.42, 0.08 ), found );
+        good = good && found.size() == 1;
+        // bryly: odcinek 2,0 m nad przewodem, zaciski pod nim
+        std::vector<catenary::solid_vertex> wires, fittings;
+        if( false == found.empty() ) { catenary::build_crossing_limiter( found[ 0 ], 0.006, wires, fittings ); }
+        double low { 1e9 }, high { -1e9 }, xmin { 1e9 }, xmax { -1e9 };
+        for( auto const &v : wires ) { low = std::min( low, v.position.y ); high = std::max( high, v.position.y ); xmin = std::min( xmin, v.position.x ); xmax = std::max( xmax, v.position.x ); }
+        good = good && false == fittings.empty() && std::abs( ( xmax - xmin ) - 2.0 ) < 1e-6 && low > 5.40 + 0.03 + 0.006 - 1e-9;
+        std::printf( "skrzyzowanie nad rozjazdem (33-0561): ogranicznik przy 1 cm, bez przy 0 i 5 cm, jeden na dwa przewody: %s\n", good ? "OK" : "BLAD" );
+        failed = failed || !good;
+    }
     return failed ? 1 : 0;
 }

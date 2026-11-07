@@ -2130,6 +2130,22 @@ crossing_ends( glm::dvec3 const &A1, glm::dvec3 const &A2, glm::dvec3 const &B1,
     return false;
 }
 
+// przęsła innych łańcuchów, które w planie zbliżają się do przewodu danego przęsła (skrzyżowania nad rozjazdami, ogranicznik 33-0561;
+// sam ogranicznik i warunek wysokości 0-3 cm liczy przęsło z prawdziwego przebiegu przewodów)
+std::vector<TTraction *>
+crossing_candidates( TTraction const &Span ) {
+    std::vector<TTraction *> result;
+    for( auto const &chain : Chains ) {
+        if( chain.removed || std::find( chain.spans.begin(), chain.spans.end(), &Span ) != chain.spans.end() ) { continue; }
+        for( auto *other : chain.spans ) {
+            if( other == nullptr ) { continue; }
+            if( crossing_ends( Span.pPoint1, Span.pPoint2, other->pPoint1, other->pPoint2 ) ) { result.push_back( other ); }
+        }
+    }
+    return result;
+}
+bool const CrossingCandidatesSet { ( CatenaryCrossingCandidates = &crossing_candidates, true ) };
+
 // przęsło innego łańcucha biegnące przy przewodzie od A do B (przęsło naprężenia) albo krzyżujące się z nim w zasięgu ślizgu (rozjazd);
 // nullptr gdy żadne. Except: łańcuch, którego się nie bierze. Crossing: także krzyżujące się (dla bieżni wspólnej; przęsła wyłączone
 // ręcznie "shared ... off" pomijane); bez niego tylko przęsła naprężenia (łączniki, panel)

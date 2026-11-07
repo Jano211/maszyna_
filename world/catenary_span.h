@@ -58,6 +58,11 @@ void catenary_span_release( TTraction &Traction );
 // razem z nim z bliska, ze stali. Pusta lista odłącza. false, gdy przęsło nie jest rysowane wg typu sieci
 bool catenary_span_attach( TTraction &Traction, std::vector<catenary::solid_vertex> const &Triangles );
 
+// skrzyżowania przewodów nad rozjazdami (karta 33-0561): przęsła, które w planie mogą krzyżować się z danym. Podaje je scena
+// (łańcuchy sieci), bo przęsło nie zna innych przęseł; nullptr = bez ogranicznika. Ogranicznik rysuje przęsło dolne, w bryłach
+using catenary_crossing_candidates = std::vector<TTraction *> ( * )( TTraction const &Span );
+extern catenary_crossing_candidates CatenaryCrossingCandidates;
+
 // wygląd metalu brył: kolor własny (sRGB), metaliczność, połysk i siła odbicia otoczenia, każde w zakresie 0–1
 struct catenary_metal {
     float color[ 3 ];

@@ -62,6 +62,15 @@ refresh_around( std::vector<TTraction *> const &Neighbours, TTraction const *Cha
 
 // przęsło łańcucha jako zwykły TTraction, wczytany z treści wpisu node traction. Bez warstwy scenerii: zapis scenerii
 // w edytorze go nie przepisuje, przęsła łańcucha zapisują się w pliku sieci jako jeden wpis
+// przęsła krzyżujące się ze zmienianym nad rozjazdem: ich bryły od nowa, bo ogranicznik 33-0561 rysuje dolne z dwóch
+static void
+refresh_crossings( TTraction const &Span ) {
+    if( CatenaryCrossingCandidates == nullptr ) { return; }
+    for( auto *other : CatenaryCrossingCandidates( Span ) ) {
+        if( other != nullptr && other != &Span ) { catenary_span_refresh( *other ); }
+    }
+}
+
 TTraction *
 catenary_span_create( std::string const &Name, double const RangeMax, double const RangeMin, std::string const &Body, bool const Link ) {
 
@@ -107,6 +116,7 @@ catenary_span_create( std::string const &Name, double const RangeMax, double con
     }
     // sąsiedzi mają teraz z tej strony przęsło (np. wspólną linkę Y): ich linie i bryły od nowa
     refresh_around( neighbours, span );
+    refresh_crossings( *span );
     return span;
 }
 
@@ -143,6 +153,7 @@ catenary_span_reload( TTraction *Span, std::string const &Name, std::string cons
     GfxRenderer->Replace( vertices, userdata, Span->m_geometry, GL_LINES );
     // sąsiedzi: wspólna linka Y i końce zależą od tego przęsła
     refresh_around( { Span->hvNext[ 0 ], Span->hvNext[ 1 ] }, Span );
+    refresh_crossings( *Span );
     return true;
 }
 
@@ -164,6 +175,7 @@ catenary_span_delete( TTraction *Span ) {
         neighbours.push_back( neighbour );
     }
     refresh_around( neighbours, Span );
+    refresh_crossings( *Span );
     // z kółka bieżni wspólnej: poprzednik wskazuje dalej za usuwanym (a gdy zostaje sam - na nic)
     if( Span->hvParallel != nullptr ) {
         auto *previous { Span->hvParallel };
