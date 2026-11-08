@@ -211,10 +211,11 @@ struct earthing_line {
     std::string gantry_part;
     double gantry_top { 0.90 };
     double gantry_wire[ 3 ] { 0.0, 0.0, 0.0 };
-    // przyłącze 13-0885 (linka od liny do konstrukcji): średnica, zacisk na linie "along" od uchwytu w stronę przęsła, końcówka na
-    // czole konstrukcji "drop" pod punktem liny
+    // przyłącze 13-0885 (linka od liny do konstrukcji): średnica, zacisk na linie "along" od uchwytu w stronę przęsła, łuk "rise" nad
+    // zaciskiem, końcówka na wierzchu słupa ("drop" pod liną - gdy słup nie ma podanego wierzchu)
     double jumper_diameter { 0.0 };
-    double jumper_along { 0.5 };
+    double jumper_along { 0.15 };
+    double jumper_rise { 0.25 };
     double jumper_drop { 0.8 };
     // strzałka zwisu przęsła o rozpiętości Span (m)
     double sag( double const Span ) const { return ( tension > 0.0 ? mass * 9.81 * Span * Span / ( 8.0 * tension * 10.0 ) : 0.0 ); }

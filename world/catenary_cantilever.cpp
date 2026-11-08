@@ -295,9 +295,9 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 }
                 else if( key == "jumper" ) {
                     // jumper diameter <m> along <m> drop <m>
-                    while( index + 1 < count && ( Tokens[ index ] == "diameter" || Tokens[ index ] == "along" || Tokens[ index ] == "drop" ) ) {
+                    while( index + 1 < count && ( Tokens[ index ] == "diameter" || Tokens[ index ] == "along" || Tokens[ index ] == "drop" || Tokens[ index ] == "rise" ) ) {
                         auto const which { Tokens[ index++ ] };
-                        number( which == "diameter" ? line.jumper_diameter : which == "along" ? line.jumper_along : line.jumper_drop, good );
+                        number( which == "diameter" ? line.jumper_diameter : which == "along" ? line.jumper_along : which == "rise" ? line.jumper_rise : line.jumper_drop, good );
                     }
                 }
                 else if( key == "guide" ) {
