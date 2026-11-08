@@ -167,6 +167,8 @@ std::size_t catenary_earthing_add( std::string const &File, catenary::earthing c
 // zmienia uszynienie (także przywraca usunięte), uchwyty i lina od nowa
 bool catenary_earthing_update( std::size_t Index, catenary::earthing const &Data );
 void catenary_earthing_remove( std::size_t Index );
+// części stawiane na słupie Pole uszynienia (np. "6130-02 + 6130 + 6130-00"), albo "! <czemu się nie da>"
+std::string catenary_earthing_holder_text( std::size_t Index, std::string const &Pole );
 std::string catenary_scene_new_earthing_name( std::string const &File );
 
 // ---- kotwienia (wpisy "anchor" w pliku sieci): słup kotwowy z urządzeniem naprężającym ---------------------------------
