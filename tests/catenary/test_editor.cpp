@@ -633,6 +633,12 @@ int main( int, char *argv[] ) {
         for( auto const &item : made ) { std::printf( "    %s%s\n", item.first.c_str(), item.second.c_str() ); }
         good6130 = good6130 && made.count( "6130-01" ) && made.count( "6130" ) && made.count( "6130-00" ) && made.count( "6120-01" )
             && catenary_earthing_parts( 0 ) == 5 && made[ "6130-01" ] == made[ "6130" ] && made[ "6130-00" ] != made[ "6130-01" ];
+        // tekstury: wysięgnik lpn w katalogu tekstury osprzętu, mocowanie osprzęt
+        for( auto i { from }; i < simulation::State.created.size(); ++i ) {
+            auto const &entry6130 { simulation::State.created[ i ].entry };
+            if( entry6130.find( "components/6130.t3d " ) != std::string::npos ) { good6130 = good6130 && entry6130.find( ".t3d siec_trakcyjna/lpn " ) != std::string::npos; }
+            if( entry6130.find( "components/6130-01.t3d " ) != std::string::npos ) { good6130 = good6130 && entry6130.find( ".t3d siec_trakcyjna/siec " ) != std::string::npos; }
+        }
         // za głęboko (śruby za krótkie): 3 m w dół - 0,237 m, wystarcza 6130-02
         arm.raise = -3.0; custom.set_holder( arm );
         good6130 = good6130 && catenary_earthing_update( 0, custom ) && catenary_earthing_holder_text( 0, "e2" ).find( "6130-02" ) == 0;

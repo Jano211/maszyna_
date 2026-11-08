@@ -11,6 +11,9 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   mocowanie wg głębokości słupa na wysokości śrub, koniec śruby ≥ głębokość + tył z nakrętką 0,025 + 0,005 → max głębokość
   0,223 / 0,243 / 0,263. Wpis `earthing_arm 6130 … endearthing_arm` w traction_supports.txt, słup bierze go kluczem
   `earthing_arm 6130` (dopisane do wszystkich z 6120: 161x i dwuteowniki 166x; betony nie). Wysięgnik w zerze i obrocie mocowania.
+- Tekstury (08.11 23:17): wszystkie 5 modeli 6130 ma już mapę -1. Mocowania i tył biorą teksturę osprzętu (jak 6120), sam
+  wysięgnik – `skin lpn` z wpisu: nazwa pliku podmieniona w katalogu tekstury osprzętu (`siec_trakcyjna/used/siec` →
+  `siec_trakcyjna/used/lpn`; warianty lpn są w new/used/old/extreme, domyślny `siec_trakcyjna/siec` → stary `siec_trakcyjna/lpn`).
 - Użytkownik 08.11: wysięgnik w modelu jest 10 cm za niski względem karty – poprawi model; wtedy poprawić `wire` (Z) we wpisie.
 - Wpis uszynienia: `holder <podwieszenie> [arm] [away] [raise <m>]` za listą słupów (tylko słupy z ustawieniami ≠ domyślne).
   `away` – uchwyt / wysięgnik na tylnej ścianie, obrócony od toru (wszystkie części i punkt liny obrócone o 180° wokół osi słupa);

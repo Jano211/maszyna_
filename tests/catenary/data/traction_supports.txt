@@ -78,8 +78,10 @@ mount 4690-05 console 0.785 -0.785 0.0 back 4690-06 endmount
 //   wysiegnik (osobna tekstura lpn) stoi w zerze mocowania; mocowanie wg glebokosci slupa na wysokosci srub: pierwsze, ktorego
 //   sruby wystarcza (koniec sruby >= glebokosc + tyl z nakretka 0,025 + 0,005 zapasu); tyl 6130-00 obrocony o 180 stopni;
 //   plate = polowa wysokosci plyty (zero mocowania najwyzej tyle pod wierzchem slupa). Slup bierze go kluczem "earthing_arm".
+//   skin = nazwa pliku tekstury samego wysiegnika (modele z mapa -1): w katalogu tekstury osprzetu, np. siec_trakcyjna/used/siec
+//   -> siec_trakcyjna/used/lpn; mocowania i tyl biora teksture osprzetu jak 6120.
 //   Przymiarka do slupow, nie z karty (karta niejasna) - do poprawki wg dopiskow z karty.
-earthing_arm 6130 back 6130-00 wire 0.0 -0.8 0.65 plate 0.09 mount 6130-01 0.223 mount 6130-02 0.243 mount 6130-03 0.263 endearthing_arm
+earthing_arm 6130 back 6130-00 wire 0.0 -0.8 0.65 plate 0.09 skin lpn mount 6130-01 0.223 mount 6130-02 0.243 mount 6130-03 0.263 endearthing_arm
 
 // ---- slupy -----------------------------------------------------------------------------------------------------
 // uszynienie grupowe: "earthing" = uchwyt liny 6120 (karta 0805) na gorze slupa; wykonania wg Jana 2026-10-25: -01 C120-160,
