@@ -646,6 +646,72 @@ int main( int, char *argv[] ) {
         check( good6130, "uszynienie: wysiegnik 6130 z mocowaniem wg glebokosci slupa, tyl 6130-00 obrocony, uchwyt od toru, wysokosc; zapis i odczyt" );
     }
 
+    // 6a6. sekcje uszynienia (Jan 2026-11-09): "from ... to" po łańcuchu, końce z kotwieniem 0492 i punkt izolujący 0493 między
+    // sekcjami, lina z naciągu; słup wstawiony do łańcucha sam wchodzi do sekcji
+    {
+        std::vector<catenary::suspension> poles;
+        for( int k = 0; k < 6; ++k ) {
+            auto item { entry };
+            item.name = "g" + std::to_string( k + 1 );
+            item.at[ 2 ] = item.rope[ 2 ] = item.pole[ 2 ] = 60.0 * k;
+            poles.push_back( item );
+        }
+        catenary::chain line;
+        line.name = "ng"; line.power = "pwr01"; line.type = "C120-2C"; line.suspensions = { "g1", "g2", "g3", "g4", "g5", "g6" };
+        catenary::earthing first, second;
+        first.name = "us1"; first.from = "g1"; first.to = "g3"; first.start = "plain"; first.end = "split";
+        second.name = "us2"; second.from = "g4"; second.to = "g6"; second.start = "split"; second.end = "anchor";
+        std::string text;
+        for( auto const &item : poles ) { text += catenary::write_suspension( item ) + "\n"; }
+        text += catenary::write_earthing( first ) + "\n" + catenary::write_earthing( second ) + "\n" + catenary::write_chain( line ) + "\n";
+        std::vector<std::string> words; std::istringstream stream { text };
+        for( std::string word; stream >> word; ) { words.push_back( word ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( words, "sekcje", parsed, problems );
+        auto good { problems.empty() && parsed.earthings.size() == 2 && catenary::write_earthing( parsed.earthings[ 0 ] ) == catenary::write_earthing( first ) };
+        { std::ofstream out { "tests/catenary/td_sekcje_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear();
+        cParser directive( "td_sekcje_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        // części policzone po jednym składaniu obu sekcji (zmiana us2 składa też us1, która kończy się punktem izolującym)
+        auto const before { simulation::State.created.size() };
+        catenary_earthing_update( 1, *catenary_earthing_get( 1 ) );
+        std::map<std::string, int> made;
+        for( auto i { before }; i < simulation::State.created.size(); ++i ) {
+            auto const &e { simulation::State.created[ i ].entry };
+            auto const at { e.find( "components/" ) };
+            if( at == std::string::npos ) { continue; }
+            ++made[ e.substr( at + 11, e.find( ".t3d" ) - at - 11 ) ];
+        }
+        std::string list;
+        for( auto const &item : made ) { list += " " + item.first + "x" + std::to_string( item.second ); }
+        auto const p1 { catenary_earthing_poles( 0 ) }, p2 { catenary_earthing_poles( 1 ) };
+        std::printf( "  sekcje: us1 %zu slupow %.0f m (czesci %zu), us2 %zu slupow (czesci %zu); wstawione:%s\n", p1.size(), catenary_earthing_length( 0 ),
+            catenary_earthing_parts( 0 ), p2.size(), catenary_earthing_parts( 1 ), list.c_str() );
+        for( auto const &l : logs ) { if( l.find( "earthing" ) != std::string::npos ) { std::printf( "    %s\n", l.c_str() ); } }
+        // us1: g1 kotwienie 0492 (4430, 4420, 5180), g2-g3 uchwyty, punkt izolujący (5180 x2, 7150); us2: g4-g5 uchwyty, g6 kotwienie 0491
+        good = good && p1.size() == 3 && p2.size() == 3 && made[ "6120-01" ] == 4 && made[ "4430-01" ] == 2 && made[ "7150-01" ] == 2
+            && made[ "5180-07" ] == 4 && made[ "4720-01" ] == 1 && catenary_earthing_parts( 0 ) == 8 && catenary_earthing_parts( 1 ) == 7
+            && std::abs( catenary_earthing_length( 0 ) - 120.0 ) < 0.01;
+        // lina: przęsła g1-g2, g2-g3, g3-g4 (z izolatorem), g4-g5, g5-g6 mają bryłę liny
+        good = good && catenary_earthing_holder_text( 0, "g1" ) == "13-0492" && catenary_earthing_holder_text( 1, "g6" ) == "13-0491";
+        // słup wstawiony do łańcucha między g1 i g2 - sam wchodzi do sekcji us1
+        auto extra { entry };
+        extra.name = "g1a"; extra.at[ 2 ] = extra.rope[ 2 ] = extra.pole[ 2 ] = 30.0;
+        catenary_scene_add( "td_sekcje_test.scm", extra );
+        auto chain { *catenary_chain_get( 0 ) };
+        chain.suspensions.insert( chain.suspensions.begin() + 1, "g1a" );
+        auto const updated { catenary_chain_update( 0, chain ) };
+        std::string names;
+        for( auto const &n : catenary_earthing_poles( 0 ) ) { names += " " + n; }
+        std::printf( "    po wstawieniu slupa (%d, lancuch %zu, plik %s / %s): us1%s\n", updated, catenary_chain_get( 0 )->suspensions.size(),
+            catenary_chain_file( 0 ).c_str(), catenary_scene_file_of( catenary_scene_size() - 1 ).c_str(), names.c_str() );
+        good = good && updated && catenary_earthing_poles( 0 ).size() == 4 && catenary_earthing_of( catenary_scene_size() - 1 ) == 0;
+        std::remove( "tests/catenary/td_sekcje_test.scm" );
+        check( good, "uszynienie: sekcje from-to po lancuchu, kotwienia 0491/0492, punkt izolujacy 0493, slup wstawiony w lancuch" );
+    }
+
     // 6a5. uszynienie przez słup z kilkoma wysięgnikami (para rozstawionych + trzeci w osi słupa): jeden uchwyt na słup, obrócony
     // jak słup (płaszczyzna przez konsolę), nie w stronę rozstawionych wysięgników
     {

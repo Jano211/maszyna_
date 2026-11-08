@@ -272,6 +272,56 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
             continue;
         }
 
+        if( token == "earthing_line" ) {
+            // earthing_line <nazwa> diameter <m> mass <kg/m> tension <daN> chain <rodzaj> <część> <m> ... endearthing_line
+            if( index >= count ) { report( "", "\"earthing_line\" without a name" ); break; }
+            catenary::earthing_line line;
+            line.name = Tokens[ index++ ];
+            auto const entry { "earthing_line \"" + line.name + "\"" };
+            auto good { true };
+            auto closed { false };
+            std::string kind;
+            while( index < count && good ) {
+                auto const key { Tokens[ index++ ] };
+                if( key == "endearthing_line" ) { closed = true; break; }
+                if( key == "diameter" ) { number( line.diameter, good ); }
+                else if( key == "mass" ) { number( line.mass, good ); }
+                else if( key == "tension" ) { number( line.tension, good ); }
+                else if( key == "guide" ) {
+                    // guide <część> x y z [x y z ...]
+                    std::string part;
+                    if( index < count ) { part = Tokens[ index++ ]; } else { good = false; }
+                    std::array<double, 3> point;
+                    while( index + 2 < count && to_number( Tokens[ index ], point[ 0 ] ) && to_number( Tokens[ index + 1 ], point[ 1 ] ) && to_number( Tokens[ index + 2 ], point[ 2 ] ) ) {
+                        line.guides[ part ].push_back( point );
+                        index += 3;
+                    }
+                }
+                else if( key == "chain" ) {
+                    if( index < count ) { kind = Tokens[ index++ ]; line.chains[ kind ]; } else { good = false; }
+                    // części do następnego słowa kluczowego: para nazwa - długość
+                    double value { 0.0 };
+                    while( index + 1 < count && to_number( Tokens[ index + 1 ], value ) && Tokens[ index ] != "chain" && Tokens[ index ] != "endearthing_line" ) {
+                        catenary::earthing_link link;
+                        link.part = Tokens[ index ];
+                        if( false == link.part.empty() && link.part.back() == '~' ) { link.reversed = true; link.part.pop_back(); }
+                        link.length = value;
+                        line.chains[ kind ].push_back( link );
+                        index += 2;
+                    }
+                }
+                else { report( entry, "unknown keyword \"" + key + "\"" ); good = false; --index; }
+            }
+            if( false == good || false == closed ) {
+                if( good ) { report( entry, "missing \"endearthing_line\"" ); } else if( Errors.empty() || Errors.back().find( entry ) == std::string::npos ) { report( entry, "bad or missing value" ); }
+                skip();
+                continue;
+            }
+            if( earthing_line( line.name ) != nullptr ) { report( entry, "defined more than once, the first definition stays" ); continue; }
+            m_earthing_lines.push_back( line );
+            continue;
+        }
+
         if( token == "earthing_arm" ) {
             // earthing_arm <wysięgnik> back <tył> wire <x> <y> <z> plate <m> mount <mocowanie> <głębokość max> ... endearthing_arm
             if( index >= count ) { report( "", "\"earthing_arm\" without a name" ); break; }
@@ -610,6 +660,11 @@ cantilever_assembly const *cantilever_catalog::assembly( std::string const &Name
 cantilever_pole const *cantilever_catalog::pole( std::string const &Name ) const {
     auto const lookup { m_poles.find( Name ) };
     return ( lookup != m_poles.end() ? &lookup->second : nullptr );
+}
+
+catenary::earthing_line const *cantilever_catalog::earthing_line( std::string const &Name ) const {
+    for( auto const &line : m_earthing_lines ) { if( Name.empty() || line.name == Name ) { return &line; } }
+    return nullptr;
 }
 
 catenary::earthing_arm const *cantilever_catalog::earthing_arm( std::string const &Name ) const {

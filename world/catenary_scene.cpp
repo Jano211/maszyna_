@@ -157,6 +157,14 @@ struct scene_earthing {
     std::string file;
     std::vector<TAnimModel *> parts;
     bool removed { false };
+    // wyznaczone przy składaniu: słupy po kolei (wpisy stawiające słup), punkty liny na końcach z kotwieniem (zamiast uchwytu)
+    // i punkt izolujący w przęśle do następnej sekcji (koniec "split")
+    std::vector<std::size_t> path;
+    std::map<std::size_t, glm::dvec3> anchored;     // słup -> koniec liny przy kotwieniu
+    std::size_t split_next { static_cast<std::size_t>( -1 ) };
+    glm::dvec3 split_from { 0.0 }, split_to { 0.0 };   // końce łańcucha punktu izolującego (od strony tej sekcji / następnej)
+    double length { 0.0 };                          // długość w planie po słupach
+    std::map<std::size_t, std::vector<std::vector<glm::dvec3>>> tails;   // zawinięcia liny w zaciskach końców: słup -> odcinki
 };
 std::vector<scene_earthing> Earthings;
 
@@ -2666,6 +2674,14 @@ catenary::earthing_holder
 earthing_holder_of( scene_earthing const &Earthing, std::size_t const Standing ) {
     catenary::earthing_holder found;
     auto first { true };
+    if( Earthing.data.section() ) {
+        // sekcja: ustawienia wpisane pod nazwą któregoś wpisu tego słupa
+        for( auto const &holder : Earthing.data.holders ) {
+            if( earthing_pole( suspension_named( Earthing.file, holder.pole ) ) == Standing ) { return holder; }
+        }
+        if( Standing < Suspensions.size() ) { found.pole = Suspensions[ Standing ].data.name; }
+        return found;
+    }
     for( auto const &name : Earthing.data.poles ) {
         if( earthing_pole( suspension_named( Earthing.file, name ) ) != Standing ) { continue; }
         auto const holder { Earthing.data.holder( name ) };
@@ -2784,62 +2800,72 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     return true;
 }
 
-// wstawia uchwyty uszynienia na słupach (albo usuwa, gdy uszynienie usunięte). zwraca liczbę wstawionych modeli
-std::size_t
-assemble_earthing( scene_earthing &Earthing ) {
-    for( auto *part : Earthing.parts ) { catenary_part_delete( part ); }
-    Earthing.parts.clear();
-    if( Earthing.removed ) { return 0; }
-    auto const *catalog { cantilevers() };
-    if( catalog == nullptr ) { return 0; }
-    auto const skin { Earthing.data.skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0 ? Earthing.data.skin : kFittingSkin };
-    std::size_t count { 0 };
-    std::vector<std::size_t> done;     // słupy z uchwytem (kilka wpisów listy na jednym słupie - jeden uchwyt)
-    for( auto const &name : Earthing.data.poles ) {
-        auto const index { suspension_named( Earthing.file, name ) };
-        auto const standing { earthing_pole( index ) };
-        if( standing < Suspensions.size() ) {
-            if( std::find( done.begin(), done.end(), standing ) != done.end() ) { continue; }
-            done.push_back( standing );
-        }
-        earthing_place place;
-        if( false == earthing_place_of( index, Earthing.data.holder( name ), place ) ) {
-            WriteLog( ( "Catenary: earthing \"" + Earthing.data.name + "\" goes over \"" + name + "\": " + place.problem ).c_str() );
-            continue;
-        }
-        for( auto const &item : place.parts ) {
-            auto const *placement { &item };
-            if( placement->part.empty() ) { continue; }
-            auto const part { catenary::cantilever_to_scene( *placement, place.heading ) };
-            // sam wysięgnik 6130 na swojej teksturze: nazwa pliku tekstury osprzętu z "siec" na początku zamienionym na nazwę z wpisu,
-            // dopisek zużycia zostaje (siec_trakcyjna/siec -> siec_trakcyjna/lpn, siec_trakcyjna/siec_used -> siec_trakcyjna/lpn_used)
-            auto partskin { skin };
-            if( placement->role == "earthing_arm" && false == place.arm_skin.empty() ) {
-                auto const slash { partskin.find_last_of( "/\\" ) };
-                auto const folder { slash == std::string::npos ? std::string() : partskin.substr( 0, slash + 1 ) };
-                auto const file { slash == std::string::npos ? partskin : partskin.substr( slash + 1 ) };
-                partskin = ( file == "siec" && false == place.arm_skin_default.empty() )
-                    ? folder + place.arm_skin_default    // osprzęt bez wariantów zużycia: wysięgnik w wariancie domyślnym (lpn_used)
-                    : folder + place.arm_skin + ( file.compare( 0, 4, "siec" ) == 0 ? file.substr( 4 ) : std::string() );
+// sąsiedzi słupów pliku po przęsłach łańcuchów (wpisy stawiające słup; kilka wpisów jednego słupa to jeden słup)
+std::map<std::size_t, std::vector<std::size_t>>
+earthing_graph( std::string const &File ) {
+    std::map<std::size_t, std::vector<std::size_t>> graph;
+    for( auto const &chain : Chains ) {
+        if( chain.removed || chain.file != File ) { continue; }
+        auto previous { Suspensions.size() };
+        for( auto const &name : chain.data.suspensions ) {
+            auto const standing { earthing_pole( suspension_named( File, name ) ) };
+            if( standing >= Suspensions.size() ) { previous = Suspensions.size(); continue; }
+            if( previous < Suspensions.size() && previous != standing ) {
+                auto &a { graph[ previous ] }, &b { graph[ standing ] };
+                if( std::find( a.begin(), a.end(), standing ) == a.end() ) { a.push_back( standing ); }
+                if( std::find( b.begin(), b.end(), previous ) == b.end() ) { b.push_back( previous ); }
             }
-            auto const entry {
-                "node " + text_number( Earthing.data.range_max, 1 ) + " " + text_number( Earthing.data.range_min, 1 ) + " none model 0 0 0 0 "
-                + catalog->models() + placement->part + ".t3d " + partskin
-                + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) + " endmodel" };
-            glm::dvec3 const position { place.origin.x + part.offset[ 0 ], place.origin.y + part.offset[ 1 ], place.origin.z + part.offset[ 2 ] };
-            if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
-                catenary_part_detach( model );
-                Earthing.parts.push_back( model );
-                ++count;
-            }
+            previous = standing;
         }
     }
-    return count;
+    return graph;
 }
 
-// słupy uszynienia po kolei (wpisy stawiające słup), kolejne wpisy na tym samym słupie jako jeden
+double
+earthing_plan_distance( std::size_t const A, std::size_t const B ) {
+    auto const &p { Suspensions[ A ].data.pole }, &q { Suspensions[ B ].data.pole };
+    return std::hypot( p[ 0 ] - q[ 0 ], p[ 2 ] - q[ 2 ] );
+}
+
+// najkrótsza droga po przęsłach łańcuchów od słupu From do To (oba włącznie); pusta, gdy się nie da
 std::vector<std::size_t>
-earthing_poles( scene_earthing const &Earthing ) {
+earthing_route( std::map<std::size_t, std::vector<std::size_t>> const &Graph, std::size_t const From, std::size_t const To ) {
+    if( From >= Suspensions.size() || To >= Suspensions.size() ) { return {}; }
+    if( From == To ) { return { From }; }
+    std::map<std::size_t, double> distance { { From, 0.0 } };
+    std::map<std::size_t, std::size_t> previous;
+    std::set<std::pair<double, std::size_t>> open { { 0.0, From } };
+    while( false == open.empty() ) {
+        auto const [ d, node ] { *open.begin() };
+        open.erase( open.begin() );
+        if( node == To ) { break; }
+        auto const found { Graph.find( node ) };
+        if( found == Graph.end() ) { continue; }
+        for( auto const next : found->second ) {
+            auto const nd { d + earthing_plan_distance( node, next ) };
+            auto const known { distance.find( next ) };
+            if( known != distance.end() && known->second <= nd ) { continue; }
+            if( known != distance.end() ) { open.erase( { known->second, next } ); }
+            distance[ next ] = nd;
+            previous[ next ] = node;
+            open.insert( { nd, next } );
+        }
+    }
+    if( previous.find( To ) == previous.end() ) { return {}; }
+    std::vector<std::size_t> path { To };
+    while( path.back() != From ) { path.push_back( previous[ path.back() ] ); }
+    std::reverse( path.begin(), path.end() );
+    return path;
+}
+
+// słupy uszynienia po kolei (wpisy stawiające słup): sekcja - trasa po łańcuchach od "from" do "to"; lista - wpisy po kolei,
+// kolejne wpisy na tym samym słupie jako jeden
+std::vector<std::size_t>
+earthing_route_of( scene_earthing const &Earthing ) {
+    if( Earthing.data.section() ) {
+        return earthing_route( earthing_graph( Earthing.file ),
+            earthing_pole( suspension_named( Earthing.file, Earthing.data.from ) ), earthing_pole( suspension_named( Earthing.file, Earthing.data.to ) ) );
+    }
     std::vector<std::size_t> list;
     for( auto const &name : Earthing.data.poles ) {
         auto const standing { earthing_pole( suspension_named( Earthing.file, name ) ) };
@@ -2849,8 +2875,213 @@ earthing_poles( scene_earthing const &Earthing ) {
     return list;
 }
 
-// lina uszynienia w przęśle łańcucha: gdy słupy obu końców przęsła są kolejnymi słupami uszynienia. Lina zwisa w przęśle
-// (ZAŁOŻENIE: strzałka 1 % rozpiętości)
+// słupy uszynienia wyznaczone przy ostatnim składaniu
+std::vector<std::size_t>
+earthing_poles( scene_earthing const &Earthing ) {
+    return Earthing.path;
+}
+
+// punkt w układzie scenerii -> układ wysięgnika słupa (X wzdłuż toru, Y do konstrukcji, Z w górę) o zerze Origin i obrocie Heading;
+// odwrotność cantilever_to_scene. Direction - bez przesunięcia
+glm::dvec3
+earthing_to_pole( glm::dvec3 const &Point, glm::dvec3 const &Origin, double const Heading, bool const Direction = false ) {
+    auto const d { Direction ? Point : Point - Origin };
+    auto const c { std::cos( Heading ) }, s { std::sin( Heading ) };
+    auto const x { d.x * c - d.z * s }, z { d.x * s + d.z * c };
+    return { -x, z, d.y };
+}
+
+// łańcuch części końca sekcji od punktu Start w kierunku Way (scenerii); części biegną w -X modelu. Zwraca koniec łańcucha
+glm::dvec3
+earthing_chain( std::vector<catenary::earthing_link> const &Links, glm::dvec3 const &Origin, double const Heading, glm::dvec3 const &Start,
+                glm::dvec3 const &Way, std::vector<catenary::cantilever_placement> &Parts, std::vector<std::vector<glm::dvec3>> *Tails = nullptr ) {
+    auto at { Start };
+    auto const way { glm::normalize( Way ) };
+    auto const *catalog { cantilevers() };
+    auto const *line { catalog != nullptr ? catalog->earthing_line() : nullptr };
+    for( auto const &link : Links ) {
+        auto const along { link.reversed ? -way : way };
+        auto const zero { link.reversed ? at + way * link.length : at };
+        // prowadzenie liny przez część (zawinięcie końca liny w zacisku): punkty modelu w scenerii. Model: X przeciwnie do "along",
+        // Z w górę (prostopadle do "along"); punkty prawie w płaszczyźnie XZ modelu, Y pomijany
+        if( Tails != nullptr && line != nullptr ) {
+            auto const guide { line->guides.find( link.part ) };
+            if( guide != line->guides.end() && false == guide->second.empty() ) {
+                auto up { glm::dvec3 { 0.0, 1.0, 0.0 } - along * along.y };
+                up = glm::length( up ) < 1e-6 ? glm::dvec3 { 1.0, 0.0, 0.0 } : glm::normalize( up );
+                std::vector<glm::dvec3> tail;
+                for( auto const &point : guide->second ) { tail.push_back( zero - along * point[ 0 ] + up * point[ 2 ] ); }
+                Tails->push_back( tail );
+            }
+        }
+        catenary::cantilever_placement placement;
+        placement.role = "earthing_end";
+        placement.part = link.part;
+        auto const position { earthing_to_pole( zero, Origin, Heading ) };
+        placement.position[ 0 ] = position.x; placement.position[ 1 ] = position.y; placement.position[ 2 ] = position.z;
+        // osie części w układzie słupa: X przeciwnie do kierunku łańcucha, Z możliwie w górę
+        auto const xaxis { -glm::normalize( earthing_to_pole( along, Origin, Heading, true ) ) };
+        auto zaxis { glm::dvec3 { 0.0, 0.0, 1.0 } - xaxis * xaxis.z };
+        zaxis = glm::length( zaxis ) < 1e-6 ? glm::dvec3 { 0.0, 1.0, 0.0 } : glm::normalize( zaxis );
+        auto const yaxis { glm::cross( zaxis, xaxis ) };
+        double const axes[ 3 ][ 3 ] { { xaxis.x, xaxis.y, xaxis.z }, { yaxis.x, yaxis.y, yaxis.z }, { zaxis.x, zaxis.y, zaxis.z } };
+        for( int row = 0; row < 3; ++row ) {
+            for( int column = 0; column < 3; ++column ) { placement.rotation[ row * 3 + column ] = axes[ column ][ row ]; }
+        }
+        Parts.push_back( placement );
+        at = at + way * link.length;
+    }
+    return at;
+}
+
+// sekcja, która zaczyna się punktem izolującym na słupie Pole (pliku File), poza Except; Earthings.size() - żadna
+std::size_t
+earthing_split_partner( std::string const &File, std::size_t const Pole, scene_earthing const *Except ) {
+    for( std::size_t k = 0; k < Earthings.size(); ++k ) {
+        auto const &other { Earthings[ k ] };
+        if( &other == Except || other.removed || other.file != File || other.data.start != "split" ) { continue; }
+        // następna sekcja mogła jeszcze nie być składana - trasa liczona na miejscu
+        auto const route { other.path.empty() ? earthing_route_of( other ) : other.path };
+        if( false == route.empty() && route.front() == Pole ) { return k; }
+    }
+    return Earthings.size();
+}
+
+// wstawia uchwyty uszynienia na słupach i części końców sekcji (albo usuwa, gdy uszynienie usunięte). zwraca liczbę wstawionych modeli
+std::size_t
+assemble_earthing( scene_earthing &Earthing ) {
+    for( auto *part : Earthing.parts ) { catenary_part_delete( part ); }
+    Earthing.parts.clear();
+    Earthing.anchored.clear();
+    Earthing.tails.clear();
+    Earthing.split_next = static_cast<std::size_t>( -1 );
+    Earthing.length = 0.0;
+    Earthing.path = Earthing.removed ? std::vector<std::size_t> {} : earthing_route_of( Earthing );
+    if( Earthing.removed ) { return 0; }
+    auto const *catalog { cantilevers() };
+    if( catalog == nullptr ) { return 0; }
+    if( Earthing.data.section() && Earthing.path.empty() ) {
+        WriteLog( ( "Catenary: earthing \"" + Earthing.data.name + "\": no way along the chains from \"" + Earthing.data.from + "\" to \"" + Earthing.data.to + "\"" ).c_str() );
+        return 0;
+    }
+    for( std::size_t k = 0; k + 1 < Earthing.path.size(); ++k ) { Earthing.length += earthing_plan_distance( Earthing.path[ k ], Earthing.path[ k + 1 ] ); }
+    auto const *line { catalog->earthing_line() };
+    auto const skin { Earthing.data.skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0 ? Earthing.data.skin : kFittingSkin };
+    std::size_t count { 0 };
+    auto const spawn = [ & ]( catenary::cantilever_placement const &Placement, earthing_place const &Place ) {
+        if( Placement.part.empty() ) { return; }
+        auto const part { catenary::cantilever_to_scene( Placement, Place.heading ) };
+        // sam wysięgnik 6130 na swojej teksturze: nazwa pliku tekstury osprzętu z "siec" na początku zamienionym na nazwę z wpisu,
+        // dopisek zużycia zostaje (siec_trakcyjna/siec_used -> siec_trakcyjna/lpn_used); przy samej "siec" - wariant domyślny
+        auto partskin { skin };
+        if( Placement.role == "earthing_arm" && false == Place.arm_skin.empty() ) {
+            auto const slash { partskin.find_last_of( "/\\" ) };
+            auto const folder { slash == std::string::npos ? std::string() : partskin.substr( 0, slash + 1 ) };
+            auto const file { slash == std::string::npos ? partskin : partskin.substr( slash + 1 ) };
+            partskin = ( file == "siec" && false == Place.arm_skin_default.empty() )
+                ? folder + Place.arm_skin_default
+                : folder + Place.arm_skin + ( file.compare( 0, 4, "siec" ) == 0 ? file.substr( 4 ) : std::string() );
+        }
+        auto const entry {
+            "node " + text_number( Earthing.data.range_max, 1 ) + " " + text_number( Earthing.data.range_min, 1 ) + " none model 0 0 0 0 "
+            + catalog->models() + Placement.part + ".t3d " + partskin
+            + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) + " endmodel" };
+        glm::dvec3 const position { Place.origin.x + part.offset[ 0 ], Place.origin.y + part.offset[ 1 ], Place.origin.z + part.offset[ 2 ] };
+        if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
+            catenary_part_detach( model );
+            Earthing.parts.push_back( model );
+            ++count;
+        }
+    };
+    auto const last { Earthing.path.empty() ? 0 : Earthing.path.size() - 1 };
+    for( std::size_t k = 0; k < Earthing.path.size(); ++k ) {
+        auto const standing { Earthing.path[ k ] };
+        earthing_place place;
+        if( false == earthing_place_of( standing, earthing_holder_of( Earthing, standing ), place ) ) {
+            WriteLog( ( "Catenary: earthing \"" + Earthing.data.name + "\" goes over \"" + Suspensions[ standing ].data.name + "\": " + place.problem ).c_str() );
+            continue;
+        }
+        // koniec sekcji z kotwieniem: zamiast uchwytu łańcuch od słupa w stronę sąsiedniego słupu sekcji
+        auto const kind { Earthing.path.size() < 2 ? std::string() : k == 0 ? Earthing.data.start : k == last ? Earthing.data.end : std::string() };
+        auto const *links { line != nullptr && ( kind == "anchor" || kind == "plain" ) ? line->chain( kind ) : nullptr };
+        if( links != nullptr ) {
+            auto const neighbour { Earthing.path[ k == 0 ? 1 : last - 1 ] };
+            earthing_place other;
+            if( earthing_place_of( neighbour, earthing_holder_of( Earthing, neighbour ), other ) ) {
+                auto way { other.wire - place.wire };
+                way.y = 0.0;
+                if( glm::length( way ) > 0.1 ) {
+                    auto const *pole { cantilevers()->pole( Suspensions[ standing ].data.pole_type ) };
+                    auto const half { pole != nullptr && pole->width > 0.0 ? 0.5 * pole->width : 0.10 };
+                    auto const start { place.wire + glm::normalize( way ) * half };
+                    std::vector<catenary::cantilever_placement> parts;
+                    auto const end { earthing_chain( *links, place.origin, place.heading, start, other.wire - start, parts, &Earthing.tails[ standing ] ) };
+                    for( auto const &part : parts ) { spawn( part, place ); }
+                    Earthing.anchored[ standing ] = end;
+                    continue;
+                }
+            }
+        }
+        for( auto const &item : place.parts ) { spawn( item, place ); }
+        // koniec "split": punkt izolujący w przęśle do pierwszego słupu następnej sekcji (ta, która zaczyna się "split" na sąsiednim słupie)
+        if( k == last && k > 0 && Earthing.data.end == "split" && line != nullptr && line->chain( "split" ) != nullptr ) {
+            auto const graph { earthing_graph( Earthing.file ) };
+            auto const found { graph.find( standing ) };
+            if( found == graph.end() ) { continue; }
+            for( auto const next : found->second ) {
+                if( next == Earthing.path[ k - 1 ] ) { continue; }
+                auto const partner { earthing_split_partner( Earthing.file, next, &Earthing ) };
+                if( partner >= Earthings.size() ) { continue; }
+                earthing_place other;
+                if( false == earthing_place_of( next, earthing_holder_of( Earthings[ partner ], next ), other ) ) { break; }
+                auto const &links { *line->chain( "split" ) };
+                auto total { 0.0 };
+                for( auto const &link : links ) { total += link.length; }
+                auto const chord { other.wire - place.wire };
+                auto const span { glm::length( chord ) };
+                if( span < total + 1.0 ) { break; }
+                auto const way { chord / span };
+                // łańcuch na środku przęsła, opuszczony o strzałkę zwisu
+                auto const middle { place.wire + chord * 0.5 - glm::dvec3 { 0.0, line->sag( span ), 0.0 } };
+                std::vector<catenary::cantilever_placement> parts;
+                Earthing.split_from = middle - way * ( 0.5 * total );
+                Earthing.split_to = earthing_chain( links, place.origin, place.heading, Earthing.split_from, way, parts, &Earthing.tails[ next ] );
+                for( auto const &part : parts ) { spawn( part, place ); }
+                Earthing.split_next = next;
+                break;
+            }
+        }
+    }
+    return count;
+}
+
+// promień liny uszynienia (z danych przewodu)
+double
+line_radius() {
+    auto const *catalog { cantilevers() };
+    auto const *line { catalog != nullptr ? catalog->earthing_line() : nullptr };
+    return ( line != nullptr ? 0.5 * line->diameter : kEarthingRadius );
+}
+
+// lina z naciągu (parabola) od A do B
+void
+earthing_rope_piece( glm::dvec3 const &A, glm::dvec3 const &B, std::vector<catenary::solid_vertex> &Solid ) {
+    auto const *catalog { cantilevers() };
+    auto const *line { catalog != nullptr ? catalog->earthing_line() : nullptr };
+    auto const length { glm::length( B - A ) };
+    if( length < 0.01 ) { return; }
+    auto const sag { line != nullptr ? line->sag( length ) : 0.01 * length };
+    std::vector<glm::dvec3> points;
+    auto const steps { std::clamp( static_cast<int>( length / 2.5 ), 2, 24 ) };
+    for( int step = 0; step <= steps; ++step ) {
+        auto const t { static_cast<double>( step ) / steps };
+        points.push_back( A + ( B - A ) * t - glm::dvec3 { 0.0, sag * 4.0 * t * ( 1.0 - t ), 0.0 } );
+    }
+    add_tube( Solid, points, line != nullptr ? 0.5 * line->diameter : kEarthingRadius );
+}
+
+// lina uszynienia w przęśle łańcucha: gdy słupy obu końców przęsła są kolejnymi słupami uszynienia (albo przęsło z punktem
+// izolującym do następnej sekcji). Zwis z naciągu liny (earthing_line), na końcu z kotwieniem lina dochodzi do łańcucha kotwienia
 void
 earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
     if( Earthings.empty() ) { return; }
@@ -2861,20 +3092,40 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
     if( a >= Suspensions.size() || b >= Suspensions.size() || a == b ) { return; }
     for( auto const &earthing : Earthings ) {
         if( earthing.removed || earthing.file != Chain.file ) { continue; }
-        // kolejne słupy uszynienia (kilka wpisów na jednym słupie to jeden słup)
-        auto const poles { earthing_poles( earthing ) };
+        auto const &poles { earthing.path };
+        auto const point = [ & ]( std::size_t const Pole, glm::dvec3 &Point ) {
+            auto const anchored { earthing.anchored.find( Pole ) };
+            if( anchored != earthing.anchored.end() ) { Point = anchored->second; return true; }
+            earthing_place place;
+            if( false == earthing_place_of( Pole, earthing_holder_of( earthing, Pole ), place ) ) { return false; }
+            Point = place.wire;
+            return true;
+        };
+        auto const tails = [ & ]( std::size_t const Pole ) {
+            auto const found { earthing.tails.find( Pole ) };
+            if( found == earthing.tails.end() ) { return; }
+            for( auto const &tail : found->second ) { if( tail.size() >= 2 ) { add_tube( Solid, tail, line_radius() ); } }
+        };
         for( std::size_t k = 0; k + 1 < poles.size(); ++k ) {
             if( false == ( ( poles[ k ] == a && poles[ k + 1 ] == b ) || ( poles[ k ] == b && poles[ k + 1 ] == a ) ) ) { continue; }
-            earthing_place first, second;
-            if( false == earthing_place_of( poles[ k ], earthing_holder_of( earthing, poles[ k ] ), first )
-             || false == earthing_place_of( poles[ k + 1 ], earthing_holder_of( earthing, poles[ k + 1 ] ), second ) ) { continue; }
-            auto const length { glm::length( second.wire - first.wire ) };
-            std::vector<glm::dvec3> points;
-            for( int step = 0; step <= 24; ++step ) {
-                auto const t { step / 24.0 };
-                points.push_back( first.wire + ( second.wire - first.wire ) * t - glm::dvec3 { 0.0, 0.01 * length * 4.0 * t * ( 1.0 - t ), 0.0 } );
+            glm::dvec3 first, second;
+            if( point( poles[ k ], first ) && point( poles[ k + 1 ], second ) ) { earthing_rope_piece( first, second, Solid ); }
+            // zawinięcia w zaciskach kotwień końców sekcji
+            if( k == 0 && earthing.anchored.count( poles[ k ] ) ) { tails( poles[ k ] ); }
+            if( k + 2 == poles.size() && earthing.anchored.count( poles[ k + 1 ] ) ) { tails( poles[ k + 1 ] ); }
+        }
+        // punkt izolujący: lina od ostatniego słupu do łańcucha i od łańcucha do pierwszego słupu następnej sekcji
+        if( false == poles.empty() && earthing.split_next < Suspensions.size()
+         && ( ( poles.back() == a && earthing.split_next == b ) || ( poles.back() == b && earthing.split_next == a ) ) ) {
+            glm::dvec3 first;
+            auto const partner { earthing_split_partner( earthing.file, earthing.split_next, &earthing ) };
+            earthing_place other;
+            if( point( poles.back(), first ) && partner < Earthings.size()
+             && earthing_place_of( earthing.split_next, earthing_holder_of( Earthings[ partner ], earthing.split_next ), other ) ) {
+                earthing_rope_piece( first, earthing.split_from, Solid );
+                earthing_rope_piece( earthing.split_to, other.wire, Solid );
+                tails( earthing.split_next );
             }
-            add_tube( Solid, points, kEarthingRadius );
         }
     }
 }
@@ -3039,9 +3290,39 @@ earthing_spans( scene_earthing const &Earthing ) {
         auto const has = [ & ]( std::string const &Name ) {
             auto const standing { earthing_pole( suspension_named( chain.file, Name ) ) };
             return standing < Suspensions.size() && std::find( poles.begin(), poles.end(), standing ) != poles.end(); };
+        auto const standing = [ & ]( std::string const &Name ) { return earthing_pole( suspension_named( chain.file, Name ) ); };
         for( std::size_t k = 0; k + 1 < chain.data.suspensions.size(); ++k ) {
-            if( has( chain.data.suspensions[ k ] ) && has( chain.data.suspensions[ k + 1 ] ) ) { rebuild_span( chain, k + offset ); }
+            auto const a { standing( chain.data.suspensions[ k ] ) }, b { standing( chain.data.suspensions[ k + 1 ] ) };
+            // przęsło z punktem izolującym do następnej sekcji
+            auto const split { false == poles.empty() && Earthing.split_next < Suspensions.size()
+                && ( ( a == poles.back() && b == Earthing.split_next ) || ( b == poles.back() && a == Earthing.split_next ) ) };
+            if( split || ( has( chain.data.suspensions[ k ] ) && has( chain.data.suspensions[ k + 1 ] ) ) ) { rebuild_span( chain, k + offset ); }
         }
+    }
+}
+
+// sekcje uszynienia pliku od nowa, gdy zmieniła się ich trasa po łańcuchach (wstawiony / usunięty słup, zmieniony łańcuch) albo
+// zawsze (Force - po wczytaniu łańcuchów pliku): części i lina w przęsłach starej i nowej trasy. Gdy coś się zmieniło, także sekcje
+// kończące się punktem izolującym (zależą od początku następnej)
+void
+refresh_earthings( std::string const &File, bool const Force ) {
+    auto changed { false };
+    for( auto &earthing : Earthings ) {
+        if( earthing.removed || earthing.file != File || false == earthing.data.section() ) { continue; }
+        if( false == Force && earthing_route_of( earthing ) == earthing.path ) { continue; }
+        scene_earthing const old { earthing };
+        assemble_earthing( earthing );
+        earthing_spans( old );
+        earthing_spans( earthing );
+        changed = true;
+    }
+    if( false == changed ) { return; }
+    for( auto &earthing : Earthings ) {
+        if( earthing.removed || earthing.file != File || earthing.data.end != "split" ) { continue; }
+        scene_earthing const old { earthing };
+        assemble_earthing( earthing );
+        earthing_spans( old );
+        earthing_spans( earthing );
     }
 }
 
@@ -3103,7 +3384,8 @@ add_content( catenary::suspension_file const &File, std::string const &Filename 
         earthing.data = line;
         earthing.file = Filename;
         Earthings.emplace_back( earthing );
-        assemble_earthing( Earthings.back() );
+        // sekcja: trasa po łańcuchach znana dopiero po ich wczytaniu (niżej)
+        if( false == line.section() ) { assemble_earthing( Earthings.back() ); }
     }
     // przęsła łańcuchów powstają od razu: przed inicjalizacją scenerii łączy je InitTraction razem z resztą sieci
     for( auto const &line : File.chains ) {
@@ -3114,6 +3396,8 @@ add_content( catenary::suspension_file const &File, std::string const &Filename 
         Chains.emplace_back( chain );
         rebuild_chain( Chains.back() );
     }
+    // sekcje uszynienia: trasa po łańcuchach znana dopiero teraz
+    if( false == File.earthings.empty() ) { refresh_earthings( Filename, true ); }
 }
 
 } // namespace
@@ -3919,7 +4203,8 @@ catenary_scene_move( std::size_t const Index, std::string const &File, bool cons
             if( earthings.count( k ) == 0 ) {
                 auto linked { false };
                 for( auto const s : suspensions ) {
-                    linked |= std::find( earthing.data.poles.begin(), earthing.data.poles.end(), Suspensions[ s ].data.name ) != earthing.data.poles.end();
+                    linked |= std::find( earthing.data.poles.begin(), earthing.data.poles.end(), Suspensions[ s ].data.name ) != earthing.data.poles.end()
+                           || earthing.data.from == Suspensions[ s ].data.name || earthing.data.to == Suspensions[ s ].data.name;
                 }
                 if( false == linked ) { continue; }
                 earthings.insert( k );
@@ -4002,6 +4287,8 @@ catenary_scene_move( std::size_t const Index, std::string const &File, bool cons
         rename( Earthings[ e ].data.name, earthing_names );
         for( auto &name : Earthings[ e ].data.poles ) { rename( name, suspension_names ); }
         for( auto &holder : Earthings[ e ].data.holders ) { rename( holder.pole, suspension_names ); }
+        rename( Earthings[ e ].data.from, suspension_names );
+        rename( Earthings[ e ].data.to, suspension_names );
         Earthings[ e ].file = File;
     }
     mark_changed( source );
@@ -4135,6 +4422,7 @@ catenary_chain_add( std::string const &File, catenary::chain const &Data ) {
     Chains.emplace_back( chain );
     rebuild_chain( Chains.back() );
     mark_changed( File );
+    refresh_earthings( File, false );
     return Chains.size() - 1;
 }
 
@@ -4160,6 +4448,7 @@ catenary_chain_update( std::size_t const Index, catenary::chain const &Data ) {
     }
     rebuild_chain( chain );
     mark_changed( chain.file );
+    refresh_earthings( chain.file, false );
     return true;
 }
 
@@ -4175,6 +4464,7 @@ catenary_chain_remove( std::size_t const Index ) {
     }
     rebuild_chain( Chains[ Index ] );
     mark_changed( Chains[ Index ].file );
+    refresh_earthings( Chains[ Index ].file, false );
 }
 
 bool
@@ -4338,16 +4628,23 @@ bool
 catenary_earthing_update( std::size_t const Index, catenary::earthing const &Data ) {
     if( Index >= Earthings.size() ) { return false; }
     auto &earthing { Earthings[ Index ] };
-    auto const before { earthing.data };
+    scene_earthing const old { earthing };
     earthing.removed = false;
     earthing.data = Data;
     mark_changed( earthing.file );
     assemble_earthing( earthing );
     // lina znika z przęseł, przez które już nie idzie, i pojawia się w nowych
-    scene_earthing old { earthing };
-    old.data = before;
     earthing_spans( old );
     earthing_spans( earthing );
+    // sąsiednie sekcje (punkt izolujący na styku)
+    refresh_earthings( earthing.file, false );
+    for( auto &other : Earthings ) {
+        if( &other == &earthing || other.removed || other.file != earthing.file || other.data.end != "split" ) { continue; }
+        scene_earthing const before { other };
+        assemble_earthing( other );
+        earthing_spans( before );
+        earthing_spans( other );
+    }
     return true;
 }
 
@@ -4355,10 +4652,59 @@ void
 catenary_earthing_remove( std::size_t const Index ) {
     if( Index >= Earthings.size() || Earthings[ Index ].removed ) { return; }
     auto &earthing { Earthings[ Index ] };
+    scene_earthing const old { earthing };
     earthing.removed = true;
     mark_changed( earthing.file );
     assemble_earthing( earthing );
-    earthing_spans( earthing );
+    earthing_spans( old );
+    // sekcja przed nią traci punkt izolujący
+    for( auto &other : Earthings ) {
+        if( other.removed || other.file != earthing.file || other.data.end != "split" ) { continue; }
+        scene_earthing const before { other };
+        assemble_earthing( other );
+        earthing_spans( before );
+        earthing_spans( other );
+    }
+}
+
+bool
+catenary_earthing_route( std::string const &File, std::string const &From, std::string const &To, std::vector<std::string> &Names, std::vector<double> &Distances ) {
+    Names.clear();
+    Distances.clear();
+    auto const path { earthing_route( earthing_graph( File ),
+        earthing_pole( suspension_named( File, From ) ), earthing_pole( suspension_named( File, To ) ) ) };
+    auto distance { 0.0 };
+    for( std::size_t k = 0; k < path.size(); ++k ) {
+        if( k > 0 ) { distance += earthing_plan_distance( path[ k - 1 ], path[ k ] ); }
+        Names.push_back( Suspensions[ path[ k ] ].data.name );
+        Distances.push_back( distance );
+    }
+    return Names.size() >= 2;
+}
+
+std::vector<std::string>
+catenary_earthing_poles( std::size_t const Index ) {
+    std::vector<std::string> names;
+    if( Index >= Earthings.size() || Earthings[ Index ].removed ) { return names; }
+    for( auto const standing : Earthings[ Index ].path ) { names.push_back( Suspensions[ standing ].data.name ); }
+    return names;
+}
+
+double
+catenary_earthing_length( std::size_t const Index ) {
+    return ( Index < Earthings.size() && false == Earthings[ Index ].removed ? Earthings[ Index ].length : 0.0 );
+}
+
+int
+catenary_earthing_of( std::size_t const Suspension ) {
+    if( Suspension >= Suspensions.size() ) { return -1; }
+    auto const standing { earthing_pole( Suspension ) };
+    for( std::size_t k = 0; k < Earthings.size(); ++k ) {
+        auto const &earthing { Earthings[ k ] };
+        if( earthing.removed || earthing.file != Suspensions[ Suspension ].file ) { continue; }
+        if( std::find( earthing.path.begin(), earthing.path.end(), standing ) != earthing.path.end() ) { return static_cast<int>( k ); }
+    }
+    return -1;
 }
 
 std::string
@@ -4366,7 +4712,12 @@ catenary_earthing_holder_text( std::size_t const Index, std::string const &Pole 
     if( Index >= Earthings.size() || Earthings[ Index ].removed ) { return {}; }
     auto const &earthing { Earthings[ Index ] };
     earthing_place place;
-    if( false == earthing_place_of( suspension_named( earthing.file, Pole ), earthing.data.holder( Pole ), place ) ) { return "! " + place.problem; }
+    auto const standing { earthing_pole( suspension_named( earthing.file, Pole ) ) };
+    if( earthing.anchored.count( standing ) ) {
+        auto const &kind { earthing.path.front() == standing ? earthing.data.start : earthing.data.end };
+        return ( kind == "anchor" ? "13-0491" : "13-0492" );
+    }
+    if( false == earthing_place_of( standing, earthing_holder_of( earthing, standing ), place ) ) { return "! " + place.problem; }
     std::string text;
     for( auto const &part : place.parts ) { text += ( text.empty() ? "" : " + " ) + part.part; }
     return text;

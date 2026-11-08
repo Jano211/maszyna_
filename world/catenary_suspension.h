@@ -193,10 +193,17 @@ struct earthing_holder {
     bool plain() const { return false == arm && false == away && raise == 0.0; }
 };
 
+// sekcja uszynienia grupowego (Jan 2026-11-09): "from <podwieszenie> to <podwieszenie>" - słupy pomiędzy wyznacza exe po przęsłach
+// łańcuchów (wstawiony / usunięty słup łańcucha sam wchodzi do sekcji); "start" / "end" - rodzaj końca: anchor (kotwienie z izolacją
+// 13-0491), plain (bez izolacji 13-0492), split (punkt izolujący 13-0493 w przęśle do następnej sekcji); brak - lina kończy się
+// na uchwycie. Stary zapis "poles <lista>" (słupy wprost) dalej czytany
 struct earthing {
     std::string name;
     double      range_max { 1000.0 };
     double      range_min { 0.0 };
+    std::string from, to;                   // sekcja: pierwszy i ostatni słup (puste - lista "poles")
+    std::string start, end;                 // rodzaje końców: anchor, plain, split albo puste
+    bool section() const { return false == from.empty() && false == to.empty(); }
     std::vector<std::string> poles;
     std::vector<earthing_holder> holders;   // tylko słupy z ustawieniami innymi niż domyślne
     std::string skin;

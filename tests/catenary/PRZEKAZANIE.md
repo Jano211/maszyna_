@@ -2,7 +2,45 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – 2026-11-08 wieczór (najnowsze)
+## START TUTAJ – 2026-11-09 noc (najnowsze): sekcje uszynienia grupowego
+
+**Papiery (przejrzane 09.11):** tom 2 (`z- KATALOG 2 -z.pdf`) s. 90–94 dział 0800: 13-0805 (uchwyt 6120 na wspornikach, wyk. 1 1611
+C120–160, 2 C160–200, 4 bramki/przestrzenne, 7 słup 1665), 13-0806 (wysięgnik 6130: wyk. 1 1611 i 1665-1/2 → 6130-1, wyk. 2 1665-3 →
+6130-2, wyk. 3 1665-4 → 6130-3; lina 900 od czoła, ~130 pod górą wysięgnika wys. 900 – czyli ~0,77 nad mocowaniem; ręczne dopiski: 1611-5
+wyk. 2 ze śrubą M16×260, 1611-17/1611-7 rozstaw otworów +10 mm), 13-0807 (6840 na dźwigarze), s. 112 13-0885 przyłącza (linka 9822-7
+1–3 m, zacisk 5630-8 na linie, końcówka 6160-8 na konstrukcji). Przewód: AFL 120 (wszędzie na kartach), linki do konstrukcji ≥ 95 AFL.
+Tom 1 s. 139–141: 13-0491 kotwienie z izolacją (4430-1, 7150-1, 4720-1, 4420-1, 5180-7 + 9915-1 0,70 m), 13-0492 bez izolacji,
+13-0493 punkt izolujący (5180-7, 7150-1, 5180-7). Iet-106 (PLK): sekcja ok. 3 km (±0,5), co najmniej 2 obwody torowe; ograniczniki
+niskonapięciowe na końcach sekcji ≥ 3 m nad główką, najdalej na 3. konstrukcji od końca, na przemian do szyn, nie na słupie granicznym,
+cudzych na słupie nie montować; rezystancja sekcji ≤ 2 Ω. Naciągu ani zwisu nigdzie nie ma.
+Betony i stare 150x/160x mają inne wysięgniki („przewód wzmacniający” – użytkownik nie wie, czy to to samo) – na razie bez uszynienia.
+
+**Zrobione 09.11 (w exe NIESPRAWDZONE):**
+- Wpis sekcji: `earthing from <podw.> to <podw.> [start anchor|plain|split] [end ...] [holder ...] endearthing` – słupy pomiędzy liczy exe
+  najkrótszą drogą po przęsłach łańcuchów pliku (graf słupów stawiających słup, `earthing_graph` / `earthing_route`), trasa w
+  `scene_earthing.path` (przy składaniu). Zmiana łańcucha (add/update/remove) → `refresh_earthings(plik)`: sekcje, którym zmieniła
+  się trasa, od nowa (wstawiony słup sam wchodzi). Po wczytaniu pliku – wszystkie sekcje od nowa (przed łańcuchami trasy nie ma).
+  Stary zapis `poles …` dalej działa. Przenoszenie do innego pliku przemianowuje też from/to.
+- Końce: `anchor` 13-0491 / `plain` 13-0492 – zamiast uchwytu łańcuch części od słupu (pół szerokości słupa od punktu liny w stronę
+  sąsiedniego słupu sekcji, celuje w jego punkt liny), lina kończy się na końcu łańcucha; `split` 13-0493 – na środku przęsła do pierwszego
+  słupu sekcji, która zaczyna się `split` na sąsiednim słupie (opuszczony o strzałkę zwisu), lina w dwóch kawałkach do łańcucha.
+- Lina: wpis `earthing_line AFL120 diameter 0.0155 mass 0.494 tension 200 guide … chain anchor|plain|split … endearthing_line`
+  w traction_supports.txt; zwis = m·g·L²/(8·H) (parabola), promień z średnicy. Średnica/masa jak przewód 120/20 (ZAŁOŻENIE),
+  naciąg 200 daN (użytkownik 08.11). Części łańcuchów biegną w -X modelu jak w kotwieniach sieci; `~` = część odwrócona.
+- 5180-07 (model 09.11): długość w łańcuchu do `wire_1` (0,14724), `guide` = wire_1..wire_3 – zawinięcie końca liny rysowane rurką
+  (`scene_earthing.tails`). Użytkownik pisał o 4 punktach wire – w modelu są 3 (sprawdzić, czy czwarty nie wypadł przy eksporcie).
+- Edytor (zakładka Uszynienie): „Uszynienie wzdłuż szlaku” – klik pierwszy i ostatni słup → trasa, długość sekcji (3000 m), końce
+  odcinka (0492/0491), między sekcjami (0493 / 0491 na obu słupach) → „Utwórz sekcje” (cięcie przy słupach najbliższych równym
+  odcinkom, min. 2 słupy). Lista sekcji: słupy, km, części, ostrzeżenie > 3,5 km, rodzaje końców, „Granica < / >” (o słup, razem
+  z następną sekcją), „Połącz z następną”, „Podziel na pół”, „Usuń”. Klik słupa: jego sekcja i ustawienia uchwytu (6120/6130, od toru,
+  wysokość). Stare klikanie słupów po kolei i „Wzdłuż łańcucha” usunięte.
+- Test `te` 6a6 (dwie sekcje po 3 słupy, 0492 + 0493 + 0491, wstawienie słupa do łańcucha).
+
+**Do zrobienia / pytania:** granica sekcji w terenie – 0493 czy dwa 0491 (użytkownik nie wie; oba w edytorze); ograniczniki (miejsca
+z Iet-106, modeli brak); przyłącza 0885 (użytkownik: „te linki od liny do słupa?” – do ustalenia, gdzie rysować); 6840 na bramkach
+(trasa po łańcuchach nie zna jeszcze zwisów bramek jako słupów uszynienia); kolorowanie sekcji w widoku (Widok → Sieć trakcyjna) – nie ma.
+
+## START TUTAJ – 2026-11-08 wieczór
 
 **Wysięgnik przewodu uszyniającego 6130 (karta 0806) + ustawienia uchwytów uszynienia (w exe NIESPRAWDZONE):**
 - Modele użytkownika (08.11): `6130` sam wysięgnik (tekstura `used\lpn`, LOD0–1, nie może być w jednym pliku z mocowaniem),

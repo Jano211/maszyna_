@@ -12747,3 +12747,87 @@ msgstr "Od toru"
 
 msgid "Default"
 msgstr "Domyślnie"
+
+msgid "Earthing from %s: LMB the last pole of the run"
+msgstr "Uszynienie od %s: LPM ostatni słup odcinka"
+
+msgid "No way along the chains from %s to %s"
+msgstr "Brak drogi po łańcuchach od %s do %s"
+
+msgid "The way: %zu poles, %.2f km - set the sections and make them"
+msgstr "Trasa: %zu słupów, %.2f km – ustaw sekcje i utwórz je"
+
+msgid "%zu earthing sections over %.2f km"
+msgstr "%zu sekcji uszynienia na %.2f km"
+
+msgid "Group earthing: the rope over the tops of the poles in sections of about 3 km. Click the first and the last pole of the run, the way goes along the chains and is cut into sections"
+msgstr "Uszynienie grupowe: lina po wierzchach słupów w sekcjach po ok. 3 km. Kliknij pierwszy i ostatni słup odcinka – trasa idzie po łańcuchach i jest dzielona na sekcje"
+
+msgid "Give up (Esc)"
+msgstr "Porzuć (Esc)"
+
+msgid "Earthing along the line: click the first and the last pole"
+msgstr "Uszynienie wzdłuż szlaku: kliknij pierwszy i ostatni słup"
+
+msgid "LMB the first pole of the run"
+msgstr "LPM pierwszy słup odcinka"
+
+msgid "Anchoring 13-0492 (no insulation)"
+msgstr "Kotwienie 13-0492 (bez izolacji)"
+
+msgid "Anchoring 13-0491 (with insulation)"
+msgstr "Kotwienie 13-0491 (z izolacją)"
+
+msgid "Insulating point 13-0493 in the span"
+msgstr "Punkt izolujący 13-0493 w przęśle"
+
+msgid "Anchorings 13-0491 on both poles"
+msgstr "Kotwienia 13-0491 na obu słupach"
+
+msgid "%s - %s: %zu poles, %.2f km"
+msgstr "%s – %s: %zu słupów, %.2f km"
+
+msgid "Section length"
+msgstr "Długość sekcji"
+
+msgid "Ends of the run"
+msgstr "Końce odcinka"
+
+msgid "Between sections"
+msgstr "Między sekcjami"
+
+msgid "Make %ld sections"
+msgstr "Utwórz sekcje: %ld"
+
+msgid "Pole %s: no earthing goes over it"
+msgstr "Słup %s: nie idzie przez niego żadne uszynienie"
+
+msgid "Pole %s in section %s: %s"
+msgstr "Słup %s w sekcji %s: %s"
+
+msgid "LMB a pole: its section and the holder on it"
+msgstr "LPM słup: jego sekcja i uchwyt na nim"
+
+msgid "%s: %zu poles, %.2f km, %zu parts (%s)"
+msgstr "%s: %zu słupów, %.2f km, części %zu (%s)"
+
+msgid "longer than 3.5 km"
+msgstr "dłuższa niż 3,5 km"
+
+msgid "Boundary <"
+msgstr "Granica <"
+
+msgid "Boundary >"
+msgstr "Granica >"
+
+msgid "Join with the next"
+msgstr "Połącz z następną"
+
+msgid "Split in half"
+msgstr "Podziel na pół"
+
+msgid "Click: the first or the last pole of the earthing run"
+msgstr "Klik: pierwszy albo ostatni słup odcinka uszynienia"
+
+msgid "Group earthing: the rope over the tops of the poles in sections of about 3 km (cards 0805-0807)"
+msgstr "Uszynienie grupowe: lina po wierzchach słupów w sekcjach po ok. 3 km (karty 0805–0807)"
