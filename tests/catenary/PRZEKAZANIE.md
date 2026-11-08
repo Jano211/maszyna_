@@ -12,8 +12,11 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   0,223 / 0,243 / 0,263. Wpis `earthing_arm 6130 … endearthing_arm` w traction_supports.txt, słup bierze go kluczem
   `earthing_arm 6130` (dopisane do wszystkich z 6120: 161x i dwuteowniki 166x; betony nie). Wysięgnik w zerze i obrocie mocowania.
 - Tekstury (08.11 23:17): wszystkie 5 modeli 6130 ma już mapę -1. Mocowania i tył biorą teksturę osprzętu (jak 6120), sam
-  wysięgnik – `skin lpn` z wpisu: nazwa pliku podmieniona w katalogu tekstury osprzętu (`siec_trakcyjna/used/siec` →
-  `siec_trakcyjna/used/lpn`; warianty lpn są w new/used/old/extreme, domyślny `siec_trakcyjna/siec` → stary `siec_trakcyjna/lpn`).
+  wysięgnik – `skin lpn` z wpisu: „siec” na początku nazwy tekstury osprzętu zamienione na „lpn”, dopisek zużycia zostaje
+  (`siec_trakcyjna/siec` → `siec_trakcyjna/lpn`, `siec_trakcyjna/siec_used` → `siec_trakcyjna/lpn_used`). Tekstury lpn
+  przeniesione 08.11 na wzór 161x: `siec_trakcyjna/lpn_{new,used,old,extreme}.tga` + `.mat`, normalki i specgloss w
+  `normals/lpn_<zużycie>_normal|_specgloss`, bez AO (stare podfoldery new/used/old/extreme zostały – użytkownik usunie sam).
+  Osprzęt `siec` nie ma jeszcze wariantów zużycia, więc domyślnie wysięgnik bierze stary `siec_trakcyjna/lpn` – PYTANIE do użytkownika.
 - Użytkownik 08.11: wysięgnik w modelu jest 10 cm za niski względem karty – poprawi model; wtedy poprawić `wire` (Z) we wpisie.
 - Wpis uszynienia: `holder <podwieszenie> [arm] [away] [raise <m>]` za listą słupów (tylko słupy z ustawieniami ≠ domyślne).
   `away` – uchwyt / wysięgnik na tylnej ścianie, obrócony od toru (wszystkie części i punkt liny obrócone o 180° wokół osi słupa);

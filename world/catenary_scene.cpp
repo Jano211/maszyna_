@@ -2809,11 +2809,14 @@ assemble_earthing( scene_earthing &Earthing ) {
             auto const *placement { &item };
             if( placement->part.empty() ) { continue; }
             auto const part { catenary::cantilever_to_scene( *placement, place.heading ) };
-            // sam wysięgnik 6130 na swojej teksturze: ten sam katalog wariantu co osprzęt, inna nazwa pliku
+            // sam wysięgnik 6130 na swojej teksturze: nazwa pliku tekstury osprzętu z "siec" na początku zamienionym na nazwę z wpisu,
+            // dopisek zużycia zostaje (siec_trakcyjna/siec -> siec_trakcyjna/lpn, siec_trakcyjna/siec_used -> siec_trakcyjna/lpn_used)
             auto partskin { skin };
             if( placement->role == "earthing_arm" && false == place.arm_skin.empty() ) {
                 auto const slash { partskin.find_last_of( "/\\" ) };
-                partskin = ( slash == std::string::npos ? std::string() : partskin.substr( 0, slash + 1 ) ) + place.arm_skin;
+                auto const folder { slash == std::string::npos ? std::string() : partskin.substr( 0, slash + 1 ) };
+                auto const file { slash == std::string::npos ? partskin : partskin.substr( slash + 1 ) };
+                partskin = folder + place.arm_skin + ( file.compare( 0, 4, "siec" ) == 0 ? file.substr( 4 ) : std::string() );
             }
             auto const entry {
                 "node " + text_number( Earthing.data.range_max, 1 ) + " " + text_number( Earthing.data.range_min, 1 ) + " none model 0 0 0 0 "
