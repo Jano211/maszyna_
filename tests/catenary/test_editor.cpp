@@ -636,7 +636,7 @@ int main( int, char *argv[] ) {
         // tekstury: wysięgnik lpn w katalogu tekstury osprzętu, mocowanie osprzęt
         for( auto i { from }; i < simulation::State.created.size(); ++i ) {
             auto const &entry6130 { simulation::State.created[ i ].entry };
-            if( entry6130.find( "components/6130.t3d " ) != std::string::npos ) { good6130 = good6130 && entry6130.find( ".t3d siec_trakcyjna/lpn " ) != std::string::npos; }
+            if( entry6130.find( "components/6130.t3d " ) != std::string::npos ) { good6130 = good6130 && entry6130.find( ".t3d siec_trakcyjna/lpn_used " ) != std::string::npos; }
             if( entry6130.find( "components/6130-01.t3d " ) != std::string::npos ) { good6130 = good6130 && entry6130.find( ".t3d siec_trakcyjna/siec " ) != std::string::npos; }
         }
         // za głęboko (śruby za krótkie): 3 m w dół - 0,237 m, wystarcza 6130-02

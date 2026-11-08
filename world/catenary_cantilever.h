@@ -180,7 +180,8 @@ struct earthing_arm {
     double wire[ 3 ] { 0.0, 0.0, 0.0 }; // punkt liny względem zera mocowania
     double plate { 0.0 };               // połowa wysokości płyty mocowania (zero mocowania najwyżej tyle pod wierzchem słupa)
     std::string skin;                   // nazwa pliku tekstury samego wysięgnika (mapa -1): wstawiana w miejsce nazwy pliku tekstury
-                                        // osprzętu, w tym samym katalogu wariantu (siec_trakcyjna/used/siec -> siec_trakcyjna/used/lpn)
+                                        // osprzętu, dopisek zużycia zostaje (siec_trakcyjna/siec_used -> siec_trakcyjna/lpn_used)
+    std::string skin_default;           // tekstura wysięgnika przy teksturze osprzętu bez dopisku zużycia (sama "siec"), np. lpn_used
     std::vector<std::pair<std::string, double>> mounts; // mocowanie i największa głębokość słupa, na którą wystarcza śrub (rosnąco)
     // mocowanie na słup o tej głębokości; puste - śruby za krótkie
     std::string mount_for( double const Depth ) const {

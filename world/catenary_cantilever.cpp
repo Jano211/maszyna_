@@ -287,6 +287,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 else if( key == "wire" ) { for( auto &value : arm.wire ) { number( value, good ); } }
                 else if( key == "plate" ) { number( arm.plate, good ); }
                 else if( key == "skin" ) { if( index < count ) { arm.skin = Tokens[ index++ ]; } else { good = false; } }
+                else if( key == "skin_default" ) { if( index < count ) { arm.skin_default = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "mount" ) {
                     std::pair<std::string, double> mount;
                     if( index < count ) { mount.first = Tokens[ index++ ]; } else { good = false; }
