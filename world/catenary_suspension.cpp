@@ -217,9 +217,10 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                         auto const &flag { Tokens[ index ] };
                         if( flag == "arm" ) { holder.arm = true; ++index; }
                         else if( flag == "away" ) { holder.away = true; ++index; }
-                        else if( flag == "raise" && index + 1 < count ) {
-                            try { holder.raise = std::stod( Tokens[ index + 1 ] ); }
-                            catch( ... ) { report( line.name, "bad \"raise\" value \"" + Tokens[ index + 1 ] + "\" of holder " + holder.pole ); good = false; }
+                        else if( flag == "nojumper" ) { holder.nojumper = true; ++index; }
+                        else if( ( flag == "raise" || flag == "shift" ) && index + 1 < count ) {
+                            try { ( flag == "raise" ? holder.raise : holder.shift ) = std::stod( Tokens[ index + 1 ] ); }
+                            catch( ... ) { report( line.name, "bad \"" + flag + "\" value \"" + Tokens[ index + 1 ] + "\" of holder " + holder.pole ); good = false; }
                             index += 2;
                         }
                         else { break; }
@@ -538,6 +539,8 @@ std::string write_earthing( earthing const &Entry ) {
         if( holder.arm ) { text += " arm"; }
         if( holder.away ) { text += " away"; }
         if( holder.raise != 0.0 ) { text += " raise " + number( std::round( holder.raise * 1000.0 ) / 1000.0 ); }
+        if( holder.shift != 0.0 ) { text += " shift " + number( std::round( holder.shift * 1000.0 ) / 1000.0 ); }
+        if( holder.nojumper ) { text += " nojumper"; }
     }
     return text + " endearthing";
 }

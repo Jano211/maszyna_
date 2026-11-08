@@ -4984,22 +4984,45 @@ void catenary_editor::render_catenary_earthing_ui()
 			holder.pole = pole;
 			ImGui::TextUnformatted(format(STR_C("Pole %s in section %s: %s"), pole.c_str(), data.name.c_str(), catenary_earthing_holder_text(static_cast<std::size_t>(section), pole).c_str()).c_str());
 			auto changed{false};
-			auto arm{holder.arm ? 1 : 0};
-			char const *kinds[]{STR_C("Holder 6120"), STR_C("Earthing arm 6130")};
-			ImGui::SetNextItemWidth(170.0f);
-			if (ImGui::Combo("##earthing_kind", &arm, kinds, 2))
+			auto const *catalog{catenary_scene_catalog()};
+			auto const *type{catalog != nullptr && selected->has_pole ? catalog->pole(selected->pole_type) : nullptr};
+			if (type != nullptr && false == type->drop.empty())
 			{
-				holder.arm = (arm == 1);
-				changed = true;
+				// a drop of a gantry: holder 6840 on the top of the beam (card 13-0807), moved along the beam
+				auto shift{static_cast<float>(holder.shift)};
+				ImGui::SetNextItemWidth(170.0f);
+				if (ImGui::SliderFloat(STR_C("Along the beam"), &shift, -5.0f, 5.0f, "%+.2f m"))
+				{
+					holder.shift = std::round(shift * 100.0f) / 100.0;
+					changed = true;
+				}
 			}
-			ImGui::SameLine();
-			changed |= ImGui::Checkbox(STR_C("Away from the track"), &holder.away);
-			auto raise{static_cast<float>(holder.raise)};
-			ImGui::SetNextItemWidth(170.0f);
-			if (ImGui::SliderFloat(STR_C("Height"), &raise, -3.0f, 0.5f, "%+.2f m"))
+			else
 			{
-				holder.raise = std::round(raise * 100.0f) / 100.0;
-				changed = true;
+				auto arm{holder.arm ? 1 : 0};
+				char const *kinds[]{STR_C("Holder 6120"), STR_C("Earthing arm 6130")};
+				ImGui::SetNextItemWidth(170.0f);
+				if (ImGui::Combo("##earthing_kind", &arm, kinds, 2))
+				{
+					holder.arm = (arm == 1);
+					changed = true;
+				}
+				ImGui::SameLine();
+				changed |= ImGui::Checkbox(STR_C("Away from the track"), &holder.away);
+				auto raise{static_cast<float>(holder.raise)};
+				ImGui::SetNextItemWidth(170.0f);
+				if (ImGui::SliderFloat(STR_C("Height"), &raise, -3.0f, 0.5f, "%+.2f m"))
+				{
+					holder.raise = std::round(raise * 100.0f) / 100.0;
+					changed = true;
+				}
+				ImGui::SameLine();
+				auto jumper{false == holder.nojumper};
+				if (ImGui::Checkbox(STR_C("Connection 13-0885"), &jumper))
+				{
+					holder.nojumper = (false == jumper);
+					changed = true;
+				}
 			}
 			ImGui::SameLine();
 			if (ImGui::SmallButton(STR_C("Default")))

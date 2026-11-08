@@ -207,6 +207,15 @@ struct earthing_line {
     std::map<std::string, std::vector<earthing_link>> chains;
     // prowadzenie liny przez część (5180-07: punkty wire_1..3 modelu, od wejścia liny w zacisk do końca zawinięcia) - x y z w układzie modelu
     std::map<std::string, std::vector<std::array<double, 3>>> guides;
+    // uchwyt na dźwigarze bramki (13-0807): część, zero na górze dźwigara = zero zwisu + top, punkt liny względem zera części
+    std::string gantry_part;
+    double gantry_top { 0.90 };
+    double gantry_wire[ 3 ] { 0.0, 0.0, 0.0 };
+    // przyłącze 13-0885 (linka od liny do konstrukcji): średnica, zacisk na linie "along" od uchwytu w stronę przęsła, końcówka na
+    // czole konstrukcji "drop" pod punktem liny
+    double jumper_diameter { 0.0 };
+    double jumper_along { 0.5 };
+    double jumper_drop { 0.8 };
     // strzałka zwisu przęsła o rozpiętości Span (m)
     double sag( double const Span ) const { return ( tension > 0.0 ? mass * 9.81 * Span * Span / ( 8.0 * tension * 10.0 ) : 0.0 ); }
     std::vector<earthing_link> const *chain( std::string const &Kind ) const {

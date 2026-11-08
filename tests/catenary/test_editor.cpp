@@ -660,6 +660,8 @@ int main( int, char *argv[] ) {
         line.name = "ng"; line.power = "pwr01"; line.type = "C120-2C"; line.suspensions = { "g1", "g2", "g3", "g4", "g5", "g6" };
         catenary::earthing first, second;
         first.name = "us1"; first.from = "g1"; first.to = "g3"; first.start = "plain"; first.end = "split";
+        catenary::earthing_holder off; off.pole = "g2"; off.nojumper = true; off.shift = 0.25;
+        first.set_holder( off );
         second.name = "us2"; second.from = "g4"; second.to = "g6"; second.start = "split"; second.end = "anchor";
         std::string text;
         for( auto const &item : poles ) { text += catenary::write_suspension( item ) + "\n"; }

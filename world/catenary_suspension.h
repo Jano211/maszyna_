@@ -185,12 +185,16 @@ struct gantry {
 // ustawienia uchwytu na jednym słupie (wpis "holder <podwieszenie> [arm] [away] [raise <m>]" za listą słupów, tylko dla słupów,
 // które coś zmieniają; Jan 2026-11-08): arm - wysięgnik przewodu uszyniającego 6130 (karta 0806) zamiast uchwytu 6120, away - uchwyt
 // albo wysięgnik obrócony od toru (na tylnej ścianie słupa), raise - przesunięcie w pionie od położenia domyślnego (ujemne w dół)
+// shift - zwis bramki: przesunięcie uchwytu 6840 wzdłuż dźwigara od osi zwisu (Jan 2026-11-09); nojumper - bez przyłącza 13-0885
+// (linki od liny do konstrukcji; domyślnie na każdym słupie)
 struct earthing_holder {
     std::string pole;
     bool        arm { false };
     bool        away { false };
     double      raise { 0.0 };
-    bool plain() const { return false == arm && false == away && raise == 0.0; }
+    double      shift { 0.0 };
+    bool        nojumper { false };
+    bool plain() const { return false == arm && false == away && raise == 0.0 && shift == 0.0 && false == nojumper; }
 };
 
 // sekcja uszynienia grupowego (Jan 2026-11-09): "from <podwieszenie> to <podwieszenie>" - słupy pomiędzy wyznacza exe po przęsłach

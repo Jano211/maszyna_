@@ -36,6 +36,14 @@ Betony i stare 150x/160x mają inne wysięgniki („przewód wzmacniający” �
   wysokość). Stare klikanie słupów po kolei i „Wzdłuż łańcucha” usunięte.
 - Test `te` 6a6 (dwie sekcje po 3 słupy, 0492 + 0493 + 0491, wstawienie słupa do łańcucha).
 
+**Dalej 09.11 (00:15):** przyłącza 13-0885 rysowane na każdym słupie sekcji (linka-rurka od zacisku na linie 0,5 m od uchwytu w stronę
+przęsła do końcówki na czole słupa 0,8 m pod liną, AFL 95 Ø13,5 – ZAŁOŻENIA, modeli 5630-8 / 6160-8 brak), wyłączane na słupie
+(`holder <słup> nojumper`, w edytorze „Przyłącze 13-0885”). 6840: użytkownik – „trzeba ręcznie dokładać i podłączać do reszty”.
+Zrobione tak: zwis bramki na trasie sekcji (trasa po łańcuchach idzie przez zwisy) dostaje uchwyt 6840-01 na górze dźwigara (zero zwisu
++ 0,90, punkt `line` 0,131), przesuwany wzdłuż dźwigara (`holder <zwis> shift <m>`, edytor „Wzdłuż dźwigara”); bez przyłącza.
+NIE zrobione: 6840 na bramce, przez której zwisy trasa nie idzie (np. lina wzdłuż innego toru) – do ustalenia z użytkownikiem,
+czy o to chodziło z „ręcznym dokładaniem”.
+
 **Do zrobienia / pytania:** granica sekcji w terenie – 0493 czy dwa 0491 (użytkownik nie wie; oba w edytorze); ograniczniki (miejsca
 z Iet-106, modeli brak); przyłącza 0885 (użytkownik: „te linki od liny do słupa?” – do ustalenia, gdzie rysować); 6840 na bramkach
 (trasa po łańcuchach nie zna jeszcze zwisów bramek jako słupów uszynienia); kolorowanie sekcji w widoku (Widok → Sieć trakcyjna) – nie ma.
