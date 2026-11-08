@@ -2637,6 +2637,7 @@ struct earthing_place {
     glm::dvec3 origin { 0.0 };
     glm::dvec3 wire { 0.0 };                      // punkt liny we współrzędnych scenerii
     std::string problem;                          // czemu się nie da (do logu i edytora)
+    std::string arm_skin;                         // wysięgnik 6130: nazwa pliku jego tekstury (w katalogu tekstury osprzętu)
 };
 
 // słup podwieszenia jako jeden słup w terenie (Jan 2026-10-30: na słupie z kilkoma wysięgnikami jeden uchwyt, obrócony jak słup):
@@ -2726,7 +2727,9 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
         front.part = mount;
         Place.parts.push_back( front );
         auto body { front };
+        body.role = "earthing_arm";
         body.part = arm->name;
+        Place.arm_skin = arm->skin;
         Place.parts.push_back( body );
         if( false == arm->back.empty() ) {
             auto back { front };
@@ -2806,9 +2809,15 @@ assemble_earthing( scene_earthing &Earthing ) {
             auto const *placement { &item };
             if( placement->part.empty() ) { continue; }
             auto const part { catenary::cantilever_to_scene( *placement, place.heading ) };
+            // sam wysięgnik 6130 na swojej teksturze: ten sam katalog wariantu co osprzęt, inna nazwa pliku
+            auto partskin { skin };
+            if( placement->role == "earthing_arm" && false == place.arm_skin.empty() ) {
+                auto const slash { partskin.find_last_of( "/\\" ) };
+                partskin = ( slash == std::string::npos ? std::string() : partskin.substr( 0, slash + 1 ) ) + place.arm_skin;
+            }
             auto const entry {
                 "node " + text_number( Earthing.data.range_max, 1 ) + " " + text_number( Earthing.data.range_min, 1 ) + " none model 0 0 0 0 "
-                + catalog->models() + placement->part + ".t3d " + skin
+                + catalog->models() + placement->part + ".t3d " + partskin
                 + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) + " endmodel" };
             glm::dvec3 const position { place.origin.x + part.offset[ 0 ], place.origin.y + part.offset[ 1 ], place.origin.z + part.offset[ 2 ] };
             if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
