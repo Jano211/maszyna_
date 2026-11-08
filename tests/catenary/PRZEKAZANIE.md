@@ -16,7 +16,7 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   (`siec_trakcyjna/siec` → `siec_trakcyjna/lpn`, `siec_trakcyjna/siec_used` → `siec_trakcyjna/lpn_used`). Tekstury lpn
   przeniesione 08.11 na wzór 161x: `siec_trakcyjna/lpn_{new,used,old,extreme}.tga` + `.mat`, normalki i specgloss w
   `normals/lpn_<zużycie>_normal|_specgloss`, bez AO (stare podfoldery new/used/old/extreme zostały – użytkownik usunie sam).
-  Osprzęt `siec` nie ma jeszcze wariantów zużycia, więc domyślnie wysięgnik bierze stary `siec_trakcyjna/lpn` – PYTANIE do użytkownika.
+  Osprzęt `siec` nie ma jeszcze wariantów zużycia – przy samym `siec` wysięgnik bierze `lpn_used` (`skin_default`, użytkownik 08.11).
 - Użytkownik 08.11: wysięgnik w modelu jest 10 cm za niski względem karty – poprawi model; wtedy poprawić `wire` (Z) we wpisie.
 - Wpis uszynienia: `holder <podwieszenie> [arm] [away] [raise <m>]` za listą słupów (tylko słupy z ustawieniami ≠ domyślne).
   `away` – uchwyt / wysięgnik na tylnej ścianie, obrócony od toru (wszystkie części i punkt liny obrócone o 180° wokół osi słupa);

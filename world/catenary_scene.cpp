@@ -2638,6 +2638,7 @@ struct earthing_place {
     glm::dvec3 wire { 0.0 };                      // punkt liny we współrzędnych scenerii
     std::string problem;                          // czemu się nie da (do logu i edytora)
     std::string arm_skin;                         // wysięgnik 6130: nazwa pliku jego tekstury (w katalogu tekstury osprzętu)
+    std::string arm_skin_default;                 // i ta przy teksturze osprzętu bez dopisku zużycia
 };
 
 // słup podwieszenia jako jeden słup w terenie (Jan 2026-10-30: na słupie z kilkoma wysięgnikami jeden uchwyt, obrócony jak słup):
@@ -2730,6 +2731,7 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
         body.role = "earthing_arm";
         body.part = arm->name;
         Place.arm_skin = arm->skin;
+        Place.arm_skin_default = arm->skin_default;
         Place.parts.push_back( body );
         if( false == arm->back.empty() ) {
             auto back { front };
@@ -2816,7 +2818,9 @@ assemble_earthing( scene_earthing &Earthing ) {
                 auto const slash { partskin.find_last_of( "/\\" ) };
                 auto const folder { slash == std::string::npos ? std::string() : partskin.substr( 0, slash + 1 ) };
                 auto const file { slash == std::string::npos ? partskin : partskin.substr( slash + 1 ) };
-                partskin = folder + place.arm_skin + ( file.compare( 0, 4, "siec" ) == 0 ? file.substr( 4 ) : std::string() );
+                partskin = ( file == "siec" && false == place.arm_skin_default.empty() )
+                    ? folder + place.arm_skin_default    // osprzęt bez wariantów zużycia: wysięgnik w wariancie domyślnym (lpn_used)
+                    : folder + place.arm_skin + ( file.compare( 0, 4, "siec" ) == 0 ? file.substr( 4 ) : std::string() );
             }
             auto const entry {
                 "node " + text_number( Earthing.data.range_max, 1 ) + " " + text_number( Earthing.data.range_min, 1 ) + " none model 0 0 0 0 "
