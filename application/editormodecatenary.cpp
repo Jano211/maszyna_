@@ -4956,7 +4956,55 @@ void catenary_editor::render_catenary_earthing_ui()
 		ImGui::TextUnformatted(format(STR_C("%s: %zu poles, %zu holders (%s)"), earthing->name.c_str(), earthing->poles.size(), catenary_earthing_parts(index), catenary_earthing_file(index).c_str()).c_str());
 		ImGui::SameLine();
 		if (ImGui::SmallButton(STR_C("Remove")))
+		{
 			catenary_earthing_remove(index);
+			ImGui::PopID();
+			continue;
+		}
+		// per pole: holder 6120 or earthing arm 6130 (card 0806), towards / away from the track, height
+		if (ImGui::TreeNode(STR_C("Holders on the poles")))
+		{
+			auto data{*earthing};
+			auto changed{false};
+			for (std::size_t k = 0; k < data.poles.size(); ++k)
+			{
+				auto const &name{data.poles[k]};
+				auto holder{data.holder(name)};
+				ImGui::PushID(static_cast<int>(k));
+				ImGui::TextUnformatted(name.c_str());
+				ImGui::SameLine();
+				ImGui::TextDisabled("%s", catenary_earthing_holder_text(index, name).c_str());
+				auto arm{holder.arm ? 1 : 0};
+				ImGui::SetNextItemWidth(170.0f);
+				char const *kinds[]{STR_C("Holder 6120"), STR_C("Earthing arm 6130")};
+				if (ImGui::Combo("##kind", &arm, kinds, 2))
+				{
+					holder.arm = (arm == 1);
+					changed = true;
+				}
+				ImGui::SameLine();
+				changed |= ImGui::Checkbox(STR_C("Away from the track"), &holder.away);
+				auto raise{static_cast<float>(holder.raise)};
+				ImGui::SetNextItemWidth(170.0f);
+				if (ImGui::SliderFloat(STR_C("Height"), &raise, -3.0f, 0.5f, "%+.2f m"))
+				{
+					holder.raise = std::round(raise * 100.0f) / 100.0;
+					changed = true;
+				}
+				ImGui::SameLine();
+				if (ImGui::SmallButton(STR_C("Default")))
+				{
+					holder = catenary::earthing_holder();
+					holder.pole = name;
+					changed = true;
+				}
+				data.set_holder(holder);
+				ImGui::PopID();
+			}
+			if (changed)
+				catenary_earthing_update(index, data);
+			ImGui::TreePop();
+		}
 		ImGui::PopID();
 	}
 }

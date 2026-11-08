@@ -1,6 +1,8 @@
 // Sieć trakcyjna: wpisy podwieszeń (wysięgniki, zwisy, podwieszenia na bramkach) z pliku dołączanego dyrektywą "catenary"
 // oraz rejestr konstrukcji wsporczych. Kod niezależny od reszty symulatora (C++17, tylko biblioteka standardowa).
 #pragma once
+
+#include <algorithm>
 #include <map>
 #include <string>
 #include <utility>
@@ -180,12 +182,34 @@ struct gantry {
 // uszynienie grupowe (karta 0805, Jan 2026-10-25): lina uszynienia po konstrukcjach wsporczych, niezależna od sieci. Wpis
 // "node <max> <min> <nazwa> earthing poles <podwieszenia> endearthing": na słupach tych podwieszeń (po kolei) uchwyty 6120 na górze
 // słupa (wykonanie z danych słupa - "earthing" w traction_supports.txt), lina przez ich punkty "wire"
+// ustawienia uchwytu na jednym słupie (wpis "holder <podwieszenie> [arm] [away] [raise <m>]" za listą słupów, tylko dla słupów,
+// które coś zmieniają; Jan 2026-11-08): arm - wysięgnik przewodu uszyniającego 6130 (karta 0806) zamiast uchwytu 6120, away - uchwyt
+// albo wysięgnik obrócony od toru (na tylnej ścianie słupa), raise - przesunięcie w pionie od położenia domyślnego (ujemne w dół)
+struct earthing_holder {
+    std::string pole;
+    bool        arm { false };
+    bool        away { false };
+    double      raise { 0.0 };
+    bool plain() const { return false == arm && false == away && raise == 0.0; }
+};
+
 struct earthing {
     std::string name;
     double      range_max { 1000.0 };
     double      range_min { 0.0 };
     std::vector<std::string> poles;
+    std::vector<earthing_holder> holders;   // tylko słupy z ustawieniami innymi niż domyślne
     std::string skin;
+    // ustawienia uchwytu na słupie (podwieszeniu) o tej nazwie; domyślne, gdy nie ma wpisu
+    earthing_holder holder( std::string const &Pole ) const {
+        for( auto const &item : holders ) { if( item.pole == Pole ) { return item; } }
+        earthing_holder plain; plain.pole = Pole; return plain;
+    }
+    // zapisuje ustawienia słupa (domyślne usuwają wpis)
+    void set_holder( earthing_holder const &Holder ) {
+        holders.erase( std::remove_if( holders.begin(), holders.end(), [ & ]( earthing_holder const &H ) { return H.pole == Holder.pole; } ), holders.end() );
+        if( false == Holder.plain() ) { holders.push_back( Holder ); }
+    }
 };
 
 // zawartość pliku podwieszeń

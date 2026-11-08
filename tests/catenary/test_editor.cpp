@@ -605,6 +605,39 @@ int main( int, char *argv[] ) {
         good = good && catenary_earthing_update( 0, shorter ) && catenary_earthing_parts( 0 ) == 2;
         std::remove( "tests/catenary/td_uszynienie_test.scm" );
         check( good, "uszynienie grupowe: zapis i odczyt, uchwyty 6120-01 na slupach 1611-11, edycja" );
+
+        // 6a4b. ustawienia na słupie: wysięgnik 6130 (karta 0806) na e2, od toru na e3, regulacja wysokości; zapis i odczyt
+        auto custom { *catenary_earthing_get( 0 ) };
+        custom.poles = { "e1", "e2", "e3" };
+        catenary::earthing_holder arm; arm.pole = "e2"; arm.arm = true; arm.raise = -0.5;
+        catenary::earthing_holder away; away.pole = "e3"; away.away = true;
+        custom.set_holder( arm ); custom.set_holder( away );
+        auto const line6130 { catenary::write_earthing( custom ) };
+        std::vector<std::string> words6130; std::istringstream stream6130 { line6130 };
+        for( std::string word; stream6130 >> word; ) { words6130.push_back( word ); }
+        catenary::suspension_file reread; std::vector<std::string> problems6130;
+        catenary::parse_suspensions( words6130, "uszynienie", reread, problems6130 );
+        auto good6130 { problems6130.empty() && reread.earthings.size() == 1 && catenary::write_earthing( reread.earthings.front() ) == line6130 };
+        auto const from { simulation::State.created.size() };
+        good6130 = good6130 && catenary_earthing_update( 0, custom );
+        std::map<std::string, std::string> made;
+        for( auto i { from }; i < simulation::State.created.size(); ++i ) {
+            auto const &entry6130 { simulation::State.created[ i ].entry };
+            for( auto const *name : { "6120-01", "6130-01", "6130-02", "6130-03", "6130-00", "6130" } ) {
+                if( entry6130.find( std::string( "components/" ) + name + ".t3d" ) != std::string::npos ) { made[ name ] = entry6130.substr( entry6130.find( " angles " ) ); }
+            }
+        }
+        // 1611-11: głębokość u góry 0,200, 0,0122 m/m; wysięgnik 0,5 m niżej niż domyślnie - nadal 6130-01
+        std::printf( "  uszynienie z 6130: %s | czesci %zu | e2: %s | e3: %s\n", line6130.c_str(), catenary_earthing_parts( 0 ),
+            catenary_earthing_holder_text( 0, "e2" ).c_str(), catenary_earthing_holder_text( 0, "e3" ).c_str() );
+        for( auto const &item : made ) { std::printf( "    %s%s\n", item.first.c_str(), item.second.c_str() ); }
+        good6130 = good6130 && made.count( "6130-01" ) && made.count( "6130" ) && made.count( "6130-00" ) && made.count( "6120-01" )
+            && catenary_earthing_parts( 0 ) == 5 && made[ "6130-01" ] == made[ "6130" ] && made[ "6130-00" ] != made[ "6130-01" ];
+        // za głęboko (śruby za krótkie): 3 m w dół - 0,237 m, wystarcza 6130-02
+        arm.raise = -3.0; custom.set_holder( arm );
+        good6130 = good6130 && catenary_earthing_update( 0, custom ) && catenary_earthing_holder_text( 0, "e2" ).find( "6130-02" ) == 0;
+        std::printf( "    e2 trzy metry nizej: %s\n", catenary_earthing_holder_text( 0, "e2" ).c_str() );
+        check( good6130, "uszynienie: wysiegnik 6130 z mocowaniem wg glebokosci slupa, tyl 6130-00 obrocony, uchwyt od toru, wysokosc; zapis i odczyt" );
     }
 
     // 6a5. uszynienie przez słup z kilkoma wysięgnikami (para rozstawionych + trzeci w osi słupa): jeden uchwyt na słup, obrócony

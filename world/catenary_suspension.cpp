@@ -201,7 +201,24 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 if( key == "endearthing" ) { closed = true; break; }
                 if( key == "node" ) { --index; break; }
                 if( key == "poles" ) {
-                    while( index < count && Tokens[ index ] != "endearthing" && Tokens[ index ] != "node" && Tokens[ index ] != "skin" ) { line.poles.push_back( Tokens[ index++ ] ); }
+                    while( index < count && Tokens[ index ] != "endearthing" && Tokens[ index ] != "node" && Tokens[ index ] != "skin" && Tokens[ index ] != "holder" ) { line.poles.push_back( Tokens[ index++ ] ); }
+                }
+                else if( key == "holder" && index < count ) {
+                    earthing_holder holder;
+                    holder.pole = Tokens[ index++ ];
+                    while( index < count ) {
+                        auto const &flag { Tokens[ index ] };
+                        if( flag == "arm" ) { holder.arm = true; ++index; }
+                        else if( flag == "away" ) { holder.away = true; ++index; }
+                        else if( flag == "raise" && index + 1 < count ) {
+                            try { holder.raise = std::stod( Tokens[ index + 1 ] ); }
+                            catch( ... ) { report( line.name, "bad \"raise\" value \"" + Tokens[ index + 1 ] + "\" of holder " + holder.pole ); good = false; }
+                            index += 2;
+                        }
+                        else { break; }
+                    }
+                    if( std::find( line.poles.begin(), line.poles.end(), holder.pole ) == line.poles.end() ) { report( line.name, "holder of pole \"" + holder.pole + "\", which isn't on the earthing" ); }
+                    else { line.set_holder( holder ); }
                 }
                 else if( key == "skin" && index < count ) { line.skin = Tokens[ index++ ]; }
                 else { report( line.name, "unexpected token \"" + key + "\" in an earthing" ); good = false; }
@@ -498,6 +515,13 @@ std::string write_earthing( earthing const &Entry ) {
     if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
     text += " poles";
     for( auto const &name : Entry.poles ) { text += " " + name; }
+    for( auto const &holder : Entry.holders ) {
+        if( holder.plain() ) { continue; }
+        text += " holder " + holder.pole;
+        if( holder.arm ) { text += " arm"; }
+        if( holder.away ) { text += " away"; }
+        if( holder.raise != 0.0 ) { text += " raise " + number( std::round( holder.raise * 1000.0 ) / 1000.0 ); }
+    }
     return text + " endearthing";
 }
 

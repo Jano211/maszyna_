@@ -2,7 +2,25 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – 2026-11-07 po południu (najnowsze)
+## START TUTAJ – 2026-11-08 wieczór (najnowsze)
+
+**Wysięgnik przewodu uszyniającego 6130 (karta 0806) + ustawienia uchwytów uszynienia (w exe NIESPRAWDZONE):**
+- Modele użytkownika (08.11): `6130` sam wysięgnik (tekstura `used\lpn`, LOD0–1, nie może być w jednym pliku z mocowaniem),
+  `6130-00` tył mocowania (stawiany na tylnej ścianie, obrót 180°), `6130-01/02/03` mocowania (punkt `wire` 0 / −0,8 / 0,65,
+  płyta X ±0,15 Z ±0,088, śruby na X ±0,11 kończą się w Y 0,253 / 0,273 / 0,293). Karta „burdel” – przymiarka do słupów:
+  mocowanie wg głębokości słupa na wysokości śrub, koniec śruby ≥ głębokość + tył z nakrętką 0,025 + 0,005 → max głębokość
+  0,223 / 0,243 / 0,263. Wpis `earthing_arm 6130 … endearthing_arm` w traction_supports.txt, słup bierze go kluczem
+  `earthing_arm 6130` (dopisane do wszystkich z 6120: 161x i dwuteowniki 166x; betony nie). Wysięgnik w zerze i obrocie mocowania.
+- Użytkownik 08.11: wysięgnik w modelu jest 10 cm za niski względem karty – poprawi model; wtedy poprawić `wire` (Z) we wpisie.
+- Wpis uszynienia: `holder <podwieszenie> [arm] [away] [raise <m>]` za listą słupów (tylko słupy z ustawieniami ≠ domyślne).
+  `away` – uchwyt / wysięgnik na tylnej ścianie, obrócony od toru (wszystkie części i punkt liny obrócone o 180° wokół osi słupa);
+  `raise` – przesunięcie od wysokości domyślnej (mount_max + 0,075), ogranicznik: wierzch słupa − 0,02 (6120) / − plate (6130).
+  Edytor: zakładka Uszynienie → „Uchwyty na słupach” (rodzaj, Od toru, Wysokość −3…+0,5 m, Domyślnie) + podgląd części / błędu.
+  Test w `te` (6a4b). Nazwy słupów w `holder` przemianowywane razem z listą przy przenoszeniu do innego pliku.
+- PYTANIE otwarte: `6120-08` (tył do dwuteowników) ma płytę w −Y i śruby do +0,293 – tak jak 6130-00, który wymaga obrotu 180°;
+  stawiany jest bez obrotu. Sprawdzić w exe, czy nie wystaje do tyłu (jeśli tak – obracać jak 6130-00).
+
+## START TUTAJ – 2026-11-07 po południu
 
 **Zrobione 07.11 po południu:**
 - Przełączniki Widok > Sieć trakcyjna zapisywane w ustawieniach edytora (`catenary_view name=0/1;…` w editorSettings; zmiana

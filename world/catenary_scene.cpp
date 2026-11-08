@@ -2632,11 +2632,11 @@ double const kEarthingWire[ 3 ] { 0.0099, -0.0497, 0.1042 };
 double constexpr kEarthingRadius { 0.0045 };
 
 struct earthing_place {
-    std::string part, back;
-    catenary::cantilever_placement front, rear;   // w układzie wysięgnika słupa, zero w osi słupa na główce szyny
+    std::vector<catenary::cantilever_placement> parts; // w układzie wysięgnika słupa, zero w osi słupa na główce szyny
     double heading { 0.0 };
     glm::dvec3 origin { 0.0 };
     glm::dvec3 wire { 0.0 };                      // punkt liny we współrzędnych scenerii
+    std::string problem;                          // czemu się nie da (do logu i edytora)
 };
 
 // słup podwieszenia jako jeden słup w terenie (Jan 2026-10-30: na słupie z kilkoma wysięgnikami jeden uchwyt, obrócony jak słup):
@@ -2659,43 +2659,108 @@ earthing_pole( std::size_t const Suspension ) {
     return best != Suspensions.size() ? best : shared;
 }
 
+// ustawienia uchwytu na słupie Standing z listy uszynienia (wpis, który go wymienia; kilka wpisów jednego słupa - pierwszy z ustawieniami)
+catenary::earthing_holder
+earthing_holder_of( scene_earthing const &Earthing, std::size_t const Standing ) {
+    catenary::earthing_holder found;
+    auto first { true };
+    for( auto const &name : Earthing.data.poles ) {
+        if( earthing_pole( suspension_named( Earthing.file, name ) ) != Standing ) { continue; }
+        auto const holder { Earthing.data.holder( name ) };
+        if( first || false == holder.plain() ) { found = holder; }
+        first = false;
+        if( false == holder.plain() ) { break; }
+    }
+    return found;
+}
+
+// obrót o 180 stopni wokół pionu (osi słupa): układ wysięgnika słupa (położenie i osie części)
+void
+earthing_turn_around( catenary::cantilever_placement &Placement ) {
+    Placement.position[ 0 ] = -Placement.position[ 0 ];
+    Placement.position[ 1 ] = -Placement.position[ 1 ];
+    for( int column = 0; column < 3; ++column ) {
+        Placement.rotation[ 0 + column ] = -Placement.rotation[ 0 + column ];
+        Placement.rotation[ 3 + column ] = -Placement.rotation[ 3 + column ];
+    }
+}
+
+// uchwyt 6120 (karta 0805) albo wysięgnik przewodu uszyniającego 6130 (karta 0806) na słupie podwieszenia z ustawieniami Holder
 bool
-earthing_place_of( std::size_t const Suspension, earthing_place &Place ) {
+earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const &Holder, earthing_place &Place ) {
     auto const *catalog { cantilevers() };
     auto const standing { earthing_pole( Suspension ) };
-    if( catalog == nullptr || standing >= Suspensions.size() ) { return false; }
+    if( catalog == nullptr || standing >= Suspensions.size() ) { Place.problem = "no pole"; return false; }
     auto const &data { Suspensions[ standing ].data };
     auto const *pole { data.has_pole && data.has_at ? catalog->pole( data.pole_type ) : nullptr };
-    if( pole == nullptr || pole->earthing.empty() ) { return false; }
+    if( pole == nullptr ) { Place.problem = "no pole"; return false; }
+    auto const *arm { Holder.arm && false == pole->earthing_arm.empty() ? catalog->earthing_arm( pole->earthing_arm ) : nullptr };
+    if( Holder.arm && arm == nullptr ) { Place.problem = "pole " + data.pole_type + " takes no earthing arm (6130)"; return false; }
+    if( false == Holder.arm && pole->earthing.empty() ) { Place.problem = "pole " + data.pole_type + " carries no earthing holder (6120)"; return false; }
     // obrót słupa: płaszczyzna wysięgnika, który go stawia; przy rozstawionych przez punkt na konsoli (słup stoi równolegle do niej,
     // przesunięty wzdłuż toru), nie od przewodu do osi słupa
     auto const *toward { data.has_spread ? data.spread : data.pole };
     auto const towardx { toward[ 0 ] - data.at[ 0 ] }, towardz { toward[ 2 ] - data.at[ 2 ] };
-    if( towardx * towardx + towardz * towardz < 0.01 ) { return false; }
+    if( towardx * towardx + towardz * towardz < 0.01 ) { Place.problem = "no direction"; return false; }
     Place.heading = std::atan2( towardx, towardz );
     Place.origin = { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
-    auto height { pole->mount_max > 0.0 ? pole->mount_max + kEarthingMargin : pole->top - 0.10 };
-    if( pole->top > 0.0 ) { height = std::min( height, pole->top - 0.02 ); }
-    auto const face { -0.5 * pole->depth( height ) };
-    Place.part = pole->earthing;
-    Place.back = pole->earthing_back;
-    Place.front = catenary::cantilever_placement();
-    Place.front.role = "earthing";
-    Place.front.part = pole->earthing;
-    Place.front.position[ 1 ] = face;
-    Place.front.position[ 2 ] = height;
-    Place.rear = Place.front;
-    Place.rear.part = pole->earthing_back;
-    Place.rear.position[ 1 ] = face + pole->depth( height );
-    catenary::cantilever_placement wire { Place.front };
-    wire.position[ 0 ] += kEarthingWire[ 0 ];
-    wire.position[ 1 ] += kEarthingWire[ 1 ];
-    wire.position[ 2 ] += kEarthingWire[ 2 ];
+    // wysokość domyślna: w połowie marginesu 0,15 m nad najwyższym mocowaniem (ZAŁOŻENIE: 0,075 m nad mount_max), plus regulacja
+    // z edytora; nie wyżej niż wierzch słupa (wysięgnik: płyta mocowania cała na słupie)
+    auto height { ( pole->mount_max > 0.0 ? pole->mount_max + kEarthingMargin : pole->top - 0.10 ) + Holder.raise };
+    if( pole->top > 0.0 ) { height = std::min( height, pole->top - ( arm != nullptr ? arm->plate : 0.02 ) ); }
+    auto const depth { pole->depth( height ) };
+    auto const face { -0.5 * depth };
+    Place.parts.clear();
+    catenary::cantilever_placement front;
+    front.role = "earthing";
+    front.position[ 1 ] = face;
+    front.position[ 2 ] = height;
+    catenary::cantilever_placement wire { front };
+    if( arm != nullptr ) {
+        // mocowanie wg głębokości słupa na wysokości śrub (długość śrub), wysięgnik w tym samym zerze, tył obrócony o 180 stopni
+        auto const mount { arm->mount_for( depth ) };
+        if( mount.empty() ) {
+            Place.problem = "the bolts of " + arm->name + " are too short for pole " + data.pole_type + " (" + std::to_string( static_cast<int>( depth * 1000.0 + 0.5 ) ) + " mm deep there)";
+            return false;
+        }
+        front.part = mount;
+        Place.parts.push_back( front );
+        auto body { front };
+        body.part = arm->name;
+        Place.parts.push_back( body );
+        if( false == arm->back.empty() ) {
+            auto back { front };
+            back.part = arm->back;
+            back.position[ 1 ] = face + depth;
+            back.rotation[ 0 ] = -1.0;
+            back.rotation[ 4 ] = -1.0;
+            Place.parts.push_back( back );
+        }
+        for( int axis = 0; axis < 3; ++axis ) { wire.position[ axis ] += arm->wire[ axis ]; }
+    }
+    else {
+        front.part = pole->earthing;
+        Place.parts.push_back( front );
+        if( false == pole->earthing_back.empty() ) {
+            auto back { front };
+            back.part = pole->earthing_back;
+            back.position[ 1 ] = face + depth;
+            Place.parts.push_back( back );
+        }
+        for( int axis = 0; axis < 3; ++axis ) { wire.position[ axis ] += kEarthingWire[ axis ]; }
+    }
+    // od toru: wszystko obrócone wokół osi słupa (uchwyt / wysięgnik na tylnej ścianie, patrzy od toru)
+    if( Holder.away ) {
+        for( auto &placement : Place.parts ) { earthing_turn_around( placement ); }
+        earthing_turn_around( wire );
+    }
     // przechylony słup: uchwyt na jego szczycie idzie z nim
     if( data.lean != 0.0 && data.umbrella.empty() && false == data.shared_pole ) {
         auto const angle { data.lean * 3.14159265358979323846 / 180.0 };
         auto const c { std::cos( angle ) }, s { std::sin( angle ) };
-        for( auto *placement : { &Place.front, &Place.rear, &wire } ) {
+        std::vector<catenary::cantilever_placement *> all { &wire };
+        for( auto &placement : Place.parts ) { all.push_back( &placement ); }
+        for( auto *placement : all ) {
             auto const y { placement->position[ 1 ] }, z { placement->position[ 2 ] };
             placement->position[ 1 ] = c * y - s * z;
             placement->position[ 2 ] = s * y + c * z;
@@ -2733,11 +2798,12 @@ assemble_earthing( scene_earthing &Earthing ) {
             done.push_back( standing );
         }
         earthing_place place;
-        if( false == earthing_place_of( index, place ) ) {
-            WriteLog( ( "Catenary: earthing \"" + Earthing.data.name + "\" goes over \"" + name + "\", whose pole carries no earthing holder (6120)" ).c_str() );
+        if( false == earthing_place_of( index, Earthing.data.holder( name ), place ) ) {
+            WriteLog( ( "Catenary: earthing \"" + Earthing.data.name + "\" goes over \"" + name + "\": " + place.problem ).c_str() );
             continue;
         }
-        for( auto const *placement : { &place.front, &place.rear } ) {
+        for( auto const &item : place.parts ) {
+            auto const *placement { &item };
             if( placement->part.empty() ) { continue; }
             auto const part { catenary::cantilever_to_scene( *placement, place.heading ) };
             auto const entry {
@@ -2784,7 +2850,8 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
         for( std::size_t k = 0; k + 1 < poles.size(); ++k ) {
             if( false == ( ( poles[ k ] == a && poles[ k + 1 ] == b ) || ( poles[ k ] == b && poles[ k + 1 ] == a ) ) ) { continue; }
             earthing_place first, second;
-            if( false == earthing_place_of( poles[ k ], first ) || false == earthing_place_of( poles[ k + 1 ], second ) ) { continue; }
+            if( false == earthing_place_of( poles[ k ], earthing_holder_of( earthing, poles[ k ] ), first )
+             || false == earthing_place_of( poles[ k + 1 ], earthing_holder_of( earthing, poles[ k + 1 ] ), second ) ) { continue; }
             auto const length { glm::length( second.wire - first.wire ) };
             std::vector<glm::dvec3> points;
             for( int step = 0; step <= 24; ++step ) {
@@ -3918,6 +3985,7 @@ catenary_scene_move( std::size_t const Index, std::string const &File, bool cons
     for( auto const e : earthings ) {
         rename( Earthings[ e ].data.name, earthing_names );
         for( auto &name : Earthings[ e ].data.poles ) { rename( name, suspension_names ); }
+        for( auto &holder : Earthings[ e ].data.holders ) { rename( holder.pole, suspension_names ); }
         Earthings[ e ].file = File;
     }
     mark_changed( source );
@@ -4275,6 +4343,17 @@ catenary_earthing_remove( std::size_t const Index ) {
     mark_changed( earthing.file );
     assemble_earthing( earthing );
     earthing_spans( earthing );
+}
+
+std::string
+catenary_earthing_holder_text( std::size_t const Index, std::string const &Pole ) {
+    if( Index >= Earthings.size() || Earthings[ Index ].removed ) { return {}; }
+    auto const &earthing { Earthings[ Index ] };
+    earthing_place place;
+    if( false == earthing_place_of( suspension_named( earthing.file, Pole ), earthing.data.holder( Pole ), place ) ) { return "! " + place.problem; }
+    std::string text;
+    for( auto const &part : place.parts ) { text += ( text.empty() ? "" : " + " ) + part.part; }
+    return text;
 }
 
 std::string

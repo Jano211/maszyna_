@@ -12732,3 +12732,18 @@ msgstr "Rzeźbienie: metry na sekundę w środku pędzla; wygładzanie, poziomow
 
 msgid "Brush: radius %.1f m, strength %.2f"
 msgstr "Pędzel: promień %.1f m, siła %.2f"
+
+msgid "Holders on the poles"
+msgstr "Uchwyty na słupach"
+
+msgid "Holder 6120"
+msgstr "Uchwyt 6120"
+
+msgid "Earthing arm 6130"
+msgstr "Wysięgnik 6130"
+
+msgid "Away from the track"
+msgstr "Od toru"
+
+msgid "Default"
+msgstr "Domyślnie"

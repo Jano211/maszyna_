@@ -140,6 +140,7 @@ struct cantilever_pole {
     // puste - słup go nie nosi (betony 1701/1711)
     std::string earthing;
     std::string earthing_back;
+    std::string earthing_arm;           // wysięgnik przewodu uszyniającego (wpis "earthing_arm", karta 0806), który pasuje do słupa; pusty - żaden
     // słup bramki z wysięgnikiem (zrobiony z wpisu "mast" z mocowaniami): model stawia bramka, nie wysięgnik; mount_max pod
     // dźwigarem bramki liczy sceneria wg jej poziomu (mast_low/mast_high minus below_beam), tu - pod dolnym mocowaniem
     bool   gantry { false };
@@ -168,6 +169,22 @@ struct cantilever_mount {
     // punkt zaczepu izolatora względem zera mocowania
     double attach_y() const { return point[ 0 ] + hinge_eye[ 0 ]; }
     double attach_z() const { return point[ 1 ] + hinge_eye[ 1 ]; }
+};
+
+// wysięgnik przewodu uszyniającego (karta 0806, modele Jana 2026-11-08): sam wysięgnik (osobna tekstura, mało faz LOD) stoi w tym
+// samym zerze i obrocie co jego mocowanie; mocowanie dobierane wg głębokości słupa na wysokości śrub (długość śrub), tył po drugiej
+// stronie słupa obrócony o 180 stopni. Układ jak w mocowaniach: zero na płaszczyźnie przylegania, słup w +Y, Z w górę
+struct earthing_arm {
+    std::string name;                   // model samego wysięgnika
+    std::string back;                   // tył mocowania (płaskownik z nakrętkami)
+    double wire[ 3 ] { 0.0, 0.0, 0.0 }; // punkt liny względem zera mocowania
+    double plate { 0.0 };               // połowa wysokości płyty mocowania (zero mocowania najwyżej tyle pod wierzchem słupa)
+    std::vector<std::pair<std::string, double>> mounts; // mocowanie i największa głębokość słupa, na którą wystarcza śrub (rosnąco)
+    // mocowanie na słup o tej głębokości; puste - śruby za krótkie
+    std::string mount_for( double const Depth ) const {
+        for( auto const &mount : mounts ) { if( Depth <= mount.second + 1e-6 ) { return mount.first; } }
+        return {};
+    }
 };
 
 // jeden klocek sposobu składania: słowo kluczowe i jego argumenty, jak w pliku danych
@@ -237,6 +254,7 @@ public:
     cantilever_scheme const *scheme( int Card, int Execution ) const;
     cantilever_pole const *pole( std::string const &Name ) const;
     cantilever_mount const *mount( std::string const &Name ) const;
+    catenary::earthing_arm const *earthing_arm( std::string const &Name ) const;
     cantilever_assembly const *assembly( std::string const &Name ) const;
     // karta z tej samej dziesiątki co Card, której pasmo A obejmuje podaną odległość; nullptr gdy żadna
     cantilever_scheme const *scheme_for_reach( int Card, int Execution, double Reach ) const;
@@ -266,6 +284,7 @@ private:
     std::map<std::pair<int, int>, cantilever_scheme> m_schemes;
     std::map<std::string, cantilever_pole> m_poles;
     std::map<std::string, cantilever_mount> m_mounts;
+    std::map<std::string, catenary::earthing_arm> m_earthing_arms;
     std::map<std::string, cantilever_assembly> m_assemblies;
     std::map<std::string, gantry_mast> m_masts;
     std::map<std::string, gantry_beam> m_beams;
