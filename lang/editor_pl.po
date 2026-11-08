@@ -12831,3 +12831,9 @@ msgstr "Klik: pierwszy albo ostatni słup odcinka uszynienia"
 
 msgid "Group earthing: the rope over the tops of the poles in sections of about 3 km (cards 0805-0807)"
 msgstr "Uszynienie grupowe: lina po wierzchach słupów w sekcjach po ok. 3 km (karty 0805–0807)"
+
+msgid "Along the beam"
+msgstr "Wzdłuż dźwigara"
+
+msgid "Connection 13-0885"
+msgstr "Przyłącze 13-0885"

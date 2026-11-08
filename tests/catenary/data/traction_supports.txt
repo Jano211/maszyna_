@@ -81,8 +81,14 @@ mount 4690-05 console 0.785 -0.785 0.0 back 4690-06 endmount
 //   anchor 13-0491 (z izolacja), plain 13-0492 (bez), split 13-0493 (punkt izolujacy w przesle: od strony slupa konca sekcji).
 //   5180-07 (zacisk odciagowy konca liny, model 2026-11-09): dlugosc do punktu wire_1 (wejscie liny w zacisk); guide = punkty wire_1..
 //   wire_3 modelu - lina wchodzi w wire_1 i przez kolejne punkty zawija sie do konca w zacisku.
+//   gantry = uchwyt na dzwigarze bramki 13-0807 na zwisach bramek w trasie sekcji: zero na gorze dzwigara (zero zwisu + top 0,90 z kart),
+//   punkt liny "line" modelu 6840-01; przesuwany wzdluz dzwigara ustawieniem slupa (shift).
+//   jumper = przylacze 13-0885 na kazdym slupie (chyba ze wylaczone - nojumper): linka AFL 95 (srednica 13,5 mm ZALOZONA), zacisk na
+//   linie 0,5 m od uchwytu w strone przesla, koncowka na czole slupa 0,8 m pod lina (ZALOZENIA, modeli 5630-8 / 6160-8 brak - sama linka).
 earthing_line AFL120 diameter 0.0155 mass 0.494 tension 200
   guide 5180-07 -0.14724 0.0 -0.00227 -0.07392 0.0 -0.03375 -0.04314 0.00006 -0.07688
+  gantry 6840-01 top 0.90 wire 0.0 0.0 0.131
+  jumper diameter 0.0135 along 0.5 drop 0.8
   chain anchor 4430-01 0.0747 7150-01 0.8324 4720-01 0.10 4420-01 0.93 5180-07 0.14724
   chain plain 4430-01 0.0747 4420-01 0.93 5180-07 0.14724
   chain split 5180-07~ 0.14724 7150-01 0.8324 5180-07 0.14724

@@ -287,6 +287,19 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 if( key == "diameter" ) { number( line.diameter, good ); }
                 else if( key == "mass" ) { number( line.mass, good ); }
                 else if( key == "tension" ) { number( line.tension, good ); }
+                else if( key == "gantry" ) {
+                    // gantry <część> top <m> wire <x> <y> <z>
+                    if( index < count ) { line.gantry_part = Tokens[ index++ ]; } else { good = false; }
+                    if( index < count && Tokens[ index ] == "top" ) { ++index; number( line.gantry_top, good ); }
+                    if( index < count && Tokens[ index ] == "wire" ) { ++index; for( auto &value : line.gantry_wire ) { number( value, good ); } }
+                }
+                else if( key == "jumper" ) {
+                    // jumper diameter <m> along <m> drop <m>
+                    while( index + 1 < count && ( Tokens[ index ] == "diameter" || Tokens[ index ] == "along" || Tokens[ index ] == "drop" ) ) {
+                        auto const which { Tokens[ index++ ] };
+                        number( which == "diameter" ? line.jumper_diameter : which == "along" ? line.jumper_along : line.jumper_drop, good );
+                    }
+                }
                 else if( key == "guide" ) {
                     // guide <część> x y z [x y z ...]
                     std::string part;

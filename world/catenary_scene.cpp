@@ -2647,6 +2647,8 @@ struct earthing_place {
     std::string problem;                          // czemu się nie da (do logu i edytora)
     std::string arm_skin;                         // wysięgnik 6130: nazwa pliku jego tekstury (w katalogu tekstury osprzętu)
     std::string arm_skin_default;                 // i ta przy teksturze osprzętu bez dopisku zużycia
+    bool has_lug { false };                       // przyłącze 13-0885: końcówka na czole konstrukcji (scenerii); zwis bramki - bez
+    glm::dvec3 lug { 0.0 };
 };
 
 // słup podwieszenia jako jeden słup w terenie (Jan 2026-10-30: na słupie z kilkoma wysięgnikami jeden uchwyt, obrócony jak słup):
@@ -2712,9 +2714,13 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     auto const &data { Suspensions[ standing ].data };
     auto const *pole { data.has_pole && data.has_at ? catalog->pole( data.pole_type ) : nullptr };
     if( pole == nullptr ) { Place.problem = "no pole"; return false; }
-    auto const *arm { Holder.arm && false == pole->earthing_arm.empty() ? catalog->earthing_arm( pole->earthing_arm ) : nullptr };
-    if( Holder.arm && arm == nullptr ) { Place.problem = "pole " + data.pole_type + " takes no earthing arm (6130)"; return false; }
-    if( false == Holder.arm && pole->earthing.empty() ) { Place.problem = "pole " + data.pole_type + " carries no earthing holder (6120)"; return false; }
+    // zwis bramki: uchwyt 13-0807 na górze dźwigara nad zwisem (przesuwany wzdłuż dźwigara)
+    auto const *line { catalog->earthing_line() };
+    auto const ongantry { false == pole->drop.empty() };
+    if( ongantry && ( line == nullptr || line->gantry_part.empty() ) ) { Place.problem = "no gantry holder (6840) in the data"; return false; }
+    auto const *arm { false == ongantry && Holder.arm && false == pole->earthing_arm.empty() ? catalog->earthing_arm( pole->earthing_arm ) : nullptr };
+    if( false == ongantry && Holder.arm && arm == nullptr ) { Place.problem = "pole " + data.pole_type + " takes no earthing arm (6130)"; return false; }
+    if( false == ongantry && false == Holder.arm && pole->earthing.empty() ) { Place.problem = "pole " + data.pole_type + " carries no earthing holder (6120)"; return false; }
     // obrót słupa: płaszczyzna wysięgnika, który go stawia; przy rozstawionych przez punkt na konsoli (słup stoi równolegle do niej,
     // przesunięty wzdłuż toru), nie od przewodu do osi słupa
     auto const *toward { data.has_spread ? data.spread : data.pole };
@@ -2726,6 +2732,7 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     // z edytora; nie wyżej niż wierzch słupa (wysięgnik: płyta mocowania cała na słupie)
     auto height { ( pole->mount_max > 0.0 ? pole->mount_max + kEarthingMargin : pole->top - 0.10 ) + Holder.raise };
     if( pole->top > 0.0 ) { height = std::min( height, pole->top - ( arm != nullptr ? arm->plate : 0.02 ) ); }
+    if( ongantry ) { height = line->gantry_top + std::max( 0.0, Holder.raise ); }   // zero zwisu to zero dźwigara
     auto const depth { pole->depth( height ) };
     auto const face { -0.5 * depth };
     Place.parts.clear();
@@ -2734,7 +2741,14 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     front.position[ 1 ] = face;
     front.position[ 2 ] = height;
     catenary::cantilever_placement wire { front };
-    if( arm != nullptr ) {
+    if( ongantry ) {
+        front.part = line->gantry_part;
+        front.position[ 1 ] = Holder.shift;
+        Place.parts.push_back( front );
+        wire = front;
+        for( int axis = 0; axis < 3; ++axis ) { wire.position[ axis ] += line->gantry_wire[ axis ]; }
+    }
+    else if( arm != nullptr ) {
         // mocowanie wg głębokości słupa na wysokości śrub (długość śrub), wysięgnik w tym samym zerze, tył obrócony o 180 stopni
         auto const mount { arm->mount_for( depth ) };
         if( mount.empty() ) {
@@ -2770,16 +2784,23 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
         }
         for( int axis = 0; axis < 3; ++axis ) { wire.position[ axis ] += kEarthingWire[ axis ]; }
     }
+    // przyłącze 13-0885: końcówka na czole konstrukcji pod punktem liny (zwis bramki - bez)
+    catenary::cantilever_placement lug { front };
+    lug.position[ 0 ] = 0.0;
+    lug.position[ 1 ] = face;
+    lug.position[ 2 ] = wire.position[ 2 ] - ( line != nullptr ? line->jumper_drop : 0.8 );
+    Place.has_lug = false == ongantry;
     // od toru: wszystko obrócone wokół osi słupa (uchwyt / wysięgnik na tylnej ścianie, patrzy od toru)
     if( Holder.away ) {
         for( auto &placement : Place.parts ) { earthing_turn_around( placement ); }
         earthing_turn_around( wire );
+        earthing_turn_around( lug );
     }
     // przechylony słup: uchwyt na jego szczycie idzie z nim
     if( data.lean != 0.0 && data.umbrella.empty() && false == data.shared_pole ) {
         auto const angle { data.lean * 3.14159265358979323846 / 180.0 };
         auto const c { std::cos( angle ) }, s { std::sin( angle ) };
-        std::vector<catenary::cantilever_placement *> all { &wire };
+        std::vector<catenary::cantilever_placement *> all { &wire, &lug };
         for( auto &placement : Place.parts ) { all.push_back( &placement ); }
         for( auto *placement : all ) {
             auto const y { placement->position[ 1 ] }, z { placement->position[ 2 ] };
@@ -2797,6 +2818,8 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     }
     auto const part { catenary::cantilever_to_scene( wire, Place.heading ) };
     Place.wire = Place.origin + glm::dvec3 { part.offset[ 0 ], part.offset[ 1 ], part.offset[ 2 ] };
+    auto const lugpart { catenary::cantilever_to_scene( lug, Place.heading ) };
+    Place.lug = Place.origin + glm::dvec3 { lugpart.offset[ 0 ], lugpart.offset[ 1 ], lugpart.offset[ 2 ] };
     return true;
 }
 
@@ -3106,10 +3129,36 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
             if( found == earthing.tails.end() ) { return; }
             for( auto const &tail : found->second ) { if( tail.size() >= 2 ) { add_tube( Solid, tail, line_radius() ); } }
         };
+        // przyłącze 13-0885 słupa Pole: od zacisku na linie (w stronę słupa Toward) do końcówki na konstrukcji
+        auto const jumper = [ & ]( std::size_t const Pole, glm::dvec3 const &Rope, glm::dvec3 const &Toward ) {
+            auto const *catalog { cantilevers() };
+            auto const *line { catalog != nullptr ? catalog->earthing_line() : nullptr };
+            if( line == nullptr || line->jumper_diameter <= 0.0 ) { return; }
+            auto const holder { earthing_holder_of( earthing, Pole ) };
+            earthing_place place;
+            if( holder.nojumper || false == earthing_place_of( Pole, holder, place ) || false == place.has_lug ) { return; }
+            auto way { Toward - Rope };
+            way.y = 0.0;
+            if( glm::length( way ) < 0.1 ) { return; }
+            auto const clamp { Rope + glm::normalize( way ) * line->jumper_along };
+            auto const middle { ( clamp + place.lug ) * 0.5 - glm::dvec3 { 0.0, 0.08, 0.0 } };
+            std::vector<glm::dvec3> points;
+            for( int step = 0; step <= 8; ++step ) {
+                auto const t { step / 8.0 };
+                // krzywa Béziera przez środek opuszczony o 8 cm: linka luźno zwisa
+                points.push_back( clamp * ( ( 1 - t ) * ( 1 - t ) ) + middle * ( 2 * t * ( 1 - t ) ) + place.lug * ( t * t ) );
+            }
+            add_tube( Solid, points, 0.5 * line->jumper_diameter );
+        };
         for( std::size_t k = 0; k + 1 < poles.size(); ++k ) {
             if( false == ( ( poles[ k ] == a && poles[ k + 1 ] == b ) || ( poles[ k ] == b && poles[ k + 1 ] == a ) ) ) { continue; }
             glm::dvec3 first, second;
-            if( point( poles[ k ], first ) && point( poles[ k + 1 ], second ) ) { earthing_rope_piece( first, second, Solid ); }
+            if( point( poles[ k ], first ) && point( poles[ k + 1 ], second ) ) {
+                earthing_rope_piece( first, second, Solid );
+                // przyłącza: każdego słupa w przęśle za nim, ostatniego - w przęśle przed nim
+                jumper( poles[ k ], first, second );
+                if( k + 2 == poles.size() ) { jumper( poles[ k + 1 ], second, first ); }
+            }
             // zawinięcia w zaciskach kotwień końców sekcji
             if( k == 0 && earthing.anchored.count( poles[ k ] ) ) { tails( poles[ k ] ); }
             if( k + 2 == poles.size() && earthing.anchored.count( poles[ k + 1 ] ) ) { tails( poles[ k + 1 ] ); }
