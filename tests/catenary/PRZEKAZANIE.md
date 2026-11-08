@@ -37,7 +37,8 @@ Betony i stare 150x/160x mają inne wysięgniki („przewód wzmacniający” �
 - Test `te` 6a6 (dwie sekcje po 3 słupy, 0492 + 0493 + 0491, wstawienie słupa do łańcucha).
 
 **Dalej 09.11 (00:15):** przyłącza 13-0885 rysowane na każdym słupie sekcji (linka-rurka od zacisku na linie 0,5 m od uchwytu w stronę
-przęsła do końcówki na czole słupa 0,8 m pod liną, AFL 95 Ø13,5 – ZAŁOŻENIA, modeli 5630-8 / 6160-8 brak), wyłączane na słupie
+przęsła do końcówki na czole słupa 0,8 m pod liną, AFL 95 Ø13,5 – ZAŁOŻENIA, modeli 5630-8 / 6160-8 brak; 00:32 po zdjęciu
+użytkownika przerobione: zacisk 0,15 m od uchwytu, łuk 0,25 m nad zacisk i w dół w wierzch słupa przy czole – `jumper along/rise`), wyłączane na słupie
 (`holder <słup> nojumper`, w edytorze „Przyłącze 13-0885”). 6840: użytkownik – „trzeba ręcznie dokładać i podłączać do reszty”.
 Zrobione tak: zwis bramki na trasie sekcji (trasa po łańcuchach idzie przez zwisy) dostaje uchwyt 6840-01 na górze dźwigara (zero zwisu
 + 0,90, punkt `line` 0,131), przesuwany wzdłuż dźwigara (`holder <zwis> shift <m>`, edytor „Wzdłuż dźwigara”); bez przyłącza.

@@ -2784,11 +2784,12 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
         }
         for( int axis = 0; axis < 3; ++axis ) { wire.position[ axis ] += kEarthingWire[ axis ]; }
     }
-    // przyłącze 13-0885: końcówka na czole konstrukcji pod punktem liny (zwis bramki - bez)
+    // przyłącze 13-0885: końcówka na wierzchu słupa, przy jego czole (zdjęcie użytkownika 2026-11-09: linka łukiem od zacisku na linie
+    // przy uchwycie, nad wysięgnikiem, w dół w wierzch słupa); zwis bramki - bez
     catenary::cantilever_placement lug { front };
     lug.position[ 0 ] = 0.0;
-    lug.position[ 1 ] = face;
-    lug.position[ 2 ] = wire.position[ 2 ] - ( line != nullptr ? line->jumper_drop : 0.8 );
+    lug.position[ 1 ] = 0.5 * face;
+    lug.position[ 2 ] = pole->top > 0.0 ? pole->top : wire.position[ 2 ] - ( line != nullptr ? line->jumper_drop : 0.8 );
     Place.has_lug = false == ongantry;
     // od toru: wszystko obrócone wokół osi słupa (uchwyt / wysięgnik na tylnej ścianie, patrzy od toru)
     if( Holder.away ) {
@@ -3141,12 +3142,22 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
             way.y = 0.0;
             if( glm::length( way ) < 0.1 ) { return; }
             auto const clamp { Rope + glm::normalize( way ) * line->jumper_along };
-            auto const middle { ( clamp + place.lug ) * 0.5 - glm::dvec3 { 0.0, 0.08, 0.0 } };
+            // łuk jak na zdjęciu: z zacisku w górę i lekko do słupa, nad wysięgnikiem, potem prawie pionowo w dół w wierzch słupa
+            // (krzywa Béziera trzeciego stopnia); "rise" - o ile wierzchołek łuku wychodzi nad zacisk
+            auto toward { place.lug - clamp };
+            toward.y = 0.0;
+            auto const reach { glm::length( toward ) };
+            auto const across { reach > 1e-3 ? toward * ( 1.0 / reach ) : glm::dvec3 { 0.0, 0.0, 0.0 } };
+            auto const above { std::max( clamp.y, place.lug.y ) + line->jumper_rise };
+            glm::dvec3 const control[ 4 ] {
+                clamp,
+                glm::dvec3 { clamp.x, above, clamp.z } + across * ( 0.15 * reach ),
+                glm::dvec3 { place.lug.x, above, place.lug.z } - across * ( 0.05 * reach ),
+                place.lug };
             std::vector<glm::dvec3> points;
-            for( int step = 0; step <= 8; ++step ) {
-                auto const t { step / 8.0 };
-                // krzywa Béziera przez środek opuszczony o 8 cm: linka luźno zwisa
-                points.push_back( clamp * ( ( 1 - t ) * ( 1 - t ) ) + middle * ( 2 * t * ( 1 - t ) ) + place.lug * ( t * t ) );
+            for( int step = 0; step <= 16; ++step ) {
+                auto const t { step / 16.0 }, u { 1.0 - t };
+                points.push_back( control[ 0 ] * ( u * u * u ) + control[ 1 ] * ( 3.0 * u * u * t ) + control[ 2 ] * ( 3.0 * u * t * t ) + control[ 3 ] * ( t * t * t ) );
             }
             add_tube( Solid, points, 0.5 * line->jumper_diameter );
         };
