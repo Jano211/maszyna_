@@ -694,10 +694,28 @@ int main( int, char *argv[] ) {
         for( auto const &l : logs ) { if( l.find( "earthing" ) != std::string::npos ) { std::printf( "    %s\n", l.c_str() ); } }
         // us1: g1 kotwienie 0492 (4430, 4420, 5180), g2-g3 uchwyty, punkt izolujący (5180 x2, 7150); us2: g4-g5 uchwyty, g6 kotwienie 0491
         good = good && p1.size() == 3 && p2.size() == 3 && made[ "6120-01" ] == 4 && made[ "4430-01" ] == 2 && made[ "7150-01" ] == 2
-            && made[ "5180-07" ] == 4 && made[ "4720-01" ] == 1 && catenary_earthing_parts( 0 ) == 8 && catenary_earthing_parts( 1 ) == 7
+            && made[ "5180-07" ] == 4 && made[ "4720-01" ] == 1 && made[ "5100-01" ] == 2 && made[ "5100-06" ] == 2
+            && catenary_earthing_parts( 0 ) == 12 && catenary_earthing_parts( 1 ) == 11
             && std::abs( catenary_earthing_length( 0 ) - 120.0 ) < 0.01;
         // lina: przęsła g1-g2, g2-g3, g3-g4 (z izolatorem), g4-g5, g5-g6 mają bryłę liny
         good = good && catenary_earthing_holder_text( 0, "g1" ) == "13-0492" && catenary_earthing_holder_text( 1, "g6" ) == "13-0491";
+        // wysięgnik 6130 na słupie końcowym g6: kotwienie na jego końcu, bez uchwytów 5100 na słupie
+        {
+            auto withArm { *catenary_earthing_get( 1 ) };
+            catenary::earthing_holder arm; arm.pole = "g6"; arm.arm = true;
+            withArm.set_holder( arm );
+            auto const from { simulation::State.created.size() };
+            catenary_earthing_update( 1, withArm );
+            int brackets { 0 }, arms { 0 };
+            for( auto i { from }; i < simulation::State.created.size(); ++i ) {
+                auto const &e { simulation::State.created[ i ].entry };
+                brackets += ( e.find( "components/5100-" ) != std::string::npos );
+                arms += ( e.find( "components/6130.t3d" ) != std::string::npos );
+            }
+            // składa się us2 (6130 na g6, bez uchwytów) i us1 (punkt izolujący na styku; uchwyty 5100 x4 na g1)
+            std::printf( "    6130 na koncu us2: uchwytow 5100 %d, wysiegnikow %d, czesci us2 %zu\n", brackets, arms, catenary_earthing_parts( 1 ) );
+            good = good && brackets == 4 && arms == 1 && catenary_earthing_parts( 1 ) == 2 + 3 + 5;
+        }
         // słup wstawiony do łańcucha między g1 i g2 - sam wchodzi do sekcji us1
         auto extra { entry };
         extra.name = "g1a"; extra.at[ 2 ] = extra.rope[ 2 ] = extra.pole[ 2 ] = 30.0;

@@ -2915,6 +2915,14 @@ earthing_to_pole( glm::dvec3 const &Point, glm::dvec3 const &Origin, double cons
     return { -x, z, d.y };
 }
 
+// punkt w układzie wysięgnika słupa -> układ scenerii (jak cantilever_to_scene)
+glm::dvec3
+earthing_to_scene( glm::dvec3 const &Point, glm::dvec3 const &Origin, double const Heading ) {
+    auto const x { -Point.x }, z { Point.y };
+    auto const c { std::cos( Heading ) }, s { std::sin( Heading ) };
+    return Origin + glm::dvec3 { x * c + z * s, Point.z, -x * s + z * c };
+}
+
 // łańcuch części końca sekcji od punktu Start w kierunku Way (scenerii); części biegną w -X modelu. Zwraca koniec łańcucha
 glm::dvec3
 earthing_chain( std::vector<catenary::earthing_link> const &Links, glm::dvec3 const &Origin, double const Heading, glm::dvec3 const &Start,
@@ -3035,10 +3043,58 @@ assemble_earthing( scene_earthing &Earthing ) {
                 auto way { other.wire - place.wire };
                 way.y = 0.0;
                 if( glm::length( way ) > 0.1 ) {
-                    auto const *pole { cantilevers()->pole( Suspensions[ standing ].data.pole_type ) };
-                    auto const half { pole != nullptr && pole->width > 0.0 ? 0.5 * pole->width : 0.10 };
-                    auto const start { place.wire + glm::normalize( way ) * half };
                     std::vector<catenary::cantilever_placement> parts;
+                    glm::dvec3 start { place.wire };
+                    auto const holder { earthing_holder_of( Earthing, standing ) };
+                    auto const onarm { holder.arm && std::any_of( place.parts.begin(), place.parts.end(), []( catenary::cantilever_placement const &P ) { return P.role == "earthing_arm"; } ) };
+                    if( onarm ) {
+                        // wysięgnik 6130 na słupie końcowym: stoi, kotwienie na jego końcu (wysokość wysięgnika)
+                        parts = place.parts;
+                    }
+                    else {
+                        // przegub 4430 w parze uchwytów kotwienia stałego sieci na ścianie słupa od strony przęsła, w osi słupa,
+                        // na wysokości liny (układ uchwytów jak w catenary_tensioner: x od ściany na zewnątrz, z w górę)
+                        auto const *pole { cantilevers()->pole( Suspensions[ standing ].data.pole_type ) };
+                        auto const towardpole { earthing_to_pole( way, place.origin, place.heading, true ) };
+                        glm::dvec3 const ex { towardpole.x >= 0.0 ? 1.0 : -1.0, 0.0, 0.0 };
+                        glm::dvec3 const ez { 0.0, 0.0, 1.0 };
+                        auto const ey { glm::cross( ez, ex ) };
+                        auto const wire { earthing_to_pole( place.wire, place.origin, place.heading ) };
+                        auto const height { wire.z };
+                        auto const thick { pole != nullptr && pole->width > 0.0 ? pole->width : pole != nullptr ? pole->depth( height ) : 0.20 };
+                        auto const face { ex * ( 0.5 * thick ) + ez * height };
+                        auto const *devices { tensioners() };
+                        auto const *device { devices != nullptr && false == line->brackets.empty() ? devices->device( line->brackets ) : nullptr };
+                        auto const *set { device != nullptr ? device->brackets_for( Suspensions[ standing ].data.pole_type ) : nullptr };
+                        auto const add = [ & ]( std::string const &Part, glm::dvec3 const &At, glm::dvec3 const &X, glm::dvec3 const &Y, glm::dvec3 const &Z ) {
+                            if( Part.empty() || Part == "-" ) { return; }
+                            catenary::cantilever_placement placement;
+                            placement.role = "earthing_end";
+                            placement.part = Part;
+                            auto const at { face + ex * At.x + ey * At.y + ez * At.z };
+                            placement.position[ 0 ] = at.x; placement.position[ 1 ] = at.y; placement.position[ 2 ] = at.z;
+                            glm::dvec3 const axes[ 3 ] { ex * X.x + ey * X.y + ez * X.z, ex * Y.x + ey * Y.y + ez * Y.z, ex * Z.x + ey * Z.y + ez * Z.z };
+                            for( int row = 0; row < 3; ++row ) {
+                                for( int column = 0; column < 3; ++column ) {
+                                    placement.rotation[ row * 3 + column ] = ( row == 0 ? axes[ column ].x : row == 1 ? axes[ column ].y : axes[ column ].z );
+                                }
+                            }
+                            parts.push_back( placement );
+                        };
+                        auto pivot { face };
+                        if( set != nullptr ) {
+                            auto const top { device->pivot_top + set->hole_drop }, bottom { -device->pivot_bottom - set->hole_drop };
+                            add( set->top_front, { 0.0, 0.0, top }, { -1.0, 0.0, 0.0 }, { 0.0, -1.0, 0.0 }, { 0.0, 0.0, 1.0 } );
+                            add( set->bottom_front, { 0.0, 0.0, bottom }, { -1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 }, { 0.0, 0.0, -1.0 } );
+                            add( set->top_back, { -thick, 0.0, top }, { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 }, { 0.0, 0.0, 1.0 } );
+                            add( set->bottom_back, { -thick, 0.0, bottom }, { 1.0, 0.0, 0.0 }, { 0.0, -1.0, 0.0 }, { 0.0, 0.0, -1.0 } );
+                            pivot = face + ex * set->hole_out;
+                        }
+                        else {
+                            WriteLog( ( "Catenary: earthing \"" + Earthing.data.name + "\": no brackets for the anchoring on pole " + Suspensions[ standing ].data.pole_type ).c_str() );
+                        }
+                        start = earthing_to_scene( pivot, place.origin, place.heading );
+                    }
                     auto const end { earthing_chain( *links, place.origin, place.heading, start, other.wire - start, parts, &Earthing.tails[ standing ] ) };
                     for( auto const &part : parts ) { spawn( part, place ); }
                     Earthing.anchored[ standing ] = end;

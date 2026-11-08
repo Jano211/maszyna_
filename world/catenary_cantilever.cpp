@@ -293,6 +293,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     if( index < count && Tokens[ index ] == "top" ) { ++index; number( line.gantry_top, good ); }
                     if( index < count && Tokens[ index ] == "wire" ) { ++index; for( auto &value : line.gantry_wire ) { number( value, good ); } }
                 }
+                else if( key == "brackets" ) { if( index < count ) { line.brackets = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "jumper" ) {
                     // jumper diameter <m> along <m> drop <m>
                     while( index + 1 < count && ( Tokens[ index ] == "diameter" || Tokens[ index ] == "along" || Tokens[ index ] == "drop" || Tokens[ index ] == "rise" ) ) {
