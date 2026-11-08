@@ -105,10 +105,15 @@ struct catenary_editor
 		bool stay_shift_open{false};
 		bool strut_shift_open{false}; // the bottom (strut) mount slider shown
 		bool turn_open{false};        // the turn by hand slider shown
-		// group earthing: the poles clicked one after another become the next earthing line (page 3)
+		// group earthing (page 3): the first and the last pole clicked, the way along the chains between them cut into sections
 		bool earthing_building{false};
-		std::vector<std::string> earthing_poles;
-		std::string earthing_file; // the slider of the top mount of the selected cantilever is shown
+		std::vector<std::string> earthing_poles; // the poles clicked (first, last)
+		std::string earthing_file;
+		std::vector<std::string> earthing_route; // the way found: poles one after another and their distance from the first
+		std::vector<double> earthing_distances;
+		float earthing_section{3000.0f}; // the target length of a section (Iet-106: about 3 km)
+		int earthing_ends{0};            // the ends of the run: 0 anchoring without insulation (13-0492), 1 with it (13-0491)
+		int earthing_joint{0};           // between the sections: 0 insulating point in the span (13-0493), 1 anchorings 13-0491 on both poles
 		bool wide_stagger{false}; // stagger -0.50..+0.50 m from the track axis (tuning at turnouts; not allowed on a line)
 		int bend{0}; // 0: from the track, 1: straight, 2: curve
 		float stagger{0.30f};
@@ -326,8 +331,10 @@ struct catenary_editor
 	void render_catenary_insulator(std::size_t const Chain);
 	void render_catenary_shared(std::size_t const Chain);
 	void render_catenary_earthing_ui();
-	// the earthing being built is finished: from two poles on it goes into the file
+	// picking the poles of the earthing given up (Esc)
 	void catenary_earthing_finish();
+	// the sections of the way picked made and put into the file
+	void catenary_earthing_make();
 	void render_catenary_chain_report(std::size_t const Chain);
 	// a pole of this type can't stand there: its group doesn't stand by switches and a switch is by it
 	bool catenary_switch_error(std::string const &Pole, glm::dvec3 const &Foot, TTrack const *Track) const;

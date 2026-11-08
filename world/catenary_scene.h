@@ -167,6 +167,14 @@ std::size_t catenary_earthing_add( std::string const &File, catenary::earthing c
 // zmienia uszynienie (także przywraca usunięte), uchwyty i lina od nowa
 bool catenary_earthing_update( std::size_t Index, catenary::earthing const &Data );
 void catenary_earthing_remove( std::size_t Index );
+// trasa po przęsłach łańcuchów pliku od słupu From do To (nazwy wpisów): słupy po kolei (wpisy stawiające słup) i odległość w planie
+// od początku; false, gdy nie ma drogi
+bool catenary_earthing_route( std::string const &File, std::string const &From, std::string const &To, std::vector<std::string> &Names, std::vector<double> &Distances );
+// słupy uszynienia po kolei (nazwy wpisów stawiających słup) i długość w planie, wg ostatniego składania
+std::vector<std::string> catenary_earthing_poles( std::size_t Index );
+double catenary_earthing_length( std::size_t Index );
+// uszynienie, przez którego słup idzie podwieszenie; -1 - żadne
+int catenary_earthing_of( std::size_t Suspension );
 // części stawiane na słupie Pole uszynienia (np. "6130-02 + 6130 + 6130-00"), albo "! <czemu się nie da>"
 std::string catenary_earthing_holder_text( std::size_t Index, std::string const &Pole );
 std::string catenary_scene_new_earthing_name( std::string const &File );

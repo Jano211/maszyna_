@@ -73,6 +73,21 @@ mount 4690-03 console 0.785 -0.785 0.0 back 4690-06 endmount
 mount 4690-04 console 0.785 -0.785 0.0 endmount
 mount 4690-05 console 0.785 -0.785 0.0 back 4690-06 endmount
 
+// ---- przewod uszyniajacy uszynienia grupowego (2026-11-09) -------------------------------------------------------
+// earthing_line <nazwa> diameter <m> mass <kg/m> tension <daN> chain <rodzaj> <czesc> <m> ... endearthing_line
+//   AFL 120 mm2 (karty 13-0805..0807, Iet-106 pkt 3.2): srednica 15,5 mm i 0,494 kg/m jak przewod 120/20 (ZALOZENIE, w katalogu
+//   nie ma); naciag 200 daN (uzytkownik 2026-11-08, w papierach brak) - zwis z naciagu, parabola.
+//   chain = czesci konca sekcji od slupa do liny, biegna w -X modelu: czesc i odleglosc od jej zera do nastepnej; "~" - odwrocona.
+//   anchor 13-0491 (z izolacja), plain 13-0492 (bez), split 13-0493 (punkt izolujacy w przesle: od strony slupa konca sekcji).
+//   5180-07 (zacisk odciagowy konca liny, model 2026-11-09): dlugosc do punktu wire_1 (wejscie liny w zacisk); guide = punkty wire_1..
+//   wire_3 modelu - lina wchodzi w wire_1 i przez kolejne punkty zawija sie do konca w zacisku.
+earthing_line AFL120 diameter 0.0155 mass 0.494 tension 200
+  guide 5180-07 -0.14724 0.0 -0.00227 -0.07392 0.0 -0.03375 -0.04314 0.00006 -0.07688
+  chain anchor 4430-01 0.0747 7150-01 0.8324 4720-01 0.10 4420-01 0.93 5180-07 0.14724
+  chain plain 4430-01 0.0747 4420-01 0.93 5180-07 0.14724
+  chain split 5180-07~ 0.14724 7150-01 0.8324 5180-07 0.14724
+endearthing_line
+
 // ---- wysiegnik przewodu uszyniajacego (karta 0806; modele 2026-11-08) ------------------------------------------------
 // earthing_arm <wysiegnik> back <tyl> wire <x> <y> <z> plate <m> mount <mocowanie> <glebokosc max> ... endearthing_arm
 //   wysiegnik (osobna tekstura lpn) stoi w zerze mocowania; mocowanie wg glebokosci slupa na wysokosci srub: pierwsze, ktorego

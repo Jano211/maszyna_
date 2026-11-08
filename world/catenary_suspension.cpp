@@ -200,7 +200,14 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 auto const key { Tokens[ index++ ] };
                 if( key == "endearthing" ) { closed = true; break; }
                 if( key == "node" ) { --index; break; }
-                if( key == "poles" ) {
+                if( ( key == "from" || key == "to" || key == "start" || key == "end" ) && index < count ) {
+                    auto const &value { Tokens[ index++ ] };
+                    if( key == "from" ) { line.from = value; }
+                    else if( key == "to" ) { line.to = value; }
+                    else if( value == "anchor" || value == "plain" || value == "split" || value == "none" ) { ( key == "start" ? line.start : line.end ) = ( value == "none" ? std::string() : value ); }
+                    else { report( line.name, "unknown end \"" + value + "\" of an earthing (anchor, plain, split or none)" ); good = false; }
+                }
+                else if( key == "poles" ) {
                     while( index < count && Tokens[ index ] != "endearthing" && Tokens[ index ] != "node" && Tokens[ index ] != "skin" && Tokens[ index ] != "holder" ) { line.poles.push_back( Tokens[ index++ ] ); }
                 }
                 else if( key == "holder" && index < count ) {
@@ -217,14 +224,17 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                         }
                         else { break; }
                     }
-                    if( std::find( line.poles.begin(), line.poles.end(), holder.pole ) == line.poles.end() ) { report( line.name, "holder of pole \"" + holder.pole + "\", which isn't on the earthing" ); }
-                    else { line.set_holder( holder ); }
+                    // sekcja: słupy znane dopiero po wczytaniu łańcuchów, nie sprawdzane tutaj
+                    if( line.poles.empty() || std::find( line.poles.begin(), line.poles.end(), holder.pole ) != line.poles.end() ) { line.set_holder( holder ); }
+                    else { report( line.name, "holder of pole \"" + holder.pole + "\", which isn't on the earthing" ); }
                 }
                 else if( key == "skin" && index < count ) { line.skin = Tokens[ index++ ]; }
                 else { report( line.name, "unexpected token \"" + key + "\" in an earthing" ); good = false; }
             }
             if( false == closed ) { report( line.name, "missing \"endearthing\"" ); good = false; }
-            if( line.poles.size() < 2 ) { report( line.name, "an earthing needs at least two poles" ); good = false; }
+            if( line.section() ) { if( false == line.poles.empty() ) { report( line.name, "an earthing gives either \"from ... to\" or \"poles\", not both" ); good = false; } }
+            else if( false == line.from.empty() || false == line.to.empty() ) { report( line.name, "an earthing section needs both \"from\" and \"to\"" ); good = false; }
+            else if( line.poles.size() < 2 ) { report( line.name, "an earthing needs at least two poles" ); good = false; }
             if( good ) { Output.earthings.push_back( line ); }
             continue;
         }
@@ -513,8 +523,15 @@ std::string write_earthing( earthing const &Entry ) {
     };
     std::string text { "node " + number( Entry.range_max ) + " " + number( Entry.range_min ) + " " + ( Entry.name.empty() ? std::string( "none" ) : Entry.name ) + " earthing" };
     if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
-    text += " poles";
-    for( auto const &name : Entry.poles ) { text += " " + name; }
+    if( Entry.section() ) {
+        text += " from " + Entry.from + " to " + Entry.to;
+        if( false == Entry.start.empty() ) { text += " start " + Entry.start; }
+        if( false == Entry.end.empty() ) { text += " end " + Entry.end; }
+    }
+    else {
+        text += " poles";
+        for( auto const &name : Entry.poles ) { text += " " + name; }
+    }
     for( auto const &holder : Entry.holders ) {
         if( holder.plain() ) { continue; }
         text += " holder " + holder.pole;

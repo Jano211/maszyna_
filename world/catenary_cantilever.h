@@ -25,6 +25,7 @@
 //   linka 4490            zero w dolnym zaczepie (przy obejmie 4210), biegnie w +Z; skalowana wzdłuż Z
 // Części zestawu ramion odciągowych mają położenie i obrót przeniesione wprost z pliku danych.
 #pragma once
+#include <array>
 #include <map>
 #include <set>
 #include <string>
@@ -190,6 +191,30 @@ struct earthing_arm {
     }
 };
 
+// przewód uszyniający grupowego uszynienia (Jan 2026-11-09): wymiary i naciąg (zwis liczony z naciągu, parabola) oraz łańcuchy części
+// końców sekcji: anchor - kotwienie z izolacją (13-0491), plain - bez izolacji (13-0492), split - punkt izolujący w przęśle (13-0493).
+// Części biegną w -X modelu (jak w kotwieniach sieci): część i odległość od jej zera do następnej; "~" po nazwie - część odwrócona
+struct earthing_link {
+    std::string part;
+    double length { 0.0 };
+    bool reversed { false };
+};
+struct earthing_line {
+    std::string name;
+    double diameter { 0.0155 };         // m
+    double mass { 0.494 };              // kg/m
+    double tension { 200.0 };           // daN
+    std::map<std::string, std::vector<earthing_link>> chains;
+    // prowadzenie liny przez część (5180-07: punkty wire_1..3 modelu, od wejścia liny w zacisk do końca zawinięcia) - x y z w układzie modelu
+    std::map<std::string, std::vector<std::array<double, 3>>> guides;
+    // strzałka zwisu przęsła o rozpiętości Span (m)
+    double sag( double const Span ) const { return ( tension > 0.0 ? mass * 9.81 * Span * Span / ( 8.0 * tension * 10.0 ) : 0.0 ); }
+    std::vector<earthing_link> const *chain( std::string const &Kind ) const {
+        auto const found { chains.find( Kind ) };
+        return ( found != chains.end() ? &found->second : nullptr );
+    }
+};
+
 // jeden klocek sposobu składania: słowo kluczowe i jego argumenty, jak w pliku danych
 struct cantilever_step {
     std::string op;
@@ -258,6 +283,8 @@ public:
     cantilever_pole const *pole( std::string const &Name ) const;
     cantilever_mount const *mount( std::string const &Name ) const;
     catenary::earthing_arm const *earthing_arm( std::string const &Name ) const;
+    // przewód uszyniający: podany z nazwy albo pierwszy zdefiniowany (pusta nazwa); nullptr - żaden
+    catenary::earthing_line const *earthing_line( std::string const &Name = {} ) const;
     cantilever_assembly const *assembly( std::string const &Name ) const;
     // karta z tej samej dziesiątki co Card, której pasmo A obejmuje podaną odległość; nullptr gdy żadna
     cantilever_scheme const *scheme_for_reach( int Card, int Execution, double Reach ) const;
@@ -288,6 +315,7 @@ private:
     std::map<std::string, cantilever_pole> m_poles;
     std::map<std::string, cantilever_mount> m_mounts;
     std::map<std::string, catenary::earthing_arm> m_earthing_arms;
+    std::vector<catenary::earthing_line> m_earthing_lines;
     std::map<std::string, cantilever_assembly> m_assemblies;
     std::map<std::string, gantry_mast> m_masts;
     std::map<std::string, gantry_beam> m_beams;
