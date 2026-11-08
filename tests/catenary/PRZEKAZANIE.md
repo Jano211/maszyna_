@@ -42,6 +42,10 @@ użytkownika przerobione: zacisk 0,15 m od uchwytu, łuk 0,25 m nad zacisk i w d
 (`holder <słup> nojumper`, w edytorze „Przyłącze 13-0885”). 6840: użytkownik – „trzeba ręcznie dokładać i podłączać do reszty”.
 Zrobione tak: zwis bramki na trasie sekcji (trasa po łańcuchach idzie przez zwisy) dostaje uchwyt 6840-01 na górze dźwigara (zero zwisu
 + 0,90, punkt `line` 0,131), przesuwany wzdłuż dźwigara (`holder <zwis> shift <m>`, edytor „Wzdłuż dźwigara”); bez przyłącza.
+Kotwienie końca sekcji (00:37, użytkownik): przegub 4430 w parze uchwytów jak w kotwieniu stałym sieci (`brackets 0403` w earthing_line
+→ wpis brackets urządzenia 0403 w traction_tensioners.txt wg typu słupu), na ścianie słupa od strony przęsła (grubość = width słupa,
+gdy brak – depth), w osi słupa, na wysokości liny; uchwytu 6120 na słupie końcowym nie ma. Wysięgnik 6130 wybrany na słupie końcowym –
+wysięgnik stoi, kotwienie (od 4430) na jego końcu, bez uchwytów 5100. Test `te` 6a6.
 NIE zrobione: 6840 na bramce, przez której zwisy trasa nie idzie (np. lina wzdłuż innego toru) – do ustalenia z użytkownikiem,
 czy o to chodziło z „ręcznym dokładaniem”.
 

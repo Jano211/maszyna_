@@ -213,6 +213,9 @@ struct earthing_line {
     double gantry_wire[ 3 ] { 0.0, 0.0, 0.0 };
     // przyłącze 13-0885 (linka od liny do konstrukcji): średnica, zacisk na linie "along" od uchwytu w stronę przęsła, łuk "rise" nad
     // zaciskiem, końcówka na wierzchu słupa ("drop" pod liną - gdy słup nie ma podanego wierzchu)
+    // zamocowanie przegubu 4430 kotwienia końca sekcji na słupie: uchwyty z urządzenia kotwienia stałego sieci (traction_tensioners.txt,
+    // wpis "brackets" urządzenia o tej nazwie, wg typu słupu; użytkownik 2026-11-09: "te same co dla kotwienia stałego sieci")
+    std::string brackets;
     double jumper_diameter { 0.0 };
     double jumper_along { 0.15 };
     double jumper_rise { 0.25 };
