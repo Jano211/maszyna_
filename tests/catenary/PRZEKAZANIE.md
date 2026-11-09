@@ -1,8 +1,50 @@
-# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-10-30 01:00)
+# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-09 01:15)
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – 2026-11-09 noc (najnowsze): sekcje uszynienia grupowego
+## START TUTAJ – 2026-11-09 01:15 (najnowsze) – zrzutka na nowy czat
+
+**Jak pracujemy (bez zmian):** wszystko z sieci commitem prosto na `siec-gl46` → push → merge do `wszystko-gl46` → push (płytki klon:
+fetch z refspec `+refs/heads/wszystko-gl46:refs/remotes/origin/wszystko-gl46`). Commity i merge jako `Claude <noreply@anthropic.com>`
+z dopiskiem Co-Authored-By (użytkownik 08.11: od teraz tak; wcześniejszego merge `8c89b82` pod jego mailem NIE przepisywać). Notatki
+w tym samym commicie co kod. Dane na `G:\Maszyna2510\data\`, tłumaczenia `G:\Maszyna2510\lang\editor_pl.po` – CRLF, przed zapisem
+porównać kopię z dysku z repo (`tr -d '\r'` + diff), po zapisie md5. Testy: `sh tests/catenary/build.sh` (ostatni krok `ta` pada na
+brak ref/glm – stare, nieistotne), uruchamiać z `tests/catenary/data`. Plik użytkownika do odtwarzania: `G:\Maszyna2510\scenery\l61\siec\
+l61_siec_nowa.scm` (sceneria `lk61_dev.scn`, dyrektywa `catenary`) – wczytanie przez atrapy jak w test_editor (Global, ErrorLog, WriteLog).
+Przy wczytywaniu NIE przebudowywać / nie usuwać przęseł (wywrotka exe 09.11 00:47 – patrz niżej).
+
+**Stan na koniec dnia (użytkownik 01:13: „działa”, w exe sprawdzone tylko wczytanie bez wywrotki):**
+- Wysięgnik uszyniający 6130 (karta 0806): modele 6130 (tekstura lpn), 6130-00 (tył, obrót 180°), 6130-01/02/03 (mocowania wg głębokości
+  słupa na wysokości śrub: max 0,223 / 0,243 / 0,263). Wysięgnik w modelu 10 cm za niski wg karty (lina 0,90 od czoła, ~0,77 nad
+  mocowaniem; model: 0,80 / 0,65) – użytkownik poprawi model, wtedy `wire` we wpisie `earthing_arm`.
+- Tekstury: modele 6120/6130/osprzęt z mapą -1; wysięgnik 6130 bierze `lpn_<zużycie>` (siec_X → lpn_X, sama `siec` → `lpn_used`).
+  Tekstury lpn przeniesione na wzór 161x: `siec_trakcyjna/lpn_{new,used,old,extreme}.tga/.mat`, `normals/lpn_<zużycie>_normal|_specgloss`
+  (stare podfoldery new/used/old/extreme do usunięcia przez użytkownika).
+- Uszynienie grupowe = sekcje: `earthing from <słup> to <słup> start/end anchor|plain|split [holder …]` – trasa po przęsłach łańcuchów
+  (wstawiony słup sam wchodzi), końce 13-0491/0492 (4430 w uchwytach kotwienia stałego 0403 wg typu słupu; 6130 na słupie końcowym →
+  kotwienie na końcu wysięgnika), 13-0493 punkt izolujący między sekcjami, 5180-07 z prowadzeniem liny (wire_1..3), lina AFL 120 z naciągu
+  200 daN, przyłącza 13-0885 łukiem do wierzchu słupa na każdym słupie (wyłączane `nojumper`), 6840 na zwisach bramek w trasie (`shift`).
+  Ustawienia słupa w `holder`: `arm`, `away`, `raise`, `shift`, `nojumper`. Dane: `earthing_line` i `earthing_arm` w traction_supports.txt.
+- Edytor (zakładka Uszynienie): „Uszynienie wzdłuż szlaku” (klik pierwszy i ostatni słup → podział na ~3 km), lista sekcji (granica o słup,
+  połącz, podziel, rodzaje końców, ostrzeżenie > 3,5 km), klik słupa → jego sekcja i uchwyt. W exe NIESPRAWDZONE (czy zwykły klik
+  zaznacza słup na tej zakładce, generator, przesuwanie granic).
+
+**Na jutro / otwarte (kolejność do ustalenia z użytkownikiem):**
+1. Obejrzeć w exe: uchwyty 6120/6130, kotwienia z uchwytami 5100/4520 (szerokość: `width` słupa, dwuteowniki – głębokość 0,20; czy trafiają
+   w słup), lina i zwis, przyłącza (kształt łuku `jumper along 0.15 rise 0.25`), punkt izolujący, 6840 na zwisach.
+2. 6120-08 (tył przy dwuteownikach): płyta w −Y, śruby do +0,293 – stawiany bez obrotu, możliwe że sterczy do tyłu; użytkownik sprawdzi w exe.
+3. 6840 na bramce, przez której zwisy trasa nie idzie – użytkownik: „trzeba ręcznie dokładać i podłączać do reszty”; zrobione tylko
+   automatycznie na zwisach w trasie – dopytać, jak to wygląda na stacji, ewentualnie wstawianie klikiem w dźwigar.
+4. 6130 na bramki – ze starego Kolprojektu (karta do znalezienia przez użytkownika).
+5. Granica sekcji w terenie: 0493 czy dwa 0491 – użytkownik nie wie (oba w edytorze, domyślnie 0493).
+6. Ograniczniki niskonapięciowe (Iet-106: końce sekcji, ≥ 3 m, najdalej 3. konstrukcja, na przemian do szyn) – brak modeli; modele
+   zacisku 5630-8 i końcówki 6160-8 przyłącza – brak.
+7. 5180-07: użytkownik pisał o 4 punktach wire, w modelu są 3 – sprawdzić eksport.
+8. Betony i stare 150x/160x: inne wysięgniki, „przewód wzmacniający” – nie wiadomo, czy to to samo; na razie bez uszynienia.
+9. Kolorowanie sekcji w widoku (Widok → Sieć trakcyjna) – nie ma. Lista sekcji liczy trasy co klatkę (O(n²) Dijkstra) – przy 30+ sekcjach
+   może zwalniać edytor, do zbuforowania.
+
+## 2026-11-09 noc – sekcje uszynienia grupowego (szczegóły)
 
 **Papiery (przejrzane 09.11):** tom 2 (`z- KATALOG 2 -z.pdf`) s. 90–94 dział 0800: 13-0805 (uchwyt 6120 na wspornikach, wyk. 1 1611
 C120–160, 2 C160–200, 4 bramki/przestrzenne, 7 słup 1665), 13-0806 (wysięgnik 6130: wyk. 1 1611 i 1665-1/2 → 6130-1, wyk. 2 1665-3 →
