@@ -2825,13 +2825,20 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
 }
 
 // sąsiedzi słupów pliku po przęsłach łańcuchów (wpisy stawiające słup; kilka wpisów jednego słupa to jeden słup)
+// łańcuchy wczytywanego pliku, jeszcze nie w Chains (przy wczytaniu sekcje uszynienia składane przed przęsłami łańcuchów, żeby
+// przęsła od razu miały linę - przebudowa przęseł w trakcie wczytywania wywraca exe)
+std::vector<catenary::chain> const *PendingChains { nullptr };
+std::string PendingFile;
+
 std::map<std::size_t, std::vector<std::size_t>>
 earthing_graph( std::string const &File ) {
     std::map<std::size_t, std::vector<std::size_t>> graph;
-    for( auto const &chain : Chains ) {
-        if( chain.removed || chain.file != File ) { continue; }
+    std::vector<catenary::chain const *> chains;
+    for( auto const &chain : Chains ) { if( false == chain.removed && chain.file == File ) { chains.push_back( &chain.data ); } }
+    if( PendingChains != nullptr && PendingFile == File ) { for( auto const &chain : *PendingChains ) { chains.push_back( &chain ); } }
+    for( auto const *data : chains ) {
         auto previous { Suspensions.size() };
-        for( auto const &name : chain.data.suspensions ) {
+        for( auto const &name : data->suspensions ) {
             auto const standing { earthing_pole( suspension_named( File, name ) ) };
             if( standing >= Suspensions.size() ) { previous = Suspensions.size(); continue; }
             if( previous < Suspensions.size() && previous != standing ) {
@@ -3503,6 +3510,20 @@ add_content( catenary::suspension_file const &File, std::string const &Filename 
         // sekcja: trasa po łańcuchach znana dopiero po ich wczytaniu (niżej)
         if( false == line.section() ) { assemble_earthing( Earthings.back() ); }
     }
+    // sekcje uszynienia: trasa po łańcuchach tego pliku (jeszcze niewczytanych) - składane przed przęsłami, które rysują ich linę
+    if( false == File.earthings.empty() ) {
+        PendingChains = &File.chains;
+        PendingFile = Filename;
+        for( auto &earthing : Earthings ) {
+            if( false == earthing.removed && earthing.file == Filename && earthing.data.section() ) { assemble_earthing( earthing ); }
+        }
+        // kończące się punktem izolującym jeszcze raz: następna sekcja ma już trasę
+        for( auto &earthing : Earthings ) {
+            if( false == earthing.removed && earthing.file == Filename && earthing.data.end == "split" ) { assemble_earthing( earthing ); }
+        }
+        PendingChains = nullptr;
+        PendingFile.clear();
+    }
     // przęsła łańcuchów powstają od razu: przed inicjalizacją scenerii łączy je InitTraction razem z resztą sieci
     for( auto const &line : File.chains ) {
         if( twice( "chain", line.name, std::any_of( Chains.begin(), Chains.end(), [ & ]( scene_chain const &Chain ) { return false == Chain.removed && Chain.file == Filename && Chain.data.name == line.name; } ) ) ) { continue; }
@@ -3512,8 +3533,6 @@ add_content( catenary::suspension_file const &File, std::string const &Filename 
         Chains.emplace_back( chain );
         rebuild_chain( Chains.back() );
     }
-    // sekcje uszynienia: trasa po łańcuchach znana dopiero teraz
-    if( false == File.earthings.empty() ) { refresh_earthings( Filename, true ); }
 }
 
 } // namespace

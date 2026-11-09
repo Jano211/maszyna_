@@ -36,6 +36,12 @@ Betony i stare 150x/160x mają inne wysięgniki („przewód wzmacniający” �
   wysokość). Stare klikanie słupów po kolei i „Wzdłuż łańcucha” usunięte.
 - Test `te` 6a6 (dwie sekcje po 3 słupy, 0492 + 0493 + 0491, wstawienie słupa do łańcucha).
 
+**Wywrotka exe 09.11 00:47 (naprawiona, w exe NIESPRAWDZONE):** po wczytaniu pliku z sekcją (`l61_siec_nowa.scm`, log kończył się na
+„63 spans of tension overlaps ... parallel”) – `refresh_earthings(…, true)` po łańcuchach pliku przebudowywał przęsła w trakcie
+wczytywania (catenary_span_delete + create przed InitTraction; w atrapie 5 usuniętych przęseł). Teraz przy wczytaniu sekcje składane PRZED
+przęsłami łańcuchów, trasa z łańcuchów pliku jeszcze niewczytanych (`PendingChains`) – przęsła powstają raz, od razu z liną.
+Zasada: przy wczytywaniu nie usuwać / nie przebudowywać przęseł.
+
 **Dalej 09.11 (00:15):** przyłącza 13-0885 rysowane na każdym słupie sekcji (linka-rurka od zacisku na linie 0,5 m od uchwytu w stronę
 przęsła do końcówki na czole słupa 0,8 m pod liną, AFL 95 Ø13,5 – ZAŁOŻENIA, modeli 5630-8 / 6160-8 brak; 00:32 po zdjęciu
 użytkownika przerobione: zacisk 0,15 m od uchwytu, łuk 0,25 m nad zacisk i w dół w wierzch słupa przy czole – `jumper along/rise`), wyłączane na słupie
