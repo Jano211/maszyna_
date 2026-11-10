@@ -18,6 +18,17 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Branch `geoportale` (scalony też do `wszystko-gl46`).
 
+### Ortofoto: przełącznik warstwy – mapy, szybkie zdjęcia, cieniowanie ISOK — commit o tym tytule
+- Co widać: w oknie ortofoto pod „Pokaż ortofoto” lista „Warstwa”: Ortofoto (geoportal.gov.pl) jak dotąd albo zamiast niego
+  Zdjęcia Esri (szybkie), OpenStreetMap, Mapa topograficzna (OpenTopoMap), Cieniowanie terenu (ISOK, WMS geoportalu, tylko
+  Polska). Do poruszania się po okolicy bez czekania na geoportal i bez wczytywania terenu; potem z powrotem ortofoto.
+  Podpis źródła mapy pod listą. Wybór zapamiętywany jak reszta ustawień ortofoto (`layer <nazwa>` w znaczniku `//$o`).
+- Warstwy to linie `map …` w `editor/foreign_sources.txt` (`title=` – nazwa na liście); plik bez linii `map` dostaje cztery
+  domyślne.
+- Zmienia: `editor/editorOrthophoto.hpp` (pole `layer` w `config` – przebudowa plików, które go wciągają, m.in. `editormode.h`),
+  `editor/editorOrthophoto.cpp`, `editor/editorForeign.hpp/.cpp`, `application/editormode.cpp`, `lang/editor_pl.po`.
+  Wymaga: „Ortofoto i NMT spoza geoportal.gov.pl”.
+
 ### Ortofoto i NMT spoza geoportal.gov.pl (Słowacja i reszta świata) — commit o tym tytule
 - Co widać: tam, gdzie geoportal.gov.pl nie ma nic (za granicą), ortofoto i model terenu dociągają się z innych źródeł,
   przeliczone na siatkę PUWG 1992 edytora. Domyślnie: Słowacja (ÚGKK SR – ortofotomozaika WMS i DMR 5.0 1 m z WCS,

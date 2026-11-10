@@ -2293,6 +2293,40 @@ void editor_mode::render_orthophoto_ui()
     if (ImGui::Checkbox(STR_C("Show orthophoto (geoportal.gov.pl)"), &enabled))
         m_orthophoto.enabled(enabled);
 
+    // what lies under the scenery: the orthophoto of geoportal.gov.pl, or a map layer which comes much quicker
+    {
+        auto const layers{editor_foreign::layers()};
+        std::string current{STR("Orthophoto (geoportal.gov.pl)")};
+        std::string credit;
+        for (auto const &item : layers)
+            if (item.name == config.layer)
+            {
+                current = STR(item.title);
+                credit = item.credit;
+            }
+        ImGui::SetNextItemWidth(260.0f);
+        if (ImGui::BeginCombo(STR_C("Layer"), current.c_str()))
+        {
+            if (ImGui::Selectable(STR_C("Orthophoto (geoportal.gov.pl)"), config.layer.empty()))
+            {
+                config.layer.clear();
+                changed = persist = true;
+            }
+            for (auto const &item : layers)
+                if (ImGui::Selectable((STR(item.title) + "###layer_" + item.name).c_str(), config.layer == item.name))
+                {
+                    config.layer = item.name;
+                    changed = persist = true;
+                }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("%s", STR_C("The orthophoto of geoportal.gov.pl (and of the other countries where it has none), or instead of it a map or the world-wide imagery,\n"
+                                         "which come much quicker: to find the way around, then back to the orthophoto for the work. The list: editor/foreign_sources.txt, map lines"));
+        if (false == credit.empty())
+            ImGui::TextDisabled(STR_C("Map: %s"), credit.c_str());
+    }
+
     ImGui::Separator();
     ImGui::TextUnformatted(STR_C("Scenery origin (0,0,0) in PUWG 1992 / EPSG:2180"));
     if (ImGui::IsItemHovered())

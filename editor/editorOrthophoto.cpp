@@ -76,6 +76,7 @@ struct tile_request
 	int level{standard_pixels};
 	int year{0};
 	bool hires{false};
+	std::string layer; // a map layer instead of the orthophoto
 };
 
 struct image
@@ -390,6 +391,21 @@ bool may_be_black(image const &Image)
 bool load_tile(http_client &Client, tile_request const &Request, image &Out, bool &Empty, std::string &Error, stop_check const &Stop)
 {
 	auto const area{tile_area(Request.ix, Request.iy)};
+	if (false == Request.layer.empty())
+	{
+		// a map layer: its tiles alone, anywhere
+		Empty = false;
+		auto const pixels{std::min(Request.level, standard_pixels)};
+		Out.width = Out.height = pixels;
+		if (false == editor_foreign::layer(Client, Request.layer, area, pixels, Out.rgba, cache_root() / "foreign", Error, Stop))
+			return false;
+		if (std::none_of(Out.rgba.begin(), Out.rgba.end(), [](std::uint8_t const Value) { return Value != 0; }))
+		{
+			Empty = true;
+			Out = image{};
+		}
+		return true;
+	}
 	if (false == editor_foreign::reaches(editor_foreign::kind::ortho, area))
 		return load_polish(Client, Request, Out, Empty, Error, Stop);
 	Empty = false;
@@ -592,6 +608,8 @@ std::string editor_orthophoto::mark(config const &Config, bool const Enabled, bo
 	char text[256];
 	std::snprintf(text, sizeof(text), "on %d year %d opacity %.2f radius %d height %.2f drape %d lift %.2f hires %d scene %d", Enabled ? 1 : 0, Config.year, Config.opacity, Config.radius, Config.height, Config.drape ? 1 : 0, Config.lift, Config.hires ? 1 : 0, Config.in_scene ? 1 : 0);
 	std::string result{text};
+	if (false == Config.layer.empty())
+		result += " layer " + Config.layer;
 	if (Origin)
 	{
 		std::snprintf(text, sizeof(text), " origin %.2f %.2f", Config.north, Config.east);
@@ -605,6 +623,7 @@ bool editor_orthophoto::read_mark(std::string const &Text, config &Config, bool 
 	std::istringstream words{Text};
 	std::string key;
 	auto found{false};
+	Config.layer.clear(); // written only when one is chosen
 	while (words >> key)
 	{
 		if (key == "on")
@@ -627,6 +646,8 @@ bool editor_orthophoto::read_mark(std::string const &Text, config &Config, bool 
 			words >> Config.in_scene;
 		else if (key == "origin")
 			words >> Config.north >> Config.east;
+		else if (key == "layer")
+			words >> Config.layer;
 		else
 			continue;
 		if (words.fail())
@@ -659,7 +680,7 @@ void editor_orthophoto::enabled(bool State)
 
 void editor_orthophoto::settings(config const &Config)
 {
-	bool const sourcechanged = (Config.year != m_config.year || Config.hires != m_config.hires);
+	bool const sourcechanged = (Config.year != m_config.year || Config.hires != m_config.hires || Config.layer != m_config.layer);
 	bool const shapechanged = (Config.height != m_config.height || Config.drape != m_config.drape || Config.in_scene != m_config.in_scene || Config.lift != m_config.lift);
 	// the surface of the ground is gathered only for the geometry in the scene, the overlay makes do with the heights
 	bool const groundchanged = (Config.in_scene != m_config.in_scene);
@@ -813,7 +834,7 @@ void editor_orthophoto::schedule(tile_key const &Key, tile &Tile, int Level, std
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		m_queue.erase(std::remove_if(m_queue.begin(), m_queue.end(), [&](job const &Job) { return Job.key == Key; }), m_queue.end());
-		m_queue.push_back(job{Key, Level, Alpha, source{m_config.year, m_config.hires}, m_generation.load()});
+		m_queue.push_back(job{Key, Level, Alpha, source{m_config.year, m_config.hires, m_config.layer}, m_generation.load()});
 	}
 	Tile.requested = Level;
 	Tile.requested_alpha = Alpha;
@@ -1244,7 +1265,7 @@ void editor_orthophoto::update(glm::dvec3 const &Camera)
 		{
 			tile_key const key{centre.first + dx, centre.second + dy};
 			tile &t = m_tiles[key];
-			if (!in_service_area(key.first, key.second) && !foreign_area(key.first, key.second))
+			if (m_config.layer.empty() && !in_service_area(key.first, key.second) && !foreign_area(key.first, key.second))
 				t.empty = true;
 			int const level = level_for(std::max(std::abs(dx), std::abs(dy)), m_config.hires);
 			if (t.empty || (t.level == level && t.alpha == m_alpha) || (t.requested == level && t.requested_alpha == m_alpha) || now < t.retry_at)
@@ -1317,7 +1338,7 @@ void editor_orthophoto::worker()
 
 		image picture;
 		std::string error;
-		tile_request const request{current.key.first, current.key.second, current.level, current.src.year, current.src.hires};
+		tile_request const request{current.key.first, current.key.second, current.level, current.src.year, current.src.hires, current.src.layer};
 		out.ok = load_tile(client, request, picture, out.empty, error, stopping);
 		if (m_stop)
 			return;

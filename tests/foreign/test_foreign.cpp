@@ -215,7 +215,7 @@ bool editor_http::client::get(std::string const &Url, std::vector<std::uint8_t> 
 		Out = png(256, 256, rgba);
 		return true;
 	}
-	if (Url.find("arcgisonline") != std::string::npos || Url.find("eox") != std::string::npos)
+	if (Url.find("arcgisonline") != std::string::npos || Url.find("eox") != std::string::npos || Url.find("openstreetmap") != std::string::npos)
 	{
 		// blue everywhere
 		std::vector<std::uint8_t> rgba(256 * 256 * 4, 0);
@@ -354,6 +354,15 @@ int main()
 	for (std::size_t i = 3; i < rgba.size(); i += 4)
 		opaque = opaque && rgba[i] == 255;
 	check(opaque, "nothing transparent left");
+	// the map layers: the defaults are there, one of them gives the whole tile
+	{
+		auto const list{layers()};
+		check(list.size() == 4 && list[3].name == "isok" && list[1].name == "osm" && list[1].title == "OpenStreetMap", "four map layers, osm second, ISOK last");
+		std::vector<std::uint8_t> map;
+		check(layer(client, "osm", tile, 512, map, "editor/cache/ortho", error, []() { return false; }) && map.size() == 512u * 512u * 4u && map[2] == 200 && map[3] == 255,
+		      "the OSM layer filled the tile");
+		check(false == layer(client, "nothing", tile, 64, map, "editor/cache/ortho", error, []() { return false; }), "an unknown layer refused");
+	}
 	// black where there's no imagery: a solid black half with a jpeg-like fringe goes, a dark shadow of 3 x 3 px stays
 	{
 		int const w{64};

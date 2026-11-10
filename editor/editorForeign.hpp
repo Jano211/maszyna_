@@ -36,7 +36,8 @@ struct area
 enum class kind
 {
 	ortho,
-	terrain
+	terrain,
+	map // a layer shown instead of the orthophoto (maps, the world-wide imagery), quick to come
 };
 
 // whether any source of the kind reaches into the rectangle
@@ -55,6 +56,18 @@ bool ortho(editor_http::client &Client, area const &Area, int const Pixels, std:
 std::size_t clear_black(std::vector<std::uint8_t> &Rgba, int const Width, int const Height, int const Block = 7);
 // the share of the pixels nearly black, a quick test before clear_black
 double black_share(std::vector<std::uint8_t> const &Rgba);
+
+// the layers which can be shown instead of the orthophoto of geoportal.gov.pl: their names (as in the file) and titles
+struct layer_info
+{
+	std::string name;
+	std::string title;
+	std::string credit;
+};
+std::vector<layer_info> layers();
+// the imagery of the layer Name for the rectangle, as ortho does (Rgba all filled from it). false if it couldn't be reached
+bool layer(editor_http::client &Client, std::string const &Name, area const &Area, int const Pixels, std::vector<std::uint8_t> &Rgba, std::filesystem::path const &Cache,
+           std::string &Error, editor_http::stop_check const &Stop);
 
 // the heights of a grid of Width x Height pixels of Pixel metres, the outer corner of its north-west pixel at West, North,
 // rows from the north. the values at or below NoData are filled from the sources, the others stay. false if a source

@@ -64,6 +64,7 @@ class editor_orthophoto
 		bool drape{true};       // fit the imagery onto the ground geometry instead of a flat plane
 		float lift{0.05f};      // with drape: distance above the ground (in the scene it has to clear the ground to be seen)
 		bool in_scene{false};   // render as opaque scene geometry, covered by whatever is in front of it
+		std::string layer;      // empty: the orthophoto of geoportal.gov.pl; otherwise a map layer of editor_foreign (maps, quick imagery)
 	};
 
 	using world_triangle = std::array<glm::dvec3, 3>;
@@ -130,6 +131,7 @@ class editor_orthophoto
 	{
 		int year{0};
 		bool hires{false};
+		std::string layer;
 	};
 
 	struct job

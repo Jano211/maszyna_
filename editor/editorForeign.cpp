@@ -255,15 +255,27 @@ struct source
 	double blend{30.0};     // terrain: metres over which the heights are pulled onto the edge of the data before them
 	double feather{10.0};   // imagery: metres over which the edge of the imagery before them fades into theirs
 	std::string credit;
+	std::string title; // map: the name shown in the list of the layers
 };
 
 char const *const file_name{"editor/foreign_sources.txt"};
+
+#define MAP_DEFAULTS                                                                                                                                                    \
+	"map esri xyz zoom=18 title=Esri_imagery_(quick) credit=Esri_World_Imagery url=https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}\n"       \
+	"map osm xyz zoom=17 title=OpenStreetMap credit=(c)_OpenStreetMap_contributors url=https://tile.openstreetmap.org/{z}/{x}/{y}.png\n"                                   \
+	"map topo xyz zoom=16 title=Topographic_(OpenTopoMap) credit=OpenTopoMap_(CC-BY-SA),_(c)_OpenStreetMap_contributors url=https://tile.opentopomap.org/{z}/{x}/{y}.png\n" \
+	"map isok wms crs=2180 resolution=1 max=4096 area=14,49,24.2,55 title=Shaded_relief_(ISOK) credit=GUGiK,_geoportal.gov.pl "                                     \
+	"url=https://mapy.geoportal.gov.pl/wss/service/PZGIK/NMT/GRID1/WMS/ShadedRelief?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:2180&LAYERS=Raster&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}\n"
+
+// the map layers when the file has none (made before they were there)
+char const *const map_defaults{MAP_DEFAULTS};
 
 // the file written when there's none. a line: what (ortho / terrain), a name, the kind of the service (wms / wcs / xyz) and
 // the settings as key=value with no spaces in them; in credit= an underscore stands for a space
 char const *const defaults{
     "# Sources of the orthophoto and the terrain beyond geoportal.gov.pl, used by the editor where geoportal.gov.pl has nothing.\n"
-    "# A line: <ortho|terrain> <name> <wms|wcs|xyz> key=value ... (no spaces in the values; in credit= _ stands for a space)\n"
+    "# A line: <ortho|terrain|map> <name> <wms|wcs|xyz> key=value ... (no spaces in the values; in credit= and title= _ stands for a space)\n"
+    "#   ortho/terrain fill what geoportal.gov.pl leaves empty; map is a layer to choose instead of the orthophoto (title= its name in the list)\n"
     "#   url=       the address of a request; {bbox} (minx,miny,maxx,maxy in the system of crs=, x to the east), {width}, {height}\n"
     "#              for wms/wcs, {z} {x} {y} for xyz tiles (Web Mercator, as OpenStreetMap)\n"
     "#   crs=       EPSG code of the system of wms/wcs: 2180, 2176-2179, 3040-3051, 25828-25838, 32628-32638, 3067, 3346, 3857, 4326, 4258\n"
@@ -290,7 +302,10 @@ char const *const defaults{
     "ortho s2 xyz zoom=15 priority=90 feather=20 credit=Sentinel-2_cloudless_by_EOX url=https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg\n"
     "# Terrain tiles of Mapzen on AWS (SRTM and others, ~30 m)\n"
     "terrain terrarium xyz zoom=13 priority=90 encoding=terrarium offset=auto blend=150 credit=Mapzen_terrain_tiles "
-    "url=https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png\n"};
+    "url=https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png\n"
+    "\n"
+    "# Layers to choose instead of the orthophoto of geoportal.gov.pl, quick to come (read from here when the file has no map lines)\n"
+    MAP_DEFAULTS};
 
 struct registry
 {
@@ -327,9 +342,11 @@ bool parse_line(std::string const &Line, source &Out, std::string &Problem)
 		Out.what = kind::ortho;
 	else if (what == "terrain")
 		Out.what = kind::terrain;
+	else if (what == "map")
+		Out.what = kind::map;
 	else
 	{
-		Problem = "not ortho or terrain: " + what;
+		Problem = "not ortho, terrain or map: " + what;
 		return false;
 	}
 	Out.name = name;
@@ -367,6 +384,11 @@ bool parse_line(std::string const &Line, source &Out, std::string &Problem)
 		{
 			Out.credit = value;
 			std::replace(Out.credit.begin(), Out.credit.end(), '_', ' ');
+		}
+		else if (key == "title")
+		{
+			Out.title = value;
+			std::replace(Out.title.begin(), Out.title.end(), '_', ' ');
 		}
 		else if (key == "encoding")
 			Out.terrarium = value == "terrarium";
@@ -473,11 +495,22 @@ void load(registry &Registry)
 			WriteLog("Editor: " + std::string{file_name} + ", line " + std::to_string(number) + " skipped: " + problem);
 		}
 	}
+	if (std::none_of(Registry.sources.begin(), Registry.sources.end(), [](source const &Item) { return Item.what == kind::map; }))
+	{
+		std::istringstream maps{map_defaults};
+		while (std::getline(maps, line))
+		{
+			source item;
+			std::string problem;
+			if (parse_line(line, item, problem))
+				Registry.sources.push_back(std::move(item));
+		}
+	}
 	std::stable_sort(Registry.sources.begin(), Registry.sources.end(), [](source const &Left, source const &Right) { return Left.priority < Right.priority; });
-	int counts[2]{0, 0};
+	int counts[3]{0, 0, 0};
 	for (auto const &item : Registry.sources)
-		++counts[item.what == kind::ortho ? 0 : 1];
-	Registry.status = std::to_string(counts[0]) + " imagery, " + std::to_string(counts[1]) + " terrain\n" + status.str();
+		++counts[static_cast<int>(item.what)];
+	Registry.status = std::to_string(counts[0]) + " imagery, " + std::to_string(counts[1]) + " terrain, " + std::to_string(counts[2]) + " map layers\n" + status.str();
 }
 
 // the sources of the kind reaching into the rectangle, by priority
@@ -988,7 +1021,7 @@ fetched fetch_tiles(editor_http::client &Client, source const &Source, target_gr
 	auto const world{2.0 * pi * mercator_radius};
 	// the level: imagery as fine as the target pixel (on the ground: the Mercator scale is 1/cos of the latitude), terrain as set
 	int zoom{Source.zoom};
-	if (Source.what == kind::ortho)
+	if (Source.what != kind::terrain)
 	{
 		double latitude, longitude;
 		to_geographic(Source.system, 0.5 * (minx + maxx), 0.5 * (miny + maxy), latitude, longitude);
@@ -1379,8 +1412,49 @@ bool reaches(kind const Kind, area const &Area)
 	return false == sources_for(Kind, Area).empty();
 }
 
+namespace
+{
+bool compose(editor_http::client &Client, std::vector<source> const &Sources, area const &Area, int const Pixels, std::vector<std::uint8_t> &Rgba, fs::path const &Cache,
+             std::string &Error, editor_http::stop_check const &Stop);
+}
+
 bool ortho(editor_http::client &Client, area const &Area, int const Pixels, std::vector<std::uint8_t> &Rgba, fs::path const &Cache, std::string &Error,
            editor_http::stop_check const &Stop)
+{
+	return compose(Client, sources_for(kind::ortho, Area), Area, Pixels, Rgba, Cache, Error, Stop);
+}
+
+std::vector<layer_info> layers()
+{
+	auto &registry{sources_registry()};
+	std::lock_guard<std::mutex> lock{registry.mutex};
+	if (false == registry.loaded)
+		load(registry);
+	std::vector<layer_info> result;
+	for (auto const &item : registry.sources)
+		if (item.what == kind::map)
+			result.push_back({item.name, item.title.empty() ? item.name : item.title, item.credit});
+	return result;
+}
+
+bool layer(editor_http::client &Client, std::string const &Name, area const &Area, int const Pixels, std::vector<std::uint8_t> &Rgba, fs::path const &Cache,
+           std::string &Error, editor_http::stop_check const &Stop)
+{
+	auto sources{sources_for(kind::map, Area)};
+	sources.erase(std::remove_if(sources.begin(), sources.end(), [&](source const &Item) { return Item.name != Name; }), sources.end());
+	Rgba.clear();
+	if (sources.empty())
+	{
+		Error = "no map layer " + Name;
+		return false;
+	}
+	return compose(Client, sources, Area, Pixels, Rgba, Cache / "maps", Error, Stop);
+}
+
+namespace
+{
+bool compose(editor_http::client &Client, std::vector<source> const &Sources, area const &Area, int const Pixels, std::vector<std::uint8_t> &Rgba, fs::path const &Cache,
+             std::string &Error, editor_http::stop_check const &Stop)
 {
 	auto const count{static_cast<std::size_t>(Pixels) * Pixels};
 	if (Rgba.size() != count * 4)
@@ -1399,7 +1473,7 @@ bool ortho(editor_http::client &Client, area const &Area, int const Pixels, std:
 	// which of them is on top at each pixel, -1: none
 	std::vector<float> owner(count, -1.f);
 	bool ok{true};
-	auto const sources{sources_for(kind::ortho, Area)};
+	auto const &sources{Sources};
 	for (std::size_t index = 0; index < sources.size(); ++index)
 	{
 		auto const &item{sources[index]};
@@ -1416,7 +1490,8 @@ bool ortho(editor_http::client &Client, area const &Area, int const Pixels, std:
 			continue;
 		std::vector<std::uint8_t> layer;
 		sample_rgba(native, item, grid, layer);
-		clear_black(layer, grid.width, grid.height);
+		if (item.what != kind::map)
+			clear_black(layer, grid.width, grid.height);
 		for (std::size_t i = 0; i < count; ++i)
 		{
 			auto *pixel{&below[i * 4]};
@@ -1464,6 +1539,8 @@ bool ortho(editor_http::client &Client, area const &Area, int const Pixels, std:
 	}
 	return ok;
 }
+
+} // namespace
 
 bool terrain(editor_http::client &Client, double const West, double const North, double const Pixel, int const Width, int const Height, std::vector<float> &Heights,
              float const NoData, std::string &Error, editor_http::stop_check const &Stop)
