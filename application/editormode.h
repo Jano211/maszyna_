@@ -19,6 +19,7 @@ http://mozilla.org/MPL/2.0/.
 #include "editor/editorTerrain.hpp"
 #include "editor/editorTerrainStreamer.hpp"
 #include "editor/editorOrthophoto.hpp"
+#include "editor/editorMinimap.hpp"
 #include "editor/editorNmt.hpp"
 #include "editor/editorTrack.hpp"
 #include "editor/editorConnections.hpp"
@@ -651,7 +652,9 @@ class editor_mode : public application_mode, private editor_track::observer
 	std::string m_openscenery_choice;
 	void render_open_scenery_popup();
 	bool m_orthophoto_window{false};
+	bool m_minimap_window{false};
 	void render_orthophoto_window();
+	void render_minimap_window();
 	// view menu: the top view, the lanes of the roads, the structure gauge, the environment
 	void render_view_menu();
 	// time of day, day of the year, visibility, clouds and air temperature, as the scenery is seen in the editor
@@ -682,6 +685,7 @@ class editor_mode : public application_mode, private editor_track::observer
 	void load_orthophoto_settings();
 	void save_orthophoto_settings();
 	editor_orthophoto m_orthophoto;
+	editor_minimap m_minimap;
 	std::string m_orthophoto_scenery;            // scenery whose origin is loaded
 	std::string m_orthophoto_mark;
 	glm::dvec2 m_orthophoto_origin_edit{0.0};    // origin being typed in (northing, easting); applied when editing ends

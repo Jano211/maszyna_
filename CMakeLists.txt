@@ -228,6 +228,7 @@ set(SOURCES
 "editor/editorHttp.cpp"
 "editor/editorNmt.cpp"
 "editor/editorForeign.cpp"
+"editor/editorMinimap.cpp"
 "editor/editorPreviews.cpp"
 "editor/editorIcons.cpp"
 "editor/editorClips.cpp"

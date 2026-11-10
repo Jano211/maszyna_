@@ -18,6 +18,17 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Branch `geoportale` (scalony też do `wszystko-gl46`).
 
+### Minimapa — commit o tym tytule
+- Co widać: Widok > Minimapa – okno z mapą 2D wokół kamery z warstw `map` pliku źródeł (OSM, mapy topograficzne, ISOK…),
+  wybór warstwy, „Za kamerą”, przeciąganie myszą, kółko przybliża wokół kursora (od 0,25 m do ok. 500 m na piksel),
+  dwuklik przenosi tam kamerę (na tej samej wysokości). Kamera jako czerwony trójkąt w kierunku patrzenia, podziałka
+  w rogu, podpis źródła pod mapą. Kafle 256 px na siatce PUWG 1992, 256 m·2^n na bok, pobierane w tle (2 wątki),
+  w pamięci do 400; póki się wczytują, widać wycinek grubszego. Pamięć podręczna wspólna z ortofoto. Bez pliku źródeł
+  albo bez punktu odniesienia scenerii – komunikat zamiast mapy. Zamknięcie okna oddaje tekstury.
+- Zmienia: nowe `editor/editorMinimap.hpp/.cpp` (CMakeLists), `application/editormode.h` (pola `m_minimap`,
+  `m_minimap_window` – przebudowa prawie całego edytora), `application/editormode.cpp`, `editor/editorForeign.hpp/.cpp`
+  (`layer(…, Plain)` bez `magnify=`), `lang/editor_pl.po`.
+
 ### Warstwy map: większe kafle i większe napisy (tile=, magnify=) — commit o tym tytule
 - W linii `map …` pliku źródeł: `tile=4` – kafle edytora 4× większe (1024 m), mapa sięga 4× dalej przy tej samej liczbie
   kafli; `magnify=4` – mapa pobierana z 4× większym pikselem (o dwa poziomy płycej), napisy i znaki 4× większe na ziemi.

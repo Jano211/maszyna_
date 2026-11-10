@@ -1391,10 +1391,13 @@ std::vector<layer_info> layers()
 }
 
 bool layer(editor_http::client &Client, std::string const &Name, area const &Area, int const Pixels, std::vector<std::uint8_t> &Rgba, fs::path const &Cache,
-           std::string &Error, editor_http::stop_check const &Stop)
+           std::string &Error, editor_http::stop_check const &Stop, bool const Plain)
 {
 	auto sources{sources_for(kind::map, Area)};
 	sources.erase(std::remove_if(sources.begin(), sources.end(), [&](source const &Item) { return Item.name != Name; }), sources.end());
+	if (Plain)
+		for (auto &item : sources)
+			item.magnify = 1;
 	Rgba.clear();
 	if (sources.empty())
 	{

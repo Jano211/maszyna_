@@ -12865,3 +12865,24 @@ msgid "The orthophoto of geoportal.gov.pl (and of the other countries where it h
 msgstr "Ortofoto z geoportal.gov.pl (a tam, gdzie go nie ma, z innych krajów) albo zamiast niego mapa lub zdjęcia ogólnoświatowe,\nktóre przychodzą dużo szybciej: do poruszania się po okolicy, potem z powrotem ortofoto do pracy. Lista: editor/foreign_sources.txt, linie map"
 
 
+
+msgid "Minimap"
+msgstr "Minimapa"
+
+msgid "A map around the camera (the map layers of editor/foreign_sources.txt): drag and zoom it, a double click takes the camera there"
+msgstr "Mapa wokół kamery (warstwy map z editor/foreign_sources.txt): przeciągaj i przybliżaj, dwuklik przenosi tam kamerę"
+
+msgid "Follow the camera"
+msgstr "Za kamerą"
+
+msgid "No map layers: the minimap shows the map lines of editor/foreign_sources.txt (OpenStreetMap, topographic maps). Put the file in the folder of the simulator and reload the sources in the orthophoto window."
+msgstr "Brak warstw map: minimapa pokazuje linie map z editor/foreign_sources.txt (OpenStreetMap, mapy topograficzne). Wrzuć plik do folderu symulatora i wczytaj ponownie źródła w oknie ortofoto."
+
+msgid "The scenery has no place on the map: set its origin in PUWG 1992 in the orthophoto window."
+msgstr "Sceneria nie ma miejsca na mapie: ustaw jej punkt odniesienia w PUWG 1992 w oknie ortofoto."
+
+msgid "Drag: move the map. Wheel: zoom. Double click: the camera goes there"
+msgstr "Przeciągnij: przesuń mapę. Kółko: przybliż. Dwuklik: kamera idzie tam"
+
+msgid "Loading: %d"
+msgstr "Wczytywanie: %d"

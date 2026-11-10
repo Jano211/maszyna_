@@ -68,8 +68,9 @@ struct layer_info
 };
 std::vector<layer_info> layers();
 // the imagery of the layer Name for the rectangle, as ortho does (Rgba all filled from it). false if it couldn't be reached
+// Plain: at the pixel asked for, without its magnify= (for a map drawn on the screen, where its lettering is as it should be)
 bool layer(editor_http::client &Client, std::string const &Name, area const &Area, int const Pixels, std::vector<std::uint8_t> &Rgba, std::filesystem::path const &Cache,
-           std::string &Error, editor_http::stop_check const &Stop);
+           std::string &Error, editor_http::stop_check const &Stop, bool const Plain = false);
 
 // the heights of a grid of Width x Height pixels of Pixel metres, the outer corner of its north-west pixel at West, North,
 // rows from the north. the values at or below NoData are filled from the sources, the others stay. false if a source

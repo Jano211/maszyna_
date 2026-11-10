@@ -1505,6 +1505,7 @@ bool editor_mode::update()
     render_first_steps();
     render_nmt_prompt();
     render_orthophoto_window();
+    render_minimap_window();
     render_switch_designer();
     render_environment_window();
     if (m_terrain_open)
@@ -3863,7 +3864,41 @@ void editor_mode::render_map_menu()
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("%s", STR_C("Aerial imagery of geoportal.gov.pl under the scenery, laid out by the origin of the scenery"));
     ImGui::MenuItem(STR_C("Orthophoto settings..."), nullptr, &m_orthophoto_window);
+    ImGui::MenuItem(STR_C("Minimap"), nullptr, &m_minimap_window);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", STR_C("A map around the camera (the map layers of editor/foreign_sources.txt): drag and zoom it, a double click takes the camera there"));
     ImGui::EndMenu();
+}
+
+void editor_mode::render_minimap_window()
+{
+    static bool was_open{false};
+    if (false == m_minimap_window)
+    {
+        if (was_open)
+            m_minimap.release(); // the tiles out of the video memory
+        was_open = false;
+        return;
+    }
+    was_open = true;
+    load_orthophoto_settings(); // the origin of the scenery, as the orthophoto has it
+    ImGui::SetNextWindowSize(ImVec2(420.0f, 460.0f), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin((std::string(STR_C("Minimap")) + "###minimap").c_str(), &m_minimap_window))
+    {
+        auto const &origin{m_orthophoto.settings()};
+        editor_minimap::camera const camera{origin.north, origin.east, Camera.Pos.x, Camera.Pos.z, Camera.Angle.y};
+        glm::dvec2 target;
+        if (m_minimap.ui(camera, target))
+        {
+            // the camera goes there at its height
+            Camera.Pos.x = target.x;
+            Camera.Pos.z = target.y;
+            Camera.Velocity = {};
+            m_focus_active = false;
+            Global.pCamera = Camera;
+        }
+    }
+    ImGui::End();
 }
 
 void editor_mode::render_orthophoto_window()
