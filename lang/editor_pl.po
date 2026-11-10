@@ -12870,3 +12870,6 @@ msgstr "Ortofoto z geoportal.gov.pl (a tam, gdzie go nie ma, z innych krajów) a
 
 msgid "Shaded relief (ISOK)"
 msgstr "Cieniowanie terenu (ISOK)"
+
+msgid "Topographic scans (geoportal.gov.pl)"
+msgstr "Skany map topograficznych (geoportal.gov.pl)"

@@ -264,6 +264,8 @@ char const *const file_name{"editor/foreign_sources.txt"};
 	"map esri xyz zoom=18 title=Esri_imagery_(quick) credit=Esri_World_Imagery url=https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}\n"       \
 	"map osm xyz zoom=17 title=OpenStreetMap credit=(c)_OpenStreetMap_contributors url=https://tile.openstreetmap.org/{z}/{x}/{y}.png\n"                                   \
 	"map topo xyz zoom=16 title=Topographic_(OpenTopoMap) credit=OpenTopoMap_(CC-BY-SA),_(c)_OpenStreetMap_contributors url=https://tile.opentopomap.org/{z}/{x}/{y}.png\n" \
+	"map topo_pl wms crs=2180 resolution=1 max=4096 area=14,49,24.2,55 title=Topographic_scans_(geoportal.gov.pl) credit=GUGiK,_geoportal.gov.pl "                     \
+	"url=https://mapy.geoportal.gov.pl/wss/service/img/guest/TOPO/MapServer/WMSServer?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:2180&LAYERS=Raster&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}\n" \
 	"map isok wms crs=2180 resolution=1 max=4096 area=14,49,24.2,55 title=Shaded_relief_(ISOK) credit=GUGiK,_geoportal.gov.pl "                                     \
 	"url=https://mapy.geoportal.gov.pl/wss/service/PZGIK/NMT/GRID1/WMS/ShadedRelief?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:2180&LAYERS=Raster&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}\n"
 

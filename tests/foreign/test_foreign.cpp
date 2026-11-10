@@ -357,7 +357,7 @@ int main()
 	// the map layers: the defaults are there, one of them gives the whole tile
 	{
 		auto const list{layers()};
-		check(list.size() == 4 && list[3].name == "isok" && list[1].name == "osm" && list[1].title == "OpenStreetMap", "four map layers, osm second, ISOK last");
+		check(list.size() == 5 && list[3].name == "topo_pl" && list[4].name == "isok" && list[1].name == "osm" && list[1].title == "OpenStreetMap", "five map layers, osm second, ISOK last");
 		std::vector<std::uint8_t> map;
 		check(layer(client, "osm", tile, 512, map, "editor/cache/ortho", error, []() { return false; }) && map.size() == 512u * 512u * 4u && map[2] == 200 && map[3] == 255,
 		      "the OSM layer filled the tile");
