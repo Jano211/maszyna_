@@ -369,6 +369,7 @@ int main(int Count, char **Arguments)
 	{
 		auto const list{layers()};
 		check(list.size() == 5 && list[3].name == "topo_pl" && list[4].name == "isok" && list[1].name == "osm" && list[4].title == "Cieniowanie terenu (ISOK)", "five map layers, osm second, ISOK last");
+		check(list[1].tile == 4 && list[0].tile == 1, "OSM with tiles 4 times larger");
 		std::vector<std::uint8_t> map;
 		check(layer(client, "osm", tile, 512, map, "editor/cache/ortho", error, []() { return false; }) && map.size() == 512u * 512u * 4u && map[2] == 200 && map[3] == 255,
 		      "the OSM layer filled the tile");

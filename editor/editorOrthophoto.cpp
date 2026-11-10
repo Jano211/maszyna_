@@ -77,6 +77,7 @@ struct tile_request
 	int year{0};
 	bool hires{false};
 	std::string layer; // a map layer instead of the orthophoto
+	double size{editor_orthophoto::tile_size}; // of the tile, m: larger for some map layers
 };
 
 struct image
@@ -346,10 +347,9 @@ bool in_service_area(int Ix, int Iy)
 	return north > 100000.0 && north < 900000.0 && east > 100000.0 && east < 900000.0;
 }
 
-editor_foreign::area tile_area(int const Ix, int const Iy)
+editor_foreign::area tile_area(int const Ix, int const Iy, double const Size = editor_orthophoto::tile_size)
 {
-	auto const size{editor_orthophoto::tile_size};
-	return {Ix * size, Iy * size, (Ix + 1) * size, (Iy + 1) * size};
+	return {Ix * Size, Iy * Size, (Ix + 1) * Size, (Iy + 1) * Size};
 }
 
 // whether the services of other countries or the world-wide imagery reach the tile; asked once per tile (main thread only),
@@ -390,7 +390,7 @@ bool may_be_black(image const &Image)
 // the tile from geoportal.gov.pl, and where it has nothing from the sources of editor_foreign
 bool load_tile(http_client &Client, tile_request const &Request, image &Out, bool &Empty, std::string &Error, stop_check const &Stop)
 {
-	auto const area{tile_area(Request.ix, Request.iy)};
+	auto const area{tile_area(Request.ix, Request.iy, Request.size)};
 	if (false == Request.layer.empty())
 	{
 		// a map layer: its tiles alone, anywhere
@@ -558,11 +558,11 @@ double sample_heights(std::vector<float> const &Heights, double U, double V)
 }
 
 // smooth normal from the heightfield (u grows towards -x, v towards -z)
-glm::vec3 heights_normal(std::vector<float> const &Heights, double U, double V)
+glm::vec3 heights_normal(std::vector<float> const &Heights, double U, double V, double const Tile)
 {
 	double constexpr delta{1.0 / ground_grid};
-	double const dhdu = (sample_heights(Heights, U + delta, V) - sample_heights(Heights, U - delta, V)) / (2.0 * delta * editor_orthophoto::tile_size);
-	double const dhdv = (sample_heights(Heights, U, V + delta) - sample_heights(Heights, U, V - delta)) / (2.0 * delta * editor_orthophoto::tile_size);
+	double const dhdu = (sample_heights(Heights, U + delta, V) - sample_heights(Heights, U - delta, V)) / (2.0 * delta * Tile);
+	double const dhdv = (sample_heights(Heights, U, V + delta) - sample_heights(Heights, U, V - delta)) / (2.0 * delta * Tile);
 	return glm::normalize(glm::vec3(static_cast<float>(dhdu), 1.0f, static_cast<float>(dhdv)));
 }
 } // namespace
@@ -695,6 +695,12 @@ void editor_orthophoto::settings(config const &Config)
 			entry.second.scene_dirty = true;
 	if (!sourcechanged)
 		return;
+	// some map layers have larger tiles: they reach further with the same number of tiles
+	m_tile = tile_size;
+	if (false == m_config.layer.empty())
+		for (auto const &item : editor_foreign::layers())
+			if (item.name == m_config.layer)
+				m_tile = tile_size * std::clamp(item.tile, 1, 16);
 	cancel_pending();
 	for (auto &entry : m_tiles)
 		release_tile(entry.second);
@@ -785,13 +791,13 @@ editor_orthophoto::tile_key editor_orthophoto::camera_tile(glm::dvec3 const &Cam
 {
 	double const east = m_config.east - Camera.x;
 	double const north = m_config.north + Camera.z;
-	return {static_cast<int>(std::floor(east / tile_size)), static_cast<int>(std::floor(north / tile_size))};
+	return {static_cast<int>(std::floor(east / m_tile)), static_cast<int>(std::floor(north / m_tile))};
 }
 
 glm::dvec2 editor_orthophoto::tile_corner(tile_key const &Key) const
 {
 	// image u runs west->east (towards -x), v north->south (towards -z)
-	return {m_config.east - Key.first * tile_size, (Key.second + 1) * tile_size - m_config.north};
+	return {m_config.east - Key.first * m_tile, (Key.second + 1) * m_tile - m_config.north};
 }
 
 void editor_orthophoto::start_workers()
@@ -834,7 +840,7 @@ void editor_orthophoto::schedule(tile_key const &Key, tile &Tile, int Level, std
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		m_queue.erase(std::remove_if(m_queue.begin(), m_queue.end(), [&](job const &Job) { return Job.key == Key; }), m_queue.end());
-		m_queue.push_back(job{Key, Level, Alpha, source{m_config.year, m_config.hires, m_config.layer}, m_generation.load()});
+		m_queue.push_back(job{Key, Level, Alpha, source{m_config.year, m_config.hires, m_config.layer, m_tile}, m_generation.load()});
 	}
 	Tile.requested = Level;
 	Tile.requested_alpha = Alpha;
@@ -900,7 +906,7 @@ void editor_orthophoto::sample_ground(tile_key const &Key, tile &Tile)
 	Tile.surface.clear();
 
 	glm::dvec2 const corner = tile_corner(Key);
-	glm::dvec2 const min(corner.x - tile_size, corner.y - tile_size);
+	glm::dvec2 const min(corner.x - m_tile, corner.y - m_tile);
 	glm::dvec2 const max(corner.x, corner.y);
 	// the clipped surface is drawn only by the geometry in the scene. the overlay needs just the heights, and the heightmap
 	// terrain gives these straight away: its triangles (hundreds of thousands in a tile) aren't gathered for it
@@ -909,7 +915,7 @@ void editor_orthophoto::sample_ground(tile_key const &Key, tile &Tile)
 	m_ground(min, max, surface, triangles);
 
 	int constexpr samples{ground_grid + 1};
-	double constexpr step{tile_size / ground_grid};
+	double const step{m_tile / ground_grid};
 	std::vector<float> heights(static_cast<std::size_t>(samples) * samples, no_height);
 	if (!surface)
 		for (int j = 0; j < samples; ++j)
@@ -1050,7 +1056,7 @@ void editor_orthophoto::build_shape(tile_key const &Key, tile &Tile)
 
 	glm::dvec2 const corner = tile_corner(Key);
 	bool const draped = m_config.drape && !Tile.surface.empty();
-	auto const uv_of = [&](glm::dvec3 const &Point) { return glm::vec2((corner.x - Point.x) / tile_size, (corner.y - Point.z) / tile_size); };
+	auto const uv_of = [&](glm::dvec3 const &Point) { return glm::vec2((corner.x - Point.x) / m_tile, (corner.y - Point.z) / m_tile); };
 
 	std::vector<world_vertex> vertices;
 	auto const add = [&](glm::dvec3 const &Point, double Lift) {
@@ -1058,7 +1064,7 @@ void editor_orthophoto::build_shape(tile_key const &Key, tile &Tile)
 		vertex.position = Point + glm::dvec3(0.0, Lift, 0.0);
 		vertex.texture = uv_of(Point);
 		// smooth normals from the heightfield, the clipped triangles alone would look faceted
-		vertex.normal = (draped && !Tile.heights.empty()) ? heights_normal(Tile.heights, vertex.texture.x, vertex.texture.y) : glm::vec3(0.0f, 1.0f, 0.0f);
+		vertex.normal = (draped && !Tile.heights.empty()) ? heights_normal(Tile.heights, vertex.texture.x, vertex.texture.y, m_tile) : glm::vec3(0.0f, 1.0f, 0.0f);
 		vertices.push_back(vertex);
 	};
 	double ylo, yhi;
@@ -1074,14 +1080,14 @@ void editor_orthophoto::build_shape(tile_key const &Key, tile &Tile)
 	{
 		// flat quad at the layer height, triangles facing up like the draped surface
 		double const y = m_config.height;
-		glm::dvec3 const nw(corner.x, y, corner.y), ne(corner.x - tile_size, y, corner.y);
-		glm::dvec3 const sw(corner.x, y, corner.y - tile_size), se(corner.x - tile_size, y, corner.y - tile_size);
+		glm::dvec3 const nw(corner.x, y, corner.y), ne(corner.x - m_tile, y, corner.y);
+		glm::dvec3 const sw(corner.x, y, corner.y - m_tile), se(corner.x - m_tile, y, corner.y - m_tile);
 		for (auto const &point : {nw, sw, ne, se, ne, sw})
 			add(point, 0.0);
 		ylo = yhi = y;
 	}
 
-	glm::dvec3 const centre(corner.x - tile_size * 0.5, (ylo + yhi) * 0.5, corner.y - tile_size * 0.5);
+	glm::dvec3 const centre(corner.x - m_tile * 0.5, (ylo + yhi) * 0.5, corner.y - m_tile * 0.5);
 	scene::basic_section &section = simulation::Region->section(centre);
 	section.create_geometry(); // existing section geometry has to be in place before we add ours (idempotent)
 	// opaque imagery goes with the section geometry; translucent one has to be drawn in the translucent pass,
@@ -1137,13 +1143,13 @@ void editor_orthophoto::build_shape(tile_key const &Key, tile &Tile)
 	// the shape gets just two bounding vertices: they give it its area, and leave no triangles behind for
 	// code which reads the source vertices of the section shapes (e.g. snapping nodes to the ground)
 	std::vector<world_vertex> bounds(2, padding);
-	bounds[0].position = glm::dvec3(corner.x - tile_size, ylo, corner.y - tile_size);
+	bounds[0].position = glm::dvec3(corner.x - m_tile, ylo, corner.y - m_tile);
 	bounds[1].position = glm::dvec3(corner.x, yhi, corner.y);
 	scene::shape_node shape;
 	shape.make_terrain(Tile.slot.material, std::move(bounds), origin);
 	shape.geometry(Tile.geometry);
 	// extend the bounds of the containers so the tile isn't culled at its edges
-	double const reach = glm::length(glm::dvec3(tile_size * 0.5, (yhi - ylo) * 0.5, tile_size * 0.5));
+	double const reach = glm::length(glm::dvec3(m_tile * 0.5, (yhi - ylo) * 0.5, m_tile * 0.5));
 	section.m_area.radius = std::max(section.m_area.radius, static_cast<float>(glm::length(section.m_area.center - centre) + reach));
 	if (cell != nullptr)
 	{
@@ -1338,7 +1344,7 @@ void editor_orthophoto::worker()
 
 		image picture;
 		std::string error;
-		tile_request const request{current.key.first, current.key.second, current.level, current.src.year, current.src.hires, current.src.layer};
+		tile_request const request{current.key.first, current.key.second, current.level, current.src.year, current.src.hires, current.src.layer, current.src.tile};
 		out.ok = load_tile(client, request, picture, out.empty, error, stopping);
 		if (m_stop)
 			return;
@@ -1399,7 +1405,7 @@ void editor_orthophoto::draw(glm::mat4 const &ViewProjection, glm::dvec3 const &
 
 		// world extent of the tile; u runs west->east (-x), v runs north->south (-z), matching the image rows
 		glm::dvec2 const corner = tile_corner(entry.first);
-		auto const relative = [&](double U, double V) { return glm::vec3(glm::dvec3(corner.x - U * tile_size, 0.0, corner.y - V * tile_size) - CameraPos); };
+		auto const relative = [&](double U, double V) { return glm::vec3(glm::dvec3(corner.x - U * m_tile, 0.0, corner.y - V * m_tile) - CameraPos); };
 		// the projection is linear before the divide, so clip positions interpolate exactly: c = c00 + du*u + dv*v + up*height
 		glm::vec4 const c00 = ViewProjection * glm::vec4(relative(0.0, 0.0), 1.0f);
 		glm::vec4 const du = ViewProjection * glm::vec4(relative(1.0, 0.0), 1.0f) - c00;
@@ -1411,12 +1417,12 @@ void editor_orthophoto::draw(glm::mat4 const &ViewProjection, glm::dvec3 const &
 
 		// ImGui interpolates texture coordinates affinely, so subdivide finer where the camera is close;
 		// draped tiles also need enough segments to follow the ground
-		double const nearestx = std::clamp(CameraPos.x, corner.x - tile_size, corner.x);
-		double const nearestz = std::clamp(CameraPos.z, corner.y - tile_size, corner.y);
+		double const nearestx = std::clamp(CameraPos.x, corner.x - m_tile, corner.x);
+		double const nearestz = std::clamp(CameraPos.z, corner.y - m_tile, corner.y);
 		double const nearesty = std::clamp(CameraPos.y, ylo, yhi);
 		double const distance = glm::length(glm::dvec3(nearestx, nearesty, nearestz) - CameraPos);
-		double const step = std::clamp(distance * 0.2, 4.0, tile_size);
-		int segments = std::clamp(static_cast<int>(std::ceil(tile_size / step)), 1, 64);
+		double const step = std::clamp(distance * 0.2, 4.0, m_tile);
+		int segments = std::clamp(static_cast<int>(std::ceil(m_tile / step)), 1, 64);
 		if (draped)
 			segments = std::max(segments, distance < 300.0 ? ground_grid : distance < 800.0 ? ground_grid / 2 : ground_grid / 4);
 		float const segmentsize = 1.0f / static_cast<float>(segments);

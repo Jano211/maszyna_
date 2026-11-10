@@ -18,6 +18,13 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Branch `geoportale` (scalony też do `wszystko-gl46`).
 
+### Warstwy map: większe kafle i większe napisy (tile=, magnify=) — commit o tym tytule
+- W linii `map …` pliku źródeł: `tile=4` – kafle edytora 4× większe (1024 m), mapa sięga 4× dalej przy tej samej liczbie
+  kafli; `magnify=4` – mapa pobierana z 4× większym pikselem (o dwa poziomy płycej), napisy i znaki 4× większe na ziemi.
+  We wzorze dla OSM i OpenTopoMap oba po 4. Napis „x × y m” przy odległości uwzględnia większe kafle.
+- Zmienia: `editor/editorOrthophoto.hpp` (`tile_side()`, pole `m_tile`, `source::tile`), `editor/editorOrthophoto.cpp`,
+  `editor/editorForeign.hpp/.cpp`, `application/editormode.cpp`, `docs/foreign_sources.txt`.
+
 ### Inne źródła tylko z pliku – exe nie ma wbudowanych adresów — commit o tym tytule
 - Exe nie zawiera żadnych adresów usług poza geoportal.gov.pl i niczego samo nie tworzy. Bez pliku `editor/foreign_sources.txt`
   edytor działa jak przed zmianami: tylko geoportal, a lista „Warstwa” zawiera tylko ortofoto. Wzór pliku ze sprawdzonymi

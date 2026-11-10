@@ -64,6 +64,7 @@ struct layer_info
 	std::string name;
 	std::string title;
 	std::string credit;
+	int tile{1}; // the tiles of the editor this many times larger (tile=): reaching further with as many of them
 };
 std::vector<layer_info> layers();
 // the imagery of the layer Name for the rectangle, as ortho does (Rgba all filled from it). false if it couldn't be reached

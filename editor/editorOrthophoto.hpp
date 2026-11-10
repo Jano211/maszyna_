@@ -94,6 +94,8 @@ class editor_orthophoto
 	// disabling drops the queue and returns the gpu memory of the resident tiles
 	void enabled(bool State);
 	config const &settings() const { return m_config; }
+	// side of a tile in metres: tile_size, or a multiple of it for the map layers with larger tiles
+	double tile_side() const { return m_tile; }
 	static std::string mark(config const &Config, bool Enabled, bool Origin);
 	static bool read_mark(std::string const &Text, config &Config, bool &Enabled);
 	// changes of year / resolution invalidate resident tiles, the rest applies immediately
@@ -132,6 +134,7 @@ class editor_orthophoto
 		int year{0};
 		bool hires{false};
 		std::string layer;
+		double tile{tile_size};
 	};
 
 	struct job
@@ -204,6 +207,7 @@ class editor_orthophoto
 	void worker();
 
 	config m_config;
+	double m_tile{tile_size};
 	bool m_enabled{false};
 	std::map<tile_key, tile> m_tiles; // main thread only
 	tile_key m_camera_tile{0, 0};

@@ -18,6 +18,8 @@
 #   blend=      teren: na ilu metrach przy krawędzi wysokości są dociągane do polskich
 #   feather=    ortho: na ilu metrach polskie zdjęcie przenika w zdjęcie tego źródła
 #   credit=     autor danych, wyświetlany pod oknami
+#   tile=       map: kafle edytora tyle razy większe (np. 4 = 1024 m zamiast 256 m): mapa sięga tyle razy dalej przy tej samej liczbie kafli
+#   magnify=    mapa pobierana z pikselem tyle razy większym (1, 2, 4, 8): napisy i znaki tyle razy większe na ziemi, mniej szczegółów
 #
 # Licencje i warunki (stan z 10.11.2026; przed wypaleniem tekstur do scenerii sprawdź je u źródła):
 #   GUGiK (geoportal.gov.pl)  dane udostępniane nieodpłatnie do powszechnego wykorzystania
@@ -39,7 +41,7 @@ terrain terrarium xyz zoom=13 priority=90 encoding=terrarium offset=auto blend=1
 
 # --- Warstwy do wyboru zamiast ortofoto (szybkie, do poruszania się po okolicy) ---
 map esri xyz zoom=18 title=Zdjęcia_Esri_(szybkie) credit=Esri_World_Imagery url=https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}
-map osm xyz zoom=17 title=OpenStreetMap credit=©_autorzy_OpenStreetMap url=https://tile.openstreetmap.org/{z}/{x}/{y}.png
-map topo xyz zoom=16 title=Mapa_topograficzna_(OpenTopoMap) credit=OpenTopoMap_(CC-BY-SA),_©_autorzy_OpenStreetMap url=https://tile.opentopomap.org/{z}/{x}/{y}.png
+map osm xyz zoom=17 tile=4 magnify=4 title=OpenStreetMap credit=©_autorzy_OpenStreetMap url=https://tile.openstreetmap.org/{z}/{x}/{y}.png
+map topo xyz zoom=16 tile=4 magnify=4 title=Mapa_topograficzna_(OpenTopoMap) credit=OpenTopoMap_(CC-BY-SA),_©_autorzy_OpenStreetMap url=https://tile.opentopomap.org/{z}/{x}/{y}.png
 map topo_pl wms crs=2180 resolution=1 max=4096 area=14,49,24.2,55 title=Skany_map_topograficznych_(geoportal.gov.pl) credit=GUGiK,_geoportal.gov.pl url=https://mapy.geoportal.gov.pl/wss/service/img/guest/TOPO/MapServer/WMSServer?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:2180&LAYERS=Raster&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
 map isok wms crs=2180 resolution=1 max=4096 area=14,49,24.2,55 title=Cieniowanie_terenu_(ISOK) credit=GUGiK,_geoportal.gov.pl url=https://mapy.geoportal.gov.pl/wss/service/PZGIK/NMT/GRID1/WMS/ShadedRelief?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:2180&LAYERS=Raster&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}

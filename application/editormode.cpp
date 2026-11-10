@@ -2374,7 +2374,7 @@ void editor_mode::render_orthophoto_ui()
     changed |= ImGui::SliderInt(STR_C("Distance (tiles)"), &config.radius, 0, editor_orthophoto::max_radius);
     persist |= ImGui::IsItemDeactivatedAfterEdit();
     ImGui::SameLine();
-    int const span = static_cast<int>((2 * config.radius + 1) * editor_orthophoto::tile_size);
+    int const span = static_cast<int>((2 * config.radius + 1) * m_orthophoto.tile_side());
     ImGui::TextDisabled("%d x %d m", span, span);
 
     // ImGui 1.73 has no public disabled state yet, the internal item flag does the job

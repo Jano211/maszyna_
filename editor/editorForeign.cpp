@@ -256,6 +256,8 @@ struct source
 	double feather{10.0};   // imagery: metres over which the edge of the imagery before them fades into theirs
 	std::string credit;
 	std::string title; // map: the name shown in the list of the layers
+	int tile{1};       // map: the tiles of the editor this many times larger
+	int magnify{1};    // the map asked for at a pixel this many times larger: its lettering and signs that much larger on the ground
 };
 
 char const *const file_name{"editor/foreign_sources.txt"};
@@ -393,6 +395,15 @@ bool parse_line(std::string const &Line, source &Out, std::string &Problem)
 			Out.blend = std::max(0.0, number);
 		else if (key == "feather")
 			Out.feather = std::max(0.0, number);
+		else if (key == "tile")
+			Out.tile = std::clamp(static_cast<int>(number), 1, 16);
+		else if (key == "magnify")
+		{
+			// a power of two, the levels of the tiles go by twos
+			Out.magnify = 1;
+			while (Out.magnify * 2 <= std::clamp(static_cast<int>(number), 1, 64))
+				Out.magnify *= 2;
+		}
 		else
 		{
 			Problem = "unknown key " + key;
@@ -900,6 +911,7 @@ fetched fetch_service(editor_http::client &Client, source const &Source, target_
 	auto pixel{Grid.pixel};
 	if (degrees)
 		pixel /= 111320.0;
+	pixel *= Source.magnify;
 	if (Source.resolution > 0.0)
 		pixel = std::max(pixel, Source.resolution);
 	double minx, miny, maxx, maxy;
@@ -966,7 +978,7 @@ fetched fetch_tiles(editor_http::client &Client, source const &Source, target_gr
 	{
 		double latitude, longitude;
 		to_geographic(Source.system, 0.5 * (minx + maxx), 0.5 * (miny + maxy), latitude, longitude);
-		auto const ground{Grid.pixel / std::max(0.05, std::cos(latitude))}; // the target pixel in Mercator metres
+		auto const ground{Grid.pixel * Source.magnify / std::max(0.05, std::cos(latitude))}; // the target pixel in Mercator metres
 		zoom = std::clamp(static_cast<int>(std::ceil(std::log2(world / 256.0 / ground))), 0, Source.zoom);
 	}
 	// no more than 8 x 8 tiles in one go
@@ -1374,7 +1386,7 @@ std::vector<layer_info> layers()
 	std::vector<layer_info> result;
 	for (auto const &item : registry.sources)
 		if (item.what == kind::map)
-			result.push_back({item.name, item.title.empty() ? item.name : item.title, item.credit});
+			result.push_back({item.name, item.title.empty() ? item.name : item.title, item.credit, item.tile});
 	return result;
 }
 
