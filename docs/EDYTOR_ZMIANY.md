@@ -18,6 +18,15 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Branch `geoportale` (scalony też do `wszystko-gl46`).
 
+### Inne źródła tylko z pliku – exe nie ma wbudowanych adresów — commit o tym tytule
+- Exe nie zawiera żadnych adresów usług poza geoportal.gov.pl i niczego samo nie tworzy. Bez pliku `editor/foreign_sources.txt`
+  edytor działa jak przed zmianami: tylko geoportal, a lista „Warstwa” zawiera tylko ortofoto. Wzór pliku ze sprawdzonymi
+  źródłami (Słowacja, Esri, Sentinel-2, Terrarium, OSM, OpenTopoMap, skany topograficzne i ISOK z geoportalu) oraz opisem
+  licencji leży w `docs/foreign_sources.txt`; do rozpowszechniania osobno, np. na forum. To, co niżej opisano jako „domyślne”,
+  pochodzi teraz z tego wzoru.
+- Zmienia: `editor/editorForeign.hpp/.cpp`, `tests/foreign/test_foreign.cpp` (przyjmuje ścieżkę wzoru), nowy
+  `docs/foreign_sources.txt`, `lang/editor_pl.po` (usunięte tłumaczenia nazw warstw – nazwy są teraz w pliku).
+
 ### Ortofoto: przełącznik warstwy – mapy, szybkie zdjęcia, cieniowanie ISOK — commit o tym tytule
 - Co widać: w oknie ortofoto pod „Pokaż ortofoto” lista „Warstwa”: Ortofoto (geoportal.gov.pl) jak dotąd albo zamiast niego
   Zdjęcia Esri (szybkie), OpenStreetMap, Mapa topograficzna (OpenTopoMap), Cieniowanie terenu (ISOK, WMS geoportalu, tylko

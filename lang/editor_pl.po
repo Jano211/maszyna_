@@ -12856,11 +12856,7 @@ msgstr "Warstwa"
 msgid "Orthophoto (geoportal.gov.pl)"
 msgstr "Ortofoto (geoportal.gov.pl)"
 
-msgid "Esri imagery (quick)"
-msgstr "Zdjęcia Esri (szybkie)"
 
-msgid "Topographic (OpenTopoMap)"
-msgstr "Mapa topograficzna (OpenTopoMap)"
 
 msgid "Map: %s"
 msgstr "Mapa: %s"
@@ -12868,8 +12864,4 @@ msgstr "Mapa: %s"
 msgid "The orthophoto of geoportal.gov.pl (and of the other countries where it has none), or instead of it a map or the world-wide imagery,\nwhich come much quicker: to find the way around, then back to the orthophoto for the work. The list: editor/foreign_sources.txt, map lines"
 msgstr "Ortofoto z geoportal.gov.pl (a tam, gdzie go nie ma, z innych krajów) albo zamiast niego mapa lub zdjęcia ogólnoświatowe,\nktóre przychodzą dużo szybciej: do poruszania się po okolicy, potem z powrotem ortofoto do pracy. Lista: editor/foreign_sources.txt, linie map"
 
-msgid "Shaded relief (ISOK)"
-msgstr "Cieniowanie terenu (ISOK)"
 
-msgid "Topographic scans (geoportal.gov.pl)"
-msgstr "Skany map topograficznych (geoportal.gov.pl)"

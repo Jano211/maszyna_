@@ -1,7 +1,8 @@
 // checks of editor/editorForeign.cpp off the simulator: the systems of coordinates, reading GeoTIFFs and filling the terrain and
 // the imagery from sources served by a fake http client. build (from the root of the repository):
 //   g++ -std=c++20 -O1 -I. -DEDITOR_FOREIGN_STANDALONE tests/foreign/test_foreign.cpp editor/editorForeign.cpp stb/stb_image.c -o test_foreign
-// and run it in an empty folder (it writes editor/foreign_sources.txt and the cache there)
+// and run it in an empty folder with the path of the sample file: ./test_foreign <repository>/docs/foreign_sources.txt
+// (it copies it to editor/foreign_sources.txt there and keeps the cache next to it)
 
 #include "editor/editorForeign.hpp"
 #include "stb/stb_image_write.h"
@@ -231,7 +232,7 @@ bool editor_http::client::get(std::string const &Url, std::vector<std::uint8_t> 
 	return false;
 }
 
-int main()
+int main(int Count, char **Arguments)
 {
 	using namespace editor_foreign;
 	// the systems
@@ -253,11 +254,21 @@ int main()
 			}
 	check(worst < 0.01, "round trips through the systems, worst " + std::to_string(worst) + " m");
 	check(false == known_system(5514), "Krovak isn't taken");
-	// the defaults written and read
+	// without the file nothing but geoportal.gov.pl
 	std::filesystem::remove_all("editor");
-	check(sources_file() == "editor/foreign_sources.txt" && std::filesystem::exists("editor/foreign_sources.txt"), "the file of the sources made");
-	check(status().rfind("3 imagery, 2 terrain", 0) == 0, "the defaults read: " + status());
-	check(credits(kind::terrain) == "UGKK SR, Mapzen terrain tiles", "credits: " + credits(kind::terrain));
+	check(false == reaches(kind::ortho, {500000, 500000, 500256, 500256}) && layers().empty() && false == std::filesystem::exists("editor"), "no file, no other sources: " + status());
+	// the sample file
+	if (Count < 2)
+	{
+		std::printf("FAIL the path of docs/foreign_sources.txt not given\n");
+		return 1;
+	}
+	std::filesystem::create_directories("editor");
+	std::filesystem::copy_file(Arguments[1], "editor/foreign_sources.txt", std::filesystem::copy_options::overwrite_existing);
+	reload();
+	check(sources_file() == "editor/foreign_sources.txt", "the file of the sources");
+	check(status().rfind("3 imagery, 2 terrain, 5 map layers", 0) == 0, "the sample read: " + status());
+	check(credits(kind::terrain) == "ÚGKK SR, Mapzen terrain tiles", "credits: " + credits(kind::terrain));
 	// a square across the Slovak border near Medzilaborce: in ETRS-TM34 the border of the fake data runs at 5460000
 	to_puwg(3046, 566000.0, 5460000.0, e, n);
 	auto const west{std::floor(e / 500.0) * 500.0}, north{std::floor(n / 500.0) * 500.0 + 500.0};
@@ -357,7 +368,7 @@ int main()
 	// the map layers: the defaults are there, one of them gives the whole tile
 	{
 		auto const list{layers()};
-		check(list.size() == 5 && list[3].name == "topo_pl" && list[4].name == "isok" && list[1].name == "osm" && list[1].title == "OpenStreetMap", "five map layers, osm second, ISOK last");
+		check(list.size() == 5 && list[3].name == "topo_pl" && list[4].name == "isok" && list[1].name == "osm" && list[4].title == "Cieniowanie terenu (ISOK)", "five map layers, osm second, ISOK last");
 		std::vector<std::uint8_t> map;
 		check(layer(client, "osm", tile, 512, map, "editor/cache/ortho", error, []() { return false; }) && map.size() == 512u * 512u * 4u && map[2] == 200 && map[3] == 255,
 		      "the OSM layer filled the tile");

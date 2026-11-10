@@ -1,0 +1,45 @@
+# Źródła ortofoto, terenu i map dla edytora MaSzyny poza geoportal.gov.pl.
+# Plik kładzie się w folderze symulatora jako editor/foreign_sources.txt. Bez niego edytor korzysta wyłącznie z geoportal.gov.pl.
+# Edytor czyta go przy starcie i po kliknięciu „Wczytaj ponownie inne źródła” w oknie ortofoto.
+#
+# Każde źródło zajmuje jedną linijkę: <ortho|terrain|map> <nazwa> <wms|wcs|xyz> klucz=wartość ...
+# W wartościach nie może być spacji; w credit= i title= podkreślnik oznacza spację.
+#   ortho / terrain  uzupełniają ortofoto / teren tam, gdzie geoportal.gov.pl nie ma danych (za granicą)
+#   map              warstwa do wyboru zamiast ortofoto (lista „Warstwa” w oknie ortofoto); title= to nazwa na liście
+#   url=        adres zapytania: dla wms/wcs {bbox} (minx,miny,maxx,maxy w układzie crs=, x na wschód), {width}, {height};
+#               dla xyz {z} {x} {y} (kafle Web Mercator jak w OpenStreetMap)
+#   crs=        kod EPSG układu wms/wcs: 2180, 2176-2179, 3040-3051, 25828-25838, 32628-32638, 3067, 3346, 3857, 4326, 4258
+#   area=       zachód,południe,wschód,północ w stopniach; poza tym obszarem źródło nie jest odpytywane (bez area: cały świat)
+#   priority=   mniejsza liczba = źródło brane wcześniej; geoportal.gov.pl zawsze ma pierwszeństwo
+#   resolution= najmniejszy piksel, o jaki warto pytać, w jednostkach crs= (wms/wcs); max= największa szerokość/wysokość zapytania
+#   zoom=       xyz: najgłębszy poziom zdjęć albo poziom kafli terenu
+#   encoding=terrarium  xyz teren: wysokości zakodowane w kolorach jak w kaflach Mapzen/AWS
+#   offset=     teren: metry dodawane do wysokości albo auto (wyliczane tam, gdzie dane stykają się z polskimi)
+#   blend=      teren: na ilu metrach przy krawędzi wysokości są dociągane do polskich
+#   feather=    ortho: na ilu metrach polskie zdjęcie przenika w zdjęcie tego źródła
+#   credit=     autor danych, wyświetlany pod oknami
+#
+# Licencje i warunki (stan z 10.11.2026; przed wypaleniem tekstur do scenerii sprawdź je u źródła):
+#   GUGiK (geoportal.gov.pl)  dane udostępniane nieodpłatnie do powszechnego wykorzystania
+#   ÚGKK SR (Słowacja)        CC BY 4.0, wymagany podpis źródła
+#   Sentinel-2 cloudless EOX  CC BY-NC-SA 4.0, tylko do użytku niekomercyjnego, na tych samych warunkach
+#   Mapzen Terrarium (AWS)    otwarte dane, podpis źródeł
+#   OpenStreetMap             dane ODbL; serwer kafli ma własne zasady: bez intensywnego użycia, z podpisem
+#   OpenTopoMap               CC-BY-SA; serwer utrzymywany przez wolontariuszy, korzystać oszczędnie
+#   Esri World Imagery        warunki Esri: bez licencji ArcGIS tylko do podglądu, nie do wypalania tekstur w scenerii
+
+# --- Słowacja: ÚGKK SR, ortofotomozaika i DMR 5.0 1 m ---
+ortho sk wms crs=3046 resolution=0.2 max=4096 priority=10 area=16.6,47.6,22.7,49.7 feather=10 credit=ÚGKK_SR url=https://zbgisws.skgeodesy.sk/zbgis_ortofoto_wms/service.svc/get?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:3046&LAYERS=1&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+terrain sk wcs crs=3046 resolution=1 max=2048 priority=10 area=16.6,47.6,22.7,49.7 offset=auto blend=30 credit=ÚGKK_SR url=https://inspirews.skgeodesy.sk/geoserver/el/ows?service=WCS&version=1.0.0&request=GetCoverage&coverage=el:EL.GridCoverage&CRS=EPSG:3046&RESPONSE_CRS=EPSG:3046&FORMAT=GeoTIFF&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+
+# --- Cały świat (Ukraina, Rosja i reszta): zdjęcia i teren tam, gdzie nie ma nic lepszego ---
+ortho esri xyz zoom=18 priority=80 feather=15 credit=Esri_World_Imagery url=https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}
+ortho s2 xyz zoom=15 priority=90 feather=20 credit=Sentinel-2_cloudless_by_EOX url=https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg
+terrain terrarium xyz zoom=13 priority=90 encoding=terrarium offset=auto blend=150 credit=Mapzen_terrain_tiles url=https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png
+
+# --- Warstwy do wyboru zamiast ortofoto (szybkie, do poruszania się po okolicy) ---
+map esri xyz zoom=18 title=Zdjęcia_Esri_(szybkie) credit=Esri_World_Imagery url=https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}
+map osm xyz zoom=17 title=OpenStreetMap credit=©_autorzy_OpenStreetMap url=https://tile.openstreetmap.org/{z}/{x}/{y}.png
+map topo xyz zoom=16 title=Mapa_topograficzna_(OpenTopoMap) credit=OpenTopoMap_(CC-BY-SA),_©_autorzy_OpenStreetMap url=https://tile.opentopomap.org/{z}/{x}/{y}.png
+map topo_pl wms crs=2180 resolution=1 max=4096 area=14,49,24.2,55 title=Skany_map_topograficznych_(geoportal.gov.pl) credit=GUGiK,_geoportal.gov.pl url=https://mapy.geoportal.gov.pl/wss/service/img/guest/TOPO/MapServer/WMSServer?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:2180&LAYERS=Raster&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+map isok wms crs=2180 resolution=1 max=4096 area=14,49,24.2,55 title=Cieniowanie_terenu_(ISOK) credit=GUGiK,_geoportal.gov.pl url=https://mapy.geoportal.gov.pl/wss/service/PZGIK/NMT/GRID1/WMS/ShadedRelief?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:2180&LAYERS=Raster&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}

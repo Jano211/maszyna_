@@ -260,54 +260,8 @@ struct source
 
 char const *const file_name{"editor/foreign_sources.txt"};
 
-#define MAP_DEFAULTS                                                                                                                                                    \
-	"map esri xyz zoom=18 title=Esri_imagery_(quick) credit=Esri_World_Imagery url=https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}\n"       \
-	"map osm xyz zoom=17 title=OpenStreetMap credit=(c)_OpenStreetMap_contributors url=https://tile.openstreetmap.org/{z}/{x}/{y}.png\n"                                   \
-	"map topo xyz zoom=16 title=Topographic_(OpenTopoMap) credit=OpenTopoMap_(CC-BY-SA),_(c)_OpenStreetMap_contributors url=https://tile.opentopomap.org/{z}/{x}/{y}.png\n" \
-	"map topo_pl wms crs=2180 resolution=1 max=4096 area=14,49,24.2,55 title=Topographic_scans_(geoportal.gov.pl) credit=GUGiK,_geoportal.gov.pl "                     \
-	"url=https://mapy.geoportal.gov.pl/wss/service/img/guest/TOPO/MapServer/WMSServer?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:2180&LAYERS=Raster&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}\n" \
-	"map isok wms crs=2180 resolution=1 max=4096 area=14,49,24.2,55 title=Shaded_relief_(ISOK) credit=GUGiK,_geoportal.gov.pl "                                     \
-	"url=https://mapy.geoportal.gov.pl/wss/service/PZGIK/NMT/GRID1/WMS/ShadedRelief?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:2180&LAYERS=Raster&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}\n"
-
-// the map layers when the file has none (made before they were there)
-char const *const map_defaults{MAP_DEFAULTS};
-
-// the file written when there's none. a line: what (ortho / terrain), a name, the kind of the service (wms / wcs / xyz) and
-// the settings as key=value with no spaces in them; in credit= an underscore stands for a space
-char const *const defaults{
-    "# Sources of the orthophoto and the terrain beyond geoportal.gov.pl, used by the editor where geoportal.gov.pl has nothing.\n"
-    "# A line: <ortho|terrain|map> <name> <wms|wcs|xyz> key=value ... (no spaces in the values; in credit= and title= _ stands for a space)\n"
-    "#   ortho/terrain fill what geoportal.gov.pl leaves empty; map is a layer to choose instead of the orthophoto (title= its name in the list)\n"
-    "#   url=       the address of a request; {bbox} (minx,miny,maxx,maxy in the system of crs=, x to the east), {width}, {height}\n"
-    "#              for wms/wcs, {z} {x} {y} for xyz tiles (Web Mercator, as OpenStreetMap)\n"
-    "#   crs=       EPSG code of the system of wms/wcs: 2180, 2176-2179, 3040-3051, 25828-25838, 32628-32638, 3067, 3346, 3857, 4326, 4258\n"
-    "#   area=      west,south,east,north in degrees; outside of it the source isn't asked (none: the whole world)\n"
-    "#   priority=  lower is taken first; geoportal.gov.pl is always before all of them\n"
-    "#   resolution= the finest pixel worth asking for, in units of crs= (wms/wcs); max= the largest width/height of a request\n"
-    "#   zoom=      xyz: the deepest level of the imagery, or the level of the terrain tiles\n"
-    "#   encoding=terrarium  xyz terrain: heights coded in the colours as in the Mapzen/AWS terrain tiles\n"
-    "#   offset=    terrain: metres added to the heights, or auto: worked out where they meet the data before them\n"
-    "#   blend=     terrain: metres over which they're pulled onto the edge of the data before them\n"
-    "#   feather=   ortho: metres over which the edge of the imagery before them fades into theirs\n"
-    "#   credit=    whom the data comes from, shown under the windows\n"
-    "# The file is read when the editor starts and with the Reload button of the orthophoto window.\n"
-    "\n"
-    "# Slovakia: UGKK SR, CC BY 4.0 (the orthophotomosaic and DTM 5.0, 1 m)\n"
-    "ortho sk wms crs=3046 resolution=0.2 max=4096 priority=10 area=16.6,47.6,22.7,49.7 feather=10 credit=UGKK_SR "
-    "url=https://zbgisws.skgeodesy.sk/zbgis_ortofoto_wms/service.svc/get?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:3046&LAYERS=1&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&BBOX={bbox}&WIDTH={width}&HEIGHT={height}\n"
-    "terrain sk wcs crs=3046 resolution=1 max=2048 priority=10 area=16.6,47.6,22.7,49.7 offset=auto blend=30 credit=UGKK_SR "
-    "url=https://inspirews.skgeodesy.sk/geoserver/el/ows?service=WCS&version=1.0.0&request=GetCoverage&coverage=el:EL.GridCoverage&CRS=EPSG:3046&RESPONSE_CRS=EPSG:3046&FORMAT=GeoTIFF&BBOX={bbox}&WIDTH={width}&HEIGHT={height}\n"
-    "\n"
-    "# The whole world. Esri World Imagery: for the view in the editor only, not for textures of a scenery\n"
-    "ortho esri xyz zoom=18 priority=80 feather=15 credit=Esri_World_Imagery url=https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}\n"
-    "# Sentinel-2 cloudless by EOX, CC BY-NC-SA 4.0, 10 m\n"
-    "ortho s2 xyz zoom=15 priority=90 feather=20 credit=Sentinel-2_cloudless_by_EOX url=https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg\n"
-    "# Terrain tiles of Mapzen on AWS (SRTM and others, ~30 m)\n"
-    "terrain terrarium xyz zoom=13 priority=90 encoding=terrarium offset=auto blend=150 credit=Mapzen_terrain_tiles "
-    "url=https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png\n"
-    "\n"
-    "# Layers to choose instead of the orthophoto of geoportal.gov.pl, quick to come (read from here when the file has no map lines)\n"
-    MAP_DEFAULTS};
+// nothing is built in: without the file there are no other sources and no map layers. a sample of the file, with the sources
+// tried out, is docs/foreign_sources.txt
 
 struct registry
 {
@@ -463,18 +417,14 @@ void load(registry &Registry)
 	Registry.loaded = true;
 	++Registry.generation;
 	Registry.sources.clear();
-	std::error_code fault;
-	if (false == fs::exists(file_name, fault))
-	{
-		fs::create_directories(fs::path{file_name}.parent_path(), fault);
-		if (std::ofstream out{file_name, std::ios::binary}; out.is_open())
-			out << defaults;
-	}
 	std::string text;
 	if (std::ifstream in{file_name, std::ios::binary}; in.is_open())
 		text.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
 	else
-		text = defaults; // can't be written either: the defaults as they are
+	{
+		Registry.status = std::string{"no "} + file_name + ": only geoportal.gov.pl";
+		return;
+	}
 	std::ostringstream status;
 	std::istringstream lines{text};
 	std::string line;
@@ -495,17 +445,6 @@ void load(registry &Registry)
 		{
 			status << "line " << number << ": " << problem << "\n";
 			WriteLog("Editor: " + std::string{file_name} + ", line " + std::to_string(number) + " skipped: " + problem);
-		}
-	}
-	if (std::none_of(Registry.sources.begin(), Registry.sources.end(), [](source const &Item) { return Item.what == kind::map; }))
-	{
-		std::istringstream maps{map_defaults};
-		while (std::getline(maps, line))
-		{
-			source item;
-			std::string problem;
-			if (parse_line(line, item, problem))
-				Registry.sources.push_back(std::move(item));
 		}
 	}
 	std::stable_sort(Registry.sources.begin(), Registry.sources.end(), [](source const &Left, source const &Right) { return Left.priority < Right.priority; });

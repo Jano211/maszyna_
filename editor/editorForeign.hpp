@@ -17,7 +17,8 @@ http://mozilla.org/MPL/2.0/.
 #include "editor/editorHttp.hpp"
 
 // orthophoto and terrain beyond geoportal.gov.pl: the services of other countries (WMS, WCS) and the world-wide tiles (XYZ),
-// listed in a text file (sources_file) the editor writes with the defaults when there's none. each source is in its own
+// listed in a text file (sources_file); nothing is built in, without the file there's geoportal.gov.pl only (a sample with the
+// sources tried out: docs/foreign_sources.txt). each source is in its own
 // coordinate system; what it gives is laid onto the PUWG 1992 grid of the editor here. all of the systems known share the datum
 // of PUWG 1992 (ETRS89, GRS80), the world-wide ones are in WGS84, which is within a metre of it.
 //
@@ -75,7 +76,7 @@ bool layer(editor_http::client &Client, std::string const &Name, area const &Are
 bool terrain(editor_http::client &Client, double const West, double const North, double const Pixel, int const Width, int const Height, std::vector<float> &Heights,
              float const NoData, std::string &Error, editor_http::stop_check const &Stop);
 
-// the file with the sources, made with the defaults if it isn't there
+// the file with the sources (it may not be there)
 std::string sources_file();
 // reads the file again
 void reload();
