@@ -1155,8 +1155,8 @@ void sample_heights(raster const &Raster, source const &Source, target_grid cons
 void spread(int const Width, int const Height, std::vector<char> const &Seeds, std::vector<float> const &Carried, float const Limit, std::vector<float> &Distance,
             std::vector<float> &Value)
 {
-	auto const far{std::numeric_limits<float>::max()};
-	Distance.assign(Seeds.size(), far);
+	auto const farthest{std::numeric_limits<float>::max()};
+	Distance.assign(Seeds.size(), farthest);
 	Value.assign(Seeds.size(), 0.f);
 	for (std::size_t i = 0; i < Seeds.size(); ++i)
 		if (Seeds[i])
