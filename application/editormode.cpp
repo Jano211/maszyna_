@@ -27,6 +27,7 @@ extern char **environ;
 
 #include "application/application.h"
 #include "editor/editorSettings.hpp"
+#include "editor/editorForeign.hpp"
 #include "editor/editorModelSets.hpp"
 #include "editor/editorTrackPresets.hpp"
 #include "editor/editorIncludeInfo.hpp"
@@ -2464,6 +2465,15 @@ void editor_mode::render_orthophoto_ui()
             m_orthophoto.clear_cache();
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(STR_C("Deletes downloaded tiles from disk. They are fetched again around the camera."));
+        ImGui::SameLine();
+        if (ImGui::Button(STR_C("Reload other sources")))
+        {
+            editor_foreign::reload();
+            m_orthophoto.retry_failed();
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(STR_C("Reads the list of the sources beyond geoportal.gov.pl again (the services of other countries and the world-wide imagery and terrain): %s\n%s"),
+                              editor_foreign::sources_file().c_str(), editor_foreign::status().c_str());
         ImGui::TreePop();
     }
 
@@ -2473,6 +2483,8 @@ void editor_mode::render_orthophoto_ui()
         save_orthophoto_settings();
 
     ImGui::TextDisabled(STR_C("Imagery: GUGiK, geoportal.gov.pl"));
+    if (auto const credits{editor_foreign::credits(editor_foreign::kind::ortho)}; false == credits.empty())
+        ImGui::TextDisabled(STR_C("Outside Poland: %s"), credits.c_str());
 }
 
 void editor_mode::draw_orthophoto()

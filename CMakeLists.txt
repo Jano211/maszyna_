@@ -227,6 +227,7 @@ set(SOURCES
 "editor/editorOrthophoto.cpp"
 "editor/editorHttp.cpp"
 "editor/editorNmt.cpp"
+"editor/editorForeign.cpp"
 "editor/editorPreviews.cpp"
 "editor/editorIcons.cpp"
 "editor/editorClips.cpp"

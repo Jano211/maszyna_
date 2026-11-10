@@ -14,6 +14,30 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
   pliku rozwiązuje się, biorąc obie strony. Nowe wpisy idą przy pokrewnych tekstach, więc konfliktów będzie mniej.
 - Zmiana pól w `application/editormode.h` oznacza przebudowę prawie całego edytora (ok. 30 min).
 
+## 2026-11-10
+
+Branch `geoportale` (scalony też do `wszystko-gl46`).
+
+### Ortofoto i NMT spoza geoportal.gov.pl (Słowacja i reszta świata) — commit o tym tytule
+- Co widać: tam, gdzie geoportal.gov.pl nie ma nic (za granicą), ortofoto i model terenu dociągają się z innych źródeł,
+  przeliczone na siatkę PUWG 1992 edytora. Domyślnie: Słowacja (ÚGKK SR – ortofotomozaika WMS i DMR 5.0 1 m z WCS,
+  EPSG:3046), a wszędzie poza tym Esri World Imagery (tylko do podglądu w edytorze), Sentinel-2 cloudless (EOX) i kafle
+  wysokości Mapzen/AWS Terrarium (~30 m) – np. Ukraina, Rosja. Na granicy: zdjęcie geoportalu przenika w zdjęcie tego
+  źródła, które wypełnia lukę obok (bez pasa innego źródła wzdłuż granicy); wysokości obcego źródła są przy krawędzi
+  dociągane do polskich (na `blend=` metrów), dalej przesunięte o średnią różnicę zebraną na krawędziach (`offset=auto`) –
+  bez uskoku na granicy mimo innego układu wysokości (Bpv / EVRF2007).
+- Źródła w pliku `editor/foreign_sources.txt` (tworzony z domyślnymi przy pierwszym użyciu; opis składni na górze pliku).
+  Nowy kraj = jedna linijka, bez kompilacji: `ortho|terrain <nazwa> wms|wcs|xyz crs=… area=… priority=… url=…{bbox}…`.
+  Układy: PUWG 1992/2000, ETRS89/UTM i ETRS-TM (25828-25838, 3040-3051), WGS84/UTM, TM35FIN, LKS-94, Web Mercator, WGS84/ETRS89
+  geograficzne (wszystkie na tym samym datum co PUWG 1992). Nie ma: S-JTSK/Křovák, DHDN, LAEA.
+  Przycisk „Wczytaj ponownie inne źródła” w oknie ortofoto (obok czyszczenia pamięci podręcznej), podpisy źródeł pod oknem
+  ortofoto i w podpowiedzi wczytywania terenu.
+- Na kaflach granicznych ortofoto wysokiej rozdzielczości geoportalu zastępuje standardowe (PNG z przezroczystością tam,
+  gdzie geoportal nie ma zdjęć); w głębi kraju bez zmian.
+- Zmienia: nowe `editor/editorForeign.hpp/.cpp` (CMakeLists), `editor/editorOrthophoto.cpp`, `editor/editorNmt.cpp`,
+  `application/editormode.cpp`, `application/editormodenmt.cpp`, `lang/editor_pl.po`; test poza symulatorem
+  `tests/foreign/test_foreign.cpp` (polecenie budowania w nagłówku). Nagłówki edytora bez zmian. Wymaga: nic.
+
 ## 2026-11-07
 
 Commity na `siec-gl46`.

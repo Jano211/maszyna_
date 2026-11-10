@@ -10,6 +10,7 @@ http://mozilla.org/MPL/2.0/.
 #include "stdafx.h"
 #include "editor/editorOrthophoto.hpp"
 #include "editor/editorHttp.hpp"
+#include "editor/editorForeign.hpp"
 
 #include "rendering/renderer.h"
 #include "scene/scene.h"
@@ -275,7 +276,7 @@ bool load_standard(http_client &Client, tile_request const &Request, image &Out,
 }
 
 // returns false on failure (to be retried later); Empty is set when the place has no imagery
-bool load_tile(http_client &Client, tile_request const &Request, image &Out, bool &Empty, std::string &Error, stop_check const &Stop)
+bool load_polish(http_client &Client, tile_request const &Request, image &Out, bool &Empty, std::string &Error, stop_check const &Stop)
 {
 	Empty = false;
 	if (Request.hires && Request.level >= hires_pixels)
@@ -342,6 +343,98 @@ bool in_service_area(int Ix, int Iy)
 	double const east = (Ix + 0.5) * editor_orthophoto::tile_size;
 	double const north = (Iy + 0.5) * editor_orthophoto::tile_size;
 	return north > 100000.0 && north < 900000.0 && east > 100000.0 && east < 900000.0;
+}
+
+editor_foreign::area tile_area(int const Ix, int const Iy)
+{
+	auto const size{editor_orthophoto::tile_size};
+	return {Ix * size, Iy * size, (Ix + 1) * size, (Iy + 1) * size};
+}
+
+// whether the services of other countries or the world-wide imagery reach the tile; asked once per tile (main thread only),
+// again after the list of the sources was read anew
+bool foreign_area(int const Ix, int const Iy)
+{
+	static std::map<std::pair<int, int>, bool> known;
+	static int generation{-1};
+	if (generation != editor_foreign::generation())
+	{
+		known.clear();
+		generation = editor_foreign::generation();
+	}
+	auto const found{known.find({Ix, Iy})};
+	if (found != known.end())
+		return found->second;
+	auto const reached{editor_foreign::reaches(editor_foreign::kind::ortho, tile_area(Ix, Iy))};
+	known[{Ix, Iy}] = reached;
+	return reached;
+}
+
+// a share of the pixels pure white: the jpeg of geoportal.gov.pl has its place without imagery like that (or there's snow or a
+// white roof: then the png asked for to make sure costs one more request)
+bool may_have_holes(image const &Image)
+{
+	std::size_t white{0};
+	for (std::size_t i = 0; i + 3 < Image.rgba.size(); i += 4)
+		white += Image.rgba[i] >= 253 && Image.rgba[i + 1] >= 253 && Image.rgba[i + 2] >= 253;
+	return white * 500 > Image.rgba.size() / 4;
+}
+
+// the tile from geoportal.gov.pl, and where it has nothing from the sources of editor_foreign
+bool load_tile(http_client &Client, tile_request const &Request, image &Out, bool &Empty, std::string &Error, stop_check const &Stop)
+{
+	auto const area{tile_area(Request.ix, Request.iy)};
+	if (false == editor_foreign::reaches(editor_foreign::kind::ortho, area))
+		return load_polish(Client, Request, Out, Empty, Error, Stop);
+	Empty = false;
+	// at the size asked for, at most the standard one
+	auto const pixels{std::min(Request.level, standard_pixels)};
+	image polish;
+	if (in_service_area(Request.ix, Request.iy))
+	{
+		bool none{false};
+		if (false == load_polish(Client, Request, polish, none, Error, Stop))
+			return false;
+		if (none)
+			polish = image{};
+		else if (false == may_have_holes(polish))
+		{
+			// inside the country: as it is, the high-resolution imagery included
+			Out = std::move(polish);
+			return true;
+		}
+		else
+		{
+			// where it has nothing exactly: the png of the standard imagery is transparent there
+			std::vector<std::uint8_t> data;
+			if (false == fetch(Client, wms_url(Request, false, standard_pixels, true), cache_file(Request, false, std::to_string(standard_pixels) + ".png"), data, Error, Stop) ||
+			    false == decode(data, polish, Error))
+				return false;
+		}
+	}
+	if (polish.width > 0)
+		while (polish.width > pixels && polish.width > 1)
+			halve(polish);
+	if (polish.width != pixels || polish.height != pixels)
+		polish = image{};
+	Out.width = pixels;
+	Out.height = pixels;
+	Out.rgba = std::move(polish.rgba);
+	std::string error;
+	if (false == editor_foreign::ortho(Client, area, pixels, Out.rgba, cache_root() / "foreign", error, Stop))
+	{
+		Error = error;
+		return false;
+	}
+	bool any{false};
+	for (std::size_t i = 3; i < Out.rgba.size() && false == any; i += 4)
+		any = Out.rgba[i] != 0;
+	if (false == any)
+	{
+		Empty = true;
+		Out = image{};
+	}
+	return true;
 }
 
 // homogeneous clip-space vertex with texture coordinates
@@ -1142,7 +1235,7 @@ void editor_orthophoto::update(glm::dvec3 const &Camera)
 		{
 			tile_key const key{centre.first + dx, centre.second + dy};
 			tile &t = m_tiles[key];
-			if (!in_service_area(key.first, key.second))
+			if (!in_service_area(key.first, key.second) && !foreign_area(key.first, key.second))
 				t.empty = true;
 			int const level = level_for(std::max(std::abs(dx), std::abs(dy)), m_config.hires);
 			if (t.empty || (t.level == level && t.alpha == m_alpha) || (t.requested == level && t.requested_alpha == m_alpha) || now < t.retry_at)

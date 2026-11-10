@@ -10,6 +10,7 @@ http://mozilla.org/MPL/2.0/.
 #include "stdafx.h"
 #include "editor/editorNmt.hpp"
 #include "editor/editorHttp.hpp"
+#include "editor/editorForeign.hpp"
 #include "utilities/Logs.h"
 #include "utilities/translation.h"
 
@@ -294,6 +295,46 @@ bool read_asc_header(std::string const &Text, std::map<std::string, double> &Hea
 	Body = at;
 	return Header.contains("ncols") && Header.contains("nrows") && Header.contains("cellsize") && (Header.contains("xllcorner") || Header.contains("xllcenter")) &&
 	       (Header.contains("yllcorner") || Header.contains("yllcenter"));
+}
+
+// where the model of GUGiK has nothing (outside Poland): the heights of the other countries and the world-wide ones
+// (editor_foreign), into a copy of the square; the square as it was when they have nothing either
+template <typename Square>
+std::shared_ptr<Square const> fill_foreign(std::shared_ptr<Square const> Square_, double const East, double const North, int const Pixels, std::string &Error,
+                                           editor_http::stop_check const &Stop)
+{
+	editor_foreign::area const area{East, North - Pixels, East + Pixels, North};
+	auto const valid = [](float const Value) { return std::isfinite(Value) && Value > no_data; };
+	bool const holes{Square_->failed || false == std::all_of(Square_->heights.begin(), Square_->heights.end(), valid)};
+	if (false == holes || false == editor_http::available() || false == editor_foreign::reaches(editor_foreign::kind::terrain, area))
+		return Square_;
+	// a square the service failed on inside the rectangle of Poland is to be asked for again, not made of the coarser ones
+	// (outside the country the service gives it with no data, which is filled)
+	if (Square_->failed && East > 140000.0 && East < 880000.0 && North > 120000.0 && North < 800000.0)
+		return Square_;
+	auto filled{std::make_shared<Square>(*Square_)};
+	if (filled->failed || filled->width < 2 || filled->height < 2)
+	{
+		// nothing from the service: the square as it would have come
+		filled->failed = false;
+		filled->width = filled->height = Pixels;
+		filled->pixel = 1.0;
+		filled->east = East;
+		filled->north = North;
+		filled->heights.assign(static_cast<std::size_t>(Pixels) * Pixels, no_data - 1.f);
+	}
+	editor_http::client client;
+	std::string error;
+	if (false == editor_foreign::terrain(client, filled->east, filled->north, filled->pixel, filled->width, filled->height, filled->heights, no_data, error, Stop))
+		WriteLog("Editor: NMT square at " + std::to_string(East) + "," + std::to_string(North) + ", the other sources: " + error, logtype::generic);
+	if (std::none_of(filled->heights.begin(), filled->heights.end(), valid))
+	{
+		if (false == error.empty())
+			Error = error;
+		return Square_;
+	}
+	Error = error;
+	return filled;
 }
 
 std::size_t constexpr kept_sheets{8}; // sheets whose heights stay read, ~25 MB each at 1 m
@@ -725,6 +766,13 @@ void editor_nmt::work()
 		}
 		std::string error;
 		auto fetched{fetch(square, error)};
+		{
+			auto const pixels{static_cast<int>(square_size) + 2 * border};
+			fetched = fill_foreign(fetched, square.first * square_size - border, square.second * square_size - border + pixels, pixels, error, [this]() {
+				std::lock_guard<std::mutex> lock{m_mutex};
+				return m_stop;
+			});
+		}
 		{
 			std::lock_guard<std::mutex> lock{m_mutex};
 			if (false == m_queued.contains(square))

@@ -17,6 +17,7 @@ http://mozilla.org/MPL/2.0/.
 #include "editor/editorFormat.hpp"
 #include "editor/editorGeometry.hpp"
 #include "editor/editorSettings.hpp"
+#include "editor/editorForeign.hpp"
 #include "model/AnimModel.h"
 #include "utilities/Globals.h"
 #include "simulation/simulation.h"
@@ -891,7 +892,11 @@ void editor_mode::render_nmt_ui()
 		auto const *text{tracks ? (state.mode == 0 ? STR_C("The terrain model is loaded along the tracks and the tracks go onto it, wherever the scenery was built: the top of the ballast at the height of the model, the grade line of every line fitted to it within the limits of the line, switches and the tracks beside them on one grade line, the formation and the slopes made along them. Where the model is off the tracks keep their line and it's reported") :
 		                                             STR_C("The tracks aren't touched: the terrain model is loaded along them and drawn to them, at each place by as much as the tracks lie above or below it there, fading out away from them, so its relief stays and the tracks don't end up in deep cuttings; then the formation and the slopes along them. For a scenery built level or at its own heights")) :
 		                           STR_C("Loads the terrain model, the real relief of the ground, around the camera")};
-		ImGui::SetTooltip("%s\n%s", text, STR_C("Terrain model: GUGiK, geoportal.gov.pl"));
+		auto const credits{editor_foreign::credits(editor_foreign::kind::terrain)};
+		if (credits.empty())
+			ImGui::SetTooltip("%s\n%s", text, STR_C("Terrain model: GUGiK, geoportal.gov.pl"));
+		else
+			ImGui::SetTooltip("%s\n%s\n%s %s", text, STR_C("Terrain model: GUGiK, geoportal.gov.pl"), STR_C("Outside Poland:"), credits.c_str());
 	}
 	if (tracks && m_streamer.resident() > 0)
 	{

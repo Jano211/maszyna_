@@ -12837,3 +12837,15 @@ msgstr "Wzdłuż dźwigara"
 
 msgid "Connection 13-0885"
 msgstr "Przyłącze 13-0885"
+
+msgid "Reload other sources"
+msgstr "Wczytaj ponownie inne źródła"
+
+msgid "Reads the list of the sources beyond geoportal.gov.pl again (the services of other countries and the world-wide imagery and terrain): %s\n%s"
+msgstr "Wczytuje ponownie listę źródeł spoza geoportal.gov.pl (usługi innych krajów oraz ogólnoświatowe zdjęcia i teren): %s\n%s"
+
+msgid "Outside Poland: %s"
+msgstr "Poza Polską: %s"
+
+msgid "Outside Poland:"
+msgstr "Poza Polską:"
