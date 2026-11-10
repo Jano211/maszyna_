@@ -380,6 +380,12 @@ bool may_have_holes(image const &Image)
 	return white * 500 > Image.rgba.size() / 4;
 }
 
+// along parts of the Slovak border the imagery of geoportal.gov.pl is solid black where it has none (opaque in the png too)
+bool may_be_black(image const &Image)
+{
+	return editor_foreign::black_share(Image.rgba) > 0.002;
+}
+
 // the tile from geoportal.gov.pl, and where it has nothing from the sources of editor_foreign
 bool load_tile(http_client &Client, tile_request const &Request, image &Out, bool &Empty, std::string &Error, stop_check const &Stop)
 {
@@ -397,13 +403,13 @@ bool load_tile(http_client &Client, tile_request const &Request, image &Out, boo
 			return false;
 		if (none)
 			polish = image{};
-		else if (false == may_have_holes(polish))
+		else if (false == may_have_holes(polish) && false == may_be_black(polish))
 		{
 			// inside the country: as it is, the high-resolution imagery included
 			Out = std::move(polish);
 			return true;
 		}
-		else
+		else if (may_have_holes(polish))
 		{
 			// where it has nothing exactly: the png of the standard imagery is transparent there
 			std::vector<std::uint8_t> data;
@@ -415,6 +421,9 @@ bool load_tile(http_client &Client, tile_request const &Request, image &Out, boo
 	if (polish.width > 0)
 		while (polish.width > pixels && polish.width > 1)
 			halve(polish);
+	// the black where it has nothing: let through, at the size it's shown at (the patch then needs 7 px of it)
+	if (polish.width > 0 && may_be_black(polish))
+		editor_foreign::clear_black(polish.rgba, polish.width, polish.height);
 	if (polish.width != pixels || polish.height != pixels)
 		polish = image{};
 	Out.width = pixels;

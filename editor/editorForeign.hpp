@@ -48,6 +48,14 @@ bool reaches(kind const Kind, area const &Area);
 bool ortho(editor_http::client &Client, area const &Area, int const Pixels, std::vector<std::uint8_t> &Rgba, std::filesystem::path const &Cache, std::string &Error,
            editor_http::stop_check const &Stop);
 
+// the solid black patches of imagery made transparent: some services fill a place they have no imagery for with black (as
+// geoportal.gov.pl does along parts of the Slovak border), which would cover the imagery of the next source. a patch is black
+// where at least Block x Block pixels are all nearly black; its edge, softened by the jpeg, goes with it. a single dark pixel
+// or a shadow stays. returns the pixels made transparent
+std::size_t clear_black(std::vector<std::uint8_t> &Rgba, int const Width, int const Height, int const Block = 7);
+// the share of the pixels nearly black, a quick test before clear_black
+double black_share(std::vector<std::uint8_t> const &Rgba);
+
 // the heights of a grid of Width x Height pixels of Pixel metres, the outer corner of its north-west pixel at West, North,
 // rows from the north. the values at or below NoData are filled from the sources, the others stay. false if a source
 // couldn't be reached

@@ -32,6 +32,10 @@ Branch `geoportale` (scalony też do `wszystko-gl46`).
   geograficzne (wszystkie na tym samym datum co PUWG 1992). Nie ma: S-JTSK/Křovák, DHDN, LAEA.
   Przycisk „Wczytaj ponownie inne źródła” w oknie ortofoto (obok czyszczenia pamięci podręcznej), podpisy źródeł pod oknem
   ortofoto i w podpowiedzi wczytywania terenu.
+- Czarne łaty (geoportal przy granicy ze Słowacją wypełnia część miejsc bez zdjęć jednolitą czernią, nieprzezroczystą
+  także w PNG): zwarte obszary prawie czarne (co najmniej 7×7 px, wszystkie kanały ≤ 12, z ciemną obwódką od JPEG) są
+  traktowane jak brak zdjęcia i przepuszczają źródło spod spodu; pojedyncze ciemne piksele i cienie zostają. To samo dla
+  zdjęć obcych źródeł.
 - Na kaflach granicznych ortofoto wysokiej rozdzielczości geoportalu zastępuje standardowe (PNG z przezroczystością tam,
   gdzie geoportal nie ma zdjęć); w głębi kraju bez zmian.
 - Zmienia: nowe `editor/editorForeign.hpp/.cpp` (CMakeLists), `editor/editorOrthophoto.cpp`, `editor/editorNmt.cpp`,

@@ -354,6 +354,31 @@ int main()
 	for (std::size_t i = 3; i < rgba.size(); i += 4)
 		opaque = opaque && rgba[i] == 255;
 	check(opaque, "nothing transparent left");
+	// black where there's no imagery: a solid black half with a jpeg-like fringe goes, a dark shadow of 3 x 3 px stays
+	{
+		int const w{64};
+		std::vector<std::uint8_t> picture(static_cast<std::size_t>(w) * w * 4, 255);
+		for (int r = 0; r < w; ++r)
+			for (int c = 0; c < w; ++c)
+			{
+				auto *p{&picture[(static_cast<std::size_t>(r) * w + c) * 4]};
+				std::uint8_t value{120};
+				if (c >= 32)
+					value = 3; // the black half
+				else if (c >= 30)
+					value = 35; // its fringe
+				else if (r >= 10 && r < 13 && c >= 10 && c < 13)
+					value = 2; // a shadow
+				p[0] = p[1] = p[2] = value;
+				p[3] = 255;
+			}
+		auto const cleared{clear_black(picture, w, w)};
+		auto const alpha = [&](int const C, int const R) { return picture[(static_cast<std::size_t>(R) * w + C) * 4 + 3]; };
+		check(alpha(50, 30) == 0 && alpha(32, 0) == 0 && alpha(63, 63) == 0, "the black half cleared");
+		check(alpha(31, 30) == 0 && alpha(30, 30) == 0, "its fringe with it");
+		check(alpha(11, 11) == 255 && alpha(20, 30) == 255 && alpha(29, 30) == 255, "the shadow and the imagery stay");
+		check(cleared == 34u * w, "cleared " + std::to_string(cleared));
+	}
 	std::printf("%s\n", failures ? "FAILED" : "all passed");
 	return failures ? 1 : 0;
 }

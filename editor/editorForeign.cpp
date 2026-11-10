@@ -1277,6 +1277,103 @@ fs::path terrain_cache()
 	return "editor/cache/foreign";
 }
 
+namespace
+{
+int constexpr black_level{12};  // the brightest channel of a pixel taken as black
+int constexpr dark_edge{60};    // the brightest channel of a pixel at the edge of a black patch going with it
+int constexpr edge_pixels{3};   // how far from the black core its edge goes
+
+bool nearly_black(std::uint8_t const *Pixel, int const Level)
+{
+	return Pixel[3] != 0 && Pixel[0] <= Level && Pixel[1] <= Level && Pixel[2] <= Level;
+}
+
+// sums of a mask over rectangles: Sum[(y)*(W+1)+x] over the pixels left of x and above y
+std::vector<std::uint32_t> integral(std::vector<char> const &Mask, int const Width, int const Height)
+{
+	std::vector<std::uint32_t> sum(static_cast<std::size_t>(Width + 1) * (Height + 1), 0);
+	for (int y = 0; y < Height; ++y)
+	{
+		std::uint32_t row{0};
+		for (int x = 0; x < Width; ++x)
+		{
+			row += Mask[static_cast<std::size_t>(y) * Width + x] ? 1 : 0;
+			sum[static_cast<std::size_t>(y + 1) * (Width + 1) + x + 1] = sum[static_cast<std::size_t>(y) * (Width + 1) + x + 1] + row;
+		}
+	}
+	return sum;
+}
+
+std::uint32_t box(std::vector<std::uint32_t> const &Sum, int const Width, int const Height, int X0, int Y0, int X1, int Y1)
+{
+	X0 = std::clamp(X0, 0, Width);
+	X1 = std::clamp(X1, 0, Width);
+	Y0 = std::clamp(Y0, 0, Height);
+	Y1 = std::clamp(Y1, 0, Height);
+	if (X1 <= X0 || Y1 <= Y0)
+		return 0;
+	auto const at = [&](int const X, int const Y) { return Sum[static_cast<std::size_t>(Y) * (Width + 1) + X]; };
+	return at(X1, Y1) - at(X0, Y1) - at(X1, Y0) + at(X0, Y0);
+}
+} // namespace
+
+double black_share(std::vector<std::uint8_t> const &Rgba)
+{
+	if (Rgba.size() < 4)
+		return 0.0;
+	std::size_t black{0};
+	for (std::size_t i = 0; i + 3 < Rgba.size(); i += 4)
+		black += nearly_black(&Rgba[i], black_level);
+	return black / (Rgba.size() / 4.0);
+}
+
+std::size_t clear_black(std::vector<std::uint8_t> &Rgba, int const Width, int const Height, int const Block)
+{
+	auto const count{static_cast<std::size_t>(Width) * Height};
+	if (Rgba.size() != count * 4 || Width < Block || Height < Block)
+		return 0;
+	std::vector<char> black(count, 0);
+	bool any{false};
+	for (std::size_t i = 0; i < count; ++i)
+	{
+		black[i] = nearly_black(&Rgba[i * 4], black_level);
+		any = any || black[i];
+	}
+	if (false == any)
+		return 0;
+	// the core: pixels whose whole block around them is black
+	auto const sums{integral(black, Width, Height)};
+	auto const half{Block / 2};
+	auto const full{static_cast<std::uint32_t>(Block * Block)};
+	std::vector<char> core(count, 0);
+	bool cores{false};
+	for (int y = 0; y < Height; ++y)
+		for (int x = 0; x < Width; ++x)
+			if (black[static_cast<std::size_t>(y) * Width + x] && box(sums, Width, Height, x - half, y - half, x - half + Block, y - half + Block) == full)
+			{
+				core[static_cast<std::size_t>(y) * Width + x] = 1;
+				cores = true;
+			}
+	if (false == cores)
+		return 0;
+	// the patch: the dark pixels close enough to the core (the core grown back to the size of the black, and its jpeg fringe)
+	auto const cores_sum{integral(core, Width, Height)};
+	auto const reach{half + edge_pixels};
+	std::size_t cleared{0};
+	for (int y = 0; y < Height; ++y)
+		for (int x = 0; x < Width; ++x)
+		{
+			auto *pixel{&Rgba[(static_cast<std::size_t>(y) * Width + x) * 4]};
+			if (pixel[3] == 0 || false == nearly_black(pixel, dark_edge))
+				continue;
+			if (box(cores_sum, Width, Height, x - reach, y - reach, x + reach + 1, y + reach + 1) == 0)
+				continue;
+			pixel[3] = 0;
+			++cleared;
+		}
+	return cleared;
+}
+
 bool reaches(kind const Kind, area const &Area)
 {
 	return false == sources_for(Kind, Area).empty();
@@ -1319,6 +1416,7 @@ bool ortho(editor_http::client &Client, area const &Area, int const Pixels, std:
 			continue;
 		std::vector<std::uint8_t> layer;
 		sample_rgba(native, item, grid, layer);
+		clear_black(layer, grid.width, grid.height);
 		for (std::size_t i = 0; i < count; ++i)
 		{
 			auto *pixel{&below[i * 4]};
