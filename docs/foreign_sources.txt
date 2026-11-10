@@ -6,7 +6,8 @@
 # W wartościach nie może być spacji; w credit= i title= podkreślnik oznacza spację.
 #   ortho / terrain  uzupełniają ortofoto / teren tam, gdzie geoportal.gov.pl nie ma danych (za granicą)
 #   map              warstwa do wyboru zamiast ortofoto (lista „Warstwa” w oknie ortofoto); title= to nazwa na liście
-#   url=        adres zapytania: dla wms/wcs {bbox} (minx,miny,maxx,maxy w układzie crs=, x na wschód), {width}, {height};
+#   url=        adres zapytania: dla wms/wcs {bbox} (minx,miny,maxx,maxy w układzie crs=, x na wschód), {width}, {height},
+#               osobno {minx} {miny} {maxx} {maxy} (dla WCS 2.0: SUBSET=E({minx},{maxx})&SUBSET=N({miny},{maxy}));
 #               dla xyz {z} {x} {y} (kafle Web Mercator jak w OpenStreetMap)
 #   crs=        kod EPSG układu wms/wcs: 2180, 2176-2179, 3040-3051, 25828-25838, 32628-32638, 3067, 3346, 3857, 4326, 4258
 #   area=       zachód,południe,wschód,północ w stopniach; poza tym obszarem źródło nie jest odpytywane (bez area: cały świat)
@@ -24,6 +25,7 @@
 # Licencje i warunki (stan z 10.11.2026; przed wypaleniem tekstur do scenerii sprawdź je u źródła):
 #   GUGiK (geoportal.gov.pl)  dane udostępniane nieodpłatnie do powszechnego wykorzystania
 #   ÚGKK SR (Słowacja)        CC BY 4.0, wymagany podpis źródła
+#   MML (Finlandia)           CC BY 4.0; wymaga darmowego, osobistego klucza API (każdy użytkownik zakłada własny)
 #   Sentinel-2 cloudless EOX  CC BY-NC-SA 4.0, tylko do użytku niekomercyjnego, na tych samych warunkach
 #   Mapzen Terrarium (AWS)    otwarte dane, podpis źródeł
 #   OpenStreetMap             dane ODbL; serwer kafli ma własne zasady: bez intensywnego użycia, z podpisem
@@ -33,6 +35,15 @@
 # --- Słowacja: ÚGKK SR, ortofotomozaika i DMR 5.0 1 m ---
 ortho sk wms crs=3046 resolution=0.2 max=4096 priority=10 area=16.6,47.6,22.7,49.7 feather=10 credit=ÚGKK_SR url=https://zbgisws.skgeodesy.sk/zbgis_ortofoto_wms/service.svc/get?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:3046&LAYERS=1&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
 terrain sk wcs crs=3046 resolution=1 max=2048 priority=10 area=16.6,47.6,22.7,49.7 offset=auto blend=30 credit=ÚGKK_SR url=https://inspirews.skgeodesy.sk/geoserver/el/ows?service=WCS&version=1.0.0&request=GetCoverage&coverage=el:EL.GridCoverage&CRS=EPSG:3046&RESPONSE_CRS=EPSG:3046&FORMAT=GeoTIFF&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+
+# --- Finlandia: Maanmittauslaitos (MML), ortofoto, model terenu 2 m, mapa topograficzna ---
+# Wymaga darmowego klucza API: konto na https://omatili.maanmittauslaitos.fi/ (Oma tili > API-avain), potem w trzech linijkach niżej
+# zamień TWOJ_KLUCZ na swój klucz i usuń # z początku. Bez klucza serwer odpowiada 401 i nic się nie wczytuje.
+# NIESPRAWDZONE (brak klucza przy przygotowaniu pliku): nazwa pokrycia terenu korkeusmalli_2m w WCS. Listę nazw pokazuje
+# https://avoin-karttakuva.maanmittauslaitos.fi/ortokuvat-ja-korkeusmallit/wcs/v2?service=WCS&request=GetCapabilities&api-key=TWOJ_KLUCZ
+#ortho fi xyz zoom=18 priority=10 area=19.0,59.5,31.6,70.1 feather=10 credit=Maanmittauslaitos url=https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/ortokuva/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.jpg?api-key=TWOJ_KLUCZ
+#terrain fi wcs crs=3067 resolution=2 max=2048 priority=10 area=19.0,59.5,31.6,70.1 offset=auto blend=30 credit=Maanmittauslaitos url=https://avoin-karttakuva.maanmittauslaitos.fi/ortokuvat-ja-korkeusmallit/wcs/v2?service=WCS&version=2.0.1&request=GetCoverage&CoverageID=korkeusmalli_2m&SUBSET=E({minx},{maxx})&SUBSET=N({miny},{maxy})&format=image/tiff&api-key=TWOJ_KLUCZ
+#map fi_topo xyz zoom=16 tile=4 magnify=2 area=19.0,59.5,31.6,70.1 title=Mapa_topograficzna_Finlandii_(MML) credit=Maanmittauslaitos url=https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/maastokartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key=TWOJ_KLUCZ
 
 # --- Cały świat (Ukraina, Rosja i reszta): zdjęcia i teren tam, gdzie nie ma nic lepszego ---
 ortho esri xyz zoom=18 priority=80 feather=15 credit=Esri_World_Imagery url=https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}

@@ -932,6 +932,16 @@ fetched fetch_service(editor_http::client &Client, source const &Source, target_
 	if (width < 1 || height < 1)
 		return fetched::nothing;
 	auto url{replace_all(Source.url, "{bbox}", format_bbox(minx, miny, maxx, maxy, degrees))};
+	// the corners one by one, for WCS 2.0 (SUBSET=E({minx},{maxx})&SUBSET=N({miny},{maxy}))
+	auto const number = [&](double const Value) {
+		char buffer[48];
+		std::snprintf(buffer, sizeof(buffer), degrees ? "%.8f" : "%.3f", Value);
+		return std::string{buffer};
+	};
+	url = replace_all(url, "{minx}", number(minx));
+	url = replace_all(url, "{miny}", number(miny));
+	url = replace_all(url, "{maxx}", number(maxx));
+	url = replace_all(url, "{maxy}", number(maxy));
 	url = replace_all(url, "{width}", std::to_string(width));
 	url = replace_all(url, "{height}", std::to_string(height));
 	auto const terrain{Source.what == kind::terrain};
