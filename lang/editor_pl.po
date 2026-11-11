@@ -12886,3 +12886,6 @@ msgstr "Przeciągnij: przesuń mapę. Kółko: przybliż. Dwuklik: kamera idzie 
 
 msgid "Loading: %d"
 msgstr "Wczytywanie: %d"
+
+msgid "The terrain there is %.0f km from the point (0,0,0) of the scenery, it can be at most %.0f km: set the origin of the scenery nearer (orthophoto window, PUWG 1992)"
+msgstr "Teren tam jest %.0f km od punktu (0,0,0) scenerii, a może być najwyżej %.0f km: ustaw punkt odniesienia scenerii bliżej (okno ortofoto, PUWG 1992)"

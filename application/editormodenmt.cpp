@@ -679,10 +679,21 @@ void editor_mode::nmt_update()
 		return;
 	// a few chunks a frame, those whose model is in
 	int made{0};
+	// the region of the scenery reaches 250 km from its point (0,0,0) each way: there's no place for terrain beyond it
+	double constexpr reach{scene::EU07_REGIONSIDESECTIONCOUNT * scene::EU07_SECTIONSIZE * 0.5 - heightmap::chunk_size};
+	std::size_t outside{0};
+	double farthest{0.0};
 	for (auto it{state.pending.begin()}; it != state.pending.end() && made < 4;)
 	{
 		if (m_streamer.exists(*it))
 		{
+			it = state.pending.erase(it);
+			continue;
+		}
+		if (auto const centre{heightmap::chunk_corner(*it) + glm::dvec2{heightmap::chunk_size * 0.5}}; std::abs(centre.x) >= reach || std::abs(centre.y) >= reach)
+		{
+			farthest = std::max(farthest, std::max(std::abs(centre.x), std::abs(centre.y)));
+			++outside;
 			it = state.pending.erase(it);
 			continue;
 		}
@@ -694,6 +705,11 @@ void editor_mode::nmt_update()
 			continue;
 		}
 		++it;
+	}
+	if (outside > 0)
+	{
+		state.error = format(STR_C("The terrain there is %.0f km from the point (0,0,0) of the scenery, it can be at most %.0f km: set the origin of the scenery nearer (orthophoto window, PUWG 1992)"), farthest / 1000.0, reach / 1000.0);
+		WriteLog("Editor: NMT - " + state.error, logtype::generic);
 	}
 	if (made > 0)
 	{
