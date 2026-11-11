@@ -599,7 +599,7 @@ void log_nothing(std::string const &Url)
 fetched download(editor_http::client &Client, std::string const &Url, fs::path const &Path, bool const Tiff, std::vector<std::uint8_t> &Out, std::string &Error,
                  editor_http::stop_check const &Stop)
 {
-	auto const valid = [&](std::vector<std::uint8_t> const &Data) { return Tiff ? is_tiff(Data) : is_image(Data); };
+	auto const valid = [&](std::vector<std::uint8_t> const &Data) { return Tiff ? is_tiff(Data) : is_image(Data) || is_tiff(Data); };
 	if (read_file(Path, Out))
 	{
 		if (Out.empty())
@@ -738,9 +738,13 @@ bool read_geotiff(std::vector<std::uint8_t> const &Data, raster &Out)
 	auto const bits{static_cast<int>(number(258, 0))};
 	auto const format{std::max(1u, number(339, 0))}; // 1 unsigned, 2 signed, 3 float
 	auto const compression{std::max(1u, number(259, 0))};
-	if (width < 1 || height < 1 || std::max(1u, number(277, 0)) != 1 || (compression != 1 && compression != 8 && compression != 32946) || std::max(1u, number(317, 0)) != 1)
+	// samples per pixel: 1 for heights, 3 or 4 of 8 bits for imagery (RGB, RGBA), interleaved
+	auto const samples{static_cast<int>(std::max(1u, number(277, 0)))};
+	bool const colour{samples == 3 || samples == 4};
+	if (width < 1 || height < 1 || (samples != 1 && false == colour) || std::max(1u, number(284, 0)) != 1 || (compression != 1 && compression != 8 && compression != 32946) ||
+	    std::max(1u, number(317, 0)) != 1)
 		return false;
-	if (false == ((format == 3 && (bits == 32 || bits == 64)) || (format != 3 && (bits == 16 || bits == 32))))
+	if (colour ? (bits != 8 || format == 3) : false == ((format == 3 && (bits == 32 || bits == 64)) || (format != 3 && (bits == 16 || bits == 32))))
 		return false;
 	// placement
 	if (entries.contains(33550) && entries.contains(33922))
@@ -773,8 +777,14 @@ bool read_geotiff(std::vector<std::uint8_t> const &Data, raster &Out)
 	Out.width = width;
 	Out.height = height;
 	auto const nan{std::numeric_limits<float>::quiet_NaN()};
-	Out.heights.assign(static_cast<std::size_t>(width) * height, nan);
-	auto const size{bits / 8};
+	if (colour)
+	{
+		Out.heights.clear();
+		Out.rgba.assign(static_cast<std::size_t>(width) * height * 4, 255);
+	}
+	else
+		Out.heights.assign(static_cast<std::size_t>(width) * height, nan);
+	auto const size{colour ? samples : bits / 8}; // bytes of a pixel
 	auto const value_of = [&](std::uint8_t const *Bytes) {
 		auto const raw{bytes_at(Bytes, size, little)};
 		double value;
@@ -794,6 +804,19 @@ bool read_geotiff(std::vector<std::uint8_t> const &Data, raster &Out)
 		if (false == std::isfinite(value) || std::abs(value) > 1e30 || (std::isfinite(nodata) && std::abs(value - nodata) < 1e-6 * std::max(1.0, std::abs(nodata))))
 			return nan;
 		return static_cast<float>(value);
+	};
+	// a pixel into the raster: a height, or the colour (black with no alpha band is taken as there being nothing)
+	auto const put = [&](std::size_t const Index, std::uint8_t const *Bytes) {
+		if (false == colour)
+		{
+			Out.heights[Index] = value_of(Bytes);
+			return;
+		}
+		auto *pixel{&Out.rgba[Index * 4]};
+		pixel[0] = Bytes[0];
+		pixel[1] = Bytes[1];
+		pixel[2] = Bytes[2];
+		pixel[3] = samples == 4 ? Bytes[3] : 255;
 	};
 	// a block (strip or tile) as its bytes, inflated when it has to be
 	auto const block = [&](std::size_t const Offset, std::size_t const Length, std::size_t const Expected, std::vector<std::uint8_t> &Buffer) -> std::uint8_t const * {
@@ -826,7 +849,7 @@ bool read_geotiff(std::vector<std::uint8_t> const &Data, raster &Out)
 			auto const left{static_cast<int>(tile % across) * tile_width}, top{static_cast<int>(tile / across) * tile_height};
 			for (int row = 0; row < tile_height && top + row < height; ++row)
 				for (int column = 0; column < tile_width && left + column < width; ++column)
-					Out.heights[static_cast<std::size_t>(top + row) * width + left + column] = value_of(bytes + (static_cast<std::size_t>(row) * tile_width + column) * size);
+					put(static_cast<std::size_t>(top + row) * width + left + column, bytes + (static_cast<std::size_t>(row) * tile_width + column) * size);
 		}
 	}
 	else if (entries.contains(273))
@@ -846,7 +869,7 @@ bool read_geotiff(std::vector<std::uint8_t> const &Data, raster &Out)
 				return false;
 			for (std::uint32_t row = 0; row < in_strip; ++row)
 				for (int column = 0; column < width; ++column)
-					Out.heights[static_cast<std::size_t>(first + row) * width + column] = value_of(bytes + (static_cast<std::size_t>(row) * width + column) * size);
+					put(static_cast<std::size_t>(first + row) * width + column, bytes + (static_cast<std::size_t>(row) * width + column) * size);
 		}
 	}
 	else
@@ -981,9 +1004,19 @@ fetched fetch_service(editor_http::client &Client, source const &Source, target_
 	auto const result{download(Client, url, path, terrain, data, Error, Stop)};
 	if (result != fetched::data)
 		return result;
+	if (false == terrain && is_tiff(data))
+	{
+		// imagery as a GeoTIFF (WCS): placed by its own tags
+		if (read_geotiff(data, Out) && false == Out.rgba.empty())
+			return fetched::data;
+		std::error_code fault;
+		fs::remove(path, fault);
+		Error = "the imagery of " + Source.name + " is a TIFF this can't read (8-bit RGB/RGBA, not compressed or deflated)";
+		return fetched::failed;
+	}
 	if (terrain)
 	{
-		if (false == read_geotiff(data, Out))
+		if (false == read_geotiff(data, Out) || Out.heights.empty())
 		{
 			std::error_code fault;
 			fs::remove(path, fault);

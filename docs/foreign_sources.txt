@@ -39,9 +39,10 @@ terrain sk wcs crs=3046 resolution=1 max=2048 priority=10 area=16.6,47.6,22.7,49
 # --- Finlandia: Maanmittauslaitos (MML), ortofoto, model terenu 2 m, mapa topograficzna ---
 # Wymaga darmowego klucza API: konto na https://omatili.maanmittauslaitos.fi/ (Oma tili > API-avain), potem w trzech linijkach niżej
 # zamień TWOJ_KLUCZ na swój klucz i usuń # z początku. Bez klucza serwer odpowiada 401 i nic się nie wczytuje.
-# NIESPRAWDZONE (brak klucza przy przygotowaniu pliku): nazwa pokrycia terenu korkeusmalli_2m w WCS. Listę nazw pokazuje
+# Sprawdzone 11.11.2026: ortofoto 0,5 m (ortokuva_vari) i teren 2 m (korkeusmalli_2m) przez WCS 2.0. Kafle WMTS MML są ostre
+# tylko do ok. 1,2 m/px, dlatego ortofoto idzie z WCS. Listę pokryć pokazuje
 # https://avoin-karttakuva.maanmittauslaitos.fi/ortokuvat-ja-korkeusmallit/wcs/v2?service=WCS&request=GetCapabilities&api-key=TWOJ_KLUCZ
-#ortho fi xyz zoom=18 priority=10 area=19.0,59.5,31.6,70.1 feather=10 credit=Maanmittauslaitos url=https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/ortokuva/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.jpg?api-key=TWOJ_KLUCZ
+#ortho fi wcs crs=3067 resolution=0.5 max=4096 priority=10 area=19.0,59.5,31.6,70.1 feather=10 credit=Maanmittauslaitos url=https://avoin-karttakuva.maanmittauslaitos.fi/ortokuvat-ja-korkeusmallit/wcs/v2?service=WCS&version=2.0.1&request=GetCoverage&CoverageID=ortokuva_vari&SUBSET=E({minx},{maxx})&SUBSET=N({miny},{maxy})&format=image/tiff&api-key=TWOJ_KLUCZ
 #terrain fi wcs crs=3067 resolution=2 max=2048 priority=10 area=19.0,59.5,31.6,70.1 offset=auto blend=30 credit=Maanmittauslaitos url=https://avoin-karttakuva.maanmittauslaitos.fi/ortokuvat-ja-korkeusmallit/wcs/v2?service=WCS&version=2.0.1&request=GetCoverage&CoverageID=korkeusmalli_2m&SUBSET=E({minx},{maxx})&SUBSET=N({miny},{maxy})&format=image/tiff&api-key=TWOJ_KLUCZ
 #map fi_topo xyz zoom=16 tile=4 magnify=2 area=19.0,59.5,31.6,70.1 title=Mapa_topograficzna_Finlandii_(MML) credit=Maanmittauslaitos url=https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/maastokartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key=TWOJ_KLUCZ
 
