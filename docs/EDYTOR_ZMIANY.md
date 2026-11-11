@@ -18,6 +18,16 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Branch `geoportale` (scalony też do `wszystko-gl46`).
 
+### Kreator nowej scenerii: mapa z sąsiadami i Finlandią (warstwa osm z pliku źródeł) — commit o tym tytule
+- Co widać: gdy `editor/foreign_sources.txt` ma warstwę `map osm`, mapa kreatora idzie z niej (kafle OSM całego świata)
+  zamiast z OSM geoportalu, więc widać też sąsiadów i Finlandię. Start dalej na całej Polsce, skala jak była.
+  Pole „szerokość, długość” przyjmuje całą Europę (34–72° N, 25° W – 45° E) zamiast samej okolicy Polski. Podpis
+  mapy bierze `credit=` warstwy. Bez pliku albo bez warstwy `osm` – mapa geoportalu jak dotąd.
+- Uwaga: sceneria dalej liczy się w PUWG 1992 (południk 19°); daleko na zachód/wschód długości się rozciągają
+  (Berlin ok. 0,1 %, Paryż ok. 1,7 %).
+- Zmienia: `launcher/scenery_wizard.cpp`.
+- Wymaga: „Inne źródła tylko z pliku” (warstwy `map`) i „Warstwy map: większe kafle…” (`layer(…, Plain)`).
+
 ### Inne źródła: Czechy i Niemcy przy granicy, klucz nodata= — commit o tym tytule
 - Co widać: w przykładowym `docs/foreign_sources.txt` nowe źródła, sprawdzone zapytaniami 11.11.2026:
   - Czechy (ČÚZK): ortofoto 0,2 m (WMS, EPSG:3045) i teren DMR 5G (ArcGIS ImageServer `exportImage`, GeoTIFF float32);

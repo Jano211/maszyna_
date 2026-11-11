@@ -10,7 +10,9 @@ http://mozilla.org/MPL/2.0/.
 #include "stdafx.h"
 #include "launcher/scenery_wizard.h"
 #include "application/application.h"
+#include "editor/editorForeign.hpp"
 #include "editor/editorFormat.hpp"
+#include "editor/editorHttp.hpp"
 #include "editor/editorOrthophoto.hpp"
 #include "editor/editorSettings.hpp"
 #include "utilities/Globals.h"
@@ -41,6 +43,18 @@ double constexpr kCentralMeridian{19.0};
 glm::dvec2 const kPolandLow{140000.0, 120000.0};
 glm::dvec2 const kPolandHigh{890000.0, 800000.0};
 std::string const kMapService{"https://mapy.geoportal.gov.pl/wss/ext/OSM/BaseMap/service"};
+// the layer of editor/foreign_sources.txt drawn instead, when the file has it: OpenStreetMap of the whole world, so the
+// neighbours (and Finland) are on the map too. without it the map of geoportal.gov.pl
+std::string const kForeignLayer{"osm"};
+
+// the credit of the layer used for the map, empty when it's the one of geoportal.gov.pl
+std::string foreign_map_credit()
+{
+	for (auto const &layer : editor_foreign::layers())
+		if (layer.name == kForeignLayer)
+			return layer.credit.empty() ? layer.title : layer.credit;
+	return {};
+}
 
 double seconds()
 {
@@ -204,11 +218,37 @@ void ui::scenerywizard_panel::render_map(glm::vec2 const &Size)
 void ui::scenerywizard_panel::request_map(glm::vec2 const &Size)
 {
 	m_dirty = false;
-	auto const width{std::clamp(static_cast<int>(Size.x), 64, 2048)};
-	auto const height{std::clamp(static_cast<int>(Size.y), 64, 2048)};
+	auto width{std::clamp(static_cast<int>(Size.x), 64, 2048)};
+	auto height{std::clamp(static_cast<int>(Size.y), 64, 2048)};
+	auto const foreign{false == foreign_map_credit().empty()};
+	if (foreign)
+		// the layers of the file come as squares: one covering the whole window
+		width = height = std::max(width, height);
 	glm::dvec2 const half{width * 0.5 * m_scale, height * 0.5 * m_scale};
 	auto const low{m_centre - half};
 	auto const high{m_centre + half};
+	if (foreign)
+	{
+		m_request = std::async(std::launch::async, [low, high, width]() {
+			map_result result;
+			result.low = low;
+			result.high = high;
+			editor_http::client client;
+			editor_foreign::area const area{low.x, low.y, high.x, high.y};
+			auto const cache{std::filesystem::path{editor_orthophoto::cache_directory()} / "foreign"};
+			if (false == editor_foreign::layer(client, kForeignLayer, area, width, result.pixels, cache, result.error, []() { return false; }, true))
+			{
+				result.pixels.clear();
+				if (result.error.empty())
+					result.error = STR("The map service sent no image");
+				return result;
+			}
+			result.width = result.height = width;
+			result.error.clear();
+			return result;
+		});
+		return;
+	}
 	char bbox[160];
 	std::snprintf(bbox, sizeof(bbox), "%.1f,%.1f,%.1f,%.1f", low.x, low.y, high.x, high.y);
 	auto const url{kMapService + "?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=osm&STYLES=&SRS=EPSG:2180&BBOX=" + bbox + "&WIDTH=" + std::to_string(width) + "&HEIGHT=" + std::to_string(height) + "&FORMAT=image/png"};
@@ -338,7 +378,7 @@ void ui::scenerywizard_panel::render_form()
 			std::replace(text.begin(), text.end(), ',', ' ');
 			std::istringstream words(text);
 			double latitude{0.0}, longitude{0.0};
-			if (words >> latitude >> longitude && latitude > 45.0 && latitude < 58.0 && longitude > 10.0 && longitude < 28.0)
+			if (words >> latitude >> longitude && latitude > 34.0 && latitude < 72.0 && longitude > -25.0 && longitude < 45.0)
 			{
 				pick(to_puwg(latitude, longitude));
 				m_centre = m_point;
@@ -363,7 +403,11 @@ void ui::scenerywizard_panel::render_form()
 	}
 	ImGui::Spacing();
 	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-	ImGui::TextWrapped("%s", STR_C("Map: (c) OpenStreetMap contributors, served by geoportal.gov.pl"));
+	auto const credit{foreign_map_credit()};
+	if (credit.empty())
+		ImGui::TextWrapped("%s", STR_C("Map: (c) OpenStreetMap contributors, served by geoportal.gov.pl"));
+	else
+		ImGui::TextWrapped(STR_C("Map: %s"), credit.c_str());
 	ImGui::PopStyleColor();
 }
 
