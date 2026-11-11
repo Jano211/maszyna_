@@ -17,6 +17,7 @@
 #   encoding=terrarium  xyz teren: wysokości zakodowane w kolorach jak w kaflach Mapzen/AWS
 #   offset=     teren: metry dodawane do wysokości albo auto (wyliczane tam, gdzie dane stykają się z polskimi)
 #   blend=      teren: na ilu metrach przy krawędzi wysokości są dociągane do polskich
+#   nodata=     teren: wartość oznaczająca brak danych (oprócz tej zapisanej w GeoTIFF-ie), np. 0 poza granicą kraju
 #   feather=    ortho: na ilu metrach polskie zdjęcie przenika w zdjęcie tego źródła
 #   credit=     autor danych, wyświetlany pod oknami
 #   tile=       map: kafle edytora tyle razy większe (np. 4 = 1024 m zamiast 256 m): mapa sięga tyle razy dalej przy tej samej liczbie kafli
@@ -25,6 +26,8 @@
 # Licencje i warunki (stan z 10.11.2026; przed wypaleniem tekstur do scenerii sprawdź je u źródła):
 #   GUGiK (geoportal.gov.pl)  dane udostępniane nieodpłatnie do powszechnego wykorzystania
 #   ÚGKK SR (Słowacja)        CC BY 4.0, wymagany podpis źródła
+#   ČÚZK (Czechy)             CC BY 4.0, wymagany podpis źródła
+#   Niemcy (BB, SN, MV)       Datenlizenz Deutschland – Namensnennung 2.0 (dl-de/by-2-0), wymagany podpis źródła
 #   MML (Finlandia)           CC BY 4.0; wymaga darmowego, osobistego klucza API (każdy użytkownik zakłada własny)
 #   Sentinel-2 cloudless EOX  CC BY-NC-SA 4.0, tylko do użytku niekomercyjnego, na tych samych warunkach
 #   Mapzen Terrarium (AWS)    otwarte dane, podpis źródeł
@@ -35,6 +38,21 @@
 # --- Słowacja: ÚGKK SR, ortofotomozaika i DMR 5.0 1 m ---
 ortho sk wms crs=3046 resolution=0.2 max=4096 priority=10 area=16.6,47.6,22.7,49.7 feather=10 credit=ÚGKK_SR url=https://zbgisws.skgeodesy.sk/zbgis_ortofoto_wms/service.svc/get?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:3046&LAYERS=1&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
 terrain sk wcs crs=3046 resolution=1 max=2048 priority=10 area=16.6,47.6,22.7,49.7 offset=auto blend=30 credit=ÚGKK_SR url=https://inspirews.skgeodesy.sk/geoserver/el/ows?service=WCS&version=1.0.0&request=GetCoverage&coverage=el:EL.GridCoverage&CRS=EPSG:3046&RESPONSE_CRS=EPSG:3046&FORMAT=GeoTIFF&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+
+# --- Czechy: ČÚZK, ortofoto 0,2 m i DMR 5G ---
+# Teren z ArcGIS ImageServer (exportImage, GeoTIFF float32); poza Czechami serwer zwraca 0 zamiast braku danych, stąd nodata=0.
+# Wysokości w układzie Bpv (Bałtyk po wyrównaniu), różnica do polskich rzędu decymetrów – wyrównuje ją offset=auto.
+ortho cz wms crs=3045 resolution=0.2 max=4096 priority=10 area=12.0,48.5,18.9,51.1 feather=10 credit=ČÚZK url=https://ags.cuzk.gov.cz/arcgis1/services/ORTOFOTO/MapServer/WMSServer?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:3045&LAYERS=0&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+terrain cz wcs crs=3045 resolution=2 max=2048 priority=10 area=12.0,48.5,18.9,51.1 nodata=0 offset=auto blend=30 credit=ČÚZK url=https://ags.cuzk.gov.cz/arcgis2/rest/services/dmr5g/ImageServer/exportImage?bbox={bbox}&bboxSR=3045&imageSR=3045&size={width},{height}&format=tiff&pixelType=F32&noData=-9999&f=image
+
+# --- Niemcy: kraje związkowe przy polskiej granicy (Brandenburgia, Saksonia, Meklemburgia-Pomorze Przednie) ---
+# Każdy land ma własny serwer; poza swoim obszarem zwracają przezroczystość, więc pokrywające się area= nie przeszkadzają.
+# Teren 1 m tylko z Brandenburgii (WCS 2.0). Saksonia i Meklemburgia dają teren wyłącznie w paczkach do pobrania (ATOM),
+# więc tam teren bierze się z globalnego terrarium niżej. Serwer Brandenburgii jest wolny (ok. 10 s na zapytanie).
+ortho de_bb wms crs=25833 resolution=0.2 max=4096 priority=10 area=11.2,51.3,14.8,53.6 feather=10 credit=GeoBasis-DE/LGB url=https://isk.geobasis-bb.de/mapproxy/dop20c/service/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:25833&LAYERS=bebb_dop20c&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+ortho de_sn wms crs=25833 resolution=0.2 max=4096 priority=10 area=11.8,50.1,15.1,51.7 feather=10 credit=GeoSN url=https://geodienste.sachsen.de/wms_geosn_dop-rgb/guest?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&CRS=EPSG:25833&LAYERS=sn_dop_020&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+ortho de_mv wms crs=25833 resolution=0.2 max=4096 priority=10 area=10.5,53.0,14.5,54.8 feather=10 credit=GeoBasis-DE/M-V url=https://www.geodaten-mv.de/dienste/adv_dop?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:25833&LAYERS=mv_dop&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+terrain de_bb wcs crs=25833 resolution=1 max=2048 priority=10 area=11.2,51.3,14.8,53.6 offset=auto blend=30 credit=GeoBasis-DE/LGB url=https://isk.geobasis-bb.de/ows/dgm_wcs?SERVICE=WCS&VERSION=2.0.1&REQUEST=GetCoverage&COVERAGEID=bb_dgm&FORMAT=image/tiff&SUBSET=x({minx},{maxx})&SUBSET=y({miny},{maxy})&SCALESIZE=x({width}),y({height})
 
 # --- Finlandia: Maanmittauslaitos (MML), ortofoto, model terenu 2 m, mapa topograficzna ---
 # Wymaga darmowego klucza API: konto na https://omatili.maanmittauslaitos.fi/ (Oma tili > API-avain), potem w trzech linijkach niżej

@@ -267,8 +267,8 @@ int main(int Count, char **Arguments)
 	std::filesystem::copy_file(Arguments[1], "editor/foreign_sources.txt", std::filesystem::copy_options::overwrite_existing);
 	reload();
 	check(sources_file() == "editor/foreign_sources.txt", "the file of the sources");
-	check(status().rfind("3 imagery, 2 terrain, 5 map layers", 0) == 0, "the sample read: " + status());
-	check(credits(kind::terrain) == "ÚGKK SR, Mapzen terrain tiles", "credits: " + credits(kind::terrain));
+	check(status().rfind("7 imagery, 4 terrain, 5 map layers", 0) == 0, "the sample read: " + status());
+	check(credits(kind::terrain) == "ÚGKK SR, ČÚZK, GeoBasis-DE/LGB, Mapzen terrain tiles", "credits: " + credits(kind::terrain));
 	// a square across the Slovak border near Medzilaborce: in ETRS-TM34 the border of the fake data runs at 5460000
 	to_puwg(3046, 566000.0, 5460000.0, e, n);
 	auto const west{std::floor(e / 500.0) * 500.0}, north{std::floor(n / 500.0) * 500.0 + 500.0};

@@ -258,6 +258,8 @@ struct source
 	std::string title; // map: the name shown in the list of the layers
 	int tile{1};       // map: the tiles of the editor this many times larger
 	int magnify{1};    // the map asked for at a pixel this many times larger: its lettering and signs that much larger on the ground
+	bool has_nodata{false}; // terrain: a value meaning no data, besides the one the GeoTIFF names (nodata=)
+	double nodata{0.0};
 };
 
 char const *const file_name{"editor/foreign_sources.txt"};
@@ -395,6 +397,11 @@ bool parse_line(std::string const &Line, source &Out, std::string &Problem)
 			Out.blend = std::max(0.0, number);
 		else if (key == "feather")
 			Out.feather = std::max(0.0, number);
+		else if (key == "nodata")
+		{
+			Out.has_nodata = true;
+			Out.nodata = number;
+		}
 		else if (key == "tile")
 			Out.tile = std::clamp(static_cast<int>(number), 1, 16);
 		else if (key == "magnify")
@@ -1023,6 +1030,10 @@ fetched fetch_service(editor_http::client &Client, source const &Source, target_
 			Error = "the terrain of " + Source.name + " isn't a GeoTIFF this can read";
 			return fetched::failed;
 		}
+		if (Source.has_nodata)
+			for (auto &value : Out.heights)
+				if (std::abs(value - Source.nodata) < 1e-3)
+					value = std::numeric_limits<float>::quiet_NaN();
 		return fetched::data;
 	}
 	if (false == decode(data, Out.width, Out.height, Out.rgba))

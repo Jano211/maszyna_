@@ -14,6 +14,39 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
   pliku rozwiązuje się, biorąc obie strony. Nowe wpisy idą przy pokrewnych tekstach, więc konfliktów będzie mniej.
 - Zmiana pól w `application/editormode.h` oznacza przebudowę prawie całego edytora (ok. 30 min).
 
+## 2026-11-11
+
+Branch `geoportale` (scalony też do `wszystko-gl46`).
+
+### Inne źródła: Czechy i Niemcy przy granicy, klucz nodata= — commit o tym tytule
+- Co widać: w przykładowym `docs/foreign_sources.txt` nowe źródła, sprawdzone zapytaniami 11.11.2026:
+  - Czechy (ČÚZK): ortofoto 0,2 m (WMS, EPSG:3045) i teren DMR 5G (ArcGIS ImageServer `exportImage`, GeoTIFF float32);
+  - Brandenburgia (LGB): ortofoto 0,2 m (WMS) i teren 1 m (WCS 2.0 `bb_dgm`); serwer wolny, ok. 10 s na zapytanie;
+  - Saksonia (GeoSN) i Meklemburgia-Pomorze Przednie: tylko ortofoto 0,2 m (WMS) – teren dają wyłącznie w paczkach
+    ATOM, więc tam zostaje globalne terrarium. Saksonia odpowiada tylko na WMS 1.3.0 (oś x na wschód dla EPSG:25833,
+    więc `{bbox}` bez zmian).
+  - Wszystkie poza swoim obszarem zwracają przezroczystość, więc nachodzące na siebie `area=` nie przeszkadzają.
+- Nowy klucz `nodata=` dla terenu: wysokość oznaczająca brak danych oprócz tej z GeoTIFF-a. Potrzebny dla Czech: serwer
+  ČÚZK poza granicą zwraca 0 zamiast braku danych, co bez tego ciągnęłoby teren do poziomu morza.
+- Zmienia: `editor/editorForeign.cpp` (pola `has_nodata`/`nodata`, odczyt klucza, zamiana na NaN po odczycie GeoTIFF-a),
+  `docs/foreign_sources.txt` (źródła + licencje), `tests/foreign/test_foreign.cpp` (liczby źródeł w przykładzie).
+- Wymaga: „Inne źródła: ortofoto z GeoTIFF-a (WCS)” (czytanie GeoTIFF-ów z WCS).
+
+### NMT: teren dalej niż 250 km od punktu (0,0,0) scenerii – komunikat zamiast cichego „zrobione” — commit o tym tytule
+- Co widać: kawałki terenu dalej niż połowa regionu scenerii (500×500 km, `EU07_REGIONSIDESECTIONCOUNT`) od punktu
+  (0,0,0) nie są już po cichu odrzucane – okno NMT pisze, ile km to jest i że trzeba przesunąć punkt odniesienia.
+- Zmienia: `application/editormodenmt.cpp`.
+
+### Inne źródła: ortofoto z GeoTIFF-a (WCS) – Finlandia 0,5 m przez WCS MML — commit o tym tytule
+- Co widać: ortofoto może przychodzić jako GeoTIFF RGB/RGBA z WCS (8 bit, bez kompresji albo deflate). Finlandia bierze
+  zdjęcia 0,5 m z WCS `ortokuva_vari` zamiast rozmytych kafli WMTS.
+- Zmienia: `editor/editorForeign.cpp`, `docs/foreign_sources.txt`.
+
+### Inne źródła: 404 i błędy w logu (z ukrytym kluczem API) — commit o tym tytule
+- Co widać: nieudane pobrania z innych źródeł trafiają do logu z adresem (do 5 razy na serwer), klucz `api-key=`
+  zamieniony na `***`.
+- Zmienia: `editor/editorForeign.cpp`.
+
 ## 2026-11-10
 
 Branch `geoportale` (scalony też do `wszystko-gl46`).
