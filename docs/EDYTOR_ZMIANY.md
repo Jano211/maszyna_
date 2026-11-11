@@ -18,6 +18,14 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Branch `geoportale` (scalony też do `wszystko-gl46`).
 
+### NMT: zera geoportalu za granicą niemiecką i czeską uzupełniane z innych źródeł — commit o tym tytule
+- Co widać: teren za granicą przy Zittau, w Czechach przy Karkonoszach itd. nie jest już płaski na wysokości 0.
+  Usługa NMT geoportal.gov.pl poza Polską na tych odcinkach zwraca dokładnie 0 zamiast braku danych (przy Słowacji
+  zwraca brak danych, dlatego tam działało), więc edytor nie pytał innych źródeł.
+- Teraz piksele równe dokładnie 0,0 też są uzupełniane z innych źródeł; tam, gdzie żadne nie ma danych, zostaje 0.
+  Uzupełnione wysokości nie schodzą poniżej 0 (model świata ma dno morza, a zalew na poziomie morza by się zapadł).
+- Zmienia: `editor/editorNmt.cpp` (`fill_foreign`).
+
 ### Kreator nowej scenerii: mapa z sąsiadami i Finlandią (warstwa osm z pliku źródeł) — commit o tym tytule
 - Co widać: gdy `editor/foreign_sources.txt` ma warstwę `map osm`, mapa kreatora idzie z niej (kafle OSM całego świata)
   zamiast z OSM geoportalu, więc widać też sąsiadów i Finlandię. Start dalej na całej Polsce, skala jak była.

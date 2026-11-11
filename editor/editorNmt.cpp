@@ -305,7 +305,10 @@ std::shared_ptr<Square const> fill_foreign(std::shared_ptr<Square const> Square_
 {
 	editor_foreign::area const area{East, North - Pixels, East + Pixels, North};
 	auto const valid = [](float const Value) { return std::isfinite(Value) && Value > no_data; };
-	bool const holes{Square_->failed || false == std::all_of(Square_->heights.begin(), Square_->heights.end(), valid)};
+	// along the German and Czech border the service gives exactly 0 outside the country instead of no data: such pixels are
+	// filled too (a real height of exactly 0.0 is as good as never met on land; on water at sea level it stays, see below)
+	auto const usable = [&](float const Value) { return valid(Value) && Value != 0.f; };
+	bool const holes{Square_->failed || false == std::all_of(Square_->heights.begin(), Square_->heights.end(), usable)};
 	if (false == holes || false == editor_http::available() || false == editor_foreign::reaches(editor_foreign::kind::terrain, area))
 		return Square_;
 	// a square the service failed on inside the rectangle of Poland is to be asked for again, not made of the coarser ones
@@ -323,10 +326,22 @@ std::shared_ptr<Square const> fill_foreign(std::shared_ptr<Square const> Square_
 		filled->north = North;
 		filled->heights.assign(static_cast<std::size_t>(Pixels) * Pixels, no_data - 1.f);
 	}
+	// the zeros made holes for the other sources, remembered to be put back where none of them has a height, and never let
+	// below 0 (the world model has the sea bottom: a lagoon at sea level would sink)
+	std::vector<char> zero(filled->heights.size(), 0);
+	for (std::size_t i = 0; i < filled->heights.size(); ++i)
+		if (filled->heights[i] == 0.f)
+		{
+			zero[i] = 1;
+			filled->heights[i] = no_data - 1.f;
+		}
 	editor_http::client client;
 	std::string error;
 	if (false == editor_foreign::terrain(client, filled->east, filled->north, filled->pixel, filled->width, filled->height, filled->heights, no_data, error, Stop))
 		WriteLog("Editor: NMT square at " + std::to_string(East) + "," + std::to_string(North) + ", the other sources: " + error, logtype::generic);
+	for (std::size_t i = 0; i < filled->heights.size(); ++i)
+		if (zero[i])
+			filled->heights[i] = valid(filled->heights[i]) ? std::max(filled->heights[i], 0.f) : 0.f;
 	if (std::none_of(filled->heights.begin(), filled->heights.end(), valid))
 	{
 		if (false == error.empty())
