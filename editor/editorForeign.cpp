@@ -567,6 +567,34 @@ enum class fetched
 	failed
 };
 
+// the address for the log, with the keys of the services hidden
+std::string loggable(std::string Url)
+{
+	for (char const *const name : {"api-key=", "api_key=", "apikey=", "key=", "token="})
+		for (std::size_t at{0}; (at = Url.find(name, at)) != std::string::npos;)
+		{
+			at += std::strlen(name);
+			auto const end{Url.find('&', at)};
+			Url.replace(at, (end == std::string::npos ? Url.size() : end) - at, "***");
+		}
+	return Url;
+}
+
+// a few times per host at most, so a source answering 404 everywhere shows in the log without flooding it
+void log_nothing(std::string const &Url)
+{
+	static std::mutex mutex;
+	static std::map<std::string, int> counts;
+	auto const start{Url.find("://")};
+	auto const host{Url.substr(0, Url.find('/', start == std::string::npos ? 0 : start + 3))};
+	{
+		std::lock_guard<std::mutex> lock{mutex};
+		if (++counts[host] > 5)
+			return;
+	}
+	WriteLog("Editor: other sources, nothing there (HTTP 404): " + loggable(Url));
+}
+
 // from the cache or the service. an empty file in the cache: nothing there
 fetched download(editor_http::client &Client, std::string const &Url, fs::path const &Path, bool const Tiff, std::vector<std::uint8_t> &Out, std::string &Error,
                  editor_http::stop_check const &Stop)
@@ -593,6 +621,7 @@ fetched download(editor_http::client &Client, std::string const &Url, fs::path c
 		{
 			if (Error == "HTTP 404")
 			{
+				log_nothing(Url);
 				write_file(Path, {});
 				Out.clear();
 				return fetched::nothing;
@@ -601,12 +630,14 @@ fetched download(editor_http::client &Client, std::string const &Url, fs::path c
 		}
 		if (false == valid(Out))
 		{
-			Error = "unexpected response: " + std::string(Out.begin(), Out.begin() + std::min<std::size_t>(Out.size(), 200));
+			Error = "unexpected response: " + std::string(Out.begin(), Out.begin() + std::min<std::size_t>(Out.size(), 300)) + " from " + loggable(Url);
 			continue;
 		}
 		write_file(Path, Out);
 		return fetched::data;
 	}
+	if (Error.find(" from ") == std::string::npos)
+		Error += " from " + loggable(Url);
 	return fetched::failed;
 }
 
