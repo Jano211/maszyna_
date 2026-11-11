@@ -134,6 +134,11 @@ bool system_by_code(int const Epsg, system_of_coordinates &Out)
 		Out = transverse(24.0, 0.9998, 500000.0, 0.0); // LKS-94
 		return true;
 	}
+	if (Epsg == 4026)
+	{
+		Out = transverse(28.4, 0.99994, 200000.0, -5000000.0); // MOLDREF99 / Moldova TM
+		return true;
+	}
 	if (Epsg == 3857 || Epsg == 900913)
 	{
 		Out = {};

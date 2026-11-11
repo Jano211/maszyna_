@@ -241,8 +241,10 @@ int main(int Count, char **Arguments)
 	check(to_puwg(4326, 19.0, 52.0, e, n) && std::abs(e - 500000.0) < 0.001 && std::abs(n - 459309.209) < 0.01, "PUWG 1992 of 52N 19E: " + std::to_string(e) + " " + std::to_string(n));
 	check(to_puwg(4326, 21.0, 49.0, e, n) && from_puwg(3046, e, n, x, y) && std::abs(x - 500000.0) < 0.001 && std::abs(y - 5427455.781) < 0.01,
 	      "ETRS-TM34 of 49N 21E: " + std::to_string(x) + " " + std::to_string(y));
+	check(to_puwg(4326, 28.4, 47.0, e, n) && from_puwg(4026, e, n, x, y) && std::abs(x - 200000.0) < 0.001 && std::abs(y - 206934.574) < 0.01,
+	      "Moldova TM of 47N 28.4E: " + std::to_string(x) + " " + std::to_string(y));
 	double worst{0.0};
-	for (int code : {2176, 2177, 2178, 2179, 3046, 25834, 3067, 3346, 3857, 4326})
+	for (int code : {2176, 2177, 2178, 2179, 3046, 25834, 3067, 3346, 4026, 3857, 4326})
 		for (double lon = 14.0; lon <= 32.0; lon += 3.0)
 			for (double lat = 47.0; lat <= 69.0; lat += 4.0)
 			{
@@ -267,8 +269,8 @@ int main(int Count, char **Arguments)
 	std::filesystem::copy_file(Arguments[1], "editor/foreign_sources.txt", std::filesystem::copy_options::overwrite_existing);
 	reload();
 	check(sources_file() == "editor/foreign_sources.txt", "the file of the sources");
-	check(status().rfind("7 imagery, 4 terrain, 5 map layers", 0) == 0, "the sample read: " + status());
-	check(credits(kind::terrain) == "ÚGKK SR, ČÚZK, GeoBasis-DE/LGB, Mapzen terrain tiles", "credits: " + credits(kind::terrain));
+	check(status().rfind("9 imagery, 8 terrain, 8 map layers", 0) == 0, "the sample read: " + status());
+	check(credits(kind::terrain) == "ÚGKK SR, ČÚZK, GeoBasis-DE/LGB, INGV TINITALY, ARFC Moldova, Mapzen terrain tiles", "credits: " + credits(kind::terrain));
 	// a square across the Slovak border near Medzilaborce: in ETRS-TM34 the border of the fake data runs at 5460000
 	to_puwg(3046, 566000.0, 5460000.0, e, n);
 	auto const west{std::floor(e / 500.0) * 500.0}, north{std::floor(n / 500.0) * 500.0 + 500.0};
@@ -368,7 +370,7 @@ int main(int Count, char **Arguments)
 	// the map layers: the defaults are there, one of them gives the whole tile
 	{
 		auto const list{layers()};
-		check(list.size() == 5 && list[3].name == "topo_pl" && list[4].name == "isok" && list[1].name == "osm" && list[4].title == "Cieniowanie terenu (ISOK)", "five map layers, osm second, ISOK last");
+		check(list.size() == 8 && list[3].name == "topo_pl" && list[4].name == "isok" && list[1].name == "osm" && list[4].title == "Cieniowanie terenu (ISOK)" && list[5].title == "Mołdawia: radziecka mapa 1:50 000 (1982)", "eight map layers, osm second, ISOK fifth, the Moldovan map after it");
 		check(list[1].tile == 4 && list[0].tile == 1, "OSM with tiles 4 times larger");
 		std::vector<std::uint8_t> map;
 		check(layer(client, "osm", tile, 512, map, "editor/cache/ortho", error, []() { return false; }) && map.size() == 512u * 512u * 4u && map[2] == 200 && map[3] == 255,

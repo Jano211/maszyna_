@@ -9,7 +9,7 @@
 #   url=        adres zapytania: dla wms/wcs {bbox} (minx,miny,maxx,maxy w układzie crs=, x na wschód), {width}, {height},
 #               osobno {minx} {miny} {maxx} {maxy} (dla WCS 2.0: SUBSET=E({minx},{maxx})&SUBSET=N({miny},{maxy}));
 #               dla xyz {z} {x} {y} (kafle Web Mercator jak w OpenStreetMap)
-#   crs=        kod EPSG układu wms/wcs: 2180, 2176-2179, 3040-3051, 25828-25838, 32628-32638, 3067, 3346, 3857, 4326, 4258
+#   crs=        kod EPSG układu wms/wcs: 2180, 2176-2179, 3040-3051, 25828-25838, 32628-32638, 3067, 3346, 4026, 3857, 4326, 4258
 #   area=       zachód,południe,wschód,północ w stopniach; poza tym obszarem źródło nie jest odpytywane (bez area: cały świat)
 #   priority=   mniejsza liczba = źródło brane wcześniej; geoportal.gov.pl zawsze ma pierwszeństwo
 #   resolution= najmniejszy piksel, o jaki warto pytać, w jednostkach crs= (wms/wcs); max= największa szerokość/wysokość zapytania
@@ -27,6 +27,9 @@
 #   GUGiK (geoportal.gov.pl)  dane udostępniane nieodpłatnie do powszechnego wykorzystania
 #   ÚGKK SR (Słowacja)        CC BY 4.0, wymagany podpis źródła
 #   ČÚZK (Czechy)             CC BY 4.0, wymagany podpis źródła
+#   basemap.at (Austria)      CC BY 4.0, wymagany podpis basemap.at
+#   INGV TINITALY (Włochy)    CC BY 4.0, wymagany podpis źródła
+#   ARFC (Mołdawia)           dane publiczne geodata.gov.md, podpis źródła; warunków dalszego użycia nie sprawdzałem
 #   Niemcy (BB, SN, MV)       Datenlizenz Deutschland – Namensnennung 2.0 (dl-de/by-2-0), wymagany podpis źródła
 #   MML (Finlandia)           CC BY 4.0; wymaga darmowego, osobistego klucza API (każdy użytkownik zakłada własny)
 #   Sentinel-2 cloudless EOX  CC BY-NC-SA 4.0, tylko do użytku niekomercyjnego, na tych samych warunkach
@@ -54,6 +57,23 @@ ortho de_sn wms crs=25833 resolution=0.2 max=4096 priority=10 area=11.8,50.1,15.
 ortho de_mv wms crs=25833 resolution=0.2 max=4096 priority=10 area=10.5,53.0,14.5,54.8 feather=10 credit=GeoBasis-DE/M-V url=https://www.geodaten-mv.de/dienste/adv_dop?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:25833&LAYERS=mv_dop&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
 terrain de_bb wcs crs=25833 resolution=1 max=2048 priority=10 area=11.2,51.3,14.8,53.6 offset=auto blend=30 credit=GeoBasis-DE/LGB url=https://isk.geobasis-bb.de/ows/dgm_wcs?SERVICE=WCS&VERSION=2.0.1&REQUEST=GetCoverage&COVERAGEID=bb_dgm&FORMAT=image/tiff&SUBSET=x({minx},{maxx})&SUBSET=y({miny},{maxy})&SCALESIZE=x({width}),y({height})
 
+# --- Austria: basemap.at (ortofoto ok. 30 cm, cieniowanie, mapa) ---
+# Teren z globalnego terrarium niżej (w Austrii to ich model 10 m). Poza Austrią serwer kafli odpowiada 404 – wtedy biorą
+# się zdjęcia następnego źródła, dlatego priorytet 20: przy granicy z Czechami i Słowacją pierwszeństwo mają ich zdjęcia.
+ortho at xyz zoom=19 priority=20 area=9.5,46.3,17.2,49.1 feather=10 credit=basemap.at url=https://mapsneu.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg
+
+# --- Włochy: teren TINITALY 10 m (INGV) ---
+# Ogólnokrajowe ortofoto geoportalu PCN było 11.11.2026 zepsute po ich stronie (błąd serwera), więc zdjęcia z Esri.
+terrain it wcs crs=32632 resolution=10 max=2048 priority=10 area=6.6,35.4,18.6,47.1 offset=auto blend=30 credit=INGV_TINITALY url=https://tinitaly.pi.ingv.it/TINItaly_1_1/wcs?SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCoverage&COVERAGE=TINItaly_1_1:tinitaly_dem&CRS=EPSG:32632&RESPONSE_CRS=EPSG:32632&FORMAT=GeoTIFF&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+
+# --- Mołdawia: geodata.gov.md (ortofoto, teren 5 m, radzieckie mapy topograficzne, cieniowanie) ---
+# Ortofoto: najnowsze dla każdego miejsca (2007-2021, miasta 20 cm). Teren: nowe modele 2020 (środek) i 2021 (południe)
+# w float, reszta kraju z modelu 2007 w pełnych metrach (na płaskim widać schodki co 1 m), stąd priorytet 20.
+ortho md wms crs=4026 resolution=0.3 max=4096 priority=10 area=26.6,45.4,30.3,48.6 feather=10 credit=ARFC_Moldova url=https://geodata.gov.md/geoserver/orthophoto/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:4026&LAYERS=orthophoto:ortofoto_ghibrid_rm&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+terrain md_centru wcs crs=4026 resolution=5 max=2048 priority=10 area=27.4,46.6,29.6,47.6 offset=auto blend=30 credit=ARFC_Moldova url=https://geodata.gov.md/geoserver/DTM/wcs?SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCoverage&COVERAGE=DTM:DTM_2020_centru&CRS=EPSG:4026&RESPONSE_CRS=EPSG:4026&FORMAT=GeoTIFF&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+terrain md_sud wcs crs=4026 resolution=5 max=2048 priority=10 area=28.0,45.4,30.3,46.8 offset=auto blend=30 credit=ARFC_Moldova url=https://geodata.gov.md/geoserver/DTM/wcs?SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCoverage&COVERAGE=DTM:DTM_2021_Sud&CRS=EPSG:4026&RESPONSE_CRS=EPSG:4026&FORMAT=GeoTIFF&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+terrain md wcs crs=4026 resolution=5 max=2048 priority=20 area=26.5,45.4,30.3,48.6 offset=auto blend=30 credit=ARFC_Moldova url=https://geodata.gov.md/geoserver/DTM/wcs?SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCoverage&COVERAGE=DTM:DTM_5m&CRS=EPSG:4026&RESPONSE_CRS=EPSG:4026&FORMAT=GeoTIFF&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+
 # --- Finlandia: Maanmittauslaitos (MML), ortofoto, model terenu 2 m, mapa topograficzna ---
 # Wymaga darmowego klucza API: konto na https://omatili.maanmittauslaitos.fi/ (Oma tili > API-avain), potem w trzech linijkach niżej
 # zamień TWOJ_KLUCZ na swój klucz i usuń # z początku. Bez klucza serwer odpowiada 401 i nic się nie wczytuje.
@@ -75,3 +95,6 @@ map osm xyz zoom=17 tile=4 magnify=2 title=OpenStreetMap credit=©_autorzy_OpenS
 map topo xyz zoom=16 tile=4 magnify=2 title=Mapa_topograficzna_(OpenTopoMap) credit=OpenTopoMap_(CC-BY-SA),_©_autorzy_OpenStreetMap url=https://tile.opentopomap.org/{z}/{x}/{y}.png
 map topo_pl wms crs=2180 resolution=1 max=4096 area=14,49,24.2,55 title=Skany_map_topograficznych_(geoportal.gov.pl) credit=GUGiK,_geoportal.gov.pl url=https://mapy.geoportal.gov.pl/wss/service/img/guest/TOPO/MapServer/WMSServer?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:2180&LAYERS=Raster&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
 map isok wms crs=2180 resolution=1 max=4096 area=14,49,24.2,55 title=Cieniowanie_terenu_(ISOK) credit=GUGiK,_geoportal.gov.pl url=https://mapy.geoportal.gov.pl/wss/service/PZGIK/NMT/GRID1/WMS/ShadedRelief?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:2180&LAYERS=Raster&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+map md_topo wms crs=4026 resolution=2 max=4096 area=26.5,45.4,30.3,48.6 title=Mołdawia:_radziecka_mapa_1:50_000_(1982) credit=ARFC_Moldova url=https://geodata.gov.md/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:4026&LAYERS=maps:harta_topografica_50k_1982&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+map md_relief wms crs=4026 resolution=5 max=4096 area=26.5,45.4,30.3,48.6 title=Mołdawia:_cieniowanie_terenu credit=ARFC_Moldova url=https://geodata.gov.md/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:4026&LAYERS=DTM:DTM_2007_ShadedRelief&STYLES=&FORMAT=image/jpeg&BBOX={bbox}&WIDTH={width}&HEIGHT={height}
+map at_relief xyz zoom=17 area=9.5,46.3,17.2,49.1 title=Austria:_cieniowanie_terenu_(basemap.at) credit=basemap.at url=https://mapsneu.wien.gv.at/basemap/bmapgelaende/grau/google3857/{z}/{y}/{x}.jpeg

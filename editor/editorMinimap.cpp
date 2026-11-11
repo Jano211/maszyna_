@@ -214,11 +214,19 @@ bool editor_minimap::ui(camera const &Camera, glm::dvec2 &Target)
 		ImGui::TextWrapped("%s", STR_C("The scenery has no place on the map: set its origin in PUWG 1992 in the orthophoto window."));
 		return false;
 	}
-	// the layer
-	auto const *current{&layers.front()};
-	for (auto const &item : layers)
-		if (item.name == m_layer)
-			current = &item;
+	// the layer: the one picked, at first the Polish topographic maps of geoportal.gov.pl (topo_pl), else OpenStreetMap,
+	// else the first in the file (the order of the file is no good guide: a foreign map may stand before the world ones)
+	editor_foreign::layer_info const *current{nullptr};
+	for (auto const *wanted : {m_layer.c_str(), "topo_pl", "osm"})
+	{
+		for (auto const &item : layers)
+			if (item.name == wanted)
+				current = &item;
+		if (current != nullptr)
+			break;
+	}
+	if (current == nullptr)
+		current = &layers.front();
 	if (current->name != m_layer)
 	{
 		m_layer = current->name;

@@ -18,6 +18,19 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Branch `geoportale` (scalony też do `wszystko-gl46`).
 
+### Inne źródła: Mołdawia, Austria, Włochy; minimapa zaczyna od polskich map — commit o tym tytule
+- Co widać: w przykładowym `docs/foreign_sources.txt` (sprawdzone zapytaniami 11.11.2026):
+  - Mołdawia (geodata.gov.md): ortofoto (najnowsze dla miejsca, miasta 20 cm), teren 5 m (modele 2020 i 2021 w float,
+    reszta kraju z 2007 w pełnych metrach), warstwy map: radziecka mapa 1:50 000 z 1982 i cieniowanie terenu;
+  - Austria (basemap.at): ortofoto ok. 30 cm (kafle XYZ, poza Austrią 404) i warstwa cieniowania; teren z terrarium;
+  - Włochy: teren TINITALY 10 m (INGV, WCS w UTM 32N); krajowe ortofoto PCN było zepsute po ich stronie, więc Esri.
+  - Rumunia (ANCPI) – serwer niedostępny z Polski, nic nie dopisane.
+- Nowy układ EPSG:4026 (MOLDREF99 / Moldova TM: południk 28,4°, skala 0,99994, 200 000 / −5 000 000) z testem.
+- Minimapa na start bierze warstwę `topo_pl` (skany map geoportal.gov.pl), potem `osm`, a dopiero potem pierwszą
+  z pliku – wcześniej pierwsza z pliku, czyli np. fińska mapa MML, jeśli stała wyżej.
+- Zmienia: `editor/editorForeign.cpp` (EPSG:4026), `editor/editorMinimap.cpp`, `docs/foreign_sources.txt`,
+  `tests/foreign/test_foreign.cpp`.
+
 ### NMT: zera geoportalu za granicą niemiecką i czeską uzupełniane z innych źródeł — commit o tym tytule
 - Co widać: teren za granicą przy Zittau, w Czechach przy Karkonoszach itd. nie jest już płaski na wysokości 0.
   Usługa NMT geoportal.gov.pl poza Polską na tych odcinkach zwraca dokładnie 0 zamiast braku danych (przy Słowacji
