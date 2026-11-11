@@ -393,9 +393,9 @@ bool load_tile(http_client &Client, tile_request const &Request, image &Out, boo
 	auto const area{tile_area(Request.ix, Request.iy, Request.size)};
 	if (false == Request.layer.empty())
 	{
-		// a map layer: its tiles alone, anywhere
+		// a map layer: its tiles alone, anywhere (its larger tiles at larger textures)
 		Empty = false;
-		auto const pixels{std::min(Request.level, standard_pixels)};
+		auto const pixels{std::min(Request.level, hires_pixels)};
 		Out.width = Out.height = pixels;
 		if (false == editor_foreign::layer(Client, Request.layer, area, pixels, Out.rgba, cache_root() / "foreign", Error, Stop))
 			return false;
@@ -1273,7 +1273,10 @@ void editor_orthophoto::update(glm::dvec3 const &Camera)
 			tile &t = m_tiles[key];
 			if (m_config.layer.empty() && !in_service_area(key.first, key.second) && !foreign_area(key.first, key.second))
 				t.empty = true;
-			int const level = level_for(std::max(std::abs(dx), std::abs(dy)), m_config.hires);
+			int level = level_for(std::max(std::abs(dx), std::abs(dy)), m_config.hires);
+			// the larger tiles of a map layer get larger textures, so a metre of them has as many pixels as before (up to twice)
+			if (false == m_config.layer.empty() && m_tile > tile_size)
+				level = std::min(hires_pixels, level * 2);
 			if (t.empty || (t.level == level && t.alpha == m_alpha) || (t.requested == level && t.requested_alpha == m_alpha) || now < t.retry_at)
 				continue;
 			schedule(key, t, level, m_alpha);
