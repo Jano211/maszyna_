@@ -504,10 +504,16 @@ namespace gl
         float top_radius;
         // distance of the observer from the centre of the planet
         float observer_radius;
-        float padding;
+        // the sky-view table holds the radiance times this: kept near 1 from the day to the deep twilight, where the radiance
+        // falls by eight orders of magnitude, out of the range of the 16 bit floats of the table
+        float skyview_exposure;
+        // xyz: world space direction towards the moon, w: average brightness of the sky it lights, as drawn (0 when it is down)
+        glm::vec4 moon;
+        // rgb: the night sky without the moon at the zenith, as drawn (airglow and starlight), w unused
+        glm::vec4 night;
     };
 
-    static_assert(sizeof(atmosphere_ubs) == 96, "bad size of atmosphere_ubs");
+    static_assert(sizeof(atmosphere_ubs) == 128, "bad size of atmosphere_ubs");
 
     // layout std430: what atmosphere_ambient.comp works out for the cpu (GLSL: atmosphere_result_ssbo). radiance with
     // the sun of illuminance 1
