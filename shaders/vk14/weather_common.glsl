@@ -142,12 +142,18 @@ vec3 fog_whiten(vec3 color, float ground)
 // only a small bright halo is left around the sun (the droplets send the light forward in a narrow lobe), when it is up
 vec3 fog_light_color(vec3 direction, float ground, float extinction)
 {
-	float dense = max(clamp(ground, 0.0, 1.0), smoothstep(0.001, 0.01, extinction));
+	// the ground fog: the colours of the horizon towards, across and away from the sun, evened out (Jan 2026-11-14: good as it is)
+	float groundshare = clamp(ground, 0.0, 1.0);
 	vec3 color = fog_color_world(direction);
+	vec3 horizon = 0.25 * (fog_horizon[0].rgb + 2.0 * fog_horizon[FOG_HORIZON_SAMPLES / 2].rgb + fog_horizon[FOG_HORIZON_SAMPLES - 1].rgb);
+	color = mix(color, horizon, 0.9 * groundshare);
+	// the rest of a thick fog (the haze of a low visibility): a white surface under the sky and the sun
+	float thick = smoothstep(0.001, 0.01, extinction) * (1.0 - groundshare);
 	vec3 sun = weather_sun_direction.xyz;
 	float sunup = weather_sun_direction.w;
 	vec3 even = weather_ambient.rgb * 0.5 + weather_sun_color.rgb * (0.375 * sunup * max(sun.y, 0.0));
-	color = mix(color, even, dense);
+	color = mix(color, even, thick);
+	float dense = max(groundshare, thick);
 	float towards = max(dot(direction, sun), 0.0);
 	color += weather_sun_color.rgb * (sunup * 0.5 * dense * pow(towards, 200.0));
 	return fog_whiten(color, ground);
