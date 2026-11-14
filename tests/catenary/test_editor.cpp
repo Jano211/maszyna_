@@ -699,6 +699,9 @@ int main( int, char *argv[] ) {
             && std::abs( catenary_earthing_length( 0 ) - 120.0 ) < 0.01;
         // lina: przęsła g1-g2, g2-g3, g3-g4 (z izolatorem), g4-g5, g5-g6 mają bryłę liny
         good = good && catenary_earthing_holder_text( 0, "g1" ) == "13-0492" && catenary_earthing_holder_text( 1, "g6" ) == "13-0491";
+        // następna sekcja z grafu słupów (lista sekcji w edytorze): us2 za us1, za us2 nic; słupy jako indeksy wpisów
+        std::printf( "    nastepna: us1 -> %d, us2 -> %d, sciezka us1 %zu\n", catenary_earthing_next( 0 ), catenary_earthing_next( 1 ), catenary_earthing_path( 0 ).size() );
+        good = good && catenary_earthing_next( 0 ) == 1 && catenary_earthing_next( 1 ) == -1 && catenary_earthing_path( 0 ).size() == 3;
         // wysięgnik 6130 na słupie końcowym g6: kotwienie na jego końcu, bez uchwytów 5100 na słupie
         {
             auto withArm { *catenary_earthing_get( 1 ) };
@@ -728,6 +731,8 @@ int main( int, char *argv[] ) {
         std::printf( "    po wstawieniu slupa (%d, lancuch %zu, plik %s / %s): us1%s\n", updated, catenary_chain_get( 0 )->suspensions.size(),
             catenary_chain_file( 0 ).c_str(), catenary_scene_file_of( catenary_scene_size() - 1 ).c_str(), names.c_str() );
         good = good && updated && catenary_earthing_poles( 0 ).size() == 4 && catenary_earthing_of( catenary_scene_size() - 1 ) == 0;
+        // graf słupów pamiętany w scenie poszedł za zmianą łańcucha: us2 dalej za us1, ścieżka us1 ma wstawiony słup
+        good = good && catenary_earthing_next( 0 ) == 1 && catenary_earthing_path( 0 ).size() == 4;
         std::remove( "tests/catenary/td_sekcje_test.scm" );
         check( good, "uszynienie: sekcje from-to po lancuchu, kotwienia 0491/0492, punkt izolujacy 0493, slup wstawiony w lancuch" );
     }

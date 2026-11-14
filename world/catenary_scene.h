@@ -173,6 +173,10 @@ bool catenary_earthing_route( std::string const &File, std::string const &From, 
 // słupy uszynienia po kolei (nazwy wpisów stawiających słup) i długość w planie, wg ostatniego składania
 std::vector<std::string> catenary_earthing_poles( std::size_t Index );
 double catenary_earthing_length( std::size_t Index );
+// słupy uszynienia po kolei jako indeksy wpisów (catenary_scene_get), wg ostatniego składania
+std::vector<std::size_t> catenary_earthing_path( std::size_t Index );
+// sekcja, która idzie zaraz za ostatnim słupem sekcji Index (pierwszy jej słup to sąsiad ostatniego po przęśle); -1 - żadna
+int catenary_earthing_next( std::size_t Index );
 // uszynienie, przez którego słup idzie podwieszenie; -1 - żadne
 int catenary_earthing_of( std::size_t Suspension );
 // części stawiane na słupie Pole uszynienia (np. "6130-02 + 6130 + 6130-00"), albo "! <czemu się nie da>"

@@ -14,6 +14,27 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
   pliku rozwiązuje się, biorąc obie strony. Nowe wpisy idą przy pokrewnych tekstach, więc konfliktów będzie mniej.
 - Zmiana pól w `application/editormode.h` oznacza przebudowę prawie całego edytora (ok. 30 min).
 
+## 2026-11-14
+
+Commity na `siec-gl46`.
+
+### Niebo: atmosfera przez cały zmierzch i noc, bez zielonego pasa — commit o tym tytule
+- Co widać: przy zachodzie i zmierzchu nie ma już zielonkawego pasa między pomarańczowym horyzontem a niebieskim zenitem
+  (dawała go stara kopuła Pereza). Niebo i kolor dalekiej mgły są z atmosfery przy każdej wysokości słońca: pas Wenus, cień
+  Ziemi, granatowy zmierzch, w nocy poświata i niebo podświetlone księżycem (wg fazy i wysokości).
+- Zmienia: `gl/ubo.h` (`atmosphere_ubs` 128 B), `rendering/common/skylight.h/.cpp`, shadery `atmosphere_*`, `fog_horizon.comp`,
+  `sky_atmosphere.frag` w `shaders/ogl46` i `shaders/vk14`, `docs/opengl46-renderer.md`.
+- Wymaga: nic.
+
+### Sieć trakcyjna: sekcje uszynienia w widoku, szybsza lista sekcji — commit o tym tytule
+- Co widać: Widok → Sieć trakcyjna → „Sekcje uszynienia” (domyślnie włączone): każda sekcja uszynienia grupowego jako linia nad
+  wierzchołkami jej słupów, w innym kolorze niż sąsiednie, z nazwą i długością w środku (czerwona ponad 3,5 km). Lista sekcji
+  na zakładce Uszynienie nie liczy już tras co klatkę (przy kilkudziesięciu sekcjach przycinała edytor).
+- Zmienia: `world/catenary_scene.h/.cpp` (graf słupów pamiętany do zmiany wpisów lub łańcuchów pliku, budowany bez szukania
+  po wszystkich wpisach; `catenary_earthing_path`, `catenary_earthing_next`), `application/editormodecatenary.cpp`,
+  `lang/editor_pl.po`, test `te`.
+- Wymaga: sekcji uszynienia z 2026-11-09.
+
 ## 2026-11-07
 
 Commity na `siec-gl46`.
