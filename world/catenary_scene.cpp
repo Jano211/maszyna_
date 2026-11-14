@@ -37,6 +37,8 @@ http://mozilla.org/MPL/2.0/.
 #include <locale>
 #include <set>
 #include <sstream>
+#include <tuple>
+#include <unordered_map>
 
 // części wysięgników w scenerii (world/catenary_scene_objects.cpp, w testach atrapa): odłączenie od pliku scenerii i usunięcie
 void catenary_part_detach( TAnimModel *Model );
@@ -2830,16 +2832,101 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
 std::vector<catenary::chain> const *PendingChains { nullptr };
 std::string PendingFile;
 
+// skrót stanu, od którego zależy graf słupów pliku: wpisy (nazwa, słup, położenie) i łańcuchy; liniowo, bez szukania
+std::uint64_t
+earthing_graph_key( std::string const &File ) {
+    std::uint64_t key { 1469598103934665603ULL };
+    auto const mix = [ &key ]( std::uint64_t const Value ) { key = ( key ^ Value ) * 1099511628211ULL; };
+    std::hash<std::string> const text;
+    mix( Suspensions.size() );
+    for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
+        auto const &suspension { Suspensions[ index ] };
+        if( suspension.removed || suspension.file != File ) { continue; }
+        auto const &data { suspension.data };
+        mix( index );
+        mix( text( data.name ) );
+        mix( ( data.has_pole ? 1 : 0 ) | ( data.has_at ? 2 : 0 ) | ( data.shared_pole ? 4 : 0 ) );
+        mix( text( data.pole_type ) );
+        mix( static_cast<std::uint64_t>( std::llround( data.pole[ 0 ] * 1000.0 ) ) );
+        mix( static_cast<std::uint64_t>( std::llround( data.pole[ 2 ] * 1000.0 ) ) );
+    }
+    for( auto const &chain : Chains ) {
+        if( chain.removed || chain.file != File ) { continue; }
+        mix( 0x9e3779b97f4a7c15ULL );
+        for( auto const &name : chain.data.suspensions ) { mix( text( name ) ); }
+    }
+    return key;
+}
+
+// słup (wpis stawiający słup) każdego wpisu pliku naraz, jak earthing_pole, ale bez przeglądania wszystkich wpisów dla każdego:
+// wpisy z słupem w kratkach 10 cm, sąsiedzi szukani w kratkach dookoła
+std::unordered_map<std::string, std::size_t>
+earthing_standing_poles( std::string const &File ) {
+    std::unordered_map<std::string, std::size_t> standing;
+    auto const cell = []( double const Value ) { return static_cast<long long>( std::floor( Value / 0.1 ) ); };
+    std::map<std::tuple<std::string, long long, long long>, std::vector<std::size_t>> grid;
+    for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
+        auto const &other { Suspensions[ index ] };
+        if( other.removed || other.file != File || false == other.data.has_pole || false == other.data.has_at ) { continue; }
+        grid[ { other.data.pole_type, cell( other.data.pole[ 0 ] ), cell( other.data.pole[ 2 ] ) } ].push_back( index );
+    }
+    for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
+        auto const &own { Suspensions[ index ] };
+        if( own.removed || own.file != File ) { continue; }
+        auto pole { Suspensions.size() };
+        if( own.data.has_pole ) {
+            auto best { Suspensions.size() }, shared { Suspensions.size() };
+            auto const cx { cell( own.data.pole[ 0 ] ) }, cz { cell( own.data.pole[ 2 ] ) };
+            for( long long x = cx - 1; x <= cx + 1; ++x ) {
+                for( long long z = cz - 1; z <= cz + 1; ++z ) {
+                    auto const found { grid.find( { own.data.pole_type, x, z } ) };
+                    if( found == grid.end() ) { continue; }
+                    for( auto const other_index : found->second ) {
+                        auto const &other { Suspensions[ other_index ] };
+                        auto const dx { other.data.pole[ 0 ] - own.data.pole[ 0 ] }, dz { other.data.pole[ 2 ] - own.data.pole[ 2 ] };
+                        if( dx * dx + dz * dz > 0.05 * 0.05 ) { continue; }
+                        if( false == other.data.shared_pole ) { best = std::min( best, other_index ); }
+                        else { shared = std::min( shared, other_index ); }
+                    }
+                }
+            }
+            pole = ( best != Suspensions.size() ? best : shared );
+        }
+        // pierwszy wpis o tej nazwie, jak suspension_named
+        standing.emplace( own.data.name, pole );
+    }
+    return standing;
+}
+
+std::map<std::size_t, std::vector<std::size_t>>
+earthing_graph_build( std::string const &File );
+
+// graf słupów pliku; pamiętany, dopóki wpisy i łańcuchy pliku się nie zmienią (lista sekcji w edytorze pyta o trasy co klatkę)
 std::map<std::size_t, std::vector<std::size_t>>
 earthing_graph( std::string const &File ) {
+    if( PendingChains != nullptr && PendingFile == File ) { return earthing_graph_build( File ); }
+    static std::map<std::string, std::pair<std::uint64_t, std::map<std::size_t, std::vector<std::size_t>>>> cache;
+    auto const key { earthing_graph_key( File ) };
+    auto &entry { cache[ File ] };
+    if( entry.second.empty() || entry.first != key ) {
+        entry.first = key;
+        entry.second = earthing_graph_build( File );
+    }
+    return entry.second;
+}
+
+std::map<std::size_t, std::vector<std::size_t>>
+earthing_graph_build( std::string const &File ) {
     std::map<std::size_t, std::vector<std::size_t>> graph;
     std::vector<catenary::chain const *> chains;
     for( auto const &chain : Chains ) { if( false == chain.removed && chain.file == File ) { chains.push_back( &chain.data ); } }
     if( PendingChains != nullptr && PendingFile == File ) { for( auto const &chain : *PendingChains ) { chains.push_back( &chain ); } }
+    auto const standing_of { earthing_standing_poles( File ) };
     for( auto const *data : chains ) {
         auto previous { Suspensions.size() };
         for( auto const &name : data->suspensions ) {
-            auto const standing { earthing_pole( suspension_named( File, name ) ) };
+            auto const found { standing_of.find( name ) };
+            auto const standing { found != standing_of.end() ? found->second : Suspensions.size() };
             if( standing >= Suspensions.size() ) { previous = Suspensions.size(); continue; }
             if( previous < Suspensions.size() && previous != standing ) {
                 auto &a { graph[ previous ] }, &b { graph[ standing ] };
@@ -4823,6 +4910,30 @@ catenary_earthing_poles( std::size_t const Index ) {
     if( Index >= Earthings.size() || Earthings[ Index ].removed ) { return names; }
     for( auto const standing : Earthings[ Index ].path ) { names.push_back( Suspensions[ standing ].data.name ); }
     return names;
+}
+
+std::vector<std::size_t>
+catenary_earthing_path( std::size_t const Index ) {
+    if( Index >= Earthings.size() || Earthings[ Index ].removed ) { return {}; }
+    return Earthings[ Index ].path;
+}
+
+int
+catenary_earthing_next( std::size_t const Index ) {
+    if( Index >= Earthings.size() || Earthings[ Index ].removed || false == Earthings[ Index ].data.section() || Earthings[ Index ].path.empty() ) { return -1; }
+    auto const &own { Earthings[ Index ] };
+    auto const graph { earthing_graph( own.file ) };
+    auto const neighbours { graph.find( own.path.back() ) };
+    if( neighbours == graph.end() ) { return -1; }
+    for( std::size_t k = 0; k < Earthings.size(); ++k ) {
+        auto const &other { Earthings[ k ] };
+        if( k == Index || other.removed || other.file != own.file || false == other.data.section() || other.path.empty() ) { continue; }
+        // the next one starts at a pole right after the last one of this section, and not on it (the one before would)
+        if( std::find( neighbours->second.begin(), neighbours->second.end(), other.path.front() ) == neighbours->second.end() ) { continue; }
+        if( std::find( own.path.begin(), own.path.end(), other.path.front() ) != own.path.end() ) { continue; }
+        return static_cast<int>( k );
+    }
+    return -1;
 }
 
 double

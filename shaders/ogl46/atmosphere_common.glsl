@@ -19,6 +19,12 @@ layout(std140, binding = ATMOSPHERE_UBO_BINDING) uniform atmosphere_ubo
 	float atmo_top_radius;
 	// distance of the observer from the centre of the planet
 	float atmo_observer_radius;
+	// the sky-view table holds the radiance times this (kept near 1 from the day to the deep twilight, for the 16 bit floats)
+	float atmo_skyview_exposure;
+	// xyz: world space direction towards the moon, w: average brightness of the sky it lights, as drawn (0 when it is down)
+	vec4 atmo_moon;
+	// rgb: the night sky without the moon at the zenith, as drawn (airglow and starlight)
+	vec4 atmo_night;
 };
 
 const float ATMO_PI = 3.14159265359;
@@ -191,4 +197,28 @@ vec2 atmo_skyview_uv_world(vec3 viewdirection, vec3 sundirection)
 	vec3 localview = vec3(sqrt(max(1.0 - cosviewzenith * cosviewzenith, 0.0)), 0.0, cosviewzenith);
 	bool intersectsground = atmo_ray_sphere_nearest(origin, localview, atmo_bottom_radius) >= 0.0;
 	return atmo_skyview_uv(intersectsground, cosviewzenith, coslightview, radius);
+}
+
+// the sky of the night as drawn, added to the light of the sun the sky-view table gives: the airglow and the starlight, brighter
+// towards the horizon where the line of sight runs longer through the glowing layer (van Rhijn), and the light of the moon
+// scattered in the air, the day sky's colour and shape at a brightness the eye adapted to the dark sees (the moonlit sky is
+// blue: it is the sunlight scattered twice). the brightnesses come from the cpu (gfx::sky_light) already as drawn
+vec3 atmo_night_sky(vec3 direction)
+{
+	float up = clamp(direction.y, 0.0, 1.0);
+	// van Rhijn for a layer about 90 km up, tempered: at the horizon about 3 times the zenith
+	float rhijn = inversesqrt(max(1.0 - 0.9 * (1.0 - up * up), 0.1));
+	vec3 night = atmo_night.rgb * rhijn;
+	if (atmo_moon.w > 0.0)
+	{
+		vec3 moon = normalize(atmo_moon.xyz);
+		float cosangle = dot(direction, moon);
+		// rayleigh scattering around the moon, brighter towards the horizon, and the aureole of the haze close to the disc
+		float shape = 0.75 * (1.0 + cosangle * cosangle) * (0.55 + 0.9 * (1.0 - up) * (1.0 - up));
+		float aureole = 0.06 / pow(max(1.0001 - cosangle, 1e-4), 0.75);
+		// the colour of the day sky, normalized to luminance 1
+		const vec3 moonsky = vec3(0.50, 0.74, 1.00) / 0.6869;
+		night += atmo_moon.w * moonsky * (shape + aureole);
+	}
+	return night;
 }

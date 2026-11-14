@@ -82,7 +82,8 @@ void main()
 		float azimuth = goldenangle * float(i);
 		vec3 direction = vec3(r * cos(azimuth), y, r * sin(azimuth));
 
-		vec3 radiance = textureLod(atmo_skyview_lut, atmo_skyview_uv_world(direction, sundirection), 0.0).rgb;
+		// the table holds the radiance times its exposure; the result is the radiance itself
+		vec3 radiance = textureLod(atmo_skyview_lut, atmo_skyview_uv_world(direction, sundirection), 0.0).rgb / max(atmo_skyview_exposure, 1e-20);
 		float basis[9];
 		sh_basis(direction, basis);
 		for (int c = 0; c < 9; ++c)

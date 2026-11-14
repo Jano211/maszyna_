@@ -664,6 +664,7 @@ struct catenary_view_flags
 	bool staggers{true}; // the staggers written at the poles of the selected chain
 	bool pantograph{false}; // the pantograph head over the tracks around the camera
 	bool placing{true}; // what a click puts: the track axis, the span counter
+	bool earthing{true}; // the sections of the group earthing, each in its own colour, with the name and length
 };
 catenary_view_flags CatenaryView;
 
@@ -682,6 +683,7 @@ std::pair<char const *, bool catenary_view_flags::*> const kViewNames[] = {
 	{"staggers", &catenary_view_flags::staggers},
 	{"pantograph", &catenary_view_flags::pantograph},
 	{"placing", &catenary_view_flags::placing},
+	{"earthing", &catenary_view_flags::earthing},
 };
 
 std::string catenary_view_text(catenary_view_flags const &Views)
@@ -762,11 +764,12 @@ void catenary_view_menu()
 	item(STR_C("Staggers in the view"), CatenaryView.staggers, STR_C("The staggers written at the poles of the selected chain"));
 	item(STR_C("Pantograph"), CatenaryView.pantograph, STR_C("Over the tracks around the camera the pantograph head as it goes: at the height of the contact wire above it, tilted with the cant. The working range of the head in blue, the whole head (with the horns) grey; where the wire runs out of the working range red"));
 	item(STR_C("Placing: track axis and span counter"), CatenaryView.placing, STR_C("Where a click puts a pole: the axis of the track it goes by and the length of the span from the last pole"));
+	item(STR_C("Earthing sections"), CatenaryView.earthing, STR_C("The sections of the group earthing along their poles, each in its own colour, with the name and the length; red over 3.5 km"));
 	ImGui::Separator();
 	if (ImGui::MenuItem(STR_C("Show all")))
-		CatenaryView = catenary_view_flags{true, true, true, true, true, true, true, true, true, true};
+		CatenaryView = catenary_view_flags{true, true, true, true, true, true, true, true, true, true, true};
 	if (ImGui::MenuItem(STR_C("Hide all")))
-		CatenaryView = catenary_view_flags{false, false, false, false, false, false, false, false, false, false};
+		CatenaryView = catenary_view_flags{false, false, false, false, false, false, false, false, false, false, false};
 	ImGui::EndMenu();
 	catenary_view_sync();
 }
@@ -5045,29 +5048,9 @@ void catenary_editor::render_catenary_earthing_ui()
 	char const *kinds[]{STR_C("none"), "13-0491", "13-0492", "13-0493"};
 	auto const kind_of = [](std::string const &Kind) { return Kind == "anchor" ? 1 : Kind == "plain" ? 2 : Kind == "split" ? 3 : 0; };
 	auto const kind_name = [](int const Kind) { return Kind == 1 ? std::string{"anchor"} : Kind == 2 ? std::string{"plain"} : Kind == 3 ? std::string{"split"} : std::string{}; };
-	// the section which goes on right after the last pole of section Index; -1 none
-	auto const next_of = [&](std::size_t const Index) -> int {
-		auto const *earthing{catenary_earthing_get(Index)};
-		if (earthing == nullptr || false == earthing->section())
-			return -1;
-		auto const file{catenary_earthing_file(Index)};
-		for (std::size_t k = 0; k < catenary_earthing_size(); ++k)
-		{
-			auto const *other{catenary_earthing_get(k)};
-			if (k == Index || other == nullptr || false == other->section() || catenary_earthing_file(k) != file)
-				continue;
-			std::vector<std::string> names;
-			std::vector<double> distances;
-			if (catenary_earthing_route(file, earthing->to, other->from, names, distances) && names.size() == 2)
-			{
-				// the next one, not the one before (its first pole isn't on this section)
-				auto const poles{catenary_earthing_poles(Index)};
-				if (std::find(poles.begin(), poles.end(), other->from) == poles.end())
-					return static_cast<int>(k);
-			}
-		}
-		return -1;
-	};
+	// the section which goes on right after the last pole of section Index; -1 none. from the poles of the sections as they were
+	// last assembled and the graph of the poles, which the scene keeps until the chains change (it was a search a frame per pair)
+	auto const next_of = [](std::size_t const Index) -> int { return catenary_earthing_next(Index); };
 	for (std::size_t index = 0; index < catenary_earthing_size(); ++index)
 	{
 		auto const *earthing{catenary_earthing_get(index)};
@@ -8809,6 +8792,44 @@ void catenary_editor::draw_catenary_overlay() const
 			if (wires)
 				label += "  " + std::string(holds == 1 ? STR_C("arms for one contact wire, the network has two") : STR_C("arms for two contact wires, the network has one"));
 			drawlist->AddText(ImVec2(head.x + 6.0f, head.y - 6.0f), colour, label.c_str());
+		}
+	}
+	// the sections of the group earthing (Jan 2026-11-09: to see where one ends and the next begins): a line over the tops of
+	// their poles, each section in its own colour (neighbours far apart on the colour wheel), the name and length at the middle
+	if (CatenaryView.earthing)
+	{
+		for (std::size_t index = 0; index < catenary_earthing_size(); ++index)
+		{
+			auto const *earthing{catenary_earthing_get(index)};
+			if (earthing == nullptr)
+				continue;
+			auto const path{catenary_earthing_path(index)};
+			if (path.size() < 2)
+				continue;
+			// golden angle steps of the hue: the sections one after another differ the most
+			auto const hue{std::fmod(static_cast<float>(index) * 0.618034f, 1.f)};
+			float r, g, b;
+			ImGui::ColorConvertHSVtoRGB(hue, 0.75f, 1.f, r, g, b);
+			auto const length{catenary_earthing_length(index)};
+			auto const colour{IM_COL32(static_cast<int>(r * 255.f), static_cast<int>(g * 255.f), static_cast<int>(b * 255.f), 220)};
+			auto const top = [](catenary::suspension const &Data) { return pole_of(Data) + glm::dvec3{0.0, pole_top(Data) + 0.4, 0.0}; };
+			for (std::size_t k = 1; k < path.size(); ++k)
+			{
+				auto const *a{catenary_scene_get(path[k - 1])};
+				auto const *b{catenary_scene_get(path[k])};
+				if (a == nullptr || b == nullptr)
+					continue;
+				if (glm::distance(pole_of(*a), camera) > 2000.0 && glm::distance(pole_of(*b), camera) > 2000.0)
+					continue;
+				projection.line(drawlist, top(*a), top(*b), colour, 3.0f);
+			}
+			auto const *middle{catenary_scene_get(path[path.size() / 2])};
+			ImVec2 point;
+			if (middle != nullptr && glm::distance(pole_of(*middle), camera) < 2000.0 && projection.project(top(*middle) + glm::dvec3{0.0, 1.0, 0.0}, point))
+			{
+				auto const label{format(STR_C("%s: %.2f km"), earthing->name.c_str(), length / 1000.0)};
+				drawlist->AddText(ImVec2(point.x + 6.0f, point.y - 6.0f), length > 3500.0 ? overlay_color::invalid : colour, label.c_str());
+			}
 		}
 	}
 	// anchors: the device from the face of the pole to the moving pulley and the column of weights; not assembled - red at the pole

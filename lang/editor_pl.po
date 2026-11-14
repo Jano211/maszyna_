@@ -4160,6 +4160,15 @@ msgstr "Uwagi Iet-107"
 msgid "Placing: track axis and span counter"
 msgstr "Wstawianie: oś toru i licznik przęsła"
 
+msgid "Earthing sections"
+msgstr "Sekcje uszynienia"
+
+msgid "The sections of the group earthing along their poles, each in its own colour, with the name and the length; red over 3.5 km"
+msgstr "Sekcje uszynienia grupowego wzdłuż ich słupów, każda w innym kolorze, z nazwą i długością; czerwone ponad 3,5 km"
+
+msgid "%s: %.2f km"
+msgstr "%s: %.2f km"
+
 msgid "Show all"
 msgstr "Pokaż wszystko"
 

@@ -18,6 +18,7 @@ http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <optional>
 
@@ -60,10 +61,10 @@ class sky_light
 	{
 		return m_sky_data;
 	}
-	// share of the atmosphere in the sky of the frame; 0 when the old sky is drawn alone
+	// share of the atmosphere in the drawn sky of the frame: 1 once the atmosphere has a result, 0 when the old sky is drawn
 	float atmosphere_weight() const
 	{
-		return m_weight;
+		return m_sky_weight;
 	}
 	bool has_result() const
 	{
@@ -73,9 +74,10 @@ class sky_light
 	{
 		return m_white_balance;
 	}
+	// the brightness of the sky-view table as drawn (its radiance is exposed, see gl::atmosphere_ubs::skyview_exposure)
 	float sky_scale() const
 	{
-		return m_sky_scale;
+		return lut_scale();
 	}
 	float overcast() const
 	{
@@ -99,6 +101,13 @@ class sky_light
 	// spherical harmonics of order 2, rgb
 	using sh_coefficients = std::array<glm::vec3, gl::SKY_SH_COEFFICIENTS>;
 
+	// the scale from the radiance of the atmosphere to the drawn sky, by the average radiance of the sun's sky (the result,
+	// or the estimate until there is one), the moon's and the night's; also the moon's direction and the radiance of its sky
+	void update_sky_scale(float const Sunelevation);
+	float lut_scale() const
+	{
+		return m_sky_scale / std::max(m_atmosphere.skyview_exposure, 1e-30f);
+	}
 	// directional part of the ambient light from the colours of the dome, scaled so its average is Ambient
 	sh_coefficients dome_directional(CSkyDome const &Skydome, glm::vec3 const &Ambient, glm::vec3 const &Sunlight, float const Sunheight) const;
 
@@ -111,9 +120,16 @@ class sky_light
 	gl::sky_data m_sky_data{};
 
 	// what the update made of the frame, for the sky, the sun disc and the debug window
+	// share of the atmosphere in the light of the scene (by the height of the sun) and in the drawn sky
 	float m_weight{0.f};
+	float m_sky_weight{0.f};
 	glm::vec3 m_white_balance{1.f};
+	// from the radiance of the atmosphere (a sun of illuminance 1) to the drawn sky, and the average of the drawn sky
 	float m_sky_scale{0.f};
+	float m_sky_drawn_average{0.f};
+	// the sky the moon lights: its average radiance in the units of the atmosphere, and the direction of the moon
+	float m_moon_radiance{0.f};
+	glm::vec3 m_moon_direction{0.f, 1.f, 0.f};
 	float m_overcast{0.f};
 	bool m_clouds{false};
 	bool m_cloud_shadows{false};

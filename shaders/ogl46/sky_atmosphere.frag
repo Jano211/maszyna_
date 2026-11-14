@@ -1,8 +1,8 @@
 #version 460 core
 #define STAGE_FRAGMENT 1
 // the sky dome drawn with the light of the physical atmosphere (atmosphere_common.glsl): the sky-view table looked up in
-// the direction of each fragment. the colour of the old dome (vertex colours, see color.frag) is kept for the night,
-// which the atmosphere does not cover (no moon, no stars), and the two are blended by the height of the sun.
+// the direction of each fragment, from the day through the twilight, and the night sky (atmo_night_sky) added to it. the
+// colour of the old dome (vertex colours, see color.frag) is there only until the atmosphere has its first result.
 // param[0].x: share of the atmosphere, param[0].y: brightness of the atmosphere, param[0].z: how much the overcast flattens
 // the sky, param[0].w: luminance the flattened sky tends to. param[1].rgb: white balance of the atmosphere
 
@@ -35,10 +35,12 @@ void main()
 	vec3 sundirection = normalize(atmo_sun_direction.xyz);
 	vec3 atmosphere = textureLod(sky_view_lut, atmo_skyview_uv_world(direction, sundirection), 0.0).rgb;
 	atmosphere *= param[1].rgb * param[0].y;
+	atmosphere = min(atmosphere, vec3(SKY_RADIANCE_MAX));
+	// the night sky: airglow, starlight and the light of the moon. by day it is lost in the light of the sun
+	atmosphere += atmo_night_sky(direction);
 	// an overcast sky is greyer and more even than the clear one the atmosphere describes
 	vec3 overcast = vec3(param[0].w) * (0.75 + 0.5 * clamp(direction.y, 0.0, 1.0));
 	atmosphere = mix(atmosphere, overcast, param[0].z);
-	atmosphere = min(atmosphere, vec3(SKY_RADIANCE_MAX));
 
 	vec3 col = mix(domecolor, atmosphere, param[0].x);
 	if (any(isnan(col)) || any(isinf(col)))

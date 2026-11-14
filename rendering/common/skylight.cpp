@@ -11,6 +11,7 @@ http://mozilla.org/MPL/2.0/.
 #include "rendering/common/skylight.h"
 
 #include "environment/skydome.h"
+#include "simulation/simulationenvironment.h"
 #include "utilities/Globals.h"
 
 namespace
@@ -64,10 +65,32 @@ glm::vec3 sky_shoulder(glm::vec3 const &Color)
 float const ATMOSPHERE_SKY_SCALE{16.f};
 float const ATMOSPHERE_AMBIENT_SCALE{44.f};
 float const ATMOSPHERE_SUN_SCALE{1.45f};
-// sun elevations (degrees) between which the sky goes over from the old model (night, twilight) to the atmosphere. the
-// atmosphere darkens at dusk much faster than the old model, which the rest of the lighting was tuned to
+// sun elevations (degrees) between which the light of the scene (sunlight, ambient light, fog colour) goes over from the
+// old model (night, twilight) to the atmosphere. the atmosphere darkens at dusk much faster than the old model, which the
+// rest of the lighting was tuned to. the drawn sky is the atmosphere's at every height of the sun (see sky_brightness)
 float const ATMOSPHERE_FADE_START{-6.f};
 float const ATMOSPHERE_FADE_END{10.f};
+// the brightness of the drawn sky. from the day to the end of the twilight the light of the sky falls by about eight orders
+// of magnitude; the eye adapts to most of it, the automatic exposure of the renderer only to a little (a stop or two). so the
+// sky is drawn as bright as the atmosphere makes it while its average radiance is above SKY_ADAPTATION_START (the sun about
+// 6 degrees high), and below that as the radiance to the power of SKY_ADAPTATION: a fall of the light by 10^n shows as a fall
+// of 10^(0.4 n). the colours and the shape of the sky stay those of the atmosphere, only its brightness is evened out
+float const SKY_ADAPTATION_START{0.015f};
+float const SKY_ADAPTATION{0.4f};
+// the moon lights the sky as the sun does, this many times weaker at the full moon (illuminance 0.25 lux against 100 klux)
+float const MOON_TO_SUN{2.5e-6f};
+// average radiance of the sky of a moonless night (airglow, starlight, the zodiacal light: about 2e-4 cd/m2) in the units of
+// the atmosphere (a sun of illuminance 1), where the clear day sky has about 0.03 (5000 cd/m2)
+float const NIGHT_SKY_RADIANCE{1.3e-9f};
+// colour of the night sky as the eye adapted to the dark sees it, luminance 1: grey blue
+glm::vec3 const NIGHT_SKY_COLOR{glm::vec3{0.55f, 0.72f, 1.f} / 0.7043f};
+// average over the upper hemisphere of the brightening towards the horizon in atmo_night_sky (atmosphere_common.glsl)
+float const NIGHT_SKY_HORIZON_GAIN{1.917f};
+// average radiance (luminance) of the clear sky of the atmosphere by the elevation of the sun, log10, every 2 degrees from
+// -20 to 20, then 30, 45, 60 and 90 degrees (worked out with the same model on the cpu). the sky-view table is exposed by it
+float const SKY_AVERAGE_LOG[]{-10.27f, -9.69f, -8.84f, -7.93f, -6.91f, -6.13f, -5.18f, -4.45f, -3.55f, -2.92f, -2.39f, -2.10f, -1.93f, -1.83f, -1.76f, -1.71f, -1.68f, -1.66f, -1.64f, -1.62f, -1.60f};
+float const SKY_AVERAGE_LOG_HIGH[]{-1.60f, -1.55f, -1.51f, -1.49f, -1.47f};
+float const SKY_AVERAGE_HIGH_ANGLES[]{20.f, 30.f, 45.f, 60.f, 90.f};
 // the shading scales the sunlight and the ambient light by these (light_common.glsl), so the light the sun gives the
 // ground, in the units of the ambient light, is the diffuse colour times their ratio
 float const SHADING_SUN_TO_AMBIENT{1.5f / 0.65f};
@@ -85,6 +108,42 @@ float const OZONE_HALF_WIDTH{15.f};
 float const BOTTOM_RADIUS{6360.f};
 float const TOP_RADIUS{6460.f};
 
+// the average radiance of the clear sky of the atmosphere with the sun (or the moon) the given degrees high
+float sky_average_estimate(float const Elevation)
+{
+	float log10value;
+	if (Elevation < -20.f)
+		log10value = SKY_AVERAGE_LOG[0] - 0.29f * (-20.f - Elevation);
+	else if (Elevation < 20.f)
+	{
+		auto const position{(Elevation + 20.f) / 2.f};
+		auto const index{std::min(static_cast<int>(position), 19)};
+		log10value = std::lerp(SKY_AVERAGE_LOG[index], SKY_AVERAGE_LOG[index + 1], position - static_cast<float>(index));
+	}
+	else
+	{
+		log10value = SKY_AVERAGE_LOG_HIGH[4];
+		for (int i = 0; i < 4; ++i)
+		{
+			if (Elevation <= SKY_AVERAGE_HIGH_ANGLES[i + 1])
+			{
+				auto const t{(Elevation - SKY_AVERAGE_HIGH_ANGLES[i]) / (SKY_AVERAGE_HIGH_ANGLES[i + 1] - SKY_AVERAGE_HIGH_ANGLES[i])};
+				log10value = std::lerp(SKY_AVERAGE_LOG_HIGH[i], SKY_AVERAGE_LOG_HIGH[i + 1], t);
+				break;
+			}
+		}
+	}
+	return std::pow(10.f, log10value);
+}
+
+// the drawn brightness of a sky of the given average radiance (see SKY_ADAPTATION)
+float sky_brightness(float const Radiance)
+{
+	if (Radiance >= SKY_ADAPTATION_START)
+		return Radiance;
+	return SKY_ADAPTATION_START * std::pow(std::max(Radiance, 1e-30f) / SKY_ADAPTATION_START, SKY_ADAPTATION);
+}
+
 } // namespace
 
 namespace gfx
@@ -101,6 +160,23 @@ sky_light::sky_light()
 	m_atmosphere.bottom_radius = BOTTOM_RADIUS;
 	m_atmosphere.top_radius = TOP_RADIUS;
 	m_atmosphere.observer_radius = BOTTOM_RADIUS + 0.2f;
+	m_atmosphere.skyview_exposure = 1.f;
+}
+
+void sky_light::update_sky_scale(float const Sunelevation)
+{
+	// the sun's part of the sky: the read back average once there is one, the estimate until then
+	auto const sun{m_result ? luminance(glm::vec3{m_result->average} * m_white_balance) : sky_average_estimate(Sunelevation)};
+	// the moon's part: the day sky it would make at its height, as much weaker as its light is, gone when it sets
+	auto const &moon{simulation::Environment.moon()};
+	auto const moonelevation{moon.getAngle()};
+	auto const moonup{glm::smoothstep(-3.f, 3.f, moonelevation)};
+	m_moon_radiance = sky_average_estimate(std::max(moonelevation, 0.f)) * MOON_TO_SUN * moon.getBrightness() * moonup;
+	auto const total{sun + m_moon_radiance + NIGHT_SKY_RADIANCE};
+	auto const drawn{ATMOSPHERE_SKY_SCALE * Global.gfx_atmosphere_sky * sky_brightness(total)};
+	m_sky_scale = drawn / total;
+	m_sky_drawn_average = drawn;
+	m_moon_direction = glm::normalize(moon.getDirection());
 }
 
 sky_light::sh_coefficients sky_light::dome_directional(CSkyDome const &Skydome, glm::vec3 const &Ambient, glm::vec3 const &Sunlight, float const Sunheight) const
@@ -159,6 +235,7 @@ void sky_light::begin_update()
 {
 	m_overcast = std::clamp(Global.Overcast, 0.f, 1.f);
 	m_weight = 0.f;
+	m_sky_weight = 0.f;
 }
 
 bool sky_light::atmosphere_changed(glm::vec3 const &Sundirection, bool &Medium)
@@ -170,9 +247,26 @@ bool sky_light::atmosphere_changed(glm::vec3 const &Sundirection, bool &Medium)
 	auto const mediumchanged{!m_tables_medium || *m_tables_medium != medium};
 	// the sky-view table follows the sun when it moved by more than about a twentieth of a degree
 	auto const sunchanged{!m_tables_sun || glm::dot(*m_tables_sun, Sundirection) < 0.9999995f};
+	// the night sky and the moon go to the shaders with the parameters of the atmosphere
+	auto const sunelevation{glm::degrees(std::asin(std::clamp(Sundirection.y, -1.f, 1.f)))};
+	update_sky_scale(sunelevation);
+	glm::vec4 const moon{m_moon_direction, m_sky_scale * m_moon_radiance};
+	glm::vec4 const night{NIGHT_SKY_COLOR * (m_sky_scale * NIGHT_SKY_RADIANCE / NIGHT_SKY_HORIZON_GAIN), 0.f};
+	// changed: brightness by more than a percent, the moon by more than about a fifth of a degree
+	auto const brighter = [](float const A, float const B) {
+		return std::abs(A - B) > std::max(std::abs(B) * 0.01f, 1e-12f);
+	};
+	auto const nightchanged{
+	    brighter(moon.w, m_atmosphere.moon.w) || brighter(night.b, m_atmosphere.night.b) ||
+	    ((moon.w > 0.f) && (glm::dot(glm::vec3{moon}, glm::vec3{m_atmosphere.moon}) < 0.999994f))};
 	Medium = mediumchanged;
-	if (!mediumchanged && !sunchanged)
+	if (!mediumchanged && !sunchanged && !nightchanged)
 		return false;
+
+	m_atmosphere.moon = moon;
+	m_atmosphere.night = night;
+	// the table holds the radiance times this, about 0.03 / the average of the sky: values the 16 bits keep well
+	m_atmosphere.skyview_exposure = 0.03f / sky_average_estimate(sunelevation);
 
 	m_atmosphere.mie = glm::vec4{MIE_SCATTERING * miescale, MIE_EXTINCTION * miescale, MIE_SCALE_HEIGHT, MIE_ASYMMETRY};
 	m_atmosphere.ground = glm::vec4{glm::vec3{Global.gfx_ambient_groundalbedo}, OZONE_HALF_WIDTH};
@@ -191,7 +285,10 @@ void sky_light::end_update(basic_light &Sunlight, glm::vec3 &Fogcolor, CSkyDome 
 	glm::vec3 const oldfog{Fogcolor};
 
 	if (Global.gfx_atmosphere && m_result)
+	{
 		m_weight = glm::smoothstep(ATMOSPHERE_FADE_START, ATMOSPHERE_FADE_END, Sunangle);
+		m_sky_weight = 1.f;
+	}
 
 	sh_coefficients directional{};
 	if (Global.gfx_ambient_sh)
@@ -210,7 +307,8 @@ void sky_light::end_update(basic_light &Sunlight, glm::vec3 &Fogcolor, CSkyDome 
 	m_ambient = oldambient;
 	m_fog = oldfog;
 	m_sun_disc_color = glm::vec3{1.f};
-	if (m_weight > 0.f)
+	// the sky is the atmosphere's whenever there is a result; the light goes over to it by the height of the sun (m_weight)
+	if (m_sky_weight > 0.f)
 	{
 		auto const &result{*m_result};
 		// the camera's white balance: the sun high in the sky is white
@@ -223,9 +321,10 @@ void sky_light::end_update(basic_light &Sunlight, glm::vec3 &Fogcolor, CSkyDome 
 		auto const sun{glm::vec3{result.sun_transmittance} * m_white_balance * (ATMOSPHERE_SUN_SCALE * Global.gfx_atmosphere_sun) * overcastsun};
 		auto const ambientscale{ATMOSPHERE_AMBIENT_SCALE * Global.gfx_atmosphere_ambient};
 		auto const ambient{desaturate(glm::vec3{result.radiance_sh[0]} * SH_Y00 * m_white_balance * ambientscale, 0.5f * m_overcast)};
-		m_sky_scale = ATMOSPHERE_SKY_SCALE * Global.gfx_atmosphere_sky;
+		// the brightness the sky is drawn with, the read back average of this frame
+		update_sky_scale(glm::degrees(std::asin(std::clamp(Sundirection.y, -1.f, 1.f))));
 		auto const fog{desaturate(glm::vec3{result.horizon} * m_white_balance * m_sky_scale, 0.5f * m_overcast)};
-		m_sky_flat_luminance = luminance(glm::vec3{result.average} * m_white_balance * m_sky_scale);
+		m_sky_flat_luminance = m_sky_drawn_average;
 
 		m_sunlight = glm::mix(olddiffuse, sun, m_weight);
 		m_ambient = glm::mix(oldambient, ambient, m_weight);
@@ -258,7 +357,7 @@ void sky_light::end_update(basic_light &Sunlight, glm::vec3 &Fogcolor, CSkyDome 
 void sky_light::sky_params(glm::vec4 &Param0, glm::vec4 &Param1) const
 {
 	// the volumetric clouds make the overcast sky themselves
-	Param0 = glm::vec4{m_weight, m_sky_scale, m_clouds ? 0.f : 0.75f * m_overcast, m_sky_flat_luminance};
+	Param0 = glm::vec4{m_sky_weight, lut_scale(), m_clouds ? 0.f : 0.75f * m_overcast, m_sky_flat_luminance};
 	Param1 = glm::vec4{m_white_balance, 0.f};
 }
 
@@ -279,7 +378,8 @@ void sky_light::draw_debug_ui() const
 	ImGui::SliderFloat("sun", &Global.gfx_atmosphere_sun, 0.f, 4.f);
 	ImGui::SliderFloat("haze", &Global.gfx_atmosphere_haze, 0.f, 8.f);
 	ImGui::SliderFloat("altitude (m)", &Global.gfx_atmosphere_altitude, 0.f, 3000.f);
-	ImGui::Text("atmosphere share %.2f%s", m_weight, (Global.gfx_atmosphere && !m_result) ? " (waiting for the first read back)" : "");
+	ImGui::Text("atmosphere share of the light %.2f, of the sky %.2f%s", m_weight, m_sky_weight, (Global.gfx_atmosphere && !m_result) ? " (waiting for the first read back)" : "");
+	ImGui::Text("sky drawn %.2e (scale %.3g), moonlit sky %.2e, table exposure %.3g", m_sky_drawn_average, m_sky_scale, m_moon_radiance * m_sky_scale, m_atmosphere.skyview_exposure);
 	ImGui::Text("sun %.3f %.3f %.3f", m_sunlight.r, m_sunlight.g, m_sunlight.b);
 	ImGui::Text("ambient %.3f %.3f %.3f", m_ambient.r, m_ambient.g, m_ambient.b);
 	ImGui::Text("fog %.3f %.3f %.3f", m_fog.r, m_fog.g, m_fog.b);

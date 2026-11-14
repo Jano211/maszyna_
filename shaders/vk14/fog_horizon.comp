@@ -40,7 +40,7 @@ void main()
 	// a little above the horizon, where the far fog meets the sky
 	vec3 direction = normalize(vec3(flat_view.x, 0.035, flat_view.y));
 	vec3 color = textureLod(sky_view_lut, atmo_skyview_uv_world(direction, sun), 0.0).rgb * white_balance * params.y;
-	color = min(color, vec3(params.w));
+	color = min(color, vec3(params.w)) + atmo_night_sky(direction);
 	float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
 	color = mix(color, vec3(luminance), params.z);
 	if (any(isnan(color)))
