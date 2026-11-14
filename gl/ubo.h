@@ -490,13 +490,14 @@ namespace gl
     // layout std140: parameters of the atmosphere (GLSL: atmosphere_ubo). distances in kilometres, coefficients per kilometre
     struct atmosphere_ubs
     {
-        // rgb: rayleigh scattering, w: rayleigh scale height
+        // scattering and absorption per kilometre at four wavelengths: x 630, y 560, z 490, w 430 nm
         glm::vec4 rayleigh;
-        // x: mie scattering, y: mie extinction, z: mie scale height, w: mie phase asymmetry
-        glm::vec4 mie;
-        // rgb: ozone absorption, w: altitude of the middle of the ozone layer
+        glm::vec4 mie_scattering;
+        glm::vec4 mie_extinction;
         glm::vec4 ozone;
-        // rgb: albedo of the ground, w: half width of the ozone layer
+        // x: rayleigh scale height, y: mie scale height, z: altitude of the middle of the ozone layer, w: its half width
+        glm::vec4 heights;
+        // x: albedo of the ground, y: asymmetry of the mie phase function, zw unused
         glm::vec4 ground;
         // world space direction towards the sun (y up), w unused
         glm::vec4 sun_direction;
@@ -511,9 +512,13 @@ namespace gl
         glm::vec4 moon;
         // rgb: the night sky without the moon at the zenith, as drawn (airglow and starlight), w unused
         glm::vec4 night;
+        // rows of the matrix from the light at the four wavelengths (a sun of irradiance 1 at each) to linear rgb
+        glm::vec4 spectral_r;
+        glm::vec4 spectral_g;
+        glm::vec4 spectral_b;
     };
 
-    static_assert(sizeof(atmosphere_ubs) == 128, "bad size of atmosphere_ubs");
+    static_assert(sizeof(atmosphere_ubs) == 208, "bad size of atmosphere_ubs");
 
     // layout std430: what atmosphere_ambient.comp works out for the cpu (GLSL: atmosphere_result_ssbo). radiance with
     // the sun of illuminance 1

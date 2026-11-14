@@ -1,17 +1,19 @@
 // physically based sky after S. Hillaire, "A Scalable and Production Ready Sky and Atmosphere Rendering Technique"
 // (EGSR 2020): transmittance, multiple scattering and sky-view look-up tables. distances in kilometres, coefficients per
 // kilometre. the planet is centred at the origin; the look-up tables are worked out in a frame with z up at the observer,
-// the world (y up) is mapped to it by the callers. radiance is that of a sun of illuminance 1
+// the world (y up) is mapped to it by the callers. radiance is that of a sun of irradiance 1 at each of the four wavelengths
 
 layout(std140, binding = ATMOSPHERE_UBO_BINDING) uniform atmosphere_ubo
 {
-	// rgb: rayleigh scattering, w: rayleigh scale height
+	// scattering and absorption per kilometre at four wavelengths, x: 630, y: 560, z: 490, w: 430 nm (the light is worked out
+	// at them and turned to rgb with atmo_to_rgb: the colours of the twilight need more than the three channels of rgb)
 	vec4 atmo_rayleigh;
-	// x: mie scattering, y: mie extinction, z: mie scale height, w: mie phase asymmetry
-	vec4 atmo_mie;
-	// rgb: ozone absorption, w: altitude of the middle of the ozone layer
+	vec4 atmo_mie_scattering;
+	vec4 atmo_mie_extinction;
 	vec4 atmo_ozone;
-	// rgb: albedo of the ground, w: half width of the ozone layer
+	// x: rayleigh scale height, y: mie scale height, z: altitude of the middle of the ozone layer, w: its half width
+	vec4 atmo_heights;
+	// x: albedo of the ground, y: asymmetry of the mie phase function
 	vec4 atmo_ground;
 	// world space direction towards the sun (y up)
 	vec4 atmo_sun_direction;
@@ -25,30 +27,40 @@ layout(std140, binding = ATMOSPHERE_UBO_BINDING) uniform atmosphere_ubo
 	vec4 atmo_moon;
 	// rgb: the night sky without the moon at the zenith, as drawn (airglow and starlight)
 	vec4 atmo_night;
+	// rows of the matrix from the four wavelengths (a sun of irradiance 1 at each) to linear rgb, with the colour of the sun
+	vec4 atmo_spectral_r;
+	vec4 atmo_spectral_g;
+	vec4 atmo_spectral_b;
 };
 
 const float ATMO_PI = 3.14159265359;
 
+// light at the four wavelengths of the atmosphere to linear rgb
+vec3 atmo_to_rgb(vec4 spectral)
+{
+	return vec3(dot(atmo_spectral_r, spectral), dot(atmo_spectral_g, spectral), dot(atmo_spectral_b, spectral));
+}
+
 struct atmo_medium_s
 {
-	vec3 scattering;
-	vec3 extinction;
-	vec3 rayleigh_scattering;
-	vec3 mie_scattering;
+	vec4 scattering;
+	vec4 extinction;
+	vec4 rayleigh_scattering;
+	vec4 mie_scattering;
 };
 
 atmo_medium_s atmo_sample_medium(float radius)
 {
 	float height = max(radius - atmo_bottom_radius, 0.0);
-	float rayleighdensity = exp(-height / atmo_rayleigh.w);
-	float miedensity = exp(-height / atmo_mie.z);
-	float ozonedensity = max(0.0, 1.0 - abs(height - atmo_ozone.w) / atmo_ground.w);
+	float rayleighdensity = exp(-height / atmo_heights.x);
+	float miedensity = exp(-height / atmo_heights.y);
+	float ozonedensity = max(0.0, 1.0 - abs(height - atmo_heights.z) / atmo_heights.w);
 
 	atmo_medium_s medium;
-	medium.rayleigh_scattering = atmo_rayleigh.rgb * rayleighdensity;
-	medium.mie_scattering = vec3(atmo_mie.x * miedensity);
+	medium.rayleigh_scattering = atmo_rayleigh * rayleighdensity;
+	medium.mie_scattering = atmo_mie_scattering * miedensity;
 	medium.scattering = medium.rayleigh_scattering + medium.mie_scattering;
-	medium.extinction = medium.rayleigh_scattering + vec3(atmo_mie.y * miedensity) + atmo_ozone.rgb * ozonedensity;
+	medium.extinction = medium.rayleigh_scattering + atmo_mie_extinction * miedensity + atmo_ozone * ozonedensity;
 	return medium;
 }
 
@@ -80,7 +92,7 @@ float atmo_rayleigh_phase(float cosangle)
 // Cornette-Shanks
 float atmo_mie_phase(float cosangle)
 {
-	float g = atmo_mie.w;
+	float g = atmo_ground.y;
 	float k = 3.0 / (8.0 * ATMO_PI) * (1.0 - g * g) / (2.0 + g * g);
 	return k * (1.0 + cosangle * cosangle) / pow(max(1.0 + g * g - 2.0 * g * cosangle, 1e-4), 1.5);
 }

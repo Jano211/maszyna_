@@ -95,14 +95,23 @@ float const SKY_AVERAGE_HIGH_ANGLES[]{20.f, 30.f, 45.f, 60.f, 90.f};
 // ground, in the units of the ambient light, is the diffuse colour times their ratio
 float const SHADING_SUN_TO_AMBIENT{1.5f / 0.65f};
 
-// parameters of the earth's atmosphere after Hillaire 2020 (km, 1/km)
-glm::vec3 const RAYLEIGH_SCATTERING{5.802e-3f, 13.558e-3f, 33.1e-3f};
+// parameters of the earth's atmosphere after Hillaire 2020 (km, 1/km), at four wavelengths: 630, 560, 490 and 430 nm.
+// rayleigh: 13.558e-3 at 550 nm, going with the wavelength to the power of -4.05; ozone: absorption cross sections of the
+// Chappuis band (about 3.6, 3.9, 1.0 and 0.1 e-21 cm2) scaled as Hillaire's; the aerosols: the haze of 550 nm, going with
+// the wavelength to the power of -1.3 (Angstrom exponent of continental aerosols)
+glm::vec4 const RAYLEIGH_SCATTERING{7.82e-3f, 12.60e-3f, 21.64e-3f, 36.76e-3f};
 float const RAYLEIGH_SCALE_HEIGHT{8.f};
+glm::vec4 const AEROSOL_SPECTRUM{0.8380f, 0.9769f, 1.1621f, 1.3771f};
 float const MIE_SCATTERING{3.996e-3f};
 float const MIE_EXTINCTION{4.440e-3f};
 float const MIE_SCALE_HEIGHT{1.2f};
 float const MIE_ASYMMETRY{0.8f};
-glm::vec3 const OZONE_ABSORPTION{0.650e-3f, 1.881e-3f, 0.085e-3f};
+glm::vec4 const OZONE_ABSORPTION{2.05e-3f, 2.22e-3f, 0.57e-3f, 0.057e-3f};
+// from the four wavelengths to linear rgb (rows), with the colour of the sun (a black body of 5778 K): fitted on the cpu by
+// least squares to the CIE 1931 observer over spectra of sunlight through and scattered by the air, within 0.2 per cent
+glm::vec4 const SPECTRAL_TO_R{1.12936f, -0.22651f, 0.25696f, -0.21065f};
+glm::vec4 const SPECTRAL_TO_G{-0.05107f, 0.80810f, 0.38715f, -0.12398f};
+glm::vec4 const SPECTRAL_TO_B{-0.01557f, -0.11982f, 0.42496f, 0.66002f};
 float const OZONE_ALTITUDE{25.f};
 float const OZONE_HALF_WIDTH{15.f};
 float const BOTTOM_RADIUS{6360.f};
@@ -152,10 +161,15 @@ namespace gfx
 sky_light::sky_light()
 {
 	// a valid atmosphere for the sky shader from the start, the tables stay black until the first update
-	m_atmosphere.rayleigh = glm::vec4{RAYLEIGH_SCATTERING, RAYLEIGH_SCALE_HEIGHT};
-	m_atmosphere.mie = glm::vec4{MIE_SCATTERING, MIE_EXTINCTION, MIE_SCALE_HEIGHT, MIE_ASYMMETRY};
-	m_atmosphere.ozone = glm::vec4{OZONE_ABSORPTION, OZONE_ALTITUDE};
-	m_atmosphere.ground = glm::vec4{glm::vec3{Global.gfx_ambient_groundalbedo}, OZONE_HALF_WIDTH};
+	m_atmosphere.rayleigh = RAYLEIGH_SCATTERING;
+	m_atmosphere.mie_scattering = AEROSOL_SPECTRUM * MIE_SCATTERING;
+	m_atmosphere.mie_extinction = AEROSOL_SPECTRUM * MIE_EXTINCTION;
+	m_atmosphere.ozone = OZONE_ABSORPTION;
+	m_atmosphere.heights = glm::vec4{RAYLEIGH_SCALE_HEIGHT, MIE_SCALE_HEIGHT, OZONE_ALTITUDE, OZONE_HALF_WIDTH};
+	m_atmosphere.ground = glm::vec4{Global.gfx_ambient_groundalbedo, MIE_ASYMMETRY, 0.f, 0.f};
+	m_atmosphere.spectral_r = SPECTRAL_TO_R;
+	m_atmosphere.spectral_g = SPECTRAL_TO_G;
+	m_atmosphere.spectral_b = SPECTRAL_TO_B;
 	m_atmosphere.sun_direction = glm::vec4{0.f, 1.f, 0.f, 0.f};
 	m_atmosphere.bottom_radius = BOTTOM_RADIUS;
 	m_atmosphere.top_radius = TOP_RADIUS;
@@ -268,8 +282,9 @@ bool sky_light::atmosphere_changed(glm::vec3 const &Sundirection, bool &Medium)
 	// the table holds the radiance times this, about 0.03 / the average of the sky: values the 16 bits keep well
 	m_atmosphere.skyview_exposure = 0.03f / sky_average_estimate(sunelevation);
 
-	m_atmosphere.mie = glm::vec4{MIE_SCATTERING * miescale, MIE_EXTINCTION * miescale, MIE_SCALE_HEIGHT, MIE_ASYMMETRY};
-	m_atmosphere.ground = glm::vec4{glm::vec3{Global.gfx_ambient_groundalbedo}, OZONE_HALF_WIDTH};
+	m_atmosphere.mie_scattering = AEROSOL_SPECTRUM * (MIE_SCATTERING * miescale);
+	m_atmosphere.mie_extinction = AEROSOL_SPECTRUM * (MIE_EXTINCTION * miescale);
+	m_atmosphere.ground = glm::vec4{Global.gfx_ambient_groundalbedo, MIE_ASYMMETRY, 0.f, 0.f};
 	m_atmosphere.sun_direction = glm::vec4{Sundirection, 0.f};
 	m_atmosphere.observer_radius = BOTTOM_RADIUS + std::max(Global.gfx_atmosphere_altitude, 0.f) * 0.001f + 0.001f;
 	m_tables_medium = medium;
