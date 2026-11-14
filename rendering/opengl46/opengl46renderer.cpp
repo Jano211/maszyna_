@@ -9,6 +9,7 @@ http://mozilla.org/MPL/2.0/.
 
 #include "stdafx.h"
 #include "rendering/opengl46/opengl46renderer.h"
+#include "rendering/common/debugwindows.h"
 #include "world/catenary_arcing.h"
 #include "utilities/color.h"
 #include "utilities/Globals.h"
@@ -1368,178 +1369,202 @@ std::optional<float> opengl46_renderer::cpu_timeline::time( char const *Name ) c
 
 void opengl46_renderer::draw_debug_ui()
 {
-	if (!debug_ui_active)
+	if (false == gfx::debug_windows_any())
 		return;
 
-    if (ImGui::Begin("Headlight config", &debug_ui_active))
-	{
-		ImGui::SetWindowSize(ImVec2(0, 0));
-
-		headlight_config_s &conf = headlight_config;
-		ImGui::SliderFloat("in_cutoff", &conf.in_cutoff, 0.9f, 1.1f);
-		ImGui::SliderFloat("out_cutoff", &conf.out_cutoff, 0.9f, 1.1f);
-
-		ImGui::SliderFloat("falloff_linear", &conf.falloff_linear, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
-		ImGui::SliderFloat("falloff_quadratic", &conf.falloff_quadratic, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
-
-		ImGui::SliderFloat("ambient", &conf.ambient, 0.0f, 3.0f);
-		ImGui::SliderFloat("intensity", &conf.intensity, 0.0f, 10.0f);
-	}
-	ImGui::End();
-
-    if (ImGui::Begin("Light clusters"))
+    if (gfx::debug_window("Headlight config"))
     {
-        ImGui::Checkbox("clustered lights (off: the first dynamiclights headlights)", &Global.gfx_lights_clustered);
-        ImGui::Checkbox("heatmap", &Global.gfx_lights_clusterheatmap);
-        ImGui::Checkbox("beams of vehicle headlights (gfx.lights.headlights)", &Global.gfx_lights_headlights);
-        if (auto const &clusters{m_viewports.front()->clusters})
-        {
-            auto const &params{clusters->params()};
-            ImGui::Text("grid %u x %u x %u, %s", gl::CLUSTER_GRID_X, gl::CLUSTER_GRID_Y, gl::CLUSTER_GRID_Z, params.valid ? "built" : "none (orthographic view)");
-            ImGui::Text("near %.3f m, far %.1f m", params.znear, params.zfar);
-            ImGui::Text("headlights %u, %u over capacity of %u", m_lights_lit, m_lights_dropped, static_cast<unsigned>(gl::MAX_LIGHTS - 1));
-            if (auto const cullstats = clusters->stats())
-            {
-                ImGui::Text("index list %u of %u", cullstats->index_count, gl::CLUSTER_COUNT * gl::MAX_LIGHTS_PER_CLUSTER);
-                ImGui::Text("overflow: %u lights dropped from full clusters (limit %u each), peak %u", cullstats->overflow_count, gl::MAX_LIGHTS_PER_CLUSTER, cullstats->overflow_peak);
-            }
-        }
-        ImGui::Separator();
-        m_locallights.draw_debug_ui();
-        ImGui::Separator();
-        m_localshadows.draw_debug_ui();
-        ImGui::Separator();
-        char const *contactlevels[]{"no", "low (the sun)", "medium (the sun and 2 lamps)", "high (the sun and 4 lamps)"};
-        ImGui::Combo("contact shadows (gfx.contactshadows)", &Global.gfx_contactshadows, contactlevels, IM_ARRAYSIZE(contactlevels));
-        ImGui::SliderFloat("length of their rays, m (gfx.contactshadows.length)", &Global.gfx_contactshadows_length, 0.05f, 5.f, "%.2f", ImGuiSliderFlags_Logarithmic);
-        ImGui::SliderFloat("distance they reach, m (gfx.contactshadows.range)", &Global.gfx_contactshadows_range, 1.f, 1000.f, "%.0f", ImGuiSliderFlags_Logarithmic);
-    }
-    ImGui::End();
+    	if (ImGui::Begin("Headlight config", &gfx::debug_window("Headlight config")))
+		{
+			ImGui::SetWindowSize(ImVec2(0, 0));
 
-    if (ImGui::Begin("Sun shadows"))
+			headlight_config_s &conf = headlight_config;
+			ImGui::SliderFloat("in_cutoff", &conf.in_cutoff, 0.9f, 1.1f);
+			ImGui::SliderFloat("out_cutoff", &conf.out_cutoff, 0.9f, 1.1f);
+
+			ImGui::SliderFloat("falloff_linear", &conf.falloff_linear, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
+			ImGui::SliderFloat("falloff_quadratic", &conf.falloff_quadratic, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
+
+			ImGui::SliderFloat("ambient", &conf.ambient, 0.0f, 3.0f);
+			ImGui::SliderFloat("intensity", &conf.intensity, 0.0f, 10.0f);
+		}
+		ImGui::End();
+    }
+
+    if (gfx::debug_window("Light clusters"))
     {
-        ImGui::Checkbox("cascades fitted to the depth of the view (gfx.shadow.sdsm)", &Global.gfx_shadow_sdsm);
-        ImGui::SliderFloat("splits, 0 equal lengths .. 1 equal ratios (gfx.shadow.sdsm.split)", &Global.gfx_shadow_sdsm_split, 0.f, 1.f, "%.2f");
-        auto const &fit{m_shadowfitstate};
-        if (Global.gfx_shadow_sdsm)
-        {
-            if (fit.fitted)
-                ImGui::Text("fitted to pixels %.2f - %.1f m, measured %u frames ago, view turned %.1f deg since", fit.depthmin, fit.depthmax, fit.age, fit.turn);
-            else
-                ImGui::Text("fixed cascades: %s", fit.reason != nullptr ? fit.reason : "");
-        }
-        if (m_shadowbuffersize > 0)
-        {
-            for (std::size_t cascade = 0; cascade < gl::MAX_CASCADES; ++cascade)
-                ImGui::Text("cascade %d: to %.1f m, map %.1f m across (whole slice %.1f m), texel %.1f cm", static_cast<int>(cascade + 1), fit.splits[cascade + 1],
-                            fit.drawn[cascade], fit.slice[cascade], 100.f * fit.drawn[cascade] / m_shadowbuffersize);
-        }
+    	if (ImGui::Begin("Light clusters", &gfx::debug_window("Light clusters")))
+    	{
+    	    ImGui::Checkbox("clustered lights (off: the first dynamiclights headlights)", &Global.gfx_lights_clustered);
+    	    ImGui::Checkbox("heatmap", &Global.gfx_lights_clusterheatmap);
+    	    ImGui::Checkbox("beams of vehicle headlights (gfx.lights.headlights)", &Global.gfx_lights_headlights);
+    	    if (auto const &clusters{m_viewports.front()->clusters})
+    	    {
+    	        auto const &params{clusters->params()};
+    	        ImGui::Text("grid %u x %u x %u, %s", gl::CLUSTER_GRID_X, gl::CLUSTER_GRID_Y, gl::CLUSTER_GRID_Z, params.valid ? "built" : "none (orthographic view)");
+    	        ImGui::Text("near %.3f m, far %.1f m", params.znear, params.zfar);
+    	        ImGui::Text("headlights %u, %u over capacity of %u", m_lights_lit, m_lights_dropped, static_cast<unsigned>(gl::MAX_LIGHTS - 1));
+    	        if (auto const cullstats = clusters->stats())
+    	        {
+    	            ImGui::Text("index list %u of %u", cullstats->index_count, gl::CLUSTER_COUNT * gl::MAX_LIGHTS_PER_CLUSTER);
+    	            ImGui::Text("overflow: %u lights dropped from full clusters (limit %u each), peak %u", cullstats->overflow_count, gl::MAX_LIGHTS_PER_CLUSTER, cullstats->overflow_peak);
+    	        }
+    	    }
+    	    ImGui::Separator();
+    	    m_locallights.draw_debug_ui();
+    	    ImGui::Separator();
+    	    m_localshadows.draw_debug_ui();
+    	    ImGui::Separator();
+    	    char const *contactlevels[]{"no", "low (the sun)", "medium (the sun and 2 lamps)", "high (the sun and 4 lamps)"};
+    	    ImGui::Combo("contact shadows (gfx.contactshadows)", &Global.gfx_contactshadows, contactlevels, IM_ARRAYSIZE(contactlevels));
+    	    ImGui::SliderFloat("length of their rays, m (gfx.contactshadows.length)", &Global.gfx_contactshadows_length, 0.05f, 5.f, "%.2f", ImGuiSliderFlags_Logarithmic);
+    	    ImGui::SliderFloat("distance they reach, m (gfx.contactshadows.range)", &Global.gfx_contactshadows_range, 1.f, 1000.f, "%.0f", ImGuiSliderFlags_Logarithmic);
+    	}
+    	ImGui::End();
     }
-    ImGui::End();
 
-    if (ImGui::Begin("Weather"))
+    if (gfx::debug_window("Sun shadows"))
     {
-        m_weather.draw_debug_ui();
+    	if (ImGui::Begin("Sun shadows", &gfx::debug_window("Sun shadows")))
+    	{
+    	    ImGui::Checkbox("cascades fitted to the depth of the view (gfx.shadow.sdsm)", &Global.gfx_shadow_sdsm);
+    	    ImGui::SliderFloat("splits, 0 equal lengths .. 1 equal ratios (gfx.shadow.sdsm.split)", &Global.gfx_shadow_sdsm_split, 0.f, 1.f, "%.2f");
+    	    auto const &fit{m_shadowfitstate};
+    	    if (Global.gfx_shadow_sdsm)
+    	    {
+    	        if (fit.fitted)
+    	            ImGui::Text("fitted to pixels %.2f - %.1f m, measured %u frames ago, view turned %.1f deg since", fit.depthmin, fit.depthmax, fit.age, fit.turn);
+    	        else
+    	            ImGui::Text("fixed cascades: %s", fit.reason != nullptr ? fit.reason : "");
+    	    }
+    	    if (m_shadowbuffersize > 0)
+    	    {
+    	        for (std::size_t cascade = 0; cascade < gl::MAX_CASCADES; ++cascade)
+    	            ImGui::Text("cascade %d: to %.1f m, map %.1f m across (whole slice %.1f m), texel %.1f cm", static_cast<int>(cascade + 1), fit.splits[cascade + 1],
+    	                        fit.drawn[cascade], fit.slice[cascade], 100.f * fit.drawn[cascade] / m_shadowbuffersize);
+    	    }
+    	}
+    	ImGui::End();
     }
-    ImGui::End();
 
-    if (ImGui::Begin("Particles"))
+    if (gfx::debug_window("Weather"))
     {
-        ImGui::Checkbox("smoke simulated and drawn on the gpu (gfx.smoke.gpu)", &Global.gfx_smoke_gpu);
-        if (Global.gfx_smoke_gpu)
-            ImGui::Checkbox("smoke lit by the sun, the sky and the lamps (gfx.smoke.lighting)", &Global.gfx_smoke_lighting);
-        ImGui::Checkbox("rain and snow as particles of the gpu (gfx.precipitation.gpu)", &Global.gfx_precipitation_gpu);
-        if (Global.gfx_precipitation_gpu)
-            ImGui::SliderInt("particles of the heaviest rain or snow (gfx.precipitation.particles)", &Global.gfx_precipitation_particles, 0, 262144);
-        ImGui::SliderFloat("soft particles, share of their size, 0: off (gfx.particles.soft)", &Global.gfx_particles_soft, 0.f, 4.f, "%.2f");
-        auto const info{m_gpuparticles.info()};
-        if (!info.empty())
-            ImGui::TextUnformatted(info.c_str() + 1);
+    	if (ImGui::Begin("Weather", &gfx::debug_window("Weather")))
+    	{
+    	    m_weather.draw_debug_ui();
+    	}
+    	ImGui::End();
     }
-    ImGui::End();
 
-    if (ImGui::Begin("Sky and exposure"))
+    if (gfx::debug_window("Particles"))
     {
-        m_sky.draw_debug_ui();
-        ImGui::SliderFloat("sun disc, 1 = physical (gfx.sun.disc)", &Global.gfx_sun_disc, 0.f, 2.f);
-        ImGui::SliderFloat("moon disc (gfx.moon.disc)", &Global.gfx_moon_disc, 0.f, 8.f);
-        ImGui::SliderFloat("moonlight on the scenery (gfx.moonlight)", &Global.gfx_moonlight, 0.f, 10.f);
-        {
-            // where the sun and the moon are: azimuth from the north to the east (the sky has x to the west, z to the north)
-            auto const azimuth = [](glm::vec3 const &Direction) { return glm::degrees(std::atan2(-Direction.x, Direction.z)) + (Direction.x > 0.f ? 360.f : 0.f); };
-            auto const &sun{simulation::Environment.sun()};
-            auto const &moon{simulation::Environment.moon()};
-            ImGui::Text("sun: elevation %.1f, azimuth %.1f", sun.getAngle(), azimuth(sun.getDirection()));
-            ImGui::Text("moon: elevation %.1f, azimuth %.1f, lit %.0f%%, age %.1f d", moon.getAngle(), azimuth(moon.getDirection()), 100.f * moon.getIllumination(), moon.getPhase());
-        }
-        ImGui::Separator();
-        m_exposure.draw_debug_ui();
-        ImGui::Separator();
-        m_ao.draw_debug_ui(!m_viewports.empty() && m_viewports.front()->ssao_tex != nullptr);
-        m_cabprobe.draw_debug_ui();
-        ImGui::Separator();
-        m_skyocclusion.draw_debug_ui();
-        ImGui::Separator();
-        m_ssr.draw_debug_ui(nullptr);
+    	if (ImGui::Begin("Particles", &gfx::debug_window("Particles")))
+    	{
+    	    ImGui::Checkbox("smoke simulated and drawn on the gpu (gfx.smoke.gpu)", &Global.gfx_smoke_gpu);
+    	    if (Global.gfx_smoke_gpu)
+    	        ImGui::Checkbox("smoke lit by the sun, the sky and the lamps (gfx.smoke.lighting)", &Global.gfx_smoke_lighting);
+    	    ImGui::Checkbox("rain and snow as particles of the gpu (gfx.precipitation.gpu)", &Global.gfx_precipitation_gpu);
+    	    if (Global.gfx_precipitation_gpu)
+    	        ImGui::SliderInt("particles of the heaviest rain or snow (gfx.precipitation.particles)", &Global.gfx_precipitation_particles, 0, 262144);
+    	    ImGui::SliderFloat("soft particles, share of their size, 0: off (gfx.particles.soft)", &Global.gfx_particles_soft, 0.f, 4.f, "%.2f");
+    	    auto const info{m_gpuparticles.info()};
+    	    if (!info.empty())
+    	        ImGui::TextUnformatted(info.c_str() + 1);
+    	}
+    	ImGui::End();
     }
-    ImGui::End();
 
-    if (ImGui::Begin("Instance culling"))
+    if (gfx::debug_window("Sky and exposure"))
     {
-        char const *modes[]{"cpu", "gpu, drawn from its result", "cpu, compared with the gpu"};
-        ImGui::Combo("instance culling (gfx.gpucull)", &Global.gfx_gpucull, modes, IM_ARRAYSIZE(modes));
-        if (Global.gfx_gpucull == 1)
-        {
-            ImGui::Checkbox("leave out instances hidden behind the depth drawn before them (gfx.gpucull.occlusion)", &Global.gfx_gpucull_occlusion);
-            if (Global.gfx_gpucull_occlusion)
-                ImGui::Checkbox("draw the instances seen in the last frame first, to hide the others (gfx.gpucull.occlusion.instances)", &Global.gfx_gpucull_occlusion_instances);
-            ImGui::Checkbox("draw the depth of the instances before their colour (gfx.depthprepass)", &Global.gfx_depthprepass);
-            if (m_drawblockstream)
-                ImGui::Checkbox("draw the instances of the same material and model with one multi draw (gfx.gpucull.multidraw)", &Global.gfx_gpucull_multidraw);
-            else
-                ImGui::TextUnformatted("(multi draws not available, see the log)");
-        }
-        if (Global.gfx_gpucull != 0)
-        {
-            ImGui::Checkbox("the same for the cascades of the sun shadows (gfx.gpucull.shadows)", &Global.gfx_gpucull_shadows);
-            ImGui::Checkbox("the same for the shadow maps of headlights (gfx.gpucull.shadows.headlights)", &Global.gfx_gpucull_shadows_headlights);
-            ImGui::Checkbox("the same for the scenery of the shadow maps of lamps, when it's drawn next (gfx.gpucull.shadows.lamps)", &Global.gfx_gpucull_shadows_lamps);
-            ImGui::Checkbox("the same for the sleepers of the tracks of the view (gfx.gpucull.sleepers)", &Global.gfx_gpucull_sleepers);
-            ImGui::Checkbox("the same for the models drawn on their own, with lights, animations or skins of their own (gfx.gpucull.models)", &Global.gfx_gpucull_models);
-            ImGui::Checkbox("leave out the models of a cell lying wholly out of view, beyond their range or too small before the culling (gfx.gpucull.bucketrange)", &Global.gfx_gpucull_bucketrange);
-            ImGui::Checkbox("keep the walks of the submodel trees of the instances from frame to frame (gfx.gpucull.walkcache)", &Global.gfx_gpucull_walkcache);
-        }
-        ImGui::Checkbox("draw the depth of the whole scene before its colour (gfx.depthprepass.scene)", &Global.gfx_depthprepass_scene);
-        if (Global.gfx_contactshadows > 0)
-            ImGui::TextUnformatted("(drawn anyway for the contact shadows, gfx.contactshadows)");
-        ImGui::Checkbox("walk the scene once for its depth and colour, drawing both from a record (gfx.depthprepass.replay)", &Global.gfx_depthprepass_replay);
-        ImGui::Checkbox("grass of the heightmap terrain (gfx.grass)", &Global.gfx_grass);
-        if (Global.gfx_grass)
-        {
-            ImGui::SliderFloat("the grass drawn whole up to, m (gfx.grass.distance)", &Global.gfx_grass_distance, 10.f, 300.f, "%.0f");
-            ImGui::SliderFloat("thinning out up to, m (gfx.grass.fadedistance)", &Global.gfx_grass_fadedistance, 10.f, 350.f, "%.0f");
-            ImGui::SliderFloat("density of the grass (gfx.grass.density)", &Global.gfx_grass_density, 0.1f, 2.f, "%.2f");
-        }
-        auto info{m_instancecull.info()};
-        if (Global.gfx_gpucull_shadows)
-        {
-            for (std::size_t cascade = 0; cascade < m_shadowcull.size(); ++cascade)
-            {
-                if (m_shadowcull[cascade].ran())
-                    info += m_shadowcull[cascade].info("gpu cull shadows " + std::to_string(cascade + 1), false);
-            }
-        }
-        info += Light_Shadow_Cull_Info(false);
-        if (!info.empty())
-            ImGui::TextUnformatted(info.c_str() + 1);
+    	if (ImGui::Begin("Sky and exposure", &gfx::debug_window("Sky and exposure")))
+    	{
+    	    m_sky.draw_debug_ui();
+    	    ImGui::SliderFloat("sun disc, 1 = physical (gfx.sun.disc)", &Global.gfx_sun_disc, 0.f, 2.f);
+    	    ImGui::SliderFloat("moon disc (gfx.moon.disc)", &Global.gfx_moon_disc, 0.f, 8.f);
+    	    ImGui::SliderFloat("moonlight on the scenery (gfx.moonlight)", &Global.gfx_moonlight, 0.f, 10.f);
+    	    {
+    	        // where the sun and the moon are: azimuth from the north to the east (the sky has x to the west, z to the north)
+    	        auto const azimuth = [](glm::vec3 const &Direction) { return glm::degrees(std::atan2(-Direction.x, Direction.z)) + (Direction.x > 0.f ? 360.f : 0.f); };
+    	        auto const &sun{simulation::Environment.sun()};
+    	        auto const &moon{simulation::Environment.moon()};
+    	        ImGui::Text("sun: elevation %.1f, azimuth %.1f", sun.getAngle(), azimuth(sun.getDirection()));
+    	        ImGui::Text("moon: elevation %.1f, azimuth %.1f, lit %.0f%%, age %.1f d", moon.getAngle(), azimuth(moon.getDirection()), 100.f * moon.getIllumination(), moon.getPhase());
+    	    }
+    	    ImGui::Separator();
+    	    m_exposure.draw_debug_ui();
+    	    ImGui::Separator();
+    	    m_ao.draw_debug_ui(!m_viewports.empty() && m_viewports.front()->ssao_tex != nullptr);
+    	    m_cabprobe.draw_debug_ui();
+    	    ImGui::Separator();
+    	    m_skyocclusion.draw_debug_ui();
+    	    ImGui::Separator();
+    	    m_ssr.draw_debug_ui(nullptr);
+    	}
+    	ImGui::End();
     }
-    ImGui::End();
 
-    ImGui::SetNextWindowSize(ImVec2S(400, 400));
-    if (ImGui::Begin("Pickbuffer") && m_pick_tex) {
-		ImGui::Image((ImTextureID)(intptr_t)(m_pick_tex->id), ImGui::GetContentRegionAvail(), ImVec2(0, 1.0), ImVec2(1.0, 0));
+    if (gfx::debug_window("Instance culling"))
+    {
+    	if (ImGui::Begin("Instance culling", &gfx::debug_window("Instance culling")))
+    	{
+    	    char const *modes[]{"cpu", "gpu, drawn from its result", "cpu, compared with the gpu"};
+    	    ImGui::Combo("instance culling (gfx.gpucull)", &Global.gfx_gpucull, modes, IM_ARRAYSIZE(modes));
+    	    if (Global.gfx_gpucull == 1)
+    	    {
+    	        ImGui::Checkbox("leave out instances hidden behind the depth drawn before them (gfx.gpucull.occlusion)", &Global.gfx_gpucull_occlusion);
+    	        if (Global.gfx_gpucull_occlusion)
+    	            ImGui::Checkbox("draw the instances seen in the last frame first, to hide the others (gfx.gpucull.occlusion.instances)", &Global.gfx_gpucull_occlusion_instances);
+    	        ImGui::Checkbox("draw the depth of the instances before their colour (gfx.depthprepass)", &Global.gfx_depthprepass);
+    	        if (m_drawblockstream)
+    	            ImGui::Checkbox("draw the instances of the same material and model with one multi draw (gfx.gpucull.multidraw)", &Global.gfx_gpucull_multidraw);
+    	        else
+    	            ImGui::TextUnformatted("(multi draws not available, see the log)");
+    	    }
+    	    if (Global.gfx_gpucull != 0)
+    	    {
+    	        ImGui::Checkbox("the same for the cascades of the sun shadows (gfx.gpucull.shadows)", &Global.gfx_gpucull_shadows);
+    	        ImGui::Checkbox("the same for the shadow maps of headlights (gfx.gpucull.shadows.headlights)", &Global.gfx_gpucull_shadows_headlights);
+    	        ImGui::Checkbox("the same for the scenery of the shadow maps of lamps, when it's drawn next (gfx.gpucull.shadows.lamps)", &Global.gfx_gpucull_shadows_lamps);
+    	        ImGui::Checkbox("the same for the sleepers of the tracks of the view (gfx.gpucull.sleepers)", &Global.gfx_gpucull_sleepers);
+    	        ImGui::Checkbox("the same for the models drawn on their own, with lights, animations or skins of their own (gfx.gpucull.models)", &Global.gfx_gpucull_models);
+    	        ImGui::Checkbox("leave out the models of a cell lying wholly out of view, beyond their range or too small before the culling (gfx.gpucull.bucketrange)", &Global.gfx_gpucull_bucketrange);
+    	        ImGui::Checkbox("keep the walks of the submodel trees of the instances from frame to frame (gfx.gpucull.walkcache)", &Global.gfx_gpucull_walkcache);
+    	    }
+    	    ImGui::Checkbox("draw the depth of the whole scene before its colour (gfx.depthprepass.scene)", &Global.gfx_depthprepass_scene);
+    	    if (Global.gfx_contactshadows > 0)
+    	        ImGui::TextUnformatted("(drawn anyway for the contact shadows, gfx.contactshadows)");
+    	    ImGui::Checkbox("walk the scene once for its depth and colour, drawing both from a record (gfx.depthprepass.replay)", &Global.gfx_depthprepass_replay);
+    	    ImGui::Checkbox("grass of the heightmap terrain (gfx.grass)", &Global.gfx_grass);
+    	    if (Global.gfx_grass)
+    	    {
+    	        ImGui::SliderFloat("the grass drawn whole up to, m (gfx.grass.distance)", &Global.gfx_grass_distance, 10.f, 300.f, "%.0f");
+    	        ImGui::SliderFloat("thinning out up to, m (gfx.grass.fadedistance)", &Global.gfx_grass_fadedistance, 10.f, 350.f, "%.0f");
+    	        ImGui::SliderFloat("density of the grass (gfx.grass.density)", &Global.gfx_grass_density, 0.1f, 2.f, "%.2f");
+    	    }
+    	    auto info{m_instancecull.info()};
+    	    if (Global.gfx_gpucull_shadows)
+    	    {
+    	        for (std::size_t cascade = 0; cascade < m_shadowcull.size(); ++cascade)
+    	        {
+    	            if (m_shadowcull[cascade].ran())
+    	                info += m_shadowcull[cascade].info("gpu cull shadows " + std::to_string(cascade + 1), false);
+    	        }
+    	    }
+    	    info += Light_Shadow_Cull_Info(false);
+    	    if (!info.empty())
+    	        ImGui::TextUnformatted(info.c_str() + 1);
+    	}
+    	ImGui::End();
     }
-    ImGui::End();
+
+    if (gfx::debug_window("Pickbuffer"))
+    {
+    	ImGui::SetNextWindowSize(ImVec2S(400, 400));
+    	if (ImGui::Begin("Pickbuffer", &gfx::debug_window("Pickbuffer")) && m_pick_tex) {
+			ImGui::Image((ImTextureID)(intptr_t)(m_pick_tex->id), ImGui::GetContentRegionAvail(), ImVec2(0, 1.0), ImVec2(1.0, 0));
+    	}
+    	ImGui::End();
+    }
 
 }
 
@@ -5419,10 +5444,11 @@ void opengl46_renderer::Render_catenary_arcing()
 
 bool opengl46_renderer::Debug_Ui_State(std::optional<bool> param)
 {
+    // all the debug windows at once; each also has its own item in Windows > Renderer
     if (param) {
-        debug_ui_active = *param;
+        gfx::debug_windows_all(*param);
     }
-
+    debug_ui_active = gfx::debug_windows_any();
     return debug_ui_active;
 }
 

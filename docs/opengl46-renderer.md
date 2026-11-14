@@ -640,6 +640,7 @@ editor goes through the first `dynamiclights` headlights, the reflections throug
   the headlights with maps (of the slots, how many ready), the size of the maps, how many were drawn so far, and the draw
   calls and cpu time of the last frame which drew any, with their GPU time in the timings (`headlight shadows:`); the count
   and the reach can be changed in the window.
+- The debug windows open each on its own from **Windows > Renderer** of the menu (debug mode, Ctrl+Shift+F12), with "Open all" and "Close all" there; every window closes with its own button.
 - **Sky and exposure** window (next to the Light clusters window): the switches and scales above, the share of the
   atmosphere, the colours of the sun, ambient light and fog in use, and the measured luminance and exposure.
   Shift+F12 shows the GPU time of `atmosphere:` (look-up tables, only when the sun moved or the weather changed),

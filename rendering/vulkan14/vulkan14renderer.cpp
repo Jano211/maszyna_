@@ -8,6 +8,7 @@ http://mozilla.org/MPL/2.0/.
 */
 
 #include "stdafx.h"
+#include "rendering/common/debugwindows.h"
 #include "rendering/vulkan14/vulkan14context.h"
 #include "rendering/nullrenderer.h"
 #include "application/application.h"
@@ -1253,8 +1254,9 @@ bool vulkan14_renderer::Debug_Ui_State(std::optional<bool> State)
 {
 	if (State)
 	{
-		m_debug_ui_active = *State;
+		gfx::debug_windows_all(*State);
 	}
+	m_debug_ui_active = gfx::debug_windows_any();
 	return m_debug_ui_active;
 }
 
