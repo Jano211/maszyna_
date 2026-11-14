@@ -66,18 +66,17 @@ glm::vec3 sky_shoulder(glm::vec3 const &Color)
 float const ATMOSPHERE_SKY_SCALE{16.f};
 float const ATMOSPHERE_AMBIENT_SCALE{44.f};
 float const ATMOSPHERE_SUN_SCALE{1.45f};
-// sun elevations (degrees) between which the light of the scene (sunlight, ambient light, fog colour) goes over from the
-// old model (night, twilight) to the atmosphere. the atmosphere darkens at dusk much faster than the old model, which the
-// rest of the lighting was tuned to. the drawn sky is the atmosphere's at every height of the sun (see sky_brightness)
-float const ATMOSPHERE_FADE_START{-6.f};
-float const ATMOSPHERE_FADE_END{10.f};
 // the brightness of the drawn sky. from the day to the end of the twilight the light of the sky falls by about eight orders
 // of magnitude; the eye adapts to most of it, the automatic exposure of the renderer only to a little (a stop or two). so the
 // sky is drawn as bright as the atmosphere makes it while its average radiance is above SKY_ADAPTATION_START (the sun about
 // 6 degrees high), and below that as the radiance to the power of SKY_ADAPTATION: a fall of the light by 10^n shows as a fall
-// of 10^(0.4 n). the colours and the shape of the sky stay those of the atmosphere, only its brightness is evened out
+// of 10^(0.25 n). the colours and the shape of the sky stay those of the atmosphere, only its brightness is evened out. the
+// light of the scene (the sun, the ambient light, the fog) is scaled the same way, so the land is as bright as the sky over
+// it: a moonless night about 1 per cent of the day, as the old lighting had it
 float const SKY_ADAPTATION_START{0.015f};
-float const SKY_ADAPTATION{0.4f};
+float const SKY_ADAPTATION{0.25f};
+// the sky of the moon in the colour of the day sky, luminance 1 (as in atmo_night_sky)
+glm::vec3 const MOON_SKY_COLOR{glm::vec3{0.50f, 0.74f, 1.00f} / 0.6869f};
 // the moon lights the sky as the sun does, this many times weaker at the full moon (illuminance 0.25 lux against 100 klux)
 float const MOON_TO_SUN{2.5e-6f};
 // average radiance of the sky of a moonless night (airglow, starlight, the zodiacal light: about 2e-4 cd/m2) in the units of
@@ -374,9 +373,11 @@ void sky_light::end_update(basic_light &Sunlight, glm::vec3 &Fogcolor, CSkyDome 
 
 	if (Global.gfx_atmosphere && m_result)
 	{
-		m_weight = glm::smoothstep(ATMOSPHERE_FADE_START, ATMOSPHERE_FADE_END, Sunangle);
+		m_weight = 1.f;
 		m_sky_weight = 1.f;
 	}
+	// the key light is the sun's (not the moon's, which the simulation makes the key light at night)
+	auto const sunkey{glm::dot(-glm::vec3{Sunlight.direction}, Sundirection) > 0.999f};
 
 	sh_coefficients directional{};
 	if (Global.gfx_ambient_sh)
@@ -403,20 +404,27 @@ void sky_light::end_update(basic_light &Sunlight, glm::vec3 &Fogcolor, CSkyDome 
 		auto const balance{1.f / glm::max(glm::vec3{result.zenith_transmittance}, glm::vec3{1e-3f})};
 		m_white_balance = balance / std::max(luminance(balance), 1e-4f);
 
-		// the atmosphere has no clouds: the overcast takes away the sunlight, greys the sky and evens out its light
-		// with the shadows of the clouds the sun is held back where they are, not everywhere
-		auto const overcastsun{m_cloud_shadows ? 1.f : (1.f - 0.65f * m_overcast)};
-		auto const sun{glm::vec3{result.sun_transmittance} * m_white_balance * (ATMOSPHERE_SUN_SCALE * Global.gfx_atmosphere_sun) * overcastsun};
-		auto const ambientscale{ATMOSPHERE_AMBIENT_SCALE * Global.gfx_atmosphere_ambient};
-		auto const ambient{desaturate(glm::vec3{result.radiance_sh[0]} * SH_Y00 * m_white_balance * ambientscale, 0.5f * m_overcast)};
-		// the brightness the sky is drawn with, the read back average of this frame
+		// the brightness the sky is drawn with, the read back average of this frame; the scene takes the same adaptation
+		// (gain 1 by day, more in the twilight and at night), so the land is never brighter than the sky over it allows
 		update_sky_scale(glm::degrees(std::asin(std::clamp(Sundirection.y, -1.f, 1.f))));
-		auto const fog{desaturate(glm::vec3{result.horizon} * m_white_balance * m_sky_scale, 0.5f * m_overcast)};
+		auto const gain{m_sky_scale / std::max(ATMOSPHERE_SKY_SCALE * Global.gfx_atmosphere_sky, 1e-6f)};
+
+		// the atmosphere has no clouds: the overcast takes away the sunlight, greys the sky and evens out its light
+		// with the shadows of the clouds the sun is held back where they are, not everywhere. the sun under the horizon gives
+		// no light (its transmittance is 0 once the planet is in the way): the land isn't lit from below the horizon at dusk
+		auto const overcastsun{m_cloud_shadows ? 1.f : (1.f - 0.65f * m_overcast)};
+		auto const sun{glm::vec3{result.sun_transmittance} * m_white_balance * (ATMOSPHERE_SUN_SCALE * Global.gfx_atmosphere_sun) * overcastsun * gain};
+		auto const ambientscale{ATMOSPHERE_AMBIENT_SCALE * Global.gfx_atmosphere_ambient * gain};
+		// the night sky and the moonlit one light the land evenly
+		auto const nightsky{(NIGHT_SKY_COLOR * NIGHT_SKY_RADIANCE + MOON_SKY_COLOR * m_moon_radiance)};
+		auto const ambient{desaturate(glm::vec3{result.radiance_sh[0]} * SH_Y00 * m_white_balance * ambientscale + nightsky * ambientscale, 0.5f * m_overcast)};
+		auto const fog{desaturate((glm::vec3{result.horizon} * m_white_balance + nightsky) * m_sky_scale, 0.5f * m_overcast)};
 		m_sky_flat_luminance = m_sky_drawn_average;
 
-		m_sunlight = glm::mix(olddiffuse, sun, m_weight);
-		m_ambient = glm::mix(oldambient, ambient, m_weight);
-		m_fog = glm::mix(oldfog, fog, m_weight);
+		// the moon as the key light stays as the simulation set it
+		m_sunlight = sunkey ? sun : olddiffuse;
+		m_ambient = ambient;
+		m_fog = fog;
 		auto const sundisc{glm::vec3{result.sun_transmittance} * m_white_balance};
 		m_sun_disc_color = sundisc / std::max({sundisc.r, sundisc.g, sundisc.b, 1e-4f});
 
@@ -424,10 +432,7 @@ void sky_light::end_update(basic_light &Sunlight, glm::vec3 &Fogcolor, CSkyDome 
 		{
 			auto const evenness{1.f - 0.75f * m_overcast};
 			for (std::size_t c = 1; c < directional.size(); ++c)
-			{
-				auto const atmosphere{desaturate(glm::vec3{result.radiance_sh[c]} * m_white_balance * (SH_IRRADIANCE_BAND[SH_BAND[c]] * ambientscale * evenness), 0.5f * m_overcast)};
-				directional[c] = glm::mix(directional[c], atmosphere, m_weight);
-			}
+				directional[c] = desaturate(glm::vec3{result.radiance_sh[c]} * m_white_balance * (SH_IRRADIANCE_BAND[SH_BAND[c]] * ambientscale * evenness), 0.5f * m_overcast);
 		}
 
 		Sunlight.diffuse = glm::vec4{m_sunlight, Sunlight.diffuse.a};

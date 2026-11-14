@@ -26,6 +26,14 @@ Commity na `siec-gl46`.
   `sky_atmosphere.frag` w `shaders/ogl46` i `shaders/vk14`, `docs/opengl46-renderer.md`.
 - Wymaga: nic.
 
+### Niebo: światło sceny za niebem o zmierzchu, mgła gęsta bez plamy od słońca — commit o tym tytule
+- Co widać: o zmierzchu teren nie jest już oświetlony przez słońce spod horyzontu (stary model dawał światło kluczowe aż do
+  -18°), a jasność sceny idzie za jasnością nieba (ta sama adaptacja co niebo; noc ok. 1% dnia jak w starym oświetleniu).
+  W gęstej mgle światło jest równe ze wszystkich stron, przy słońcu nad horyzontem tylko mała jasna otoczka wokół niego
+  zamiast jasnej połowy ekranu.
+- Zmienia: `rendering/common/skylight.cpp`, `weather_common.glsl` i `fog_inject.comp` w `shaders/ogl46` i `shaders/vk14`.
+- Wymaga: „Niebo: pory roku i rodzaj aerozoli miejsca”.
+
 ### Niebo: pory roku i rodzaj aerozoli miejsca — commit o tym tytule
 - Co widać: zimą czystsze, głębiej niebieskie niebo (mniej aerozoli), latem bardziej mleczne; ozon wg daty i szerokości
   (najwięcej wczesną wiosną) zmienia odcień zmierzchu; przy porze roku „winter” ziemia pod niebem to śnieg (jaśniejsze światło
