@@ -269,7 +269,7 @@ void main()
 			float shadow = sun_shadow(start + raydirection * (span * 0.5 * offset.z)) + sun_shadow(start + raydirection * (span * 0.5 * (offset.z + 1.0)));
 			sunlit *= 1.0 - 0.5 * shadow;
 		}
-		vec3 light = fog_light_color(direction, (ground + clouds) / extinction) * ((1.0 - fog_light.x) * skyoccl.x + fog_light.x * sunlit);
+		vec3 light = fog_light_color(direction, (ground + clouds) / extinction, extinction) * ((1.0 - fog_light.x) * skyoccl.x + fog_light.x * sunlit);
 		// lamps and headlights of the clusters the segment of the cell goes through, each part of the segment with the lights of
 		// its own cluster. the lights of the cluster of the point sampled would change with the point, frame to frame, where the
 		// cell reaches into two clusters which don't hold the same lights (a full cluster leaves the least important out)
