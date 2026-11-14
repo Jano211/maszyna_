@@ -8,6 +8,7 @@ http://mozilla.org/MPL/2.0/.
 */
 
 #include "stdafx.h"
+#include "rendering/common/debugwindows.h"
 #include "application/uilayer.h"
 
 #include <utility>
@@ -720,9 +721,12 @@ void ui_layer::render_menu_contents()
 		if (DebugModeFlag)
 		{
 			ImGui::MenuItem(STR_C("ImGui Demo"), nullptr, &m_imgui_demo);
-			bool ret = ImGui::MenuItem(STR_C("Headlight config"), nullptr, GfxRenderer->Debug_Ui_State(std::nullopt));
-
-			GfxRenderer->Debug_Ui_State(ret);
+			// the debug windows of the renderer, each on its own
+			if (ImGui::BeginMenu(STR_C("Renderer")))
+			{
+				gfx::debug_windows_menu();
+				ImGui::EndMenu();
+			}
 		}
 		if(EditorModeFlag){
 			ImGui::MenuItem(STR_C("Scene Hierarchy"), nullptr, &m_editor_hierarchy);

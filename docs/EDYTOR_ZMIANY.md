@@ -26,6 +26,14 @@ Commity na `siec-gl46`.
   `sky_atmosphere.frag` w `shaders/ogl46` i `shaders/vk14`, `docs/opengl46-renderer.md`.
 - Wymaga: nic.
 
+### Okna debugowania renderera: każde osobno i z zamykaniem — commit o tym tytule
+- Co widać: zamiast „Headlight config”, które otwierało naraz kilka okien bez możliwości zamknięcia, w trybie debugowania menu
+  Windows → Renderer z listą okien (Headlight config, Light clusters, Sun shadows, Weather, Particles, Sky and exposure,
+  Instance culling, Pickbuffer), „Open all” i „Close all”; każde okno ma swój przycisk zamknięcia.
+- Zmienia: nowe `rendering/common/debugwindows.h`, `application/uilayer.cpp`, `rendering/opengl46/opengl46renderer.cpp`,
+  `rendering/vulkan14/vulkan14debug.cpp`, `rendering/vulkan14/vulkan14renderer.cpp`.
+- Wymaga: nic.
+
 ### Mgła: gęsta mgła każdego rodzaju świeci jak biała powierzchnia pod tym niebem — commit o tym tytule
 - Co widać: mgła z widoczności (haze) przy widzialności poniżej kilkuset metrów też jest równa ze wszystkich stron, nie tylko
   przyziemna; jej jasność to jasność białej powierzchni pod tym samym niebem i słońcem (ambient + słońce), więc o zmierzchu
