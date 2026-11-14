@@ -1900,6 +1900,7 @@ global_settings::ConfigParse_gfx_sky( cParser &Parser, std::string_view const To
     else if( Token == "gfx.atmosphere.ambient" ) { readvalue( gfx_atmosphere_ambient, 0.f, 16.f ); }
     else if( Token == "gfx.atmosphere.sun" ) { readvalue( gfx_atmosphere_sun, 0.f, 16.f ); }
     else if( Token == "gfx.atmosphere.haze" ) { readvalue( gfx_atmosphere_haze, 0.f, 32.f ); }
+    else if( Token == "gfx.atmosphere.aerosol" ) { Parser.getTokens( 1 ); Parser >> gfx_atmosphere_aerosol; }
     else if( Token == "gfx.atmosphere.altitude" ) { readvalue( gfx_atmosphere_altitude, 0.f, 9000.f ); }
     else if( Token == "gfx.postfx.autoexposure" ) { readswitch( gfx_postfx_autoexposure ); }
     else if( Token == "gfx.postfx.autoexposure.key" ) { readvalue( gfx_postfx_autoexposure_key, 0.001f, 100.f ); }
@@ -2427,6 +2428,7 @@ global_settings::export_as_text( std::ostream &Output ) const {
     export_as_text( Output, "gfx.atmosphere.ambient", gfx_atmosphere_ambient );
     export_as_text( Output, "gfx.atmosphere.sun", gfx_atmosphere_sun );
     export_as_text( Output, "gfx.atmosphere.haze", gfx_atmosphere_haze );
+    export_as_text( Output, "gfx.atmosphere.aerosol", gfx_atmosphere_aerosol );
     export_as_text( Output, "gfx.atmosphere.altitude", gfx_atmosphere_altitude );
     export_as_text( Output, "gfx.postfx.autoexposure", gfx_postfx_autoexposure );
     export_as_text( Output, "gfx.postfx.autoexposure.key", gfx_postfx_autoexposure_key );

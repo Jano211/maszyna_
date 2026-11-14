@@ -129,6 +129,10 @@ class sky_light
 	float m_sky_drawn_average{0.f};
 	// the sky the moon lights: its average radiance in the units of the atmosphere, and the direction of the moon
 	float m_moon_radiance{0.f};
+	// the air of the place and the season, for the debug window
+	char const *m_aerosol_name{"rural"};
+	float m_ozone_du{318.f};
+	float m_aerosol_amount{1.f};
 	glm::vec3 m_moon_direction{0.f, 1.f, 0.f};
 	float m_overcast{0.f};
 	bool m_clouds{false};

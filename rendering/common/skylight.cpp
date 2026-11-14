@@ -12,6 +12,7 @@ http://mozilla.org/MPL/2.0/.
 
 #include "environment/skydome.h"
 #include "simulation/simulationenvironment.h"
+#include "simulation/simulationtime.h"
 #include "utilities/Globals.h"
 
 namespace
@@ -107,6 +108,61 @@ float const MIE_EXTINCTION{4.440e-3f};
 float const MIE_SCALE_HEIGHT{1.2f};
 float const MIE_ASYMMETRY{0.8f};
 glm::vec4 const OZONE_ABSORPTION{2.05e-3f, 2.22e-3f, 0.57e-3f, 0.057e-3f};
+// kinds of aerosols (after the OPAC models of Hess, Koepke, Schult 1998, simplified): the Angstrom exponent (how much more the
+// short waves are scattered), the single scattering albedo at the four wavelengths (what is left after the absorption: soot
+// of the towns takes the light at all of them, desert dust the blue most), the amount against the rural haze, the scale height
+// (km) and the asymmetry of the phase function (how much the light goes forward, the glow around the sun)
+struct aerosol_kind
+{
+	char const *name;
+	float angstrom;
+	glm::vec4 albedo;
+	float amount;
+	float height;
+	float asymmetry;
+};
+aerosol_kind const AEROSOLS[]{
+    {"continental", 1.2f, glm::vec4{0.97f}, 0.6f, 2.0f, 0.75f},
+    {"rural", 1.3f, glm::vec4{0.95f, 0.95f, 0.94f, 0.93f}, 1.0f, 1.2f, 0.76f},
+    {"urban", 1.4f, glm::vec4{0.83f, 0.82f, 0.81f, 0.80f}, 1.8f, 1.0f, 0.72f},
+    {"maritime", 0.4f, glm::vec4{0.99f}, 0.9f, 0.9f, 0.80f},
+    {"desert", 0.3f, glm::vec4{0.97f, 0.94f, 0.90f, 0.85f}, 1.8f, 2.0f, 0.78f},
+    {"polar", 1.0f, glm::vec4{0.98f}, 0.35f, 1.5f, 0.75f},
+};
+glm::vec4 const WAVELENGTHS{630.f, 560.f, 490.f, 430.f};
+// the ozone of the parameters above makes a column of about 318 Dobson units
+float const OZONE_REFERENCE_DU{318.f};
+// albedo of the ground under snow, for the light the atmosphere takes back from it (the season "winter")
+float const SNOW_ALBEDO{0.6f};
+
+// the aerosols picked by gfx.atmosphere.aerosol; auto: rural, polar beyond the polar circles
+aerosol_kind const &aerosol_of(std::string const &Name, float const Latitude)
+{
+	for (auto const &kind : AEROSOLS)
+		if (Name == kind.name)
+			return kind;
+	return (std::abs(Latitude) > 66.5f) ? AEROSOLS[5] : AEROSOLS[1];
+}
+
+// the seasons, by the day of the year and the latitude (the southern hemisphere half a year off): the ozone column in Dobson units
+// (northern middle latitudes: most in the early spring, about 380, least in the autumn, about 290; the tropics about 260 all
+// year) and the amount of the aerosols against the yearly average (more in the summer: humidity, dust, pollen; the winter air is
+// clear, its sky a deeper blue)
+float season_phase(float const Day, float const Peak, float const Latitude)
+{
+	auto const day{Latitude < 0.f ? Day + 182.5f : Day};
+	return std::cos(2.f * 3.14159265f * (day - Peak) / 365.25f);
+}
+float ozone_column(float const Day, float const Latitude)
+{
+	auto const reach{std::clamp(std::abs(Latitude) / 50.f, 0.f, 1.2f)};
+	return 260.f + 75.f * std::min(reach, 1.f) + 45.f * reach * season_phase(Day, 80.f, Latitude);
+}
+float aerosol_season(float const Day, float const Latitude)
+{
+	return 1.f + 0.25f * season_phase(Day, 196.f, Latitude);
+}
+
 // from the four wavelengths to linear rgb (rows), with the colour of the sun (a black body of 5778 K): fitted on the cpu by
 // least squares to the CIE 1931 observer over spectra of sunlight through and scattered by the air, within 0.2 per cent
 glm::vec4 const SPECTRAL_TO_R{1.12936f, -0.22651f, 0.25696f, -0.21065f};
@@ -257,7 +313,16 @@ bool sky_light::atmosphere_changed(glm::vec3 const &Sundirection, bool &Medium)
 	// aerosols grow with the turbidity the weather sets (3 clear .. 9 overcast)
 	auto const turbidity{std::clamp(Global.fTurbidity, 3.f, 9.f)};
 	auto const miescale{Global.gfx_atmosphere_haze * (1.f + 0.5f * (turbidity - 3.f))};
-	glm::vec4 const medium{miescale, Global.gfx_ambient_groundalbedo, Global.gfx_atmosphere_altitude, 0.f};
+	// the season and the place: the ozone and the amount of the aerosols, the kind of the aerosols, snow on the ground
+	auto const latitude{static_cast<float>(simulation::Environment.sun().getLatitude())};
+	auto const day{static_cast<float>(simulation::Time.year_day())};
+	auto const &aerosol{aerosol_of(Global.gfx_atmosphere_aerosol, latitude)};
+	auto const kind{static_cast<float>(&aerosol - AEROSOLS)};
+	auto const ozone{ozone_column(day, latitude) / OZONE_REFERENCE_DU};
+	auto const aerosolamount{miescale * aerosol.amount * aerosol_season(day, latitude)};
+	auto const groundalbedo{Global.Season == "winter:" ? std::max(Global.gfx_ambient_groundalbedo, SNOW_ALBEDO) : Global.gfx_ambient_groundalbedo};
+	// the tables follow the season in steps of a few days; the medium is the key of the transmittance and multiple scattering ones
+	glm::vec4 const medium{std::round(aerosolamount * 200.f) / 200.f + kind * 1000.f, groundalbedo, Global.gfx_atmosphere_altitude, std::round(ozone * 100.f) / 100.f};
 	auto const mediumchanged{!m_tables_medium || *m_tables_medium != medium};
 	// the sky-view table follows the sun when it moved by more than about a twentieth of a degree
 	auto const sunchanged{!m_tables_sun || glm::dot(*m_tables_sun, Sundirection) < 0.9999995f};
@@ -282,9 +347,17 @@ bool sky_light::atmosphere_changed(glm::vec3 const &Sundirection, bool &Medium)
 	// the table holds the radiance times this, about 0.03 / the average of the sky: values the 16 bits keep well
 	m_atmosphere.skyview_exposure = 0.03f / sky_average_estimate(sunelevation);
 
-	m_atmosphere.mie_scattering = AEROSOL_SPECTRUM * (MIE_SCATTERING * miescale);
-	m_atmosphere.mie_extinction = AEROSOL_SPECTRUM * (MIE_EXTINCTION * miescale);
-	m_atmosphere.ground = glm::vec4{Global.gfx_ambient_groundalbedo, MIE_ASYMMETRY, 0.f, 0.f};
+	// the extinction of the aerosols of 550 nm as the rural haze of Hillaire's, by the kind and the season, spread over the
+	// wavelengths by the Angstrom exponent; what the albedo leaves of it is scattering
+	auto const extinction{glm::pow(glm::vec4{550.f} / WAVELENGTHS, glm::vec4{aerosol.angstrom}) * (MIE_EXTINCTION * aerosolamount)};
+	m_atmosphere.mie_extinction = extinction;
+	m_atmosphere.mie_scattering = extinction * aerosol.albedo;
+	m_atmosphere.ozone = OZONE_ABSORPTION * ozone;
+	m_atmosphere.heights = glm::vec4{RAYLEIGH_SCALE_HEIGHT, aerosol.height, OZONE_ALTITUDE, OZONE_HALF_WIDTH};
+	m_atmosphere.ground = glm::vec4{groundalbedo, aerosol.asymmetry, 0.f, 0.f};
+	m_aerosol_name = aerosol.name;
+	m_ozone_du = ozone * OZONE_REFERENCE_DU;
+	m_aerosol_amount = aerosolamount;
 	m_atmosphere.sun_direction = glm::vec4{Sundirection, 0.f};
 	m_atmosphere.observer_radius = BOTTOM_RADIUS + std::max(Global.gfx_atmosphere_altitude, 0.f) * 0.001f + 0.001f;
 	m_tables_medium = medium;
@@ -392,6 +465,16 @@ void sky_light::draw_debug_ui() const
 	ImGui::SliderFloat("ambient", &Global.gfx_atmosphere_ambient, 0.f, 4.f);
 	ImGui::SliderFloat("sun", &Global.gfx_atmosphere_sun, 0.f, 4.f);
 	ImGui::SliderFloat("haze", &Global.gfx_atmosphere_haze, 0.f, 8.f);
+	{
+		char const *names[]{"auto", "continental", "rural", "urban", "maritime", "desert", "polar"};
+		int current{0};
+		for (int i = 1; i < 7; ++i)
+			if (Global.gfx_atmosphere_aerosol == names[i])
+				current = i;
+		if (ImGui::Combo("aerosols (gfx.atmosphere.aerosol)", &current, names, 7))
+			Global.gfx_atmosphere_aerosol = names[current];
+	}
+	ImGui::Text("aerosols %s x%.2f, ozone %.0f DU%s", m_aerosol_name, m_aerosol_amount, m_ozone_du, Global.Season == "winter:" ? ", snow on the ground" : "");
 	ImGui::SliderFloat("altitude (m)", &Global.gfx_atmosphere_altitude, 0.f, 3000.f);
 	ImGui::Text("atmosphere share of the light %.2f, of the sky %.2f%s", m_weight, m_sky_weight, (Global.gfx_atmosphere && !m_result) ? " (waiting for the first read back)" : "");
 	ImGui::Text("sky drawn %.2e (scale %.3g), moonlit sky %.2e, table exposure %.3g", m_sky_drawn_average, m_sky_scale, m_moon_radiance * m_sky_scale, m_atmosphere.skyview_exposure);

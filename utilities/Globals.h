@@ -468,6 +468,9 @@ struct global_settings {
     float gfx_atmosphere_ambient { 1.f }; // brightness of the ambient light
     float gfx_atmosphere_sun { 1.f }; // brightness of the sunlight
     float gfx_atmosphere_haze { 1.f }; // amount of aerosols (mie scattering) on a clear day; grows with the overcast
+    // kind of the aerosols of the place: auto (rural, polar beyond the polar circles), continental (clean), rural, urban, maritime,
+    // desert, polar. they set the colour and the amount of the haze; the season changes their amount and the ozone
+    std::string gfx_atmosphere_aerosol { "auto" };
     float gfx_atmosphere_altitude { 200.f }; // height of the scenery above the sea level, in metres
     bool gfx_postfx_autoexposure { true }; // the exposure follows the brightness of the image, within limits
     float gfx_postfx_autoexposure_key { 0.3f }; // average luminance of the image the exposure is set for
