@@ -127,18 +127,23 @@ vec3 fog_whiten(vec3 color, float ground)
 	return mix(color, vec3(luminance), clamp(ground, 0.0, 1.0) * fog_light.z);
 }
 
-// light of the fog in a direction with the share Ground of the dense ground fog in it. the haze scatters the light once, so it
-// has the colour of the sky that way (fog_color_world); in a dense fog the light is scattered many times over and comes from all
-// around evenly, and only a small bright halo is left around the sun (the droplets send the light forward in a narrow lobe), when
-// the sun is up. the even light: the colours of the horizon towards, across and away from the sun
-vec3 fog_light_color(vec3 direction, float ground)
+// light of the fog in a direction, with the share Ground of the dense ground fog in it and the extinction (1/m) where the light
+// is taken. a thin haze scatters the light once, so it has the colour of the sky that way (fog_color_world). a thick fog
+// (visibility under a few hundred metres, of whatever kind) scatters it many times over: its light comes from all around
+// evenly and is as bright as a white surface under the same sky and sun - so it is never brighter than the land around it,
+// also in the twilight, when the horizon towards the sunset still glows (weather_ambient: the ambient light times 1.3; the
+// shading gives a white surface 0.65 of the ambient light and 1.5 of the sunlight, a quarter of which reaches it on average).
+// only a small bright halo is left around the sun (the droplets send the light forward in a narrow lobe), when it is up
+vec3 fog_light_color(vec3 direction, float ground, float extinction)
 {
-	float dense = clamp(ground, 0.0, 1.0);
+	float dense = max(clamp(ground, 0.0, 1.0), smoothstep(0.001, 0.01, extinction));
 	vec3 color = fog_color_world(direction);
-	vec3 even = 0.25 * (fog_horizon[0].rgb + 2.0 * fog_horizon[FOG_HORIZON_SAMPLES / 2].rgb + fog_horizon[FOG_HORIZON_SAMPLES - 1].rgb);
-	color = mix(color, even, 0.9 * dense);
-	float towards = max(dot(direction, weather_sun_direction.xyz), 0.0);
-	color += weather_sun_color.rgb * (weather_sun_direction.w * 0.5 * dense * pow(towards, 200.0));
+	vec3 sun = weather_sun_direction.xyz;
+	float sunup = weather_sun_direction.w;
+	vec3 even = weather_ambient.rgb * 0.5 + weather_sun_color.rgb * (0.375 * sunup * max(sun.y, 0.0));
+	color = mix(color, even, dense);
+	float towards = max(dot(direction, sun), 0.0);
+	color += weather_sun_color.rgb * (sunup * 0.5 * dense * pow(towards, 200.0));
 	return fog_whiten(color, ground);
 }
 
@@ -149,7 +154,7 @@ vec4 fog_analytic_with(vec3 direction, float near, float far, float haze, float 
 	vec2 depth = fog_optical_depth(weather_camera.x, direction.y, near, far, haze, ground);
 	float total = depth.x + depth.y;
 	float transmittance = exp(-total);
-	vec3 light = fog_light_color(direction, depth.y / max(total, 1e-6)) * fog_light_factor(fog_light.y) * fog_haze.w;
+	vec3 light = fog_light_color(direction, depth.y / max(total, 1e-6), total / max(far - near, 1e-3)) * fog_light_factor(fog_light.y) * fog_haze.w;
 	return vec4(light * (1.0 - transmittance), transmittance);
 }
 

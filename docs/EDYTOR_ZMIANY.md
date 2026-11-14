@@ -26,6 +26,13 @@ Commity na `siec-gl46`.
   `sky_atmosphere.frag` w `shaders/ogl46` i `shaders/vk14`, `docs/opengl46-renderer.md`.
 - Wymaga: nic.
 
+### Mgła: gęsta mgła każdego rodzaju świeci jak biała powierzchnia pod tym niebem — commit o tym tytule
+- Co widać: mgła z widoczności (haze) przy widzialności poniżej kilkuset metrów też jest równa ze wszystkich stron, nie tylko
+  przyziemna; jej jasność to jasność białej powierzchni pod tym samym niebem i słońcem (ambient + słońce), więc o zmierzchu
+  nie świeci jaśniej niż teren dookoła.
+- Zmienia: `weather_common.glsl` i `fog_inject.comp` w `shaders/ogl46` i `shaders/vk14`.
+- Wymaga: poprzedniego.
+
 ### Niebo: światło sceny za niebem o zmierzchu, mgła gęsta bez plamy od słońca — commit o tym tytule
 - Co widać: o zmierzchu teren nie jest już oświetlony przez słońce spod horyzontu (stary model dawał światło kluczowe aż do
   -18°), a jasność sceny idzie za jasnością nieba (ta sama adaptacja co niebo; noc ok. 1% dnia jak w starym oświetleniu).
