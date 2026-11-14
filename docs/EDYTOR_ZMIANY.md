@@ -26,6 +26,14 @@ Commity na `siec-gl46`.
   `sky_atmosphere.frag` w `shaders/ogl46` i `shaders/vk14`, `docs/opengl46-renderer.md`.
 - Wymaga: nic.
 
+### Niebo: pory roku i rodzaj aerozoli miejsca — commit o tym tytule
+- Co widać: zimą czystsze, głębiej niebieskie niebo (mniej aerozoli), latem bardziej mleczne; ozon wg daty i szerokości
+  (najwięcej wczesną wiosną) zmienia odcień zmierzchu; przy porze roku „winter” ziemia pod niebem to śnieg (jaśniejsze światło
+  od dołu). Nowe `gfx.atmosphere.aerosol` (auto, continental, rural, urban, maritime, desert, polar) – kolor i ilość mgiełki;
+  można ustawić w sekcji `config` scenerii; przełącznik też w oknie „Sky and exposure”.
+- Zmienia: `utilities/Globals.h/.cpp`, `rendering/common/skylight.h/.cpp`, `docs/opengl46-renderer.md`.
+- Wymaga: „Niebo: atmosfera liczona widmowo, perspektywa powietrzna”.
+
 ### Niebo: atmosfera liczona widmowo, perspektywa powietrzna — commit o tym tytule
 - Co widać: światło atmosfery liczone na czterech długościach fali (630, 560, 490, 430 nm) i zamieniane na rgb wg obserwatora
   CIE (jak w niebie betterRenderera): czysty błękit zmierzchu zamiast fioletu, złoto zachodu. Daleki teren znika w kolorze

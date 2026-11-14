@@ -66,6 +66,7 @@ existed.
 | `gfx.atmosphere.sun` | `1.0` | brightness of the sunlight from the atmosphere |
 | `gfx.atmosphere.haze` | `1.0` | amount of aerosols on a clear day (whiter, hazier sky); the weather adds to it with the overcast |
 | `gfx.atmosphere.altitude` | `200` | height of the scenery above the sea level, metres |
+| `gfx.atmosphere.aerosol` | `auto` | kind of the aerosols of the place: `continental` (clean), `rural`, `urban` (soot: greyer, dimmer haze), `maritime` (white haze), `desert` (yellowish dust), `polar`; `auto` is rural, polar beyond the polar circles. Can be set in the `config` section of a scenery. The season changes the amount of the aerosols (clearer, bluer air in the winter) and the ozone (most in the early spring), by the date and the latitude; with the winter season the ground under the sky is snow |
 | `gfx.postfx.autoexposure yes/no` | `yes` | the exposure follows the average brightness of the image (luminance histogram, compute pass) |
 | `gfx.postfx.autoexposure.key` | `0.3` | average luminance of the image the exposure is set for |
 | `gfx.postfx.autoexposure.min` | `-1.0` | the most the exposure darkens a bright image, EV |
