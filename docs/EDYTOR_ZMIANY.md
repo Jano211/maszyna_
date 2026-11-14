@@ -26,6 +26,14 @@ Commity na `siec-gl46`.
   `sky_atmosphere.frag` w `shaders/ogl46` i `shaders/vk14`, `docs/opengl46-renderer.md`.
 - Wymaga: nic.
 
+### Niebo: atmosfera liczona widmowo, perspektywa powietrzna — commit o tym tytule
+- Co widać: światło atmosfery liczone na czterech długościach fali (630, 560, 490, 430 nm) i zamieniane na rgb wg obserwatora
+  CIE (jak w niebie betterRenderera): czysty błękit zmierzchu zamiast fioletu, złoto zachodu. Daleki teren znika w kolorze
+  nieba przy horyzoncie i niebieszczeje z odległością (rozpraszanie Rayleigha powietrza, oprócz mgiełki z pogody).
+- Zmienia: `gl/ubo.h` (`atmosphere_ubs` 208 B), `rendering/common/skylight.cpp`, shadery `atmosphere_*` i `apply_fog.glsl`
+  w `shaders/ogl46` i `shaders/vk14`.
+- Wymaga: „Niebo: atmosfera przez cały zmierzch i noc”.
+
 ### Sieć trakcyjna: sekcje uszynienia w widoku, szybsza lista sekcji — commit o tym tytule
 - Co widać: Widok → Sieć trakcyjna → „Sekcje uszynienia” (domyślnie włączone): każda sekcja uszynienia grupowego jako linia nad
   wierzchołkami jej słupów, w innym kolorze niż sąsiednie, z nazwą i długością w środku (czerwona ponad 3,5 km). Lista sekcji

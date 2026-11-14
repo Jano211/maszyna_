@@ -18,8 +18,8 @@ layout(set = COMPUTE_SET, binding = 1, rgba16f) writeonly uniform image2D multis
 const int MULTISCATTERING_SAMPLES = 20;
 const int SQRT_DIRECTIONS = 8;
 
-shared vec3 shared_luminance[64];
-shared vec3 shared_multiscattering[64];
+shared vec4 shared_luminance[64];
+shared vec4 shared_multiscattering[64];
 
 void main()
 {
@@ -64,9 +64,9 @@ void main()
 		return;
 
 	const float isotropicphase = 1.0 / spheresolidangle;
-	vec3 inscatteredluminance = shared_luminance[0] * isotropicphase;
-	vec3 multiscatteringas1 = shared_multiscattering[0] * isotropicphase;
+	vec4 inscatteredluminance = shared_luminance[0] * isotropicphase;
+	vec4 multiscatteringas1 = shared_multiscattering[0] * isotropicphase;
 	// every further order of scattering is the previous one times multiscatteringas1
-	vec3 luminance = inscatteredluminance / max(vec3(1.0) - multiscatteringas1, vec3(1e-3));
-	imageStore(multiscattering_target, texel, vec4(luminance, 1.0));
+	vec4 luminance = inscatteredluminance / max(vec4(1.0) - multiscatteringas1, vec4(1e-3));
+	imageStore(multiscattering_target, texel, luminance);
 }

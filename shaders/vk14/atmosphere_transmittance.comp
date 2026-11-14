@@ -31,7 +31,7 @@ void main()
 	float ttop = atmo_ray_sphere_nearest(origin, direction, atmo_top_radius);
 	float tmax = (tbottom > 0.0) ? ((ttop > 0.0) ? min(ttop, tbottom) : tbottom) : max(ttop, 0.0);
 
-	vec3 opticaldepth = vec3(0.0);
+	vec4 opticaldepth = vec4(0.0);
 	float dt = tmax / float(TRANSMITTANCE_SAMPLES);
 	for (int s = 0; s < TRANSMITTANCE_SAMPLES; ++s)
 	{
@@ -39,5 +39,5 @@ void main()
 		opticaldepth += atmo_sample_medium(length(position)).extinction * dt;
 	}
 
-	imageStore(transmittance_target, texel, vec4(exp(-opticaldepth), 1.0));
+	imageStore(transmittance_target, texel, exp(-opticaldepth));
 }
