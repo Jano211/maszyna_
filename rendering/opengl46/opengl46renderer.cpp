@@ -11,6 +11,7 @@ http://mozilla.org/MPL/2.0/.
 #include "rendering/opengl46/opengl46renderer.h"
 #include "rendering/common/debugwindows.h"
 #include "world/catenary_arcing.h"
+#include "world/catenary_dust.h"
 #include "utilities/color.h"
 #include "utilities/Globals.h"
 #include "utilities/Timer.h"
@@ -1691,6 +1692,8 @@ void opengl46_renderer::Render_pass(viewport_config &vp, rendermode const Mode)
 		gfx::screen_reflections::clear(scene_ubs);
 		// the occlusion of the sky by the scenery, seen from the camera of the view
 		m_skyocclusion.setup_scene(scene_ubs, m_colorpass.pass_camera.position());
+		// the dust on the poles and the fittings of the catenary, its noise placed by the camera of the view
+		catenary_dust::setup_scene(scene_ubs, m_colorpass.pass_camera.position());
 		scene_ubs.projection = OpenGLMatrices.data(GL_PROJECTION);
         scene_ubs.inv_view = glm::inverse( glm::mat4{ glm::mat3{ m_colorpass.pass_camera.modelview() } } );
         scene_ubo->update(scene_ubs);

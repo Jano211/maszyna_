@@ -24,6 +24,8 @@ layout(location = 5) out vec4 f_clip_future_pos;
 //out vec3 TangentViewPos;
 layout(location = 6) out vec3 TangentFragPos;
 layout(location = 7) out vec4 UserData;
+// the rails of the pole of a part of the catenary, for the dust (dust.glsl): instance_dust_rail() in common.glsl
+layout(location = 22) flat out vec2 f_dust_rail;
 
 void main()
 {
@@ -52,6 +54,7 @@ void main()
 //	TangentViewPos = TBN * vec3(0.0, 0.0, 0.0);
 	TangentFragPos = TBN * f_pos.xyz;
 	UserData = v_userdata;
+	f_dust_rail = instance_dust_rail();
 #ifdef MODEL_DRAWS
 	// which model block of the multi draw the fragments read (glsl_common)
 	f_model_draw = uint(gl_DrawID);

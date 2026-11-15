@@ -27,6 +27,7 @@ http://mozilla.org/MPL/2.0/.
 #include "vehicle/DynObj.h"
 #include "model/Model3d.h"
 #include "model/AnimModel.h"
+#include "world/catenary_dust.h"
 #include "utilities/Globals.h"
 #include "utilities/Logs.h"
 #include "utilities/Timer.h"
@@ -1619,6 +1620,8 @@ void vulkan14_renderer::render_viewport(std::size_t const Index)
 		auto const fogtarget{glm::ivec2{vp.width, vp.height}};
 		// the occlusion of the sky by the scenery, seen from the camera of the view
 		scene.skyocclusion.setup_scene(scene_ubs, m_colorpass.pass_camera.position());
+		// the dust on the poles and the fittings of the catenary, its noise placed by the camera of the view
+		catenary_dust::setup_scene(scene_ubs, m_colorpass.pass_camera.position());
 		scene_ubs.projection = OpenGLMatrices.data(GL_PROJECTION);
 		scene_ubs.inv_view = glm::inverse(glm::mat4{glm::mat3{m_colorpass.pass_camera.modelview()}});
 		setup_shadow_matrices();

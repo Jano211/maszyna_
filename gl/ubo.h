@@ -192,9 +192,19 @@ namespace gl
         glm::vec4 cab_probe_sun_color;
         glm::vec4 cab_probe_sun_box;
         glm::vec4 cab_probe_sun_world;
+        // the dust on the poles and the fittings of the catenary (catenary_dust, the materials with param_dust): xyz the world position
+        // of the camera wrapped to the period of the noise of the dust (catenary_dust::kPeriod), w 1 when it's drawn; rgb its colour
+        // (linear), a its strength; x the share of it on the vertical faces, y on the faces looking down, z how patchy it is, w the
+        // height above the rails taken for the models which don't know theirs; x, y, z the share of the gloss, the metalness and the
+        // reflection full dust takes away, w unused; the profile over the height above the rails, two points (height, amount) a vector
+        glm::vec4 dust_origin;
+        glm::vec4 dust_color;
+        glm::vec4 dust_params;
+        glm::vec4 dust_params2;
+        glm::vec4 dust_profile[4];
     };
 
-    static_assert(sizeof(scene_ubs) == 928 + 80 * MAX_HEADLIGHT_SHADOWS + 96 * MAX_CAB_PROBE_LAMPS, "bad size of ubs");
+    static_assert(sizeof(scene_ubs) == 1056 + 80 * MAX_HEADLIGHT_SHADOWS + 96 * MAX_CAB_PROBE_LAMPS, "bad size of ubs");
 
     const size_t MAX_PARAMS = 3;
 

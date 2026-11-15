@@ -11,6 +11,7 @@ std::vector<std::string> mock_span_bodies;   // treść każdego zrobionego prz�
 std::vector<std::string> mock_span_names;
 void catenary_part_detach( TAnimModel * ) {}
 void catenary_part_delete( TAnimModel * ) { ++mock_deleted_parts; }
+void catenary_part_rail( TAnimModel *, double ) {}
 TTraction *catenary_span_create( std::string const &Name, double, double, std::string const &Body, bool ) {
     mock_span_bodies.push_back( Body );
     mock_span_names.push_back( Name );
