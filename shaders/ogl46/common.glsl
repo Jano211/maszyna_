@@ -7,7 +7,7 @@
 // the locations of the inputs and outputs between the stages, the same for a name in every shader (SPIR-V links the stages by
 // the locations, not by the names): 0 f_normal, 1 f_normal_raw, 2 f_coord, 3 f_pos, 4 f_clip_pos, 5 f_clip_future_pos,
 // 6 TangentFragPos, 7 UserData, 8-10 f_tbn, 11 f_model_draw, 12 f_albedo, 13 f_color, 14 f_coords, 15 f_local, 16 f_soft,
-// 17 f_streak, 18 g_coord, 19 g_coords, 20 g_pos, 21 g_normal
+// 17 f_streak, 18 g_coord, 19 g_coords, 20 g_pos, 21 g_normal, 22 f_dust_rail
 #ifndef COMMON_GLSL
 #define COMMON_GLSL
 
@@ -363,6 +363,12 @@ layout(std140, binding = SCENE_UBO_BINDING) uniform scene_ubo
     vec4 cab_probe_sun_color;
     vec4 cab_probe_sun_box;
     vec4 cab_probe_sun_world;
+    // the dust on the poles and the fittings of the catenary, see gl::scene_ubs and dust.glsl
+    vec4 dust_origin;
+    vec4 dust_color;
+    vec4 dust_params;
+    vec4 dust_params2;
+    vec4 dust_profile[4];
 };
 
 #ifdef STAGE_VERTEX
@@ -378,8 +384,18 @@ layout(std430, binding = INSTANCE_SSBO_BINDING) readonly buffer instance_ssbo
     mat4 instance_modelview[];
 };
 
+// the bottom row of the matrix of an instance carries the rails of the pole of a part of the catenary, for the dust
+// (world/catenary_dust.h, scene_walk::Render_Instanced(), instance_cull.comp): x their height relative to the camera, world
+// space, y 1 when they're known. the matrix is used without them
 mat4 effective_modelview() {
-    return instance_modelview[gl_BaseInstance + gl_InstanceID] * modelview;
+    mat4 instance = instance_modelview[gl_BaseInstance + gl_InstanceID];
+    instance[0][3] = 0.0;
+    instance[1][3] = 0.0;
+    return instance * modelview;
+}
+vec2 instance_dust_rail() {
+    mat4 instance = instance_modelview[gl_BaseInstance + gl_InstanceID];
+    return vec2(instance[0][3], instance[1][3]);
 }
 mat3 effective_modelviewnormal() {
     // instance_modelview can include per-instance scale (uniform or per-axis),

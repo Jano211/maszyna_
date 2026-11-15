@@ -43,6 +43,8 @@ http://mozilla.org/MPL/2.0/.
 // części wysięgników w scenerii (world/catenary_scene_objects.cpp, w testach atrapa): odłączenie od pliku scenerii i usunięcie
 void catenary_part_detach( TAnimModel *Model );
 void catenary_part_delete( TAnimModel *Model );
+// wysokość główki szyny przy słupie części (zero słupa) - pod pył shaderów (catenary_dust.h)
+void catenary_part_rail( TAnimModel *Model, double Rail );
 // przęsła łańcuchów (tamże): Body to treść wpisu node traction od nazwy zasilacza do endtraction włącznie.
 // Link: od razu połączyć z sąsiednimi przęsłami i zasilaczem (po inicjalizacji scenerii; wcześniej robi to InitTraction)
 TTraction *catenary_span_create( std::string const &Name, double RangeMax, double RangeMin, std::string const &Body, bool Link );
@@ -169,6 +171,44 @@ struct scene_earthing {
     std::map<std::size_t, std::vector<std::vector<glm::dvec3>>> tails;   // zawinięcia liny w zaciskach końców: słup -> odcinki
 };
 std::vector<scene_earthing> Earthings;
+
+// pył shaderów (catenary_dust.h) leży według wysokości nad główką szyny słupa, na którym część siedzi (zero słupa; fundament
+// poniżej zera). Słup najbliższy w planie punktowi Position, w promieniu 3 m: podwieszenia ze słupem, samodzielne kotwienia,
+// słupy bramek z tego samego pliku sieci. false, gdy żadnego nie ma (część dostaje wtedy stałą wysokość z traction_dust.txt)
+bool
+rail_near( std::string const &File, glm::dvec3 const &Position, double &Rail ) {
+    auto best { 3.0 * 3.0 };
+    auto found { false };
+    auto const consider = [ & ]( double const *Point ) {
+        auto const dx { Point[ 0 ] - Position.x }, dz { Point[ 2 ] - Position.z };
+        auto const distance { dx * dx + dz * dz };
+        if( distance < best ) { best = distance; Rail = Point[ 1 ]; found = true; }
+    };
+    for( auto const &suspension : Suspensions ) {
+        if( suspension.removed || suspension.file != File || false == suspension.data.has_pole ) { continue; }
+        consider( suspension.data.pole );
+    }
+    for( auto const &anchor : Anchors ) {
+        // na słupie podwieszenia albo bramki: ten słup jest już wyżej
+        if( anchor.removed || anchor.file != File || false == anchor.data.on.empty() || false == anchor.data.gantry.empty() ) { continue; }
+        consider( anchor.data.pole );
+    }
+    for( auto const &gantry : Gantries ) {
+        if( gantry.removed || gantry.file != File ) { continue; }
+        for( int mast = 0; mast < 2; ++mast ) {
+            // pojedynczy wspornik: drugi punkt to koniec wspornika, nie słup
+            if( false == gantry.data.masts[ mast ].empty() ) { consider( gantry.data.points[ mast ] ); }
+        }
+    }
+    return found;
+}
+
+// część wstawiona przez sieć: wysokość szyny jej słupa dla pyłu, o ile się znalazł
+void
+part_rail_near( TAnimModel *Model, std::string const &File, glm::dvec3 const &Position ) {
+    double rail { 0.0 };
+    if( rail_near( File, Position, rail ) ) { catenary_part_rail( Model, rail ); }
+}
 
 // bramka wieloprzęsłowa: przęsła (wpisy gantry) stykają się na wspólnych słupach - ten sam punkt (w planie do 0,05 m).
 // Model wspólnego słupa stawia przęsło o najniższym numerze; true, gdy słup K przęsła Index stawia inne przęsło
@@ -780,6 +820,8 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         }
         return pole != nullptr && false == pole->skin.empty() ? pole->skin : std::string( "none" );
     };
+    // zwis bramki: punkt wpisu jest w spodzie dźwigara, nie na wysokości główki szyny
+    auto const hanging { data.has_pole && Catalog.pole( data.pole_type ) != nullptr && false == Catalog.pole( data.pole_type )->drop.empty() };
     Suspension.has_saddle = false;
     for( auto const &placement : result.parts ) {
         if( false == Suspension.has_saddle && placement.role == "messenger_clamp" ) {
@@ -803,6 +845,10 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
             // części należą do pliku sieci, nie do pliku scenerii: zapis scenerii w edytorze ich nie przepisuje
             catenary_part_detach( model );
+            // pył: zero słupa (oś słupa na wysokości główki szyny); zwis bramki (punkt w spodzie dźwigara) i wpis bez słupa -
+            // słup w pobliżu (noga bramki), o ile jest
+            if( data.has_pole && false == hanging ) { catenary_part_rail( model, data.pole[ 1 ] ); }
+            else { part_rail_near( model, Suspension.file, position ); }
             Suspension.parts.push_back( model );
             ++count;
         }
@@ -1143,6 +1189,8 @@ assemble_gantry( scene_gantry &Gantry ) {
         glm::dvec3 const position { origin.x + part.offset[ 0 ], origin.y + part.offset[ 1 ], origin.z + part.offset[ 2 ] };
         if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
             catenary_part_detach( model );
+            // pył: zero bliższego słupa bramki (osie słupów na wysokości główki szyny)
+            part_rail_near( model, Gantry.file, position );
             Gantry.parts.push_back( model );
             ++count;
         }
@@ -1549,6 +1597,8 @@ assemble_anchor( scene_anchor &Anchor ) {
         glm::dvec3 const position { Origin.x + part.offset[ 0 ], Origin.y + part.offset[ 1 ], Origin.z + part.offset[ 2 ] };
         if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
             catenary_part_detach( model );
+            // pył: zero słupa kotwowego (także cudzego - podwieszenia albo bramki, na którym kotwienie stoi)
+            catenary_part_rail( model, polepoint[ 1 ] );
             Anchor.parts.push_back( model );
             ++count;
         }
@@ -2320,6 +2370,7 @@ assemble_middle( scene_chain &Chain ) {
                 glm::dvec3 const at { own.saddle_origin.x + scened.offset[ 0 ], own.saddle_origin.y + scened.offset[ 1 ], own.saddle_origin.z + scened.offset[ 2 ] };
                 if( auto *model3d { simulation::State.create_model( entry, "none", at ) }; model3d != nullptr ) {
                     catenary_part_detach( model3d );
+                    part_rail_near( model3d, Chain.file, at );
                     Chain.middle_parts.push_back( model3d );
                 }
                 // przesunięcie o tyle samo w stronę konstrukcji (oś Y wysięgnika w scenerii)
@@ -2482,6 +2533,7 @@ assemble_middle( scene_chain &Chain ) {
                         glm::dvec3 const at { origin.x + scened.offset[ 0 ], origin.y + scened.offset[ 1 ], origin.z + scened.offset[ 2 ] };
                         if( auto *model3d { simulation::State.create_model( entry, "none", at ) }; model3d != nullptr ) {
                             catenary_part_detach( model3d );
+                            part_rail_near( model3d, Chain.file, at );
                             Chain.middle_parts.push_back( model3d );
                         }
                     }
@@ -3115,6 +3167,7 @@ assemble_earthing( scene_earthing &Earthing ) {
         glm::dvec3 const position { Place.origin.x + part.offset[ 0 ], Place.origin.y + part.offset[ 1 ], Place.origin.z + part.offset[ 2 ] };
         if( auto *model { simulation::State.create_model( entry, "none", position ) }; model != nullptr ) {
             catenary_part_detach( model );
+            part_rail_near( model, Earthing.file, position );
             Earthing.parts.push_back( model );
             ++count;
         }

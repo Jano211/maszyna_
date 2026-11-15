@@ -19,8 +19,8 @@
 //
 // the locations of the inputs and outputs between the stages are the table of shaders/ogl46/common.glsl, the same for a name
 // in every shader: 0 f_normal, 1 f_normal_raw, 2 f_coord, 3 f_pos, 4 f_clip_pos, 5 f_clip_future_pos, 6 TangentFragPos,
-// 7 UserData, 8-10 f_tbn, 12 f_albedo, 13 f_color, 14 f_coords, 15 f_local, 16 f_soft, 17 f_streak (11 f_model_draw is not
-// used: the draw is in the push constants)
+// 7 UserData, 8-10 f_tbn, 12 f_albedo, 13 f_color, 14 f_coords, 15 f_local, 16 f_soft, 17 f_streak, 22 f_dust_rail (11 f_model_draw
+// is not used: the draw is in the push constants)
 #ifndef COMMON_GLSL
 #define COMMON_GLSL
 
@@ -330,6 +330,12 @@ layout(std140, set = PASS_SET, binding = SCENE_UBO) uniform scene_ubo
 	vec4 cab_probe_sun_color;
 	vec4 cab_probe_sun_box;
 	vec4 cab_probe_sun_world;
+	// the dust on the poles and the fittings of the catenary, see gl::scene_ubs and dust.glsl
+	vec4 dust_origin;
+	vec4 dust_color;
+	vec4 dust_params;
+	vec4 dust_params2;
+	vec4 dust_profile[4];
 };
 
 #ifndef LAYOUT_COMPUTE
@@ -443,9 +449,21 @@ layout(std430, set = PASS_SET, binding = CLUSTER_INDEX_SSBO) readonly buffer clu
 };
 
 #ifdef STAGE_VERTEX
+// the bottom row of the matrix of an instance carries the rails of the pole of a part of the catenary, for the dust
+// (world/catenary_dust.h, gfx::scene_walk::Render_Instanced(), instance_cull.comp): x their height relative to the camera,
+// world space, y 1 when they're known. the matrix is used without them
 mat4 effective_modelview()
 {
-	return instance_modelview[gl_InstanceIndex] * modelview;
+	mat4 instance = instance_modelview[gl_InstanceIndex];
+	instance[0][3] = 0.0;
+	instance[1][3] = 0.0;
+	return instance * modelview;
+}
+
+vec2 instance_dust_rail()
+{
+	mat4 instance = instance_modelview[gl_InstanceIndex];
+	return vec2(instance[0][3], instance[1][3]);
 }
 
 mat3 effective_modelviewnormal()

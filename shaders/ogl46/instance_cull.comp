@@ -227,7 +227,16 @@ void write(uint entry, instance_record record, vec3 location, instance_cull_job 
 		modelviews[slot] = originview * mat4(record.rotationscale[0], record.rotationscale[1], record.rotationscale[2], vec4(record.position, 1.0));
 		return;
 	}
-	modelviews[slot] = view * mat4(record.rotationscale[0], record.rotationscale[1], record.rotationscale[2], vec4(location, 1.0));
+	// w of the first two columns: the rails of the pole of a part of the catenary, for the dust (world/catenary_dust.h) - the height
+	// above the origin of the instance and 1. they go to the bottom row of the matrix (effective_modelview() in common.glsl takes
+	// them out), as the height of the rails relative to the camera; scene_walk::Render_Instanced() does the same
+	mat4 modelview = view * mat4(vec4(record.rotationscale[0].xyz, 0.0), vec4(record.rotationscale[1].xyz, 0.0), vec4(record.rotationscale[2].xyz, 0.0), vec4(location, 1.0));
+	if (record.rotationscale[1].w > 0.5)
+	{
+		modelview[0][3] = location.y + record.rotationscale[0].w;
+		modelview[1][3] = 1.0;
+	}
+	modelviews[slot] = modelview;
 }
 
 void main()

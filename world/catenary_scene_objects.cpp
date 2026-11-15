@@ -35,6 +35,16 @@ catenary_part_detach( TAnimModel *Model ) {
     Model->m_catenary = true;
 }
 
+// wysokość główki szyny przy słupie części (zero słupa): pył shaderów leży według wysokości nad nią (world/catenary_dust.h).
+// Wpisywana zaraz po wstawieniu, zanim renderer zrobi kopie egzemplarzy (scene::basic_cell::instance_record)
+void
+catenary_part_rail( TAnimModel *Model, double const Rail ) {
+
+    if( Model == nullptr ) { return; }
+    Model->m_dustrail = Rail;
+    Model->m_hasdustrail = true;
+}
+
 void
 catenary_part_delete( TAnimModel *Model ) {
 

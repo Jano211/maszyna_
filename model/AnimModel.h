@@ -233,6 +233,11 @@ public:
     // (no billboards turned to the camera): an instance drawn on its own can then be culled on the gpu like the instanced
     // ones, its tree walked from the origin of the instance, which the culling places in view
     bool m_cameraindependent { false };
+    // height of the rails (world y) at the pole a part of the catenary stands on (the zero of the pole), set by
+    // world/catenary_scene.cpp when it places the part: the dust of the shaders (world/catenary_dust.h) is laid by the height
+    // above it. the renderer hands it to the shaders in the bottom row of the matrix of the instance (instanced draws only)
+    double m_dustrail { 0.0 };
+    bool m_hasdustrail { false };
     // helper: evaluates current state and updates m_instanceable accordingly.
     void update_instanceable_flag();
     // helper: assigns the model and the replacable skin to the instance, and binds light and variant submodels of the model

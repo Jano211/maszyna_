@@ -1,8 +1,32 @@
-# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-09 01:15)
+# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-15)
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – 2026-11-09 01:15 (najnowsze) – zrzutka na nowy czat
+## START TUTAJ – 2026-11-15 (najnowsze) – pył na słupach i osprzęcie (shader)
+
+**Zrobione 15.11 (w exe NIESPRAWDZONE, skompilowane tylko shadery – glslang, ogl46 i vk14 – i testy te/tsc):** brązowo-miedziany pył
+i ogólny brud nakładany shaderem `mat_normalmap_specgloss` według położenia w świecie, żeby słup i przykręcone do niego mocowania
+łapały jedną, ciągłą warstwę (rdze i inne lokalne zabrudzenia zostają w teksturach). Na razie tylko słupy i sieć.
+- Ile pyłu: ułożenie powierzchni (normalna w świecie: góra 1, pion `side`, spód `bottom`) × profil wysokości nad główką szyny słupa
+  części (fundament poniżej zera najbardziej – użytkownik 15.11) × plamy z okresowego szumu 3D w świecie (komórki 4 / 1 / 0,25 m,
+  okres 4096 m; kamera zawinięta do okresu, więc bez skoków). Pył: kolor, mniej połysku, metalu i odbicia.
+- Wysokość szyny: gradient po wysokości bezwzględnej odpadł (różnice wysokości torów na scenerii). Część zna zero swojego słupa:
+  `catenary_part_rail()` (catenary_scene_objects.cpp, atrapa w mock_objects.cpp) wpisuje `TAnimModel::m_dustrail` przy stawianiu:
+  podwieszenie – `pole` wpisu (zwis bramki i wpis bez słupa – najbliższy słup w 3 m, `rail_near()`), kotwienie – jego słup
+  (też cudzy), bramka, kotwienie środkowe, uszynienie – najbliższy słup. Do shadera idzie BEZ nowych buforów: rekord egzemplarza
+  ma wolne `rotationscale[].w` – [0].w wysokość szyny względem zera egzemplarza, [1].w = 1; `Render_Instanced()` (scenewalk.cpp)
+  i `instance_cull.comp` zerują w przed mnożeniem i wpisują do dolnego wiersza macierzy (`[0][3]` szyna względem kamery, `[1][3]` 1);
+  `effective_modelview()` w common.glsl zeruje je przed użyciem, `instance_dust_rail()` je czyta → `f_dust_rail` (location 22).
+  Rysowane osobno (nieinstancjonowane) nie mają szyny – dostają stałą wysokość `no_rail` (użytkownik: w sieci takich nie ma).
+- `param_dust` w .mat (param[2].x): nie podany (0) – części sieci (mają szynę) 1, reszta nic; dodatni – mnożnik dla czegokolwiek;
+  ujemny – wyłączony. Ustawienia: `data/traction_dust.txt` (kolor #6B4A36, siła, side/bottom, plamistość, połysk/metal/odbicie,
+  profil 8 punktów, no_rail) – czytany raz, `world/catenary_dust.cpp`, do bloku sceny `dust_*` (gl/ubo.h, rozmiar +128 B) przy
+  przebiegu koloru obu rendererów. Wartości profilu i koloru wstępne – do dostrojenia przez użytkownika.
+- Do sprawdzenia w exe: czy plamy idą ciągle ze słupa na mocowanie, profil (fundament / dół / przy drucie), czy nic się nie rozjechało
+  w instancjonowaniu (cienie, depth prepass, odbicia RT). NIE wiadomo, gdzie mają zero słupy 1701/1711, 150x i 160x (fundamenty
+  wylewane) – jeśli nie na główce szyny, profil się przesunie.
+
+## START TUTAJ – 2026-11-09 01:15 – zrzutka na nowy czat
 
 **Jak pracujemy (bez zmian):** wszystko z sieci commitem prosto na `siec-gl46` → push → merge do `wszystko-gl46` → push (płytki klon:
 fetch z refspec `+refs/heads/wszystko-gl46:refs/remotes/origin/wszystko-gl46`). Commity i merge jako `Claude <noreply@anthropic.com>`

@@ -4,6 +4,7 @@ layout(location = 0) in vec3 f_normal;
 layout(location = 2) in vec2 f_coord;
 layout(location = 3) in vec4 f_pos;
 layout(location = 8) in mat3 f_tbn;
+layout(location = 22) flat in vec2 f_dust_rail;
 
 layout(location = 4) in vec4 f_clip_pos;
 layout(location = 5) in vec4 f_clip_future_pos;
@@ -18,6 +19,9 @@ layout(location = 1) out vec4 out_motion;
 #pragma param(specular, 1, 1, 1, specular)
 #pragma param(reflection, 1, 2, 1, one)
 #pragma param(glossiness, 1, 3, 1, glossiness)
+// the dust of the catenary (dust.glsl, world/catenary_dust.h): how much of it the material takes. 0 (not given): the parts of the
+// catenary (with the rails of their pole) 1, the rest none; a negative value: none
+#pragma param(dust, 2, 0, 1, zero)
 
 #pragma texture(diffuse, 0, sRGB_A)
 layout(binding = 0) uniform sampler2D diffuse;
@@ -32,6 +36,7 @@ layout(binding = 2) uniform sampler2D specgloss;
 #define NORMALMAP
 #include "light_common.glsl"
 #include "apply_fog.glsl"
+#include "dust.glsl"
 #include "tonemapping.glsl"
 
 void main()
@@ -54,6 +59,16 @@ void main()
 	float specularity = texture(specgloss, f_coord).r;
 	glossiness = texture(specgloss, f_coord).g * abs(param[1].w);
 	metalic = texture(specgloss, f_coord).b;
+
+	// the dust of the catenary over the texture: duller, less metal, less of the surroundings reflected
+	float dust = dust_amount(f_pos.xyz, fragnormal, f_dust_rail, param[2].x);
+	if (dust > 0.0)
+	{
+		tex_color.rgb = mix(tex_color.rgb, dust_color.rgb, dust);
+		glossiness *= 1.0 - dust * dust_params2.x;
+		metalic *= 1.0 - dust * dust_params2.y;
+		reflectivity *= 1.0 - dust * dust_params2.z;
+	}
 
 	fragcolor = apply_lights(fragcolor, fragnormal, tex_color.rgb, reflectivity, specularity, shadow_tone);
 

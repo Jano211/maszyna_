@@ -1,0 +1,27 @@
+// Pyl na slupach i osprzecie sieci trakcyjnej (brazowo-miedziany pyl z przewodow i z toru, ogolny brud), nakladany shaderem
+// wedlug polozenia w swiecie - slup i przykrecone do niego mocowania lapia jedna, ciagla warstwe. Dziala na materialach
+// z shaderem normalmap_specgloss: same z siebie na modelach wstawionych przez siec (slupy, fundamenty, wysiegniki, osprzet,
+// bramki), na innych tylko z "param_dust: <mnoznik>" w .mat. Ten wpis zmienia tez ilosc na czesciach sieci (np. 0.5, 2.0),
+// ujemny wylacza. Rdza i inne lokalne zabrudzenia zostaja w teksturach.
+// Plik opcjonalny: bez niego albo bez wpisu obowiazuja te same wartosci, wpisane w symulator. Czytany raz, przy pierwszym
+// uzyciu (zmiana - restart symulatora, bez kompilacji). Komentarze od //.
+
+color        #6B4A36     // kolor pylu (sRGB)
+strength     1.0         // mnoznik calosci (0 - wylaczony wszedzie)
+
+// --- ulozenie powierzchni (gora = 1) ---
+side         0.45        // sciany pionowe
+bottom       0.08        // spody (powierzchnie zwrocone w dol)
+
+// --- wyglad ---
+contrast     0.7         // plamistosc: 0 - rowna warstwa, 1 - od zera do podwojnej
+gloss        0.6         // o tyle (czesc) pelny pyl zmniejsza polysk
+metal        0.9         // o tyle zmniejsza metalicznosc
+reflection   0.8         // o tyle zmniejsza odbicie otoczenia
+
+// --- wysokosc nad glowka szyny ---
+// profil: pary "wysokosc (m) ilosc (0-1)", od 2 do 8 par, wysokosci rosnaco; miedzy punktami liniowo, ponizej pierwszego
+// i powyzej ostatniego jak w skrajnym. Wysokosc liczona od zera slupa, na ktorym czesc siedzi (glowka szyny); ponizej zera
+// fundament - tam najwiecej
+profile     -3.0 1.0   0.0 1.0   0.6 0.75   2.0 0.4   4.0 0.3   5.5 0.5   7.0 0.55   10.0 0.35
+no_rail      2.0         // wysokosc przyjmowana dla modeli, ktore nie znaja swojej szyny (slupy spoza plikow sieci)

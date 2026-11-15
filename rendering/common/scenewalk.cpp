@@ -1013,7 +1013,14 @@ void scene_walk::Update_Instance_Records( TModel3d const *Model, scene::basic_ce
 				| ( instance->m_catenary ? scene::basic_cell::instance_keep_small : 0u );
 			auto const &rotationscale { instance->rotation_scale() };
 			for( int column = 0; column < 3; ++column ) {
-				record.rotationscale[ column ] = rotationscale[ column ];
+				record.rotationscale[ column ] = glm::vec4{ glm::vec3{ rotationscale[ column ] }, 0.f };
+			}
+			// the rails of the pole of a part of the catenary, for the dust (world/catenary_dust.h): the height above the
+			// origin of the instance in w of the first column, 1 in w of the second; the matrices of the instances carry them
+			// in their bottom row (Render_Instanced(), instance_cull.comp)
+			if( instance->m_hasdustrail ) {
+				record.rotationscale[ 0 ].w = static_cast<float>( instance->m_dustrail - instance->location().y );
+				record.rotationscale[ 1 ].w = 1.f;
 			}
 		}
 		// an empty slot keeps its record without flags, and isn't drawn
@@ -1217,16 +1224,25 @@ void scene_walk::Render_Instanced( TModel3d *Model, std::vector<queued_instance>
 		// The rotation and scale part comes from the record, the translation goes into its last
 		// column. The scale is folded in so the GPU-instanced path produces visually identical output
 		// to the regular per-instance path; the shader applies it via effective_modelview = instance_mv * model_local.
+		// the w of the columns of the record carry the rails of the dust, not a part of the transform
+		glm::vec3 const offset { location - m_renderpass.pass_camera.position() };
 		glm::mat4 const root {
-			record.rotationscale[ 0 ],
-			record.rotationscale[ 1 ],
-			record.rotationscale[ 2 ],
-			glm::vec4( glm::vec3( location - m_renderpass.pass_camera.position() ), 1.f ) };
+			glm::vec4{ glm::vec3{ record.rotationscale[ 0 ] }, 0.f },
+			glm::vec4{ glm::vec3{ record.rotationscale[ 1 ] }, 0.f },
+			glm::vec4{ glm::vec3{ record.rotationscale[ 2 ] }, 0.f },
+			glm::vec4( offset, 1.f ) };
+		auto modelview { view_matrix * root };
+		if( record.rotationscale[ 1 ].w > 0.5f ) {
+			// the bottom row of the matrix of the instance (effective_modelview() in common.glsl takes it out): the height of the
+			// rails relative to the camera, world space, and 1
+			modelview[ 0 ][ 3 ] = offset.y + record.rotationscale[ 0 ].w;
+			modelview[ 1 ][ 3 ] = 1.f;
+		}
 
 		auto const distance { static_cast<float>( distancesquared ) };
 		farthest_distancesquared = std::max( farthest_distancesquared, distance );
 		m_instance_survivors.push_back( {
-			view_matrix * root,
+			modelview,
 			distance,
 			static_cast<std::uint32_t>( std::upper_bound( m_instance_lodbounds.begin(), m_instance_lodbounds.end(), distance ) - m_instance_lodbounds.begin() ) } );
 	}
