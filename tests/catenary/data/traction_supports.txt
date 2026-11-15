@@ -99,17 +99,20 @@ earthing_line AFL120 diameter 0.0155 mass 0.494 tension 200
   chain split 5180-07~ 0.14724 7150-01 0.8324 5180-07 0.14724
 endearthing_line
 
-// ---- wysiegnik przewodu uszyniajacego (karta 0806; modele 2026-11-08) ------------------------------------------------
-// earthing_arm <wysiegnik> back <tyl> wire <x> <y> <z> plate <m> mount <mocowanie> <glebokosc max> ... endearthing_arm
-//   wysiegnik (osobna tekstura lpn) stoi w zerze mocowania; mocowanie wg glebokosci slupa na wysokosci srub: pierwsze, ktorego
-//   sruby wystarcza (koniec sruby >= glebokosc + tyl z nakretka 0,025 + 0,005 zapasu); tyl 6130-00 obrocony o 180 stopni;
+// ---- wysiegnik przewodu uszyniajacego (karta 0806; modele 2026-11-08, wysiegnik z mocowaniem w jednym modelu od 2026-11-16) ------
+// earthing_arm <nazwa> [body <wysiegnik>] back <tyl> wire <x> <y> <z> plate <m> mount <mocowanie> <glebokosc max> ... endearthing_arm
+//   mocowanie wg glebokosci slupa na wysokosci srub: pierwsze, ktorego sruby wystarcza (koniec sruby >= glebokosc + tyl z nakretka
+//   0,025 + 0,005 zapasu); body = osobny model wysiegnika w zerze mocowania (brak - wysiegnik jest w modelu mocowania); tyl stoi na
+//   tylnej scianie slupa bez obrotu (model 6130-00 ulozony tak, jak tam siedzi - plyta w +Y; uzytkownik 2026-11-16);
 //   plate = polowa wysokosci plyty (zero mocowania najwyzej tyle pod wierzchem slupa). Slup bierze go kluczem "earthing_arm".
-//   skin = nazwa tekstury samego wysiegnika (modele z mapa -1): zastepuje "siec" na poczatku nazwy tekstury osprzetu, dopisek
-//   zuzycia zostaje (siec_trakcyjna/siec -> siec_trakcyjna/lpn, siec_trakcyjna/siec_used -> siec_trakcyjna/lpn_used; tekstury lpn:
-//   lpn_new / lpn_used / lpn_old / lpn_extreme); skin_default = gdy tekstura osprzetu nie ma dopisku zuzycia (sama "siec");
-//   mocowania i tyl biora teksture osprzetu jak 6120.
+//   skin = nazwa tekstury wszystkich czesci wysiegnika (modele z mapa -1): zastepuje "siec" na poczatku nazwy tekstury osprzetu,
+//   dopisek zuzycia zostaje (siec_trakcyjna/siec_used -> siec_trakcyjna/uszynienia_used; tekstury uszynienia_new / _used / _old /
+//   _extreme); skin_default = gdy tekstura osprzetu nie ma dopisku zuzycia (sama "siec").
+//   Modele 2026-11-16: 6130-01/02/03 sruby do Y 0,253 / 0,273 / 0,293, punkt liny (0, -0,7962, 0,7496); wykonania 6130-04/05 sa dla
+//   slupow ETG (strunobetonowych - jeszcze bez modeli slupow, nie wpisane); 6131-01..05 dluzszy wysieg (lina Y -1,3151, -04 -1,4121,
+//   -05 -1,4396) i 6132-01 (plyta 0,66 m, wlasny tyl) - do ktorych slupow, do ustalenia z uzytkownikiem.
 //   Przymiarka do slupow, nie z karty (karta niejasna) - do poprawki wg dopiskow z karty.
-earthing_arm 6130 back 6130-00 wire 0.0 -0.8 0.65 plate 0.09 skin lpn skin_default lpn_used mount 6130-01 0.223 mount 6130-02 0.243 mount 6130-03 0.263 endearthing_arm
+earthing_arm 6130 back 6130-00 wire 0.0 -0.7962 0.7496 plate 0.09 skin uszynienia skin_default uszynienia_used mount 6130-01 0.223 mount 6130-02 0.243 mount 6130-03 0.263 endearthing_arm
 
 // ---- slupy -----------------------------------------------------------------------------------------------------
 // uszynienie grupowe: "earthing" = uchwyt liny 6120 (karta 0805) na gorze slupa; wykonania wg Jana 2026-10-25: -01 C120-160,

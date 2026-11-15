@@ -2803,26 +2803,29 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
         for( int axis = 0; axis < 3; ++axis ) { wire.position[ axis ] += line->gantry_wire[ axis ]; }
     }
     else if( arm != nullptr ) {
-        // mocowanie wg głębokości słupa na wysokości śrub (długość śrub), wysięgnik w tym samym zerze, tył obrócony o 180 stopni
+        // mocowanie wg głębokości słupa na wysokości śrub (długość śrub), osobny wysięgnik (jeśli jest) w tym samym zerze, tył na tylnej ścianie
         auto const mount { arm->mount_for( depth ) };
         if( mount.empty() ) {
             Place.problem = "the bolts of " + arm->name + " are too short for pole " + data.pole_type + " (" + std::to_string( static_cast<int>( depth * 1000.0 + 0.5 ) ) + " mm deep there)";
             return false;
         }
+        // wszystkie części wysięgnika (mocowanie, osobny wysięgnik, tył) na teksturze z wpisu (Jan 2026-11-16: klocki 6130/6131/6132
+        // na teksturze uszynienia w 4 wariantach zużycia)
+        front.role = "earthing_arm";
         front.part = mount;
         Place.parts.push_back( front );
-        auto body { front };
-        body.role = "earthing_arm";
-        body.part = arm->name;
         Place.arm_skin = arm->skin;
         Place.arm_skin_default = arm->skin_default;
-        Place.parts.push_back( body );
+        if( false == arm->body.empty() ) {
+            auto body { front };
+            body.part = arm->body;
+            Place.parts.push_back( body );
+        }
         if( false == arm->back.empty() ) {
+            // tył w modelu już ułożony tak, jak siedzi na tylnej ścianie (płyta w +Y, Jan 2026-11-16) - bez obrotu
             auto back { front };
             back.part = arm->back;
             back.position[ 1 ] = face + depth;
-            back.rotation[ 0 ] = -1.0;
-            back.rotation[ 4 ] = -1.0;
             Place.parts.push_back( back );
         }
         for( int axis = 0; axis < 3; ++axis ) { wire.position[ axis ] += arm->wire[ axis ]; }
@@ -3149,8 +3152,8 @@ assemble_earthing( scene_earthing &Earthing ) {
     auto const spawn = [ & ]( catenary::cantilever_placement const &Placement, earthing_place const &Place ) {
         if( Placement.part.empty() ) { return; }
         auto const part { catenary::cantilever_to_scene( Placement, Place.heading ) };
-        // sam wysięgnik 6130 na swojej teksturze: nazwa pliku tekstury osprzętu z "siec" na początku zamienionym na nazwę z wpisu,
-        // dopisek zużycia zostaje (siec_trakcyjna/siec_used -> siec_trakcyjna/lpn_used); przy samej "siec" - wariant domyślny
+        // części wysięgnika 6130 na swojej teksturze: nazwa pliku tekstury osprzętu z "siec" na początku zamienionym na nazwę z wpisu,
+        // dopisek zużycia zostaje (siec_trakcyjna/siec_used -> siec_trakcyjna/uszynienia_used); przy samej "siec" - wariant domyślny
         auto partskin { skin };
         if( Placement.role == "earthing_arm" && false == Place.arm_skin.empty() ) {
             auto const slash { partskin.find_last_of( "/\\" ) };
