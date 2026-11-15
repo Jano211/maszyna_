@@ -118,6 +118,7 @@ struct scene_chain {
     // kotwienie środkowe: części na słupach sąsiednich podwieszeń, bryły (lina, V, zaciski) dla przęsła przed i za środkowym
     std::vector<TAnimModel *> middle_parts;
     std::vector<catenary::solid_vertex> middle_solid[ 2 ];
+    std::vector<std::vector<TAnimModel *>> span_parts;   // przęsło k: części w przęśle (izolator sekcyjny i jego osprzęt)
     std::size_t middle_span { static_cast<std::size_t>( -1 ) };   // przęsło przed podwieszeniem środkowym (za nim: +1)
     double swing_temperature { 10.0 };  // temperatura, przy której ostatnio obracano wysięgniki łańcucha (kotwienie środkowe)
 };
@@ -2773,6 +2774,13 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     auto const ongantry { false == pole->drop.empty() };
     if( ongantry && ( line == nullptr || line->gantry_part.empty() ) ) { Place.problem = "no gantry holder (6840) in the data"; return false; }
     auto const *arm { false == ongantry && Holder.arm && false == pole->earthing_arm.empty() ? catalog->earthing_arm( pole->earthing_arm ) : nullptr };
+    // dłuższy (6131 zamiast 6130): wpis wskazany słowem "long" wysięgnika
+    if( arm != nullptr && Holder.longer ) {
+        auto const *longer { arm->longer.empty() ? nullptr : catalog->earthing_arm( arm->longer ) };
+        if( longer == nullptr ) { Place.problem = "earthing arm " + arm->name + " has no longer version"; return false; }
+        arm = longer;
+    }
+    if( ongantry && Holder.arm && line->gantry_arm.empty() ) { Place.problem = "no gantry earthing arm (6132) in the data"; return false; }
     if( false == ongantry && Holder.arm && arm == nullptr ) { Place.problem = "pole " + data.pole_type + " takes no earthing arm (6130)"; return false; }
     if( false == ongantry && false == Holder.arm && pole->earthing.empty() ) { Place.problem = "pole " + data.pole_type + " carries no earthing holder (6120)"; return false; }
     // obrót słupa: płaszczyzna wysięgnika, który go stawia; przy rozstawionych przez punkt na konsoli (słup stoi równolegle do niej,
@@ -2795,7 +2803,27 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     front.position[ 1 ] = face;
     front.position[ 2 ] = height;
     catenary::cantilever_placement wire { front };
-    if( ongantry ) {
+    if( ongantry && Holder.arm ) {
+        // wysięgnik 6132 na dźwigarze (na teksturze uszynienia jak 6130)
+        front.role = "earthing_arm";
+        front.part = line->gantry_arm;
+        front.position[ 1 ] = Holder.shift;
+        front.position[ 2 ] -= line->gantry_arm_drop;
+        Place.arm_skin = "uszynienia";
+        Place.arm_skin_default = "uszynienia_used";
+        if( auto const *any { catalog->earthing_arm( "6130" ) }; any != nullptr ) { Place.arm_skin = any->skin; Place.arm_skin_default = any->skin_default; }
+        // płyta na czole dźwigara, wysięgnik wzdłuż toru (układ zwisu: Y wzdłuż dźwigara, X wzdłuż toru): obrót o 90 stopni wokół
+        // pionu - Y modelu na X układu (wysięgnik, -Y modelu, w -X; kierunek NA OKO)
+        double const turn[ 9 ] { 0.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+        std::copy( std::begin( turn ), std::end( turn ), front.rotation );
+        Place.parts.push_back( front );
+        wire = front;
+        auto const *w { line->gantry_arm_wire };
+        wire.position[ 0 ] += turn[ 0 ] * w[ 0 ] + turn[ 1 ] * w[ 1 ] + turn[ 2 ] * w[ 2 ];
+        wire.position[ 1 ] += turn[ 3 ] * w[ 0 ] + turn[ 4 ] * w[ 1 ] + turn[ 5 ] * w[ 2 ];
+        wire.position[ 2 ] += turn[ 6 ] * w[ 0 ] + turn[ 7 ] * w[ 1 ] + turn[ 8 ] * w[ 2 ];
+    }
+    else if( ongantry ) {
         front.part = line->gantry_part;
         front.position[ 1 ] = Holder.shift;
         Place.parts.push_back( front );
@@ -3396,14 +3424,33 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
     }
 }
 
-// izolator sekcyjny w przęśle (Jan 2026-10-25, w połowie; 2026-10-30: "at" m od podwieszenia "after"): na przewodzie jezdnym element
-// izolujący z prowadnicami (ok. 2 m), nad nim izolator w linie nośnej. Do czasu modeli (żywiczny na jeden / dwa przewody, ceramiczny)
-// bryły zastępcze; przewód liczony prosto między końcami (ZAŁOŻENIE: przewód jezdny bez strzałki), lina nośna z parabolą strzałki
-// (w połowie ok. 1/10 wysokości konstrukcyjnej niżej). Element nie wychodzi poza przęsło
+// izolator sekcyjny w przęśle (Jan 2026-10-25, w połowie; 2026-10-30: "at" m od podwieszenia "after"; modele 2026-11-16):
+// "resin" - 7500-01 (sieć z jednym przewodem jezdnym) albo 7500-02 (dwa przewody) wg typu sieci; "ceramic" - stary izolator ESN-106A:
+// element 2065 (model esn_2065) na jednym przewodzie, nad nim w linie nośnej izolator ESN-2025 w łącznikach 2063 z zaciskami
+// klinowymi jak w kotwieniach (5120 zamiast 2027; użytkownik 2026-11-16). Modele leżą wzdłuż przewodu: zero na jednym końcu,
+// drugi koniec ("wire") w -X; linki podwieszające z uszu eye_1..eye_4 do liny nośnej w "V" (para uszu do jednego punktu liny, karta).
+// Przewód liczony prosto między końcami (ZAŁOŻENIE: bez strzałki), lina nośna z parabolą (w połowie ok. 1/10 wysokości
+// konstrukcyjnej niżej). Element nie wychodzi poza przęsło. Bez modelu linii nośnej (7500) i łącznika 2063 - bryły zastępcze
+struct section_model {
+    char const *model;
+    double length;              // od zera do punktu "wire" (wzdłuż -X)
+    double eyes[ 4 ][ 3 ];      // eye_1..eye_4 (1, 2 - jedna para, 3, 4 - druga)
+};
+// z modeli w G:\Maszyna2510\models\siec_trakcyjna\components (2026-11-16); esn_2065 - WYMIARY NA OKO z rysunku ESN-106A
+// (modelu jeszcze nie było: do poprawki wg punktów modelu)
+section_model const kSection7500_1 { "7500-01", 2.906, { { -0.8157, -0.1674, 0.0825 }, { -0.8157, 0.1672, 0.0825 }, { -2.0724, -0.1674, 0.0825 }, { -2.0724, 0.1672, 0.0825 } } };
+section_model const kSection7500_2 { "7500-02", 2.906, { { -0.8257, -0.2033, 0.0825 }, { -0.8257, 0.2031, 0.0825 }, { -2.0799, -0.2033, 0.0825 }, { -2.0799, 0.2031, 0.0825 } } };
+section_model const kSection2065 { "esn_2065", 1.30, { { -0.20, -0.10, 0.35 }, { -0.20, 0.10, 0.35 }, { -1.10, -0.10, 0.35 }, { -1.10, 0.10, 0.35 } } };
+double constexpr kSectionHangerRadius { 0.0025 };   // linka Cu 10 mm2
+double constexpr kSectionLink2063 { 0.30 };         // łącznik płaski 2063 - NA OKO (pół długości ESN-2025, rysunek 106A)
+double constexpr kSectionClamp { 0.058 };           // zacisk 5120: zero - wejście liny (jak w kotwieniach)
+double constexpr kSectionRopeInsulator { 0.6004 };  // ESN-2025: zero - hole_1
+
 void
-section_insulator( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
+section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
     auto const &data { Chain.data };
     auto const offset { data.anchor_start.empty() ? 0u : 1u };
+    auto const *catalog { cantilevers() };
     for( auto const &insulator : data.insulators ) {
         auto const found { std::find( data.suspensions.begin(), data.suspensions.end(), insulator.after ) };
         if( found == data.suspensions.end() || static_cast<std::size_t>( found - data.suspensions.begin() ) + offset != Span ) { continue; }
@@ -3412,16 +3459,73 @@ section_insulator( scene_chain const &Chain, std::size_t const Span, std::vector
         if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) ) { return; }
         glm::dvec3 const a { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, b { wb[ 0 ], wb[ 1 ], wb[ 2 ] };
         auto const ceramic { insulator.kind == "ceramic" };
+        auto const *type { data.type.empty() ? nullptr : catenary::types().find( data.type ) };
+        auto const &element { ceramic ? kSection2065 : ( type != nullptr && type->type.contact_count >= 2 ? kSection7500_2 : kSection7500_1 ) };
         auto const length { std::max( glm::length( b - a ), 1e-3 ) };
-        auto const half { ( ceramic ? 1.6 : 2.0 ) * 0.5 };
+        auto const half { 0.5 * element.length };
         auto const t { insulator.at < 0.0 ? 0.5 : std::clamp( insulator.at / length, std::min( 0.5, half / length ), std::max( 0.5, 1.0 - half / length ) ) };
+        auto const along { ( b - a ) / length };
         auto const wire { a + ( b - a ) * t };
         auto const height { 0.5 * ( ( ra[ 1 ] - wa[ 1 ] ) + ( rb[ 1 ] - wb[ 1 ] ) ) };
         glm::dvec3 const ropea { ra[ 0 ], ra[ 1 ], ra[ 2 ] }, ropeb { rb[ 0 ], rb[ 1 ], rb[ 2 ] };
-        auto const rope { ropea + ( ropeb - ropea ) * t - glm::dvec3 { 0.0, 0.4 * height * t * ( 1.0 - t ), 0.0 } };
-        auto const along { b - a };
-        add_box( Solid, wire + glm::dvec3 { 0.0, 0.06, 0.0 }, along, ceramic ? 1.6 : 2.0, ceramic ? 0.12 : 0.08 );   // element izolujący z prowadnicami
-        add_box( Solid, rope, along, 0.6, 0.07 );                                                               // izolator w linie nośnej
+        auto const ropeat = [ & ]( double const T ) { return ropea + ( ropeb - ropea ) * T - glm::dvec3 { 0.0, 0.4 * height * T * ( 1.0 - T ), 0.0 }; };
+        auto const rope { ropeat( t ) };
+        // część z zerem w From, osią -X wzdłuż Direction (poziomo); zwraca położenie punktu Point modelu w scenerii
+        auto const spawn = [ & ]( std::string const &Part, glm::dvec3 const &From, glm::dvec3 Direction, double const ( *Points )[ 3 ], int const Count, glm::dvec3 *Out ) {
+            Direction.y = 0.0;
+            if( glm::length( Direction ) < 1e-6 ) { return; }
+            Direction = glm::normalize( Direction );
+            // kierunek "do konstrukcji" (Y modelu) prostopadły; z dwóch możliwych ten, przy którym +X modelu wypada w -Direction
+            auto heading { std::atan2( -Direction.z, Direction.x ) };
+            catenary::cantilever_placement probe;
+            probe.position[ 0 ] = 1.0;
+            for( int pass = 0; pass < 2; ++pass ) {
+                auto const moved { catenary::cantilever_to_scene( probe, heading ) };
+                if( moved.offset[ 0 ] * Direction.x + moved.offset[ 2 ] * Direction.z < 0.0 ) { break; }
+                heading += M_PI;
+            }
+            catenary::cantilever_placement placement;
+            for( int k = 0; k < Count; ++k ) {
+                catenary::cantilever_placement point;
+                std::copy( std::begin( Points[ k ] ), std::end( Points[ k ] ), point.position );
+                auto const moved { catenary::cantilever_to_scene( point, heading ) };
+                Out[ k ] = From + glm::dvec3 { moved.offset[ 0 ], moved.offset[ 1 ], moved.offset[ 2 ] };
+            }
+            if( catalog == nullptr ) { return; }
+            auto const scened { catenary::cantilever_to_scene( placement, heading ) };
+            auto const entry {
+                "node " + text_number( data.range_max > 0.0 ? data.range_max : 1000.0, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 "
+                + catalog->models() + Part + ".t3d " + kFittingSkin
+                + " angles " + text_number( scened.angles[ 0 ] ) + " " + text_number( scened.angles[ 1 ] ) + " " + text_number( scened.angles[ 2 ] ) + " endmodel" };
+            glm::dvec3 const at { From.x + scened.offset[ 0 ], From.y + scened.offset[ 1 ], From.z + scened.offset[ 2 ] };
+            if( auto *model { simulation::State.create_model( entry, "none", at ) }; model != nullptr ) {
+                catenary_part_detach( model );
+                part_rail_near( model, Chain.file, at );
+                Chain.span_parts[ Span ].push_back( model );
+            }
+        };
+        // element na przewodzie: zero na końcu od strony "a", drugi koniec w stronę "b"
+        glm::dvec3 eyes[ 4 ];
+        spawn( element.model, wire - along * half, along, element.eyes, 4, eyes );
+        // linki podwieszające w "V": para uszu do punktu liny nad środkiem pary
+        for( int pair = 0; pair < 2; ++pair ) {
+            auto const middle { ( eyes[ 2 * pair ] + eyes[ 2 * pair + 1 ] ) * 0.5 };
+            auto const top { ropeat( std::clamp( t + glm::dot( middle - wire, along ) / length, 0.0, 1.0 ) ) };
+            for( int side = 0; side < 2; ++side ) { add_tube( Solid, { eyes[ 2 * pair + side ], top }, kSectionHangerRadius ); }
+        }
+        // lina nośna: stary - ESN-2025 w łącznikach 2063 (bryła zastępcza) z zaciskami 5120; nowy - izolator liny bryłą zastępczą
+        auto const ropealong { glm::length( ropeb - ropea ) > 1e-6 ? glm::normalize( ropeb - ropea ) : along };
+        if( ceramic ) {
+            spawn( "esn_2025", rope - ropealong * ( 0.5 * kSectionRopeInsulator ), ropealong, nullptr, 0, nullptr );
+            for( int side = -1; side <= 1; side += 2 ) {
+                auto const inner { rope + ropealong * ( side * 0.5 * kSectionRopeInsulator ) };
+                add_box( Solid, inner + ropealong * ( side * 0.5 * kSectionLink2063 ), ropeb - ropea, kSectionLink2063, 0.04 );
+                spawn( "5120-01", inner + ropealong * ( side * ( kSectionLink2063 + kSectionClamp ) ), ropealong * double( side ), nullptr, 0, nullptr );
+            }
+        }
+        else {
+            add_box( Solid, rope, ropeb - ropea, 0.6, 0.07 );
+        }
         return;
     }
 }
@@ -3476,6 +3580,9 @@ rebuild_span( scene_chain &Chain, std::size_t const Span ) {
 void
 rebuild_span_only( scene_chain &Chain, std::size_t const Span ) {
     if( Span >= Chain.spans.size() ) { return; }
+    if( Chain.span_parts.size() < Chain.spans.size() ) { Chain.span_parts.resize( Chain.spans.size() ); }
+    for( auto *part : Chain.span_parts[ Span ] ) { catenary_part_delete( part ); }
+    Chain.span_parts[ Span ].clear();
     auto const body { span_body( Chain, Span ) };
     // przęsło już stoi (edytor): wczytane od nowa w miejscu, bez nowego fragmentu w banku geometrii sekcji
     // (to w GL 4.6 przesyłało całą sekcję na kartę co klatkę przy przeciąganiu suwaka - Jan 2026-11-06)
@@ -3507,7 +3614,7 @@ rebuild_span_only( scene_chain &Chain, std::size_t const Span ) {
         }
         // przęsło naprężenia zwarte: łącznik 33-0640 za słupem krzyżowym
         overlap_connector( Chain, Span, rope );
-        // izolator sekcyjny w połowie przęsła (bryła zastępcza do czasu modeli)
+        // izolator sekcyjny (modele; części przęsła stawiane od nowa razem z nim)
         section_insulator( Chain, Span, rope );
         // izolowane przęsło naprężenia: izolatory w przewodzie i linie schodzących do kotwienia, przy słupie krzyżowym
         overlap_insulators( Chain, Span, rope );
@@ -3526,6 +3633,8 @@ rebuild_chain( scene_chain &Chain ) {
     }
     assemble_middle( Chain );
     for( auto *span : Chain.spans ) { if( span != nullptr ) { catenary_span_delete( span ); } }
+    for( auto &parts : Chain.span_parts ) { for( auto *part : parts ) { catenary_part_delete( part ); } }
+    Chain.span_parts.clear();
     Chain.spans.assign( Chain.removed || Chain.data.suspensions.size() < 2 ? 0 : chain_points( Chain ) - 1, nullptr );
     // odciągi sieci: lina nośna w ich miejscu z całej rozpiętości, odciągi złożone od nowa
     // (przed powiązaniem scenerii tylko lina - odciągi złoży catenary_scene_resolve, inaczej części stałyby dwa razy)

@@ -187,14 +187,17 @@ struct gantry {
 // albo wysięgnik obrócony od toru (na tylnej ścianie słupa), raise - przesunięcie w pionie od położenia domyślnego (ujemne w dół)
 // shift - zwis bramki: przesunięcie uchwytu 6840 wzdłuż dźwigara od osi zwisu (Jan 2026-11-09); nojumper - bez przyłącza 13-0885
 // (linki od liny do konstrukcji; domyślnie na każdym słupie)
+// longer - wysięgnik dłuższy (6131 zamiast 6130; wpis "long" wysięgnika w traction_supports.txt; Jan 2026-11-16); na zwisie bramki
+// arm - wysięgnik 6132 na dźwigarze zamiast uchwytu 6840
 struct earthing_holder {
     std::string pole;
     bool        arm { false };
+    bool        longer { false };
     bool        away { false };
     double      raise { 0.0 };
     double      shift { 0.0 };
     bool        nojumper { false };
-    bool plain() const { return false == arm && false == away && raise == 0.0 && shift == 0.0 && false == nojumper; }
+    bool plain() const { return false == arm && false == longer && false == away && raise == 0.0 && shift == 0.0 && false == nojumper; }
 };
 
 // sekcja uszynienia grupowego (Jan 2026-11-09): "from <podwieszenie> to <podwieszenie>" - słupy pomiędzy wyznacza exe po przęsłach

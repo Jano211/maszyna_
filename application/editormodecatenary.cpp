@@ -4999,6 +4999,8 @@ void catenary_editor::render_catenary_earthing_ui()
 					holder.shift = std::round(shift * 100.0f) / 100.0;
 					changed = true;
 				}
+				ImGui::SameLine();
+				changed |= ImGui::Checkbox(STR_C("Earthing arm 6132"), &holder.arm);
 			}
 			else
 			{
@@ -5010,6 +5012,13 @@ void catenary_editor::render_catenary_earthing_ui()
 					holder.arm = (arm == 1);
 					changed = true;
 				}
+				if (holder.arm)
+				{
+					ImGui::SameLine();
+					changed |= ImGui::Checkbox(STR_C("Long (6131)"), &holder.longer);
+				}
+				else
+					holder.longer = false;
 				ImGui::SameLine();
 				changed |= ImGui::Checkbox(STR_C("Away from the track"), &holder.away);
 				auto raise{static_cast<float>(holder.raise)};

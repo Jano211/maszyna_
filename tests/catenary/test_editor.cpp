@@ -644,6 +644,11 @@ int main( int, char *argv[] ) {
         arm.raise = -3.0; custom.set_holder( arm );
         good6130 = good6130 && catenary_earthing_update( 0, custom ) && catenary_earthing_holder_text( 0, "e2" ).find( "6130-02" ) == 0;
         std::printf( "    e2 trzy metry nizej: %s\n", catenary_earthing_holder_text( 0, "e2" ).c_str() );
+        // dłuższy wysięgnik (6131, Jan 2026-11-16): "long" w zapisie i mocowanie 6131
+        arm.raise = -0.5; arm.longer = true; custom.set_holder( arm );
+        good6130 = good6130 && catenary_earthing_update( 0, custom ) && catenary_earthing_holder_text( 0, "e2" ).find( "6131-01" ) == 0
+            && catenary::write_earthing( custom ).find( "holder e2 arm long raise -0.5" ) != std::string::npos;
+        std::printf( "    e2 dlugi: %s\n", catenary_earthing_holder_text( 0, "e2" ).c_str() );
         check( good6130, "uszynienie: wysiegnik 6130 z mocowaniem wg glebokosci slupa, tyl 6130-00 bez obrotu, tekstura uszynienia, uchwyt od toru, wysokosc; zapis i odczyt" );
     }
 
@@ -876,9 +881,19 @@ int main( int, char *argv[] ) {
         auto good { problems.empty() && parsed.chains.size() == 1 && catenary::write_chain( parsed.chains.front() ) == written && written.find( " insulator i2 ceramic pwr09" ) != std::string::npos };
         { std::ofstream out { "tests/catenary/td_izolator_test.scm", std::ios::binary }; out << text; }
         catenary_scene_clear(); errors.clear(); mock_span_bodies.clear(); mock_span_names.clear();
+        auto const madefrom { simulation::State.created.size() };
         cParser directive( "td_izolator_test.scm endcatenary" );
         catenary_scene_load( directive );
         catenary_scene_resolve();
+        // stary izolator (ceramic, ESN-106A): element esn_2065, w linie nośnej ESN-2025 i dwa zaciski 5120 (modele 2026-11-16)
+        std::map<std::string, int> sectionparts;
+        for( auto i { madefrom }; i < simulation::State.created.size(); ++i ) {
+            for( auto const *name : { "esn_2065", "esn_2025", "5120-01", "7500-01", "7500-02" } ) {
+                if( simulation::State.created[ i ].entry.find( std::string( "components/" ) + name + ".t3d" ) != std::string::npos ) { ++sectionparts[ name ]; }
+            }
+        }
+        std::printf( "  izolator sekcyjny ceramic: esn_2065 %d, esn_2025 %d, 5120 %d\n", sectionparts[ "esn_2065" ], sectionparts[ "esn_2025" ], sectionparts[ "5120-01" ] );
+        good = good && sectionparts[ "esn_2065" ] >= 1 && sectionparts[ "esn_2025" ] >= 1 && sectionparts[ "5120-01" ] >= 2 && sectionparts[ "7500-01" ] == 0;
         good = good && mock_span_bodies.size() == 3 && mock_span_bodies[ 0 ].find( "pwr01" ) == 0 && mock_span_bodies[ 1 ].find( "pwr01" ) == 0 && mock_span_bodies[ 2 ].find( "pwr09" ) == 0 && errors.empty();
         std::remove( "tests/catenary/td_izolator_test.scm" );
         check( good, "izolator sekcyjny: zapis i odczyt, przesla za nim zasila jego zasilacz" );

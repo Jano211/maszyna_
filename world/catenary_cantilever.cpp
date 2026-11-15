@@ -293,6 +293,12 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     if( index < count && Tokens[ index ] == "top" ) { ++index; number( line.gantry_top, good ); }
                     if( index < count && Tokens[ index ] == "wire" ) { ++index; for( auto &value : line.gantry_wire ) { number( value, good ); } }
                 }
+                else if( key == "gantry_arm" ) {
+                    // gantry_arm <model> drop <m> wire <x> <y> <z>
+                    if( index < count ) { line.gantry_arm = Tokens[ index++ ]; } else { good = false; }
+                    if( index < count && Tokens[ index ] == "drop" ) { ++index; number( line.gantry_arm_drop, good ); }
+                    if( index < count && Tokens[ index ] == "wire" ) { ++index; for( auto &value : line.gantry_arm_wire ) { number( value, good ); } }
+                }
                 else if( key == "brackets" ) { if( index < count ) { line.brackets = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "jumper" ) {
                     // jumper diameter <m> along <m> drop <m>
@@ -349,6 +355,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 if( key == "endearthing_arm" ) { closed = true; break; }
                 if( key == "back" ) { if( index < count ) { arm.back = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "body" ) { if( index < count ) { arm.body = Tokens[ index++ ]; } else { good = false; } }
+                else if( key == "long" ) { if( index < count ) { arm.longer = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "wire" ) { for( auto &value : arm.wire ) { number( value, good ); } }
                 else if( key == "plate" ) { number( arm.plate, good ); }
                 else if( key == "skin" ) { if( index < count ) { arm.skin = Tokens[ index++ ]; } else { good = false; } }

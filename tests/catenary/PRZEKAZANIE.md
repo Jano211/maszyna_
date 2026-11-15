@@ -15,12 +15,37 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   („siec” w nazwie tekstury osprzętu → „uszynienia”, dopisek zużycia zostaje). Uchwyt 6120 dalej na osprzęcie.
 - Tekstury uszynienia posortowane na G: na wzór 161x/lpn: `textures/siec_trakcyjna/uszynienia_{new,used,old,extreme}.tga` + `.mat`,
   `normals/uszynienia_<zużycie>_normal|_specgloss`, AO pominięte. Stare podfoldery new/used/old/extreme – do usunięcia przez użytkownika.
-- `G:\Maszyna2510\data\traction_supports.txt` wgrany (CRLF, md5 15b96ef39946d5b0bb3acb6c0f779b60).
+- `G:\Maszyna2510\data\traction_supports.txt` wgrany (CRLF, md5 b4cea2687dfb826b736700c54546bb14 po 6131/6132), lang/editor_pl.po z G: + 2 nowe wpisy (G: ma wpisy spoza tej gałęzi – NIE nadpisywać wersją z repo).
+
+**Zrobione 16.11 w nocy (testy te OK, w exe NIESPRAWDZONE):**
+- 6131 = ten sam wysięgnik co 6130, tylko dłuższy: wpis `earthing_arm 6131` (lina Y −1,3151), 6130 ma `long 6131`; w uchwycie
+  słowo `long` (edytor: „Długi (6131)” przy wysięgniku). 
+- 6132-01 na dźwigarach bramek: `gantry_arm 6132-01 drop 0.90 wire 0 −1.1319 0.7776` w `earthing_line`; na zwisie bramki `arm`
+  uchwytu stawia 6132 zamiast 6840 (edytor: „Wysięgnik 6132”). Zero 0,90 pod zerem 6840 (≈ dół dźwigara 600×800), obrót 90° –
+  wysięgnik wzdłuż toru (−X układu zwisu). WSZYSTKO NA OKO – do obejrzenia w exe.
+- Izolatory sekcyjne z modelami zamiast brył: `resin` → 7500-01 / 7500-02 wg liczby przewodów jezdnych typu sieci, `ceramic` → stary
+  ESN-106A: `esn_2065` (WYMIARY NA OKO w kodzie: długość 1,30, uszy X −0,20/−1,10, Y ±0,10, Z 0,35 – po eksporcie modelu przepisać
+  z jego punktów `wire`/`eye_1..4`; stałe kSection* w catenary_scene.cpp), w linie nośnej `esn_2025` w łącznikach 2063 (bryła
+  zastępcza 0,30 m – modelu brak) z zaciskami klinowymi `5120-01` (zamiast 2027, użytkownik 16.11). Linki podwieszające w „V” z par
+  uszu do liny (Cu 10). Nad 7500 izolator w linie nośnej nadal bryłą zastępczą (nie wiadomo, jaki model). 2066 (płozy) – modelu brak.
+  Części przęsła trzymane w `scene_chain::span_parts` (stawiane od nowa z przęsłem).
+
+**DO ZROBIENIA (ustalenia 16.11):**
+1. Przewód wzmacniający – „analogicznie do uszynienia”, NA OKO z papierów (ESN-98, 2141, 2259, 2338A, 2510, 2635A, 2363A, 57, 61,
+   94A, 96, 97B; notatki w KATALOG_ESN.md). Propozycja: rodzaj liny w tym samym mechanizmie co uszynienie (sekcje od słupa do słupa,
+   uchwyty na słupach), jedna zakładka edytora „Przewody na słupach” z wyborem: uszynienie / wzmacniający / (później LPN).
+   Wysięgniki: 4910/4920 (eye Z −0,05; krótki/długi), 4930/4940 (eye Z 0,85 – esowe), wykonania: -01 słupy 1601, 1602; -02 słupy
+   1604, 1605, 1901 (półbramki), 1711 (karta, użytkownik 16.11); słupy 150x analogicznie. 4950-01 na dźwigar bramki (jak 6132).
+   Stara norma: ESN-2141-<profil ceownika 12..20>, ESN-2510-<12..18> (długi), ESN-2635A (ŻK) – końcówka nazwy = ceownik słupa,
+   na który siadają, bez regulacji (dobór wg profilu słupa, nie wg głębokości). Uchwyt na `eye`: izolator obrotowy
+   0301-05/051/07/071/09/091 (punkt `wire`). Przewody AFL95/185/240. W przyszłości przewód wzmacniający może zmniejszać opór sekcji
+   (połączony równolegle z siecią na końcach – 57/94A, 61/96/97B).
+2. Stary izolator 2065: przejazd > 40 km/h – mocne iskrzenie; > 50 km/h – 75% szans na złamanie pantografu (ew. zerwanie sieci,
+   jeśli kiedyś będzie). Iskrzenie: catenary_arcing (przejazd przez izolator sekcyjny jest już obsługiwany).
+3. Modele do zrobienia przez użytkownika: 2063, 2066, eksport esn_2065.
 
 **Nowe modele w `components` (16.11), jeszcze NIEPODPIĘTE w exe:**
-- `6131-01..05` – dłuższy wysięg uszyniający (lina Y −1,3151; -04 −1,4121, -05 −1,4396; Z 0,7496); `6132-01` – płyta ±0,33,
-  lina (0, −1,1319, 0,7776), własny tył. Do jakich słupów – DO USTALENIA z użytkownikiem. `6130-00` pasuje do wszystkich poza
-  ESN-*, 4950 i 6132-01 (użytkownik).
+- `6130-00` pasuje do wszystkich poza ESN-*, 4950 i 6132-01 (użytkownik). 6131 i 6132 – podpięte (wyżej).
 - Wysięgniki przewodu wzmacniającego (punkt `eye` = zaczep uchwytu 0301): `4910-01/02`, `4920-01/02` (eye Z −0,05; Y −0,785 /
   −1,785), `4930-01/02`, `4940-01/02` (eye Z 0,8526; Y −1,335 / −1,634), `4950-01` (płyta ±0,33, własny tył; eye −1,1255 / 0,8807),
   -01 śruby do Y 0,293, -02 do 0,253 (dwa warianty – tak ma być, użytkownik 16.11); stara norma: `ESN-2141-12..20` (eye −0,5633 /

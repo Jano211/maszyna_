@@ -216,6 +216,7 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                     while( index < count ) {
                         auto const &flag { Tokens[ index ] };
                         if( flag == "arm" ) { holder.arm = true; ++index; }
+                        else if( flag == "long" ) { holder.longer = true; ++index; }
                         else if( flag == "away" ) { holder.away = true; ++index; }
                         else if( flag == "nojumper" ) { holder.nojumper = true; ++index; }
                         else if( ( flag == "raise" || flag == "shift" ) && index + 1 < count ) {
@@ -537,6 +538,7 @@ std::string write_earthing( earthing const &Entry ) {
         if( holder.plain() ) { continue; }
         text += " holder " + holder.pole;
         if( holder.arm ) { text += " arm"; }
+        if( holder.longer ) { text += " long"; }
         if( holder.away ) { text += " away"; }
         if( holder.raise != 0.0 ) { text += " raise " + number( std::round( holder.raise * 1000.0 ) / 1000.0 ); }
         if( holder.shift != 0.0 ) { text += " shift " + number( std::round( holder.shift * 1000.0 ) / 1000.0 ); }

@@ -12846,3 +12846,9 @@ msgstr "Wzdłuż dźwigara"
 
 msgid "Connection 13-0885"
 msgstr "Przyłącze 13-0885"
+
+msgid "Long (6131)"
+msgstr "Długi (6131)"
+
+msgid "Earthing arm 6132"
+msgstr "Wysięgnik 6132"
