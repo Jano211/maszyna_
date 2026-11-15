@@ -189,15 +189,19 @@ struct gantry {
 // (linki od liny do konstrukcji; domyślnie na każdym słupie)
 // longer - wysięgnik dłuższy (6131 zamiast 6130; wpis "long" wysięgnika w traction_supports.txt; Jan 2026-11-16); na zwisie bramki
 // arm - wysięgnik 6132 na dźwigarze zamiast uchwytu 6840
+// przewód wzmacniający (Jan 2026-11-16): feeder_arm - wysięgnik inny niż domyślny linii (np. 4920 zamiast 4910; wpis "feeder_arm
+// <nazwa>"), fresh - uchwyt na nowym izolatorze (0301-051 zamiast -05 itd.; "new"); away - tu: do toru (domyślnie przewód od toru)
 struct earthing_holder {
     std::string pole;
+    std::string feeder_arm;
+    bool        fresh { false };
     bool        arm { false };
     bool        longer { false };
     bool        away { false };
     double      raise { 0.0 };
     double      shift { 0.0 };
     bool        nojumper { false };
-    bool plain() const { return false == arm && false == longer && false == away && raise == 0.0 && shift == 0.0 && false == nojumper; }
+    bool plain() const { return feeder_arm.empty() && false == fresh && false == arm && false == longer && false == away && raise == 0.0 && shift == 0.0 && false == nojumper; }
 };
 
 // sekcja uszynienia grupowego (Jan 2026-11-09): "from <podwieszenie> to <podwieszenie>" - słupy pomiędzy wyznacza exe po przęsłach
@@ -210,6 +214,7 @@ struct earthing {
     double      range_min { 0.0 };
     std::string from, to;                   // sekcja: pierwszy i ostatni słup (puste - lista "poles")
     std::string start, end;                 // rodzaje końców: anchor, plain, split albo puste
+    std::string line;                       // przewód (wpis earthing_line, "line <nazwa>"); pusty - pierwszy (AFL120 uszynienia)
     bool section() const { return false == from.empty() && false == to.empty(); }
     std::vector<std::string> poles;
     std::vector<earthing_holder> holders;   // tylko słupy z ustawieniami innymi niż domyślne

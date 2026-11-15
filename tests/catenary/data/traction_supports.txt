@@ -120,34 +120,88 @@ endearthing_line
 earthing_arm 6130 long 6131 back 6130-00 wire 0.0 -0.7962 0.7496 plate 0.09 skin uszynienia skin_default uszynienia_used mount 6130-01 0.223 mount 6130-02 0.243 mount 6130-03 0.263 endearthing_arm
 earthing_arm 6131 back 6130-00 wire 0.0 -1.3151 0.7496 plate 0.09 skin uszynienia skin_default uszynienia_used mount 6131-01 0.223 mount 6131-02 0.243 mount 6131-03 0.263 endearthing_arm
 
+// ---- przewod wzmacniajacy (2026-11-16; uzytkownik: "analogicznie do uszynienia", NA OKO z papierow) -----------------
+// Te same sekcje co uszynienie ("node ... earthing line <nazwa> from <slup> to <slup> ... endearthing"), ale linia ma slowo "feeder":
+//   na slupach (slowo "feeder" slupa) wysiegnik z listy "arms" (pierwszy domyslny, inny ustawieniem uchwytu "feeder_arm <nazwa>"),
+//   plyta tuz pod wierzchem slupa, domyslnie od toru ("away" przeklada do toru); w punkcie eye wysiegnika uchwyt na izolatorze
+//   obrotowym 0301 ("insulator <czesc> wire <z>" - Z punktu wire modelu; "insulator_new" - na nowych izolatorach, ustawienie "new");
+//   na zwisach bramek wysiegnik 4950-01 (gantry_arm, ulozony jak 6132 - NA OKO); bez przylaczy 13-0885.
+//   -05 AFL95, -07 AFL185, -09 AFL240; "1" na koncu (-051/-071/-091) - to samo na nowych izolatorach (uzytkownik 2026-11-16).
+//   Koniec "anchor" = kotwienie przewodu wzmacniajacego, karta 23-0419 starego Kolprojektu (kolprojekt1.pdf s. 157): od czola
+//   konstrukcji 4450-1, 4710-1, izolator 7210-1 (= ESN-2025, model esn_2025), 4420-1, zacisk 5180-4 (AFL50-95) / 5180-7 (AFL120-185) -
+//   modelu 5180-04 brak, wszedzie 5180-07; tasma Al 0,70 m i koncowka 5630-5/-8 do polaczenia elektrycznego - bez modeli. Przegub 4450
+//   w uchwytach kotwienia stalego sieci (brackets 0403, jak w uszynieniu). "plain" i "split" - nie ma (na kartach brak).
+//   ZALOZENIA: srednice i masy AFL-6 95/185/240 z tablic producentow (nie z katalogu), naciag 400 daN (w papierach brak) - do potwierdzenia.
+earthing_line AFL95 feeder description AFL 95 - przewod wzmacniajacy enddescription diameter 0.0135 mass 0.382 tension 400
+  arms 4910 4920 4930 4940 ESN-2141 ESN-2510 ESN-2635A
+  insulator 0301-05 wire -0.52
+  insulator_new 0301-051 wire -0.64
+  gantry_arm 4950-01 drop 0.0 wire 0.0 -1.12552 0.88067
+  guide 5180-07 -0.14724 0.0 -0.00227 -0.07392 0.0 -0.03375 -0.04314 0.00006 -0.07688
+  brackets 0403
+  chain anchor 4450-01 0.0747 4710-01 0.075 esn_2025 0.60043 4420-01 0.93 5180-07 0.14724
+endearthing_line
+earthing_line AFL185 feeder description AFL 185 - przewod wzmacniajacy enddescription diameter 0.0190 mass 0.755 tension 400
+  arms 4910 4920 4930 4940 ESN-2141 ESN-2510 ESN-2635A
+  insulator 0301-07 wire -0.52
+  insulator_new 0301-071 wire -0.64
+  gantry_arm 4950-01 drop 0.0 wire 0.0 -1.12552 0.88067
+  guide 5180-07 -0.14724 0.0 -0.00227 -0.07392 0.0 -0.03375 -0.04314 0.00006 -0.07688
+  brackets 0403
+  chain anchor 4450-01 0.0747 4710-01 0.075 esn_2025 0.60043 4420-01 0.93 5180-07 0.14724
+endearthing_line
+earthing_line AFL240 feeder description AFL 240 - przewod wzmacniajacy enddescription diameter 0.0218 mass 0.964 tension 400
+  arms 4910 4920 4930 4940 ESN-2141 ESN-2510 ESN-2635A
+  insulator 0301-09 wire -0.56
+  insulator_new 0301-091 wire -0.68
+  gantry_arm 4950-01 drop 0.0 wire 0.0 -1.12552 0.88067
+  guide 5180-07 -0.14724 0.0 -0.00227 -0.07392 0.0 -0.03375 -0.04314 0.00006 -0.07688
+  brackets 0403
+  chain anchor 4450-01 0.0747 4710-01 0.075 esn_2025 0.60043 4420-01 0.93 5180-07 0.14724
+endearthing_line
+
+// wysiegniki przewodu wzmacniajacego (modele 2026-11-16, punkt eye = zaczep uchwytu 0301): mocowanie wg glebokosci slupa jak 6130
+// (-02 sruby do Y 0,253 -> slup do 0,223; -01 do 0,293 -> do 0,263; uzytkownik: wlasciwe -01 na 1601/1602, -02 na 1604/1605/1701/1711,
+// na innych slupach tylko gdy pasuja wymiarem). 4910 krotki, 4920 dlugi, 4930 / 4940 esowe (eye nad plyta).
+// Stara norma: ESN-2141 (wysieg 650) i ESN-2510 (wydluzony, 1900) - wykonanie wg profilu ceownika slupa (width), bez regulacji;
+// ESN-2635A - na slup zelbetowy ZK (takich slupow w danych brak - mocowanie dopuszczone do 0,40, wybierac recznie).
+earthing_arm 4910 wire 0.0 -0.78512 -0.05265 plate 0.09 mount 4910-02 0.223 mount 4910-01 0.263 endearthing_arm
+earthing_arm 4920 wire 0.0 -1.78474 -0.05211 plate 0.09 mount 4920-02 0.223 mount 4920-01 0.263 endearthing_arm
+earthing_arm 4930 wire 0.0 -1.33503 0.85265 plate 0.09 mount 4930-02 0.223 mount 4930-01 0.263 endearthing_arm
+earthing_arm 4940 wire 0.0 -1.63444 0.85265 plate 0.09 mount 4940-02 0.223 mount 4940-01 0.263 endearthing_arm
+earthing_arm ESN-2141 wire 0.0 -0.56326 -0.0526 plate 0.08 profile ESN-2141-12 0.12 profile ESN-2141-14 0.14 profile ESN-2141-16 0.16 profile ESN-2141-18 0.18 profile ESN-2141-20 0.20 endearthing_arm
+earthing_arm ESN-2510 wire 0.0 -1.83554 -0.05211 plate 0.08 profile ESN-2510-12 0.12 profile ESN-2510-14 0.14 profile ESN-2510-16 0.16 profile ESN-2510-18 0.18 endearthing_arm
+earthing_arm ESN-2635A wire 0.0 -0.57826 -0.0526 plate 0.08 mount ESN-2635A 0.40 endearthing_arm
+
 // ---- slupy -----------------------------------------------------------------------------------------------------
 // uszynienie grupowe: "earthing" = uchwyt liny 6120 (karta 0805) na gorze slupa; wykonania wg Jana 2026-10-25: -01 C120-160,
-// -02 C180/200, -04 maszty bramek, -07 dwuteowniki (z tylem 6120-08); betony bez uszynienia
-pole 1701 model siec_trakcyjna/slupy/1701 skin siec_trakcyjna_ph/beton1 top 7.4600 length 8.7500 depth 0.1750 0.3850 width 0.2100 mount_max 7.3000 strut 4610-03 stay 4620-03 steady 4630-03 steady_console 4690-03 endpole   // slup betonowy (2026-10-11); wzdluz toru 210 mm stale na calej wysokosci, tak samo 1711 (Jan 2026-10-24)
-pole 1665 model siec_trakcyjna/slupy/1665 foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2000 0.2000 mount_max 8.0500 strut 4610-07 stay 4620-07 steady 4630-07 console 4890-02 earthing 6120-07 earthing_back 6120-08 earthing_arm 6130 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (2026-10-21)
-pole 1666 model siec_trakcyjna/slupy/1666 foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2000 0.2000 mount_max 7.6500 strut 4610-07 stay 4620-07 steady 4630-07 console 4890-02 earthing 6120-07 earthing_back 6120-08 earthing_arm 6130 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (2026-10-21)
-pole 1667 model siec_trakcyjna/slupy/1667 foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2000 0.2000 mount_max 7.2500 strut 4610-07 stay 4620-07 steady 4630-07 console 4890-02 earthing 6120-07 earthing_back 6120-08 earthing_arm 6130 endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (2026-10-21)
+// -02 C180/200, -04 maszty bramek, -07 dwuteowniki (z tylem 6120-08); betony bez uszynienia. "feeder" = slup nosi wysiegniki
+// przewodu wzmacniajacego (49xx / ESN; 2026-11-16 - slupy z 6130 i 1701)
+pole 1701 model siec_trakcyjna/slupy/1701 skin siec_trakcyjna_ph/beton1 top 7.4600 length 8.7500 depth 0.1750 0.3850 width 0.2100 mount_max 7.3000 strut 4610-03 stay 4620-03 steady 4630-03 steady_console 4690-03 feeder endpole   // slup betonowy (2026-10-11); wzdluz toru 210 mm stale na calej wysokosci, tak samo 1711 (Jan 2026-10-24)
+pole 1665 model siec_trakcyjna/slupy/1665 foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2000 0.2000 mount_max 8.0500 strut 4610-07 stay 4620-07 steady 4630-07 console 4890-02 earthing 6120-07 earthing_back 6120-08 earthing_arm 6130 feeder endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (2026-10-21)
+pole 1666 model siec_trakcyjna/slupy/1666 foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2000 0.2000 mount_max 7.6500 strut 4610-07 stay 4620-07 steady 4630-07 console 4890-02 earthing 6120-07 earthing_back 6120-08 earthing_arm 6130 feeder endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (2026-10-21)
+pole 1667 model siec_trakcyjna/slupy/1667 foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2000 0.2000 mount_max 7.2500 strut 4610-07 stay 4620-07 steady 4630-07 console 4890-02 earthing 6120-07 earthing_back 6120-08 earthing_arm 6130 feeder endpole   // dwuteownik 200x200 na fundamencie palowym 1492 (2026-10-21)
 
 // ---- slupy kratowe 161x na fundamentach palowych (2026-10-21) ------------------------------------------------
 // Kratownica wezszym bokiem wzdluz toru; depth = wiekszy wymiar (w glab od toru): u gory i u podstawy, zbieznosc na calej wysokosci.
 // Mocowania: wyk. 10 (C 120-140), czesci -08 (C 160-200) - karta 53-0501. Pale: -11, -11-1 -> 1491; -12, -13 -> 1492; -14, -15 -> 1493.
 // mount_max = wierzch - 0,15 m (jak dwuteowniki 166x; potwierdzone 2026-10-21).
-pole 1611-11 model siec_trakcyjna/slupy/1611-11 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1491-01 top 8.2000 length 8.2000 depth 0.2000 0.3000 width 0.1200 mount_max 8.0500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 endpole   // C120, pal 1491
-pole 1611-11-1 model siec_trakcyjna/slupy/1611-11-1 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1491-01 top 8.2000 length 8.2000 depth 0.2000 0.3000 width 0.1200 mount_max 8.0500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 endpole   // C120E, pal 1491
-pole 1611-12 model siec_trakcyjna/slupy/1611-12 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2300 0.3300 width 0.1400 mount_max 8.0500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 endpole   // C140E, pal 1492
-pole 1611-13 model siec_trakcyjna/slupy/1611-13 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2300 0.3300 width 0.1600 mount_max 8.0500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 endpole   // C160E, pal 1492
-pole 1611-14 model siec_trakcyjna/slupy/1611-14 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1493-01 top 8.2000 length 8.2000 depth 0.2300 0.3300 width 0.1800 mount_max 8.0500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-02 earthing 6120-02 earthing_arm 6130 endpole   // C180E, pal 1493
-pole 1611-15 model siec_trakcyjna/slupy/1611-15 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1493-01 top 8.2000 length 8.2000 depth 0.2300 0.3300 width 0.2000 mount_max 8.0500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-02 earthing 6120-02 earthing_arm 6130 endpole   // C200E, pal 1493
-pole 1613-11 model siec_trakcyjna/slupy/1613-11 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1491-01 top 7.8000 length 7.8000 depth 0.2000 0.3000 width 0.1200 mount_max 7.6500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 endpole   // C120, pal 1491
-pole 1613-11-1 model siec_trakcyjna/slupy/1613-11-1 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1491-01 top 7.8000 length 7.8000 depth 0.2000 0.3000 width 0.1200 mount_max 7.6500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 endpole   // C120E, pal 1491
-pole 1613-12 model siec_trakcyjna/slupy/1613-12 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2300 0.3300 width 0.1400 mount_max 7.6500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 endpole   // C140E, pal 1492
-pole 1613-13 model siec_trakcyjna/slupy/1613-13 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2300 0.3300 width 0.1600 mount_max 7.6500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 endpole   // C160E, pal 1492
-pole 1613-14 model siec_trakcyjna/slupy/1613-14 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1493-01 top 7.8000 length 7.8000 depth 0.2300 0.3300 width 0.1800 mount_max 7.6500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-02 earthing 6120-02 earthing_arm 6130 endpole   // C180E, pal 1493
-pole 1613-15 model siec_trakcyjna/slupy/1613-15 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1493-01 top 7.8000 length 7.8000 depth 0.2300 0.3300 width 0.2000 mount_max 7.6500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-02 earthing 6120-02 earthing_arm 6130 endpole   // C200E, pal 1493
-pole 1614-11 model siec_trakcyjna/slupy/1614-11 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1491-01 top 7.4000 length 7.4000 depth 0.2000 0.3000 width 0.1200 mount_max 7.2500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 endpole   // C120, pal 1491
-pole 1614-11-1 model siec_trakcyjna/slupy/1614-11-1 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1491-01 top 7.4000 length 7.4000 depth 0.2000 0.3000 width 0.1200 mount_max 7.2500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 endpole   // C120E, pal 1491
-pole 1614-12 model siec_trakcyjna/slupy/1614-12 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2300 0.3300 width 0.1400 mount_max 7.2500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 endpole   // C140E, pal 1492
-pole 1614-13 model siec_trakcyjna/slupy/1614-13 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2300 0.3300 width 0.1600 mount_max 7.2500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 endpole   // C160E, pal 1492
+pole 1611-11 model siec_trakcyjna/slupy/1611-11 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1491-01 top 8.2000 length 8.2000 depth 0.2000 0.3000 width 0.1200 mount_max 8.0500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 feeder endpole   // C120, pal 1491
+pole 1611-11-1 model siec_trakcyjna/slupy/1611-11-1 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1491-01 top 8.2000 length 8.2000 depth 0.2000 0.3000 width 0.1200 mount_max 8.0500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 feeder endpole   // C120E, pal 1491
+pole 1611-12 model siec_trakcyjna/slupy/1611-12 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2300 0.3300 width 0.1400 mount_max 8.0500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 feeder endpole   // C140E, pal 1492
+pole 1611-13 model siec_trakcyjna/slupy/1611-13 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1492-01 top 8.2000 length 8.2000 depth 0.2300 0.3300 width 0.1600 mount_max 8.0500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 feeder endpole   // C160E, pal 1492
+pole 1611-14 model siec_trakcyjna/slupy/1611-14 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1493-01 top 8.2000 length 8.2000 depth 0.2300 0.3300 width 0.1800 mount_max 8.0500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-02 earthing 6120-02 earthing_arm 6130 feeder endpole   // C180E, pal 1493
+pole 1611-15 model siec_trakcyjna/slupy/1611-15 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1493-01 top 8.2000 length 8.2000 depth 0.2300 0.3300 width 0.2000 mount_max 8.0500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-02 earthing 6120-02 earthing_arm 6130 feeder endpole   // C200E, pal 1493
+pole 1613-11 model siec_trakcyjna/slupy/1613-11 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1491-01 top 7.8000 length 7.8000 depth 0.2000 0.3000 width 0.1200 mount_max 7.6500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 feeder endpole   // C120, pal 1491
+pole 1613-11-1 model siec_trakcyjna/slupy/1613-11-1 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1491-01 top 7.8000 length 7.8000 depth 0.2000 0.3000 width 0.1200 mount_max 7.6500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 feeder endpole   // C120E, pal 1491
+pole 1613-12 model siec_trakcyjna/slupy/1613-12 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2300 0.3300 width 0.1400 mount_max 7.6500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 feeder endpole   // C140E, pal 1492
+pole 1613-13 model siec_trakcyjna/slupy/1613-13 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1492-01 top 7.8000 length 7.8000 depth 0.2300 0.3300 width 0.1600 mount_max 7.6500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 feeder endpole   // C160E, pal 1492
+pole 1613-14 model siec_trakcyjna/slupy/1613-14 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1493-01 top 7.8000 length 7.8000 depth 0.2300 0.3300 width 0.1800 mount_max 7.6500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-02 earthing 6120-02 earthing_arm 6130 feeder endpole   // C180E, pal 1493
+pole 1613-15 model siec_trakcyjna/slupy/1613-15 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1493-01 top 7.8000 length 7.8000 depth 0.2300 0.3300 width 0.2000 mount_max 7.6500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-02 earthing 6120-02 earthing_arm 6130 feeder endpole   // C200E, pal 1493
+pole 1614-11 model siec_trakcyjna/slupy/1614-11 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1491-01 top 7.4000 length 7.4000 depth 0.2000 0.3000 width 0.1200 mount_max 7.2500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 feeder endpole   // C120, pal 1491
+pole 1614-11-1 model siec_trakcyjna/slupy/1614-11-1 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1491-01 top 7.4000 length 7.4000 depth 0.2000 0.3000 width 0.1200 mount_max 7.2500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 feeder endpole   // C120E, pal 1491
+pole 1614-12 model siec_trakcyjna/slupy/1614-12 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2300 0.3300 width 0.1400 mount_max 7.2500 strut 4610-10 stay 4620-10 steady 4630-10 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 feeder endpole   // C140E, pal 1492
+pole 1614-13 model siec_trakcyjna/slupy/1614-13 skin siec_trakcyjna/161x_old_gray foundation siec_trakcyjna/slupy/1492-01 top 7.4000 length 7.4000 depth 0.2300 0.3300 width 0.1600 mount_max 7.2500 strut 4610-08 stay 4620-08 steady 4630-08 console 4890-03 steady_console 4690-01 earthing 6120-01 earthing_arm 6130 feeder endpole   // C160E, pal 1492
 
 // ---- bramki: slupy, dzwigary, zwisy (2026-10-22) ---------------------------------------------------------------
 // mast <nazwa> model <sciezka> width <wzdluz toru> length <wzdluz dzwigara> height <m> mount <przeswit dolny> <gorny> offset <m> through|end endmast

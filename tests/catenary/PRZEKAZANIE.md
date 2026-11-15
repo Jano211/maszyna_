@@ -1,8 +1,43 @@
-# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-16)
+# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-16 noc)
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – 2026-11-16 (najnowsze) – nowe modele uszynienia i przewodu wzmacniającego
+## START TUTAJ – 2026-11-16 noc (najnowsze) – przewód wzmacniający, stary izolator sekcyjny wg 23-0436
+
+**Zrobione 16.11 w nocy (testy te/tsc/tc/tk OK, składnia plików exe OK, w exe NIESPRAWDZONE):**
+- Przewód wzmacniający = sekcje uszynienia z innym przewodem: wpis `node … earthing line AFL95 from <słup> to <słup> [start/end anchor]
+  [holder <słup> feeder_arm <nazwa> new away raise <m> shift <m>] endearthing`. Linie w traction_supports.txt: `earthing_line AFL95 /
+  AFL185 / AFL240 feeder` z `arms` (4910 domyślny, 4920, 4930, 4940, ESN-2141, ESN-2510, ESN-2635A), `insulator 0301-05/07/09 wire Z`,
+  `insulator_new 0301-051/071/091` (użytkownik: „1” na końcu = to samo na nowych izolatorach), `gantry_arm 4950-01` (na zwisach bramek,
+  ułożony jak 6132 – NA OKO), `chain anchor` = karta 23-0419 starego Kolprojektu (kolprojekt1.pdf s. 157): 4450-1, 4710-1, 7210-1
+  (= ESN-2025, model esn_2025), 4420-1, 5180-07 (5180-04 dla AFL95 – modelu brak), przegub 4450 w uchwytach 0403 jak w uszynieniu.
+  Końcówka 5630 i taśma – bez modeli. Brak `plain` / `split` (na kartach nie ma) – w edytorze koniec „na wysięgniku” albo 23-0419.
+- Wysięgnik na słupie: płyta tuż pod wierzchem słupa (top − plate), domyślnie OD TORU (`away` = do toru; użytkownik 16.11),
+  regulacja wysokości w dół. Wykonanie 49xx wg głębokości słupa jak 6130 (-02 do 0,223, -01 do 0,263); ESN-2141/2510 wg `width`
+  słupa (profil ceownika, wpisy `profile`), ESN-2635A (ŻK) dopuszczony do 0,40 – tylko ręcznie. Słup musi mieć słowo `feeder`
+  (dopisane do wszystkich słupów z 6130 i do 1701 – użytkownik: „właściwe” słupy 1601/1602 (-01) i 1604/1605/1701/1711 (-02) dojdą
+  z modelami, na innych tylko gdy pasuje wymiarem). Uchwyt 0301 zawieszony w `eye` wysięgnika, przewód w jego `wire`.
+- Tekstura: 49xx i 0301 na teksturze osprzętu (role „earthing”); wpis wysięgnika z `skin` przełączy na własną – DO USTALENIA, na czym są.
+- ZAŁOŻENIA (do potwierdzenia): AFL-6 95/185/240 średnica 13,5/19,0/21,8 mm, masa 0,382/0,755/0,964 kg/m, naciąg 400 daN; brak
+  przyłączy do sieci (57/94A/96/97B) – przewód wzmacniający nie zmienia jeszcze prądów.
+- Kod: `earthing.line`, `earthing_holder.feeder_arm/fresh`, `earthing_line.feeder/arms/insulator*/description`, `earthing_arm.profiles`,
+  `cantilever_pole.feeder`; `earthing_place_of(…, Line)` – przewód sekcji (`earthing_line_of`) zamiast pierwszego z danych (też lina,
+  zwis, zawinięcia w zaciskach). Następna sekcja i partner punktu izolującego – tylko z tym samym przewodem. Test `te` 6a7.
+- Edytor (zakładka Uszynienie): wybór „Przewód” (uszynienie / AFL…) dla nowego odcinka, końce 23-0419; klik słupa pokazuje WSZYSTKIE
+  sekcje przez niego (`catenary_earthings_of`) – przy przewodzie wzmacniającym: wysięgnik z listy, „Nowy izolator”, „Do toru”, wysokość;
+  na zwisie bramki: wzdłuż dźwigara + „Nowy izolator”. Lista sekcji: dopisek „wzmacniający <przewód>”, końce brak / 23-0419.
+- Stary izolator sekcyjny (`ceramic`) przerobiony wg karty 23-0436 (kolprojekt1.pdf s. 163; użytkownik: ESN-106 przeniesione do starego
+  Kolprojektu, główne części 7210 = ESN-2025 i 7230): w przewodzie jezdnym `7230-01` (dawniej esn_2065; wymiary dalej NA OKO – po eksporcie
+  przepisać punkty `wire`/`eye_1..4` do kSection7230), w linie nośnej 7210 (esn_2025) w łącznikach 6513-1 (bryła zastępcza) z zaciskami
+  5120 (wg karty 5120-5 – modelu brak, stoi 5120-01), dwie linki L10 pionowo (poz. 12) zamiast „V”. Pozostałe części karty (5110-1,
+  5320-1, 5360-1, 6514-1/-2 płozy, 4230-1, 6301-1, 6311-1) – bez modeli, niepodpięte.
+- G: `data\traction_supports.txt` (md5 664685b769d7803866d99c1e2a318823) i `lang\editor_pl.po` (d2b9759c7732badc74ba894137276b2b, wersja z G: + 12 wpisów).
+
+**Do zrobienia:** obejrzeć w exe (strona wysięgnika, wysokość, izolator 0301 pod eye, kotwienie 23-0419 – kierunek 4710/7210, 4950 na
+bramce); modele 7230-01, 6513, 6514, 5120-05; połączenia z siecią (57/94A/96/97B); izolator 2065 – iskrzenie > 40 km/h, łamanie
+pantografu > 50 km/h (punkt 2 niżej, niezrobione).
+
+## START TUTAJ – 2026-11-16 – nowe modele uszynienia i przewodu wzmacniającego
 
 **Zrobione 16.11 (testy te/tc OK, w exe NIESPRAWDZONE):**
 - Wysięgnik uszyniający 6130: wysięgnik jest teraz w jednym modelu z mocowaniem (`6130-01/02/03`, osobnego `6130` już nie ma) –

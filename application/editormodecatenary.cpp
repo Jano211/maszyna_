@@ -4909,13 +4909,18 @@ void catenary_editor::catenary_earthing_make()
 		first = best + 1;
 	}
 	ends.push_back(route.size() - 1);
-	auto const ending{tool.earthing_ends == 1 ? std::string{"anchor"} : std::string{"plain"}};
-	auto const joint{tool.earthing_joint == 1 ? std::string{"anchor"} : std::string{"split"}};
+	// a reinforcing feeder (Jan 2026-11-16): anchoring 23-0419 or the end on the arm, no 13-0492 / 13-0493
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *rope{catalog != nullptr ? catalog->earthing_line(tool.earthing_line) : nullptr};
+	auto const feeder{rope != nullptr && rope->feeder};
+	auto const ending{tool.earthing_ends == 1 ? std::string{"anchor"} : feeder ? std::string{} : std::string{"plain"}};
+	auto const joint{tool.earthing_joint == 1 ? std::string{"anchor"} : feeder ? std::string{} : std::string{"split"}};
 	std::size_t from{0};
 	for (std::size_t k = 0; k < ends.size(); ++k)
 	{
 		catenary::earthing data;
 		data.name = catenary_scene_new_earthing_name(tool.earthing_file);
+		data.line = (feeder ? tool.earthing_line : std::string{});
 		data.from = route[from];
 		data.to = route[ends[k]];
 		data.start = (k == 0 ? ending : joint);
@@ -4923,7 +4928,7 @@ void catenary_editor::catenary_earthing_make()
 		catenary_earthing_add(tool.earthing_file, data);
 		from = ends[k] + 1;
 	}
-	tool.status = format(STR_C("%zu earthing sections over %.2f km"), ends.size(), total / 1000.0);
+	tool.status = format(feeder ? STR_C("%zu feeder sections over %.2f km") : STR_C("%zu earthing sections over %.2f km"), ends.size(), total / 1000.0);
 	tool.earthing_poles.clear();
 	tool.earthing_route.clear();
 	tool.earthing_distances.clear();
@@ -4936,7 +4941,7 @@ void catenary_editor::render_catenary_earthing_ui()
 {
 	auto &tool{m_catenary};
 	ImGui::Separator();
-	ImGui::TextWrapped("%s", STR_C("Group earthing: the rope over the tops of the poles in sections of about 3 km. Click the first and the last pole of the run, the way goes along the chains and is cut into sections"));
+	ImGui::TextWrapped("%s", STR_C("Group earthing and reinforcing feeders: the rope over the poles in sections (earthing about 3 km). Pick the rope, click the first and the last pole of the run, the way goes along the chains and is cut into sections"));
 	if (ImGui::Button(tool.earthing_building ? STR_C("Give up (Esc)") : STR_C("Earthing along the line: click the first and the last pole")))
 	{
 		if (tool.earthing_building || false == tool.earthing_route.empty())
@@ -4948,8 +4953,31 @@ void catenary_editor::render_catenary_earthing_ui()
 			tool.status = STR("LMB the first pole of the run");
 		}
 	}
-	char const *ends[]{STR_C("Anchoring 13-0492 (no insulation)"), STR_C("Anchoring 13-0491 (with insulation)")};
-	char const *joints[]{STR_C("Insulating point 13-0493 in the span"), STR_C("Anchorings 13-0491 on both poles")};
+	// the rope of the run: the earthing or a reinforcing feeder (lines "feeder" of traction_supports.txt; Jan 2026-11-16: one tab for
+	// the wires on the poles)
+	auto const *catalog{catenary_scene_catalog()};
+	if (catalog != nullptr && catalog->earthing_lines().size() > 1)
+	{
+		auto const label = [](catenary::earthing_line const &Line) {
+			return Line.feeder ? (Line.description.empty() ? Line.name : Line.description) : std::string{STR("Group earthing")} + " (" + Line.name + ")";
+		};
+		auto const *current{catalog->earthing_line(tool.earthing_line)};
+		ImGui::SetNextItemWidth(260.0f);
+		if (ImGui::BeginCombo(STR_C("Rope"), current != nullptr ? label(*current).c_str() : ""))
+		{
+			for (std::size_t k = 0; k < catalog->earthing_lines().size(); ++k)
+			{
+				auto const &line{catalog->earthing_lines()[k]};
+				if (ImGui::Selectable(label(line).c_str(), current == &line))
+					tool.earthing_line = (k == 0 ? std::string{} : line.name);
+			}
+			ImGui::EndCombo();
+		}
+	}
+	auto const *rope{catalog != nullptr ? catalog->earthing_line(tool.earthing_line) : nullptr};
+	auto const feeder{rope != nullptr && rope->feeder};
+	char const *ends[]{feeder ? STR_C("The rope ends on the arm") : STR_C("Anchoring 13-0492 (no insulation)"), feeder ? STR_C("Anchoring 23-0419") : STR_C("Anchoring 13-0491 (with insulation)")};
+	char const *joints[]{feeder ? STR_C("The ropes end on the arms") : STR_C("Insulating point 13-0493 in the span"), feeder ? STR_C("Anchorings 23-0419 on both poles") : STR_C("Anchorings 13-0491 on both poles")};
 	if (false == tool.earthing_route.empty())
 	{
 		auto const total{tool.earthing_distances.back()};
@@ -4970,13 +4998,19 @@ void catenary_editor::render_catenary_earthing_ui()
 	// the pole selected: its section and the holder on it
 	if (auto const *selected{tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr}; selected != nullptr)
 	{
-		auto const section{catenary_earthing_of(static_cast<std::size_t>(tool.selected))};
+		auto const sections{catenary_earthings_of(static_cast<std::size_t>(tool.selected))};
 		ImGui::Separator();
-		if (section < 0)
+		if (sections.empty())
 			ImGui::TextUnformatted(format(STR_C("Pole %s: no earthing goes over it"), selected->name.c_str()).c_str());
-		else if (auto const *earthing{catenary_earthing_get(static_cast<std::size_t>(section))}; earthing != nullptr)
+		// every section over the pole (the earthing and the reinforcing feeders may go over the same one)
+		for (auto const section : sections)
 		{
+			auto const *earthing{catenary_earthing_get(static_cast<std::size_t>(section))};
+			if (earthing == nullptr)
+				continue;
+			ImGui::PushID(section);
 			auto data{*earthing};
+			auto const feeder{catenary_earthing_feeder(static_cast<std::size_t>(section))};
 			// the holder settings are kept under the name of the entry which stands the pole
 			std::string pole{selected->name};
 			for (auto const &name : catenary_earthing_poles(static_cast<std::size_t>(section)))
@@ -4991,7 +5025,7 @@ void catenary_editor::render_catenary_earthing_ui()
 			auto const *type{catalog != nullptr && selected->has_pole ? catalog->pole(selected->pole_type) : nullptr};
 			if (type != nullptr && false == type->drop.empty())
 			{
-				// a drop of a gantry: holder 6840 on the top of the beam (card 13-0807), moved along the beam
+				// a drop of a gantry: holder 6840 on the top of the beam (card 13-0807), moved along the beam; a feeder - always the arm 4950
 				auto shift{static_cast<float>(holder.shift)};
 				ImGui::SetNextItemWidth(170.0f);
 				if (ImGui::SliderFloat(STR_C("Along the beam"), &shift, -5.0f, 5.0f, "%+.2f m"))
@@ -4999,8 +5033,45 @@ void catenary_editor::render_catenary_earthing_ui()
 					holder.shift = std::round(shift * 100.0f) / 100.0;
 					changed = true;
 				}
+				if (feeder)
+				{
+					ImGui::SameLine();
+					changed |= ImGui::Checkbox(STR_C("New insulator"), &holder.fresh);
+				}
+				else
+				{
+					ImGui::SameLine();
+					changed |= ImGui::Checkbox(STR_C("Earthing arm 6132"), &holder.arm);
+				}
+			}
+			else if (feeder)
+			{
+				// reinforcing feeder: the arm from the list of the rope (the first one by default), the insulator 0301 new or old, by default
+				// away from the track (on the top of the pole)
+				auto const *line{catalog != nullptr ? catalog->earthing_line(data.line) : nullptr};
+				auto const current{false == holder.feeder_arm.empty() ? holder.feeder_arm : line != nullptr && false == line->arms.empty() ? line->arms.front() : std::string{}};
+				ImGui::SetNextItemWidth(130.0f);
+				if (line != nullptr && ImGui::BeginCombo(STR_C("Arm"), current.c_str()))
+				{
+					for (std::size_t k = 0; k < line->arms.size(); ++k)
+						if (ImGui::Selectable(line->arms[k].c_str(), line->arms[k] == current))
+						{
+							holder.feeder_arm = (k == 0 ? std::string{} : line->arms[k]);
+							changed = true;
+						}
+					ImGui::EndCombo();
+				}
 				ImGui::SameLine();
-				changed |= ImGui::Checkbox(STR_C("Earthing arm 6132"), &holder.arm);
+				changed |= ImGui::Checkbox(STR_C("New insulator"), &holder.fresh);
+				ImGui::SameLine();
+				changed |= ImGui::Checkbox(STR_C("Toward the track"), &holder.away);
+				auto raise{static_cast<float>(holder.raise)};
+				ImGui::SetNextItemWidth(170.0f);
+				if (ImGui::SliderFloat(STR_C("Height"), &raise, -3.0f, 0.0f, "%+.2f m"))
+				{
+					holder.raise = std::round(raise * 100.0f) / 100.0;
+					changed = true;
+				}
 			}
 			else
 			{
@@ -5048,6 +5119,7 @@ void catenary_editor::render_catenary_earthing_ui()
 				data.set_holder(holder);
 				catenary_earthing_update(static_cast<std::size_t>(section), data);
 			}
+			ImGui::PopID();
 		}
 	}
 	else
@@ -5068,7 +5140,14 @@ void catenary_editor::render_catenary_earthing_ui()
 		ImGui::PushID(static_cast<int>(index));
 		auto const poles{catenary_earthing_poles(index)};
 		auto const length{catenary_earthing_length(index)};
+		auto const feeder{catenary_earthing_feeder(index)};
 		ImGui::TextUnformatted(format(STR_C("%s: %zu poles, %.2f km, %zu parts (%s)"), earthing->name.c_str(), poles.size(), length / 1000.0, catenary_earthing_parts(index), catenary_earthing_file(index).c_str()).c_str());
+		if (feeder)
+		{
+			// a reinforcing feeder: its rope by the name
+			ImGui::SameLine();
+			ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), "%s", format(STR_C("feeder %s"), earthing->line.c_str()).c_str());
+		}
 		if (length > 3500.0)
 		{
 			ImGui::SameLine();
@@ -5078,11 +5157,20 @@ void catenary_editor::render_catenary_earthing_ui()
 		{
 			auto data{*earthing};
 			auto start{kind_of(data.start)}, end{kind_of(data.end)};
+			// a reinforcing feeder: only the anchoring 23-0419 (as "anchor") or nothing
+			char const *feeder_kinds[]{STR_C("none"), "23-0419"};
+			auto const *shown{feeder ? feeder_kinds : kinds};
+			auto const shown_count{feeder ? 2 : 4};
+			if (feeder)
+			{
+				start = std::min(start, 1);
+				end = std::min(end, 1);
+			}
 			ImGui::SetNextItemWidth(110.0f);
-			auto changed{ImGui::Combo(STR_C("Start"), &start, kinds, 4)};
+			auto changed{ImGui::Combo(STR_C("Start"), &start, shown, shown_count)};
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(110.0f);
-			changed |= ImGui::Combo(STR_C("End"), &end, kinds, 4);
+			changed |= ImGui::Combo(STR_C("End"), &end, shown, shown_count);
 			if (changed)
 			{
 				data.start = kind_name(start);
@@ -5143,7 +5231,7 @@ void catenary_editor::render_catenary_earthing_ui()
 					auto second{data};
 					second.name = catenary_scene_new_earthing_name(catenary_earthing_file(index));
 					second.from = names[middle + 1];
-					second.start = (tool.earthing_joint == 1 ? "anchor" : "split");
+					second.start = (tool.earthing_joint == 1 ? "anchor" : feeder ? "" : "split");
 					auto first{data};
 					first.to = names[middle];
 					first.end = second.start;

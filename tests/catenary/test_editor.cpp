@@ -743,6 +743,64 @@ int main( int, char *argv[] ) {
         check( good, "uszynienie: sekcje from-to po lancuchu, kotwienia 0491/0492, punkt izolujacy 0493, slup wstawiony w lancuch" );
     }
 
+    // 6a7. przewód wzmacniający (Jan 2026-11-16): sekcja jak uszynienie z "line AFL95"; wysięgniki 49xx wg głębokości słupa (1611-11 -> -02),
+    // uchwyt na izolatorze 0301 (-05, "new" -> -051), domyślnie od toru; koniec "anchor" = kotwienie 23-0419 (4450, 4710, 7210, 4420, 5180)
+    {
+        std::vector<catenary::suspension> poles;
+        for( int k = 0; k < 4; ++k ) {
+            auto item { entry };
+            item.name = "f" + std::to_string( k + 1 );
+            item.at[ 2 ] = item.rope[ 2 ] = item.pole[ 2 ] = 60.0 * k;
+            poles.push_back( item );
+        }
+        catenary::chain line;
+        line.name = "nf"; line.power = "pwr01"; line.type = "C120-2C"; line.suspensions = { "f1", "f2", "f3", "f4" };
+        catenary::earthing feeder;
+        feeder.name = "wz1"; feeder.line = "AFL95"; feeder.from = "f1"; feeder.to = "f4"; feeder.start = "anchor";
+        catenary::earthing_holder s3; s3.pole = "f3"; s3.feeder_arm = "4930"; s3.fresh = true;
+        feeder.set_holder( s3 );
+        catenary::earthing_holder s4; s4.pole = "f4"; s4.away = true;
+        feeder.set_holder( s4 );
+        std::string text;
+        for( auto const &item : poles ) { text += catenary::write_suspension( item ) + "\n"; }
+        text += catenary::write_earthing( feeder ) + "\n" + catenary::write_chain( line ) + "\n";
+        std::vector<std::string> words; std::istringstream stream { text };
+        for( std::string word; stream >> word; ) { words.push_back( word ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( words, "wzmacniajacy", parsed, problems );
+        auto const written { catenary::write_earthing( feeder ) };
+        auto good { problems.empty() && parsed.earthings.size() == 1 && catenary::write_earthing( parsed.earthings[ 0 ] ) == written
+            && written.find( " line AFL95 " ) != std::string::npos && written.find( " holder f3 feeder_arm 4930 new" ) != std::string::npos };
+        { std::ofstream out { "tests/catenary/td_wzmacniajacy_test.scm", std::ios::binary }; out << text; }
+        catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear();
+        auto const before { simulation::State.created.size() };
+        cParser directive( "td_wzmacniajacy_test.scm endcatenary" );
+        catenary_scene_load( directive );
+        catenary_scene_resolve();
+        std::map<std::string, int> made;
+        std::string arm2;
+        for( auto i { before }; i < simulation::State.created.size(); ++i ) {
+            auto const &e { simulation::State.created[ i ].entry };
+            auto const at { e.find( "components/" ) };
+            if( at == std::string::npos ) { continue; }
+            ++made[ e.substr( at + 11, e.find( ".t3d" ) - at - 11 ) ];
+        }
+        std::string list;
+        for( auto const &item : made ) { list += " " + item.first + "x" + std::to_string( item.second ); }
+        std::printf( "  przewod wzmacniajacy: %zu slupow, czesci %zu; wstawione:%s\n", catenary_earthing_poles( 0 ).size(), catenary_earthing_parts( 0 ), list.c_str() );
+        for( auto const &l : logs ) { if( l.find( "earthing" ) != std::string::npos ) { std::printf( "    %s\n", l.c_str() ); } }
+        std::printf( "    f1 %s, f2 %s, f3 %s, f4 %s\n", catenary_earthing_holder_text( 0, "f1" ).c_str(), catenary_earthing_holder_text( 0, "f2" ).c_str(),
+            catenary_earthing_holder_text( 0, "f3" ).c_str(), catenary_earthing_holder_text( 0, "f4" ).c_str() );
+        good = good && made[ "4910-02" ] == 2 && made[ "4930-02" ] == 1 && made[ "0301-05" ] == 2 && made[ "0301-051" ] == 1
+            && made[ "4450-01" ] == 1 && made[ "4710-01" ] == 1 && made[ "esn_2025" ] == 1 && made[ "4420-01" ] == 1 && made[ "5180-07" ] == 1
+            && made[ "6120-01" ] == 0 && catenary_earthing_holder_text( 0, "f1" ) == "23-0419"
+            && catenary_earthing_holder_text( 0, "f2" ) == "4910-02 + 0301-05";
+        // przewód w przęsłach (lina rysowana z przęsłami łańcucha) - przęsło f2-f3 istnieje
+        good = good && std::find( mock_span_names.begin(), mock_span_names.end(), std::string( "nf_1" ) ) != mock_span_names.end();
+        std::remove( "tests/catenary/td_wzmacniajacy_test.scm" );
+        check( good, "przewod wzmacniajacy: sekcja z line AFL95, wysiegniki 49xx wg glebokosci, izolatory 0301, kotwienie 23-0419" );
+    }
+
     // 6a5. uszynienie przez słup z kilkoma wysięgnikami (para rozstawionych + trzeci w osi słupa): jeden uchwyt na słup, obrócony
     // jak słup (płaszczyzna przez konsolę), nie w stronę rozstawionych wysięgników
     {
@@ -885,15 +943,15 @@ int main( int, char *argv[] ) {
         cParser directive( "td_izolator_test.scm endcatenary" );
         catenary_scene_load( directive );
         catenary_scene_resolve();
-        // stary izolator (ceramic, ESN-106A): element esn_2065, w linie nośnej ESN-2025 i dwa zaciski 5120 (modele 2026-11-16)
+        // stary izolator (ceramic, karta 23-0436): element 7230-01, w linie nośnej ESN-2025 i dwa zaciski 5120 (modele 2026-11-16)
         std::map<std::string, int> sectionparts;
         for( auto i { madefrom }; i < simulation::State.created.size(); ++i ) {
-            for( auto const *name : { "esn_2065", "esn_2025", "5120-01", "7500-01", "7500-02" } ) {
+            for( auto const *name : { "7230-01", "esn_2025", "5120-01", "7500-01", "7500-02" } ) {
                 if( simulation::State.created[ i ].entry.find( std::string( "components/" ) + name + ".t3d" ) != std::string::npos ) { ++sectionparts[ name ]; }
             }
         }
-        std::printf( "  izolator sekcyjny ceramic: esn_2065 %d, esn_2025 %d, 5120 %d\n", sectionparts[ "esn_2065" ], sectionparts[ "esn_2025" ], sectionparts[ "5120-01" ] );
-        good = good && sectionparts[ "esn_2065" ] >= 1 && sectionparts[ "esn_2025" ] >= 1 && sectionparts[ "5120-01" ] >= 2 && sectionparts[ "7500-01" ] == 0;
+        std::printf( "  izolator sekcyjny ceramic: 7230 %d, esn_2025 %d, 5120 %d\n", sectionparts[ "7230-01" ], sectionparts[ "esn_2025" ], sectionparts[ "5120-01" ] );
+        good = good && sectionparts[ "7230-01" ] >= 1 && sectionparts[ "esn_2025" ] >= 1 && sectionparts[ "5120-01" ] >= 2 && sectionparts[ "7500-01" ] == 0;
         good = good && mock_span_bodies.size() == 3 && mock_span_bodies[ 0 ].find( "pwr01" ) == 0 && mock_span_bodies[ 1 ].find( "pwr01" ) == 0 && mock_span_bodies[ 2 ].find( "pwr09" ) == 0 && errors.empty();
         std::remove( "tests/catenary/td_izolator_test.scm" );
         check( good, "izolator sekcyjny: zapis i odczyt, przesla za nim zasila jego zasilacz" );

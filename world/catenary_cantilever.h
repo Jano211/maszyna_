@@ -142,6 +142,9 @@ struct cantilever_pole {
     std::string earthing;
     std::string earthing_back;
     std::string earthing_arm;           // wysięgnik przewodu uszyniającego (wpis "earthing_arm", karta 0806), który pasuje do słupa; pusty - żaden
+    // słup nosi wysięgniki przewodu wzmacniającego (49xx, stara norma ESN-2141/2510/2635A; słowo "feeder"); mocowanie dobierane jak
+    // przy 6130 - wg głębokości słupa (długości śrub) albo wg profilu ceownika (width) dla wysięgników starej normy
+    bool feeder { false };
     // słup bramki z wysięgnikiem (zrobiony z wpisu "mast" z mocowaniami): model stawia bramka, nie wysięgnik; mount_max pod
     // dźwigarem bramki liczy sceneria wg jej poziomu (mast_low/mast_high minus below_beam), tu - pod dolnym mocowaniem
     bool   gantry { false };
@@ -187,8 +190,15 @@ struct earthing_arm {
                                         // osprzętu, dopisek zużycia zostaje (siec_trakcyjna/siec_used -> siec_trakcyjna/uszynienia_used)
     std::string skin_default;           // tekstura wysięgnika przy teksturze osprzętu bez dopisku zużycia (sama "siec"), np. uszynienia_used
     std::vector<std::pair<std::string, double>> mounts; // mocowanie i największa głębokość słupa, na którą wystarcza śrub (rosnąco)
-    // mocowanie na słup o tej głębokości; puste - śruby za krótkie
-    std::string mount_for( double const Depth ) const {
+    // wysięgniki starej normy (ESN-2141, ESN-2510): wykonanie wg profilu ceownika słupa ("profile <mocowanie> <szerokość słupa>"),
+    // bez regulacji; gdy są - zamiast "mount"
+    std::vector<std::pair<std::string, double>> profiles;
+    // mocowanie na słup o tej głębokości (Width - szerokość słupa wzdłuż toru, dla "profile"); puste - śruby za krótkie / brak profilu
+    std::string mount_for( double const Depth, double const Width = 0.0 ) const {
+        if( false == profiles.empty() ) {
+            for( auto const &profile : profiles ) { if( std::abs( Width - profile.second ) < 0.005 ) { return profile.first; } }
+            return {};
+        }
         for( auto const &mount : mounts ) { if( Depth <= mount.second + 1e-6 ) { return mount.first; } }
         return {};
     }
@@ -204,6 +214,15 @@ struct earthing_link {
 };
 struct earthing_line {
     std::string name;
+    // przewód wzmacniający (słowo "feeder", użytkownik 2026-11-16: "analogicznie do uszynienia"): sekcje jak w uszynieniu, ale na słupach
+    // wysięgniki 49xx (arms - do wyboru, pierwszy domyślny) z uchwytem na izolatorze obrotowym 0301 w punkcie eye wysięgnika (insulator
+    // - część i Z punktu "wire" względem jej zera; insulator_new - to samo na nowych izolatorach), domyślnie od toru, bez przyłączy 13-0885;
+    // na zwisie bramki zawsze wysięgnik gantry_arm (4950)
+    bool feeder { false };
+    std::string description;            // opis w edytorze (np. "AFL 95 - przewód wzmacniający")
+    std::vector<std::string> arms;
+    std::string insulator, insulator_new;
+    double insulator_wire { 0.0 }, insulator_new_wire { 0.0 };
     double diameter { 0.0155 };         // m
     double mass { 0.494 };              // kg/m
     double tension { 200.0 };           // daN
@@ -306,6 +325,7 @@ public:
     catenary::earthing_arm const *earthing_arm( std::string const &Name ) const;
     // przewód uszyniający: podany z nazwy albo pierwszy zdefiniowany (pusta nazwa); nullptr - żaden
     catenary::earthing_line const *earthing_line( std::string const &Name = {} ) const;
+    std::vector<catenary::earthing_line> const &earthing_lines() const { return m_earthing_lines; }
     cantilever_assembly const *assembly( std::string const &Name ) const;
     // karta z tej samej dziesiątki co Card, której pasmo A obejmuje podaną odległość; nullptr gdy żadna
     cantilever_scheme const *scheme_for_reach( int Card, int Execution, double Reach ) const;

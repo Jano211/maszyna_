@@ -208,7 +208,7 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                     else { report( line.name, "unknown end \"" + value + "\" of an earthing (anchor, plain, split or none)" ); good = false; }
                 }
                 else if( key == "poles" ) {
-                    while( index < count && Tokens[ index ] != "endearthing" && Tokens[ index ] != "node" && Tokens[ index ] != "skin" && Tokens[ index ] != "holder" ) { line.poles.push_back( Tokens[ index++ ] ); }
+                    while( index < count && Tokens[ index ] != "endearthing" && Tokens[ index ] != "node" && Tokens[ index ] != "skin" && Tokens[ index ] != "holder" && Tokens[ index ] != "line" ) { line.poles.push_back( Tokens[ index++ ] ); }
                 }
                 else if( key == "holder" && index < count ) {
                     earthing_holder holder;
@@ -219,6 +219,8 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                         else if( flag == "long" ) { holder.longer = true; ++index; }
                         else if( flag == "away" ) { holder.away = true; ++index; }
                         else if( flag == "nojumper" ) { holder.nojumper = true; ++index; }
+                        else if( flag == "new" ) { holder.fresh = true; ++index; }
+                        else if( flag == "feeder_arm" && index + 1 < count ) { holder.feeder_arm = Tokens[ index + 1 ]; index += 2; }
                         else if( ( flag == "raise" || flag == "shift" ) && index + 1 < count ) {
                             try { ( flag == "raise" ? holder.raise : holder.shift ) = std::stod( Tokens[ index + 1 ] ); }
                             catch( ... ) { report( line.name, "bad \"" + flag + "\" value \"" + Tokens[ index + 1 ] + "\" of holder " + holder.pole ); good = false; }
@@ -231,6 +233,7 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                     else { report( line.name, "holder of pole \"" + holder.pole + "\", which isn't on the earthing" ); }
                 }
                 else if( key == "skin" && index < count ) { line.skin = Tokens[ index++ ]; }
+                else if( key == "line" && index < count ) { line.line = Tokens[ index++ ]; }
                 else { report( line.name, "unexpected token \"" + key + "\" in an earthing" ); good = false; }
             }
             if( false == closed ) { report( line.name, "missing \"endearthing\"" ); good = false; }
@@ -525,6 +528,7 @@ std::string write_earthing( earthing const &Entry ) {
     };
     std::string text { "node " + number( Entry.range_max ) + " " + number( Entry.range_min ) + " " + ( Entry.name.empty() ? std::string( "none" ) : Entry.name ) + " earthing" };
     if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
+    if( false == Entry.line.empty() ) { text += " line " + Entry.line; }
     if( Entry.section() ) {
         text += " from " + Entry.from + " to " + Entry.to;
         if( false == Entry.start.empty() ) { text += " start " + Entry.start; }
@@ -543,6 +547,8 @@ std::string write_earthing( earthing const &Entry ) {
         if( holder.raise != 0.0 ) { text += " raise " + number( std::round( holder.raise * 1000.0 ) / 1000.0 ); }
         if( holder.shift != 0.0 ) { text += " shift " + number( std::round( holder.shift * 1000.0 ) / 1000.0 ); }
         if( holder.nojumper ) { text += " nojumper"; }
+        if( false == holder.feeder_arm.empty() ) { text += " feeder_arm " + holder.feeder_arm; }
+        if( holder.fresh ) { text += " new"; }
     }
     return text + " endearthing";
 }
