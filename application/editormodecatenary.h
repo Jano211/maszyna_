@@ -114,6 +114,7 @@ struct catenary_editor
 		float earthing_section{3000.0f}; // the target length of a section (Iet-106: about 3 km)
 		int earthing_ends{0};            // the ends of the run: 0 anchoring without insulation (13-0492), 1 with it (13-0491)
 		int earthing_joint{0};           // between the sections: 0 insulating point in the span (13-0493), 1 anchorings 13-0491 on both poles
+		std::string earthing_line;       // the rope of the new run (earthing_line in traction_supports.txt): empty - the earthing (AFL120); a feeder line - reinforcing feeder
 		bool wide_stagger{false}; // stagger -0.50..+0.50 m from the track axis (tuning at turnouts; not allowed on a line)
 		int bend{0}; // 0: from the track, 1: straight, 2: curve
 		float stagger{0.30f};

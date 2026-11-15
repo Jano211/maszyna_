@@ -2760,9 +2760,18 @@ earthing_turn_around( catenary::cantilever_placement &Placement ) {
     }
 }
 
+// przewód sekcji (wpis "line"; brak albo nieznany - pierwszy, AFL120 uszynienia)
+catenary::earthing_line const *
+earthing_line_of( scene_earthing const &Earthing ) {
+    auto const *catalog { cantilevers() };
+    if( catalog == nullptr ) { return nullptr; }
+    auto const *line { catalog->earthing_line( Earthing.data.line ) };
+    return ( line != nullptr ? line : catalog->earthing_line() );
+}
+
 // uchwyt 6120 (karta 0805) albo wysięgnik przewodu uszyniającego 6130 (karta 0806) na słupie podwieszenia z ustawieniami Holder
 bool
-earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const &Holder, earthing_place &Place ) {
+earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const &Holder, earthing_place &Place, catenary::earthing_line const *Line ) {
     auto const *catalog { cantilevers() };
     auto const standing { earthing_pole( Suspension ) };
     if( catalog == nullptr || standing >= Suspensions.size() ) { Place.problem = "no pole"; return false; }
@@ -2770,19 +2779,30 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     auto const *pole { data.has_pole && data.has_at ? catalog->pole( data.pole_type ) : nullptr };
     if( pole == nullptr ) { Place.problem = "no pole"; return false; }
     // zwis bramki: uchwyt 13-0807 na górze dźwigara nad zwisem (przesuwany wzdłuż dźwigara)
-    auto const *line { catalog->earthing_line() };
+    auto const *line { Line != nullptr ? Line : catalog->earthing_line() };
+    if( line == nullptr ) { Place.problem = "no earthing line in the data"; return false; }
+    // przewód wzmacniający: zawsze na wysięgniku (49xx na słupie, gantry_arm na dźwigarze bramki)
+    auto const feeder { line->feeder };
+    auto const usearm { feeder || Holder.arm };
     auto const ongantry { false == pole->drop.empty() };
-    if( ongantry && ( line == nullptr || line->gantry_part.empty() ) ) { Place.problem = "no gantry holder (6840) in the data"; return false; }
-    auto const *arm { false == ongantry && Holder.arm && false == pole->earthing_arm.empty() ? catalog->earthing_arm( pole->earthing_arm ) : nullptr };
+    if( ongantry && false == feeder && line->gantry_part.empty() ) { Place.problem = "no gantry holder (6840) in the data"; return false; }
+    catenary::earthing_arm const *arm { nullptr };
+    if( feeder && false == ongantry ) {
+        if( false == pole->feeder ) { Place.problem = "pole " + data.pole_type + " takes no feeder arm"; return false; }
+        auto const name { false == Holder.feeder_arm.empty() ? Holder.feeder_arm : line->arms.empty() ? std::string() : line->arms.front() };
+        arm = catalog->earthing_arm( name );
+        if( arm == nullptr ) { Place.problem = "no feeder arm \"" + name + "\" in the data"; return false; }
+    }
+    else if( false == ongantry && Holder.arm && false == pole->earthing_arm.empty() ) { arm = catalog->earthing_arm( pole->earthing_arm ); }
     // dłuższy (6131 zamiast 6130): wpis wskazany słowem "long" wysięgnika
-    if( arm != nullptr && Holder.longer ) {
+    if( arm != nullptr && false == feeder && Holder.longer ) {
         auto const *longer { arm->longer.empty() ? nullptr : catalog->earthing_arm( arm->longer ) };
         if( longer == nullptr ) { Place.problem = "earthing arm " + arm->name + " has no longer version"; return false; }
         arm = longer;
     }
-    if( ongantry && Holder.arm && line->gantry_arm.empty() ) { Place.problem = "no gantry earthing arm (6132) in the data"; return false; }
+    if( ongantry && usearm && line->gantry_arm.empty() ) { Place.problem = "no gantry arm (6132 / 4950) in the data for " + line->name; return false; }
     if( false == ongantry && Holder.arm && arm == nullptr ) { Place.problem = "pole " + data.pole_type + " takes no earthing arm (6130)"; return false; }
-    if( false == ongantry && false == Holder.arm && pole->earthing.empty() ) { Place.problem = "pole " + data.pole_type + " carries no earthing holder (6120)"; return false; }
+    if( false == ongantry && false == usearm && pole->earthing.empty() ) { Place.problem = "pole " + data.pole_type + " carries no earthing holder (6120)"; return false; }
     // obrót słupa: płaszczyzna wysięgnika, który go stawia; przy rozstawionych przez punkt na konsoli (słup stoi równolegle do niej,
     // przesunięty wzdłuż toru), nie od przewodu do osi słupa
     auto const *toward { data.has_spread ? data.spread : data.pole };
@@ -2792,7 +2812,9 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     Place.origin = { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
     // wysokość domyślna: w połowie marginesu 0,15 m nad najwyższym mocowaniem (ZAŁOŻENIE: 0,075 m nad mount_max), plus regulacja
     // z edytora; nie wyżej niż wierzch słupa (wysięgnik: płyta mocowania cała na słupie)
-    auto height { ( pole->mount_max > 0.0 ? pole->mount_max + kEarthingMargin : pole->top - 0.10 ) + Holder.raise };
+    // przewód wzmacniający: płyta wysięgnika tuż pod wierzchem słupa (użytkownik 2026-11-16: "szczyt, od toru")
+    auto height { ( feeder && arm != nullptr && pole->top > 0.0 ? pole->top - arm->plate
+                  : pole->mount_max > 0.0 ? pole->mount_max + kEarthingMargin : pole->top - 0.10 ) + Holder.raise };
     if( pole->top > 0.0 ) { height = std::min( height, pole->top - ( arm != nullptr ? arm->plate : 0.02 ) ); }
     if( ongantry ) { height = line->gantry_top + std::max( 0.0, Holder.raise ); }   // zero zwisu to zero dźwigara
     auto const depth { pole->depth( height ) };
@@ -2803,9 +2825,9 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     front.position[ 1 ] = face;
     front.position[ 2 ] = height;
     catenary::cantilever_placement wire { front };
-    if( ongantry && Holder.arm ) {
-        // wysięgnik 6132 na dźwigarze (na teksturze uszynienia jak 6130)
-        front.role = "earthing_arm";
+    if( ongantry && usearm ) {
+        // wysięgnik 6132 na dźwigarze (na teksturze uszynienia jak 6130); przewód wzmacniający - 4950 (na teksturze osprzętu)
+        front.role = feeder ? "earthing" : "earthing_arm";
         front.part = line->gantry_arm;
         front.position[ 1 ] = Holder.shift;
         front.position[ 2 ] -= line->gantry_arm_drop;
@@ -2832,14 +2854,17 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     }
     else if( arm != nullptr ) {
         // mocowanie wg głębokości słupa na wysokości śrub (długość śrub), osobny wysięgnik (jeśli jest) w tym samym zerze, tył na tylnej ścianie
-        auto const mount { arm->mount_for( depth ) };
+        auto const mount { arm->mount_for( depth, pole->width ) };
         if( mount.empty() ) {
-            Place.problem = "the bolts of " + arm->name + " are too short for pole " + data.pole_type + " (" + std::to_string( static_cast<int>( depth * 1000.0 + 0.5 ) ) + " mm deep there)";
+            Place.problem = false == arm->profiles.empty()
+                ? arm->name + " has no version for the channel of pole " + data.pole_type + " (" + std::to_string( static_cast<int>( pole->width * 1000.0 + 0.5 ) ) + " mm)"
+                : "the bolts of " + arm->name + " are too short for pole " + data.pole_type + " (" + std::to_string( static_cast<int>( depth * 1000.0 + 0.5 ) ) + " mm deep there)";
             return false;
         }
         // wszystkie części wysięgnika (mocowanie, osobny wysięgnik, tył) na teksturze z wpisu (Jan 2026-11-16: klocki 6130/6131/6132
         // na teksturze uszynienia w 4 wariantach zużycia)
-        front.role = "earthing_arm";
+        // przewód wzmacniający: wysięgniki 49xx na teksturze osprzętu, chyba że wpis ma własną ("skin")
+        front.role = ( feeder && arm->skin.empty() ) ? "earthing" : "earthing_arm";
         front.part = mount;
         Place.parts.push_back( front );
         Place.arm_skin = arm->skin;
@@ -2869,15 +2894,29 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
         }
         for( int axis = 0; axis < 3; ++axis ) { wire.position[ axis ] += kEarthingWire[ axis ]; }
     }
+    // przewód wzmacniający: uchwyt na izolatorze obrotowym 0301 zawieszony w punkcie eye wysięgnika (zero izolatora u góry, w zaczepie),
+    // przewód w jego punkcie "wire"; nowe izolatory (-051/-071/-091) ustawieniem "new"
+    if( feeder ) {
+        auto const fresh { Holder.fresh && false == line->insulator_new.empty() };
+        auto const &insulator { fresh ? line->insulator_new : line->insulator };
+        if( false == insulator.empty() ) {
+            auto hanger { wire };
+            hanger.role = "earthing";
+            hanger.part = insulator;
+            Place.parts.push_back( hanger );
+            wire.position[ 2 ] += ( fresh ? line->insulator_new_wire : line->insulator_wire );
+        }
+    }
     // przyłącze 13-0885: końcówka na wierzchu słupa, przy jego czole (zdjęcie użytkownika 2026-11-09: linka łukiem od zacisku na linie
     // przy uchwycie, nad wysięgnikiem, w dół w wierzch słupa); zwis bramki - bez
     catenary::cantilever_placement lug { front };
     lug.position[ 0 ] = 0.0;
     lug.position[ 1 ] = 0.5 * face;
     lug.position[ 2 ] = pole->top > 0.0 ? pole->top : wire.position[ 2 ] - ( line != nullptr ? line->jumper_drop : 0.8 );
-    Place.has_lug = false == ongantry;
-    // od toru: wszystko obrócone wokół osi słupa (uchwyt / wysięgnik na tylnej ścianie, patrzy od toru)
-    if( Holder.away ) {
+    Place.has_lug = false == ongantry && false == feeder;
+    // od toru: wszystko obrócone wokół osi słupa (uchwyt / wysięgnik na tylnej ścianie, patrzy od toru); przewód wzmacniający domyślnie
+    // od toru, "away" przekłada go do toru
+    if( Holder.away != ( feeder && false == ongantry ) ) {
         for( auto &placement : Place.parts ) { earthing_turn_around( placement ); }
         earthing_turn_around( wire );
         earthing_turn_around( lug );
@@ -3103,11 +3142,12 @@ earthing_to_scene( glm::dvec3 const &Point, glm::dvec3 const &Origin, double con
 // łańcuch części końca sekcji od punktu Start w kierunku Way (scenerii); części biegną w -X modelu. Zwraca koniec łańcucha
 glm::dvec3
 earthing_chain( std::vector<catenary::earthing_link> const &Links, glm::dvec3 const &Origin, double const Heading, glm::dvec3 const &Start,
-                glm::dvec3 const &Way, std::vector<catenary::cantilever_placement> &Parts, std::vector<std::vector<glm::dvec3>> *Tails = nullptr ) {
+                glm::dvec3 const &Way, std::vector<catenary::cantilever_placement> &Parts, std::vector<std::vector<glm::dvec3>> *Tails = nullptr,
+                catenary::earthing_line const *Line = nullptr ) {
     auto at { Start };
     auto const way { glm::normalize( Way ) };
     auto const *catalog { cantilevers() };
-    auto const *line { catalog != nullptr ? catalog->earthing_line() : nullptr };
+    auto const *line { Line != nullptr ? Line : catalog != nullptr ? catalog->earthing_line() : nullptr };
     for( auto const &link : Links ) {
         auto const along { link.reversed ? -way : way };
         auto const zero { link.reversed ? at + way * link.length : at };
@@ -3149,6 +3189,7 @@ earthing_split_partner( std::string const &File, std::size_t const Pole, scene_e
     for( std::size_t k = 0; k < Earthings.size(); ++k ) {
         auto const &other { Earthings[ k ] };
         if( &other == Except || other.removed || other.file != File || other.data.start != "split" ) { continue; }
+        if( Except != nullptr && earthing_line_of( other ) != earthing_line_of( *Except ) ) { continue; }
         // następna sekcja mogła jeszcze nie być składana - trasa liczona na miejscu
         auto const route { other.path.empty() ? earthing_route_of( other ) : other.path };
         if( false == route.empty() && route.front() == Pole ) { return k; }
@@ -3174,7 +3215,7 @@ assemble_earthing( scene_earthing &Earthing ) {
         return 0;
     }
     for( std::size_t k = 0; k + 1 < Earthing.path.size(); ++k ) { Earthing.length += earthing_plan_distance( Earthing.path[ k ], Earthing.path[ k + 1 ] ); }
-    auto const *line { catalog->earthing_line() };
+    auto const *line { earthing_line_of( Earthing ) };
     auto const skin { Earthing.data.skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0 ? Earthing.data.skin : kFittingSkin };
     std::size_t count { 0 };
     auto const spawn = [ & ]( catenary::cantilever_placement const &Placement, earthing_place const &Place ) {
@@ -3207,7 +3248,7 @@ assemble_earthing( scene_earthing &Earthing ) {
     for( std::size_t k = 0; k < Earthing.path.size(); ++k ) {
         auto const standing { Earthing.path[ k ] };
         earthing_place place;
-        if( false == earthing_place_of( standing, earthing_holder_of( Earthing, standing ), place ) ) {
+        if( false == earthing_place_of( standing, earthing_holder_of( Earthing, standing ), place, earthing_line_of( Earthing ) ) ) {
             WriteLog( ( "Catenary: earthing \"" + Earthing.data.name + "\" goes over \"" + Suspensions[ standing ].data.name + "\": " + place.problem ).c_str() );
             continue;
         }
@@ -3217,7 +3258,7 @@ assemble_earthing( scene_earthing &Earthing ) {
         if( links != nullptr ) {
             auto const neighbour { Earthing.path[ k == 0 ? 1 : last - 1 ] };
             earthing_place other;
-            if( earthing_place_of( neighbour, earthing_holder_of( Earthing, neighbour ), other ) ) {
+            if( earthing_place_of( neighbour, earthing_holder_of( Earthing, neighbour ), other, earthing_line_of( Earthing ) ) ) {
                 auto way { other.wire - place.wire };
                 way.y = 0.0;
                 if( glm::length( way ) > 0.1 ) {
@@ -3273,7 +3314,7 @@ assemble_earthing( scene_earthing &Earthing ) {
                         }
                         start = earthing_to_scene( pivot, place.origin, place.heading );
                     }
-                    auto const end { earthing_chain( *links, place.origin, place.heading, start, other.wire - start, parts, &Earthing.tails[ standing ] ) };
+                    auto const end { earthing_chain( *links, place.origin, place.heading, start, other.wire - start, parts, &Earthing.tails[ standing ], line ) };
                     for( auto const &part : parts ) { spawn( part, place ); }
                     Earthing.anchored[ standing ] = end;
                     continue;
@@ -3291,7 +3332,7 @@ assemble_earthing( scene_earthing &Earthing ) {
                 auto const partner { earthing_split_partner( Earthing.file, next, &Earthing ) };
                 if( partner >= Earthings.size() ) { continue; }
                 earthing_place other;
-                if( false == earthing_place_of( next, earthing_holder_of( Earthings[ partner ], next ), other ) ) { break; }
+                if( false == earthing_place_of( next, earthing_holder_of( Earthings[ partner ], next ), other, earthing_line_of( Earthings[ partner ] ) ) ) { break; }
                 auto const &links { *line->chain( "split" ) };
                 auto total { 0.0 };
                 for( auto const &link : links ) { total += link.length; }
@@ -3303,7 +3344,7 @@ assemble_earthing( scene_earthing &Earthing ) {
                 auto const middle { place.wire + chord * 0.5 - glm::dvec3 { 0.0, line->sag( span ), 0.0 } };
                 std::vector<catenary::cantilever_placement> parts;
                 Earthing.split_from = middle - way * ( 0.5 * total );
-                Earthing.split_to = earthing_chain( links, place.origin, place.heading, Earthing.split_from, way, parts, &Earthing.tails[ next ] );
+                Earthing.split_to = earthing_chain( links, place.origin, place.heading, Earthing.split_from, way, parts, &Earthing.tails[ next ], line );
                 for( auto const &part : parts ) { spawn( part, place ); }
                 Earthing.split_next = next;
                 break;
@@ -3315,17 +3356,13 @@ assemble_earthing( scene_earthing &Earthing ) {
 
 // promień liny uszynienia (z danych przewodu)
 double
-line_radius() {
-    auto const *catalog { cantilevers() };
-    auto const *line { catalog != nullptr ? catalog->earthing_line() : nullptr };
+line_radius( catenary::earthing_line const *line ) {
     return ( line != nullptr ? 0.5 * line->diameter : kEarthingRadius );
 }
 
 // lina z naciągu (parabola) od A do B
 void
-earthing_rope_piece( glm::dvec3 const &A, glm::dvec3 const &B, std::vector<catenary::solid_vertex> &Solid ) {
-    auto const *catalog { cantilevers() };
-    auto const *line { catalog != nullptr ? catalog->earthing_line() : nullptr };
+earthing_rope_piece( glm::dvec3 const &A, glm::dvec3 const &B, std::vector<catenary::solid_vertex> &Solid, catenary::earthing_line const *line ) {
     auto const length { glm::length( B - A ) };
     if( length < 0.01 ) { return; }
     auto const sag { line != nullptr ? line->sag( length ) : 0.01 * length };
@@ -3355,23 +3392,22 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
             auto const anchored { earthing.anchored.find( Pole ) };
             if( anchored != earthing.anchored.end() ) { Point = anchored->second; return true; }
             earthing_place place;
-            if( false == earthing_place_of( Pole, earthing_holder_of( earthing, Pole ), place ) ) { return false; }
+            if( false == earthing_place_of( Pole, earthing_holder_of( earthing, Pole ), place, earthing_line_of( earthing ) ) ) { return false; }
             Point = place.wire;
             return true;
         };
         auto const tails = [ & ]( std::size_t const Pole ) {
             auto const found { earthing.tails.find( Pole ) };
             if( found == earthing.tails.end() ) { return; }
-            for( auto const &tail : found->second ) { if( tail.size() >= 2 ) { add_tube( Solid, tail, line_radius() ); } }
+            for( auto const &tail : found->second ) { if( tail.size() >= 2 ) { add_tube( Solid, tail, line_radius( earthing_line_of( earthing ) ) ); } }
         };
         // przyłącze 13-0885 słupa Pole: od zacisku na linie (w stronę słupa Toward) do końcówki na konstrukcji
         auto const jumper = [ & ]( std::size_t const Pole, glm::dvec3 const &Rope, glm::dvec3 const &Toward ) {
-            auto const *catalog { cantilevers() };
-            auto const *line { catalog != nullptr ? catalog->earthing_line() : nullptr };
+            auto const *line { earthing_line_of( earthing ) };
             if( line == nullptr || line->jumper_diameter <= 0.0 ) { return; }
             auto const holder { earthing_holder_of( earthing, Pole ) };
             earthing_place place;
-            if( holder.nojumper || false == earthing_place_of( Pole, holder, place ) || false == place.has_lug ) { return; }
+            if( holder.nojumper || false == earthing_place_of( Pole, holder, place, earthing_line_of( earthing ) ) || false == place.has_lug ) { return; }
             auto way { Toward - Rope };
             way.y = 0.0;
             if( glm::length( way ) < 0.1 ) { return; }
@@ -3399,7 +3435,7 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
             if( false == ( ( poles[ k ] == a && poles[ k + 1 ] == b ) || ( poles[ k ] == b && poles[ k + 1 ] == a ) ) ) { continue; }
             glm::dvec3 first, second;
             if( point( poles[ k ], first ) && point( poles[ k + 1 ], second ) ) {
-                earthing_rope_piece( first, second, Solid );
+                earthing_rope_piece( first, second, Solid, earthing_line_of( earthing ) );
                 // przyłącza: każdego słupa w przęśle za nim, ostatniego - w przęśle przed nim
                 jumper( poles[ k ], first, second );
                 if( k + 2 == poles.size() ) { jumper( poles[ k + 1 ], second, first ); }
@@ -3415,9 +3451,9 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
             auto const partner { earthing_split_partner( earthing.file, earthing.split_next, &earthing ) };
             earthing_place other;
             if( point( poles.back(), first ) && partner < Earthings.size()
-             && earthing_place_of( earthing.split_next, earthing_holder_of( Earthings[ partner ], earthing.split_next ), other ) ) {
-                earthing_rope_piece( first, earthing.split_from, Solid );
-                earthing_rope_piece( earthing.split_to, other.wire, Solid );
+             && earthing_place_of( earthing.split_next, earthing_holder_of( Earthings[ partner ], earthing.split_next ), other, earthing_line_of( Earthings[ partner ] ) ) ) {
+                earthing_rope_piece( first, earthing.split_from, Solid, earthing_line_of( earthing ) );
+                earthing_rope_piece( earthing.split_to, other.wire, Solid, earthing_line_of( earthing ) );
                 tails( earthing.split_next );
             }
         }
@@ -3425,26 +3461,30 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
 }
 
 // izolator sekcyjny w przęśle (Jan 2026-10-25, w połowie; 2026-10-30: "at" m od podwieszenia "after"; modele 2026-11-16):
-// "resin" - 7500-01 (sieć z jednym przewodem jezdnym) albo 7500-02 (dwa przewody) wg typu sieci; "ceramic" - stary izolator ESN-106A:
-// element 2065 (model esn_2065) na jednym przewodzie, nad nim w linie nośnej izolator ESN-2025 w łącznikach 2063 z zaciskami
-// klinowymi jak w kotwieniach (5120 zamiast 2027; użytkownik 2026-11-16). Modele leżą wzdłuż przewodu: zero na jednym końcu,
-// drugi koniec ("wire") w -X; linki podwieszające z uszu eye_1..eye_4 do liny nośnej w "V" (para uszu do jednego punktu liny, karta).
+// "resin" - 7500-01 (sieć z jednym przewodem jezdnym) albo 7500-02 (dwa przewody) wg typu sieci; "ceramic" - stary izolator sekcyjny
+// wg karty 23-0436 starego Kolprojektu (kolprojekt1.pdf s. 163; następca ESN-106A, użytkownik 2026-11-16): w przewodzie jezdnym
+// izolator 7230-1 (poz. 11) z płozami 6514-1/-2 i zaciskami 5110-1, w linie nośnej izolator 7210-1 (= ESN-2025, model esn_2025)
+// w łącznikach 6513-1 (poz. 8) z zaciskami 5120-5 (poz. 3); dwie linki L10 1,5 m (poz. 12, z uchwytami 4230-1 / 6301-1 / 6311-1)
+// pionowo z łączników do końców izolatora w przewodzie. Modele leżą wzdłuż przewodu: zero na jednym końcu, drugi koniec ("wire")
+// w -X; 7500: linki podwieszające z uszu eye_1..eye_4 do liny nośnej w "V" (para uszu do jednego punktu liny, karta), 7230: jedna
+// linka pionowo nad środkiem każdej pary uszu.
 // Przewód liczony prosto między końcami (ZAŁOŻENIE: bez strzałki), lina nośna z parabolą (w połowie ok. 1/10 wysokości
-// konstrukcyjnej niżej). Element nie wychodzi poza przęsło. Bez modelu linii nośnej (7500) i łącznika 2063 - bryły zastępcze
+// konstrukcyjnej niżej). Element nie wychodzi poza przęsło. Bez modelu izolatora liny nośnej nowego (7500) i łącznika 6513 - bryły
+// zastępcze; modeli 7230 / 6514 / 5120-05 jeszcze nie ma (7230 - wymiary NA OKO, 5120-01 w miejscu 5120-05)
 struct section_model {
     char const *model;
     double length;              // od zera do punktu "wire" (wzdłuż -X)
     double eyes[ 4 ][ 3 ];      // eye_1..eye_4 (1, 2 - jedna para, 3, 4 - druga)
 };
-// z modeli w G:\Maszyna2510\models\siec_trakcyjna\components (2026-11-16); esn_2065 - WYMIARY NA OKO z rysunku ESN-106A
-// (modelu jeszcze nie było: do poprawki wg punktów modelu)
+// z modeli w G:\Maszyna2510\models\siec_trakcyjna\components (2026-11-16); 7230-01 - WYMIARY NA OKO z rysunków 23-0436 / ESN-106A
+// (modelu jeszcze nie było: do poprawki wg punktów modelu; eye - zaczepy linek pionowych, para na każdym końcu)
 section_model const kSection7500_1 { "7500-01", 2.906, { { -0.8157, -0.1674, 0.0825 }, { -0.8157, 0.1672, 0.0825 }, { -2.0724, -0.1674, 0.0825 }, { -2.0724, 0.1672, 0.0825 } } };
 section_model const kSection7500_2 { "7500-02", 2.906, { { -0.8257, -0.2033, 0.0825 }, { -0.8257, 0.2031, 0.0825 }, { -2.0799, -0.2033, 0.0825 }, { -2.0799, 0.2031, 0.0825 } } };
-section_model const kSection2065 { "esn_2065", 1.30, { { -0.20, -0.10, 0.35 }, { -0.20, 0.10, 0.35 }, { -1.10, -0.10, 0.35 }, { -1.10, 0.10, 0.35 } } };
+section_model const kSection7230 { "7230-01", 1.30, { { -0.20, -0.10, 0.35 }, { -0.20, 0.10, 0.35 }, { -1.10, -0.10, 0.35 }, { -1.10, 0.10, 0.35 } } };
 double constexpr kSectionHangerRadius { 0.0025 };   // linka Cu 10 mm2
-double constexpr kSectionLink2063 { 0.30 };         // łącznik płaski 2063 - NA OKO (pół długości ESN-2025, rysunek 106A)
-double constexpr kSectionClamp { 0.058 };           // zacisk 5120: zero - wejście liny (jak w kotwieniach)
-double constexpr kSectionRopeInsulator { 0.6004 };  // ESN-2025: zero - hole_1
+double constexpr kSectionLink6513 { 0.30 };         // łącznik 6513-1 (karta 23-0436 poz. 8) - NA OKO (pół długości 7210, rysunek)
+double constexpr kSectionClamp { 0.058 };           // zacisk 5120 (5120-05 wg karty - modelu brak, stoi 5120-01): zero - wejście liny
+double constexpr kSectionRopeInsulator { 0.6004 };  // 7210-1 = ESN-2025 (model esn_2025): zero - hole_1
 
 void
 section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
@@ -3460,7 +3500,7 @@ section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<caten
         glm::dvec3 const a { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, b { wb[ 0 ], wb[ 1 ], wb[ 2 ] };
         auto const ceramic { insulator.kind == "ceramic" };
         auto const *type { data.type.empty() ? nullptr : catenary::types().find( data.type ) };
-        auto const &element { ceramic ? kSection2065 : ( type != nullptr && type->type.contact_count >= 2 ? kSection7500_2 : kSection7500_1 ) };
+        auto const &element { ceramic ? kSection7230 : ( type != nullptr && type->type.contact_count >= 2 ? kSection7500_2 : kSection7500_1 ) };
         auto const length { std::max( glm::length( b - a ), 1e-3 ) };
         auto const half { 0.5 * element.length };
         auto const t { insulator.at < 0.0 ? 0.5 : std::clamp( insulator.at / length, std::min( 0.5, half / length ), std::max( 0.5, 1.0 - half / length ) ) };
@@ -3507,20 +3547,22 @@ section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<caten
         // element na przewodzie: zero na końcu od strony "a", drugi koniec w stronę "b"
         glm::dvec3 eyes[ 4 ];
         spawn( element.model, wire - along * half, along, element.eyes, 4, eyes );
-        // linki podwieszające w "V": para uszu do punktu liny nad środkiem pary
+        // linki podwieszające: 7500 - w "V", para uszu do punktu liny nad środkiem pary; 7230 (23-0436) - jedna linka pionowo
+        // ze środka pary do liny (łącznika 6513) nad nim
         for( int pair = 0; pair < 2; ++pair ) {
             auto const middle { ( eyes[ 2 * pair ] + eyes[ 2 * pair + 1 ] ) * 0.5 };
             auto const top { ropeat( std::clamp( t + glm::dot( middle - wire, along ) / length, 0.0, 1.0 ) ) };
+            if( ceramic ) { add_tube( Solid, { middle, top }, kSectionHangerRadius ); continue; }
             for( int side = 0; side < 2; ++side ) { add_tube( Solid, { eyes[ 2 * pair + side ], top }, kSectionHangerRadius ); }
         }
-        // lina nośna: stary - ESN-2025 w łącznikach 2063 (bryła zastępcza) z zaciskami 5120; nowy - izolator liny bryłą zastępczą
+        // lina nośna: stary - 7210 (ESN-2025) w łącznikach 6513 (bryła zastępcza) z zaciskami 5120; nowy - izolator liny bryłą zastępczą
         auto const ropealong { glm::length( ropeb - ropea ) > 1e-6 ? glm::normalize( ropeb - ropea ) : along };
         if( ceramic ) {
             spawn( "esn_2025", rope - ropealong * ( 0.5 * kSectionRopeInsulator ), ropealong, nullptr, 0, nullptr );
             for( int side = -1; side <= 1; side += 2 ) {
                 auto const inner { rope + ropealong * ( side * 0.5 * kSectionRopeInsulator ) };
-                add_box( Solid, inner + ropealong * ( side * 0.5 * kSectionLink2063 ), ropeb - ropea, kSectionLink2063, 0.04 );
-                spawn( "5120-01", inner + ropealong * ( side * ( kSectionLink2063 + kSectionClamp ) ), ropealong * double( side ), nullptr, 0, nullptr );
+                add_box( Solid, inner + ropealong * ( side * 0.5 * kSectionLink6513 ), ropeb - ropea, kSectionLink6513, 0.04 );
+                spawn( "5120-01", inner + ropealong * ( side * ( kSectionLink6513 + kSectionClamp ) ), ropealong * double( side ), nullptr, 0, nullptr );
             }
         }
         else {
@@ -5093,6 +5135,7 @@ catenary_earthing_next( std::size_t const Index ) {
     for( std::size_t k = 0; k < Earthings.size(); ++k ) {
         auto const &other { Earthings[ k ] };
         if( k == Index || other.removed || other.file != own.file || false == other.data.section() || other.path.empty() ) { continue; }
+        if( earthing_line_of( other ) != earthing_line_of( own ) ) { continue; }   // uszynienie i przewód wzmacniający to osobne ciągi
         // the next one starts at a pole right after the last one of this section, and not on it (the one before would)
         if( std::find( neighbours->second.begin(), neighbours->second.end(), other.path.front() ) == neighbours->second.end() ) { continue; }
         if( std::find( own.path.begin(), own.path.end(), other.path.front() ) != own.path.end() ) { continue; }
@@ -5104,6 +5147,26 @@ catenary_earthing_next( std::size_t const Index ) {
 double
 catenary_earthing_length( std::size_t const Index ) {
     return ( Index < Earthings.size() && false == Earthings[ Index ].removed ? Earthings[ Index ].length : 0.0 );
+}
+
+std::vector<int>
+catenary_earthings_of( std::size_t const Suspension ) {
+    std::vector<int> found;
+    if( Suspension >= Suspensions.size() ) { return found; }
+    auto const standing { earthing_pole( Suspension ) };
+    for( std::size_t k = 0; k < Earthings.size(); ++k ) {
+        auto const &earthing { Earthings[ k ] };
+        if( earthing.removed || earthing.file != Suspensions[ Suspension ].file ) { continue; }
+        if( std::find( earthing.path.begin(), earthing.path.end(), standing ) != earthing.path.end() ) { found.push_back( static_cast<int>( k ) ); }
+    }
+    return found;
+}
+
+bool
+catenary_earthing_feeder( std::size_t const Index ) {
+    if( Index >= Earthings.size() ) { return false; }
+    auto const *line { earthing_line_of( Earthings[ Index ] ) };
+    return ( line != nullptr && line->feeder );
 }
 
 int
@@ -5126,9 +5189,11 @@ catenary_earthing_holder_text( std::size_t const Index, std::string const &Pole 
     auto const standing { earthing_pole( suspension_named( earthing.file, Pole ) ) };
     if( earthing.anchored.count( standing ) ) {
         auto const &kind { earthing.path.front() == standing ? earthing.data.start : earthing.data.end };
+        auto const *line { earthing_line_of( earthing ) };
+        if( line != nullptr && line->feeder ) { return "23-0419"; }
         return ( kind == "anchor" ? "13-0491" : "13-0492" );
     }
-    if( false == earthing_place_of( standing, earthing_holder_of( earthing, standing ), place ) ) { return "! " + place.problem; }
+    if( false == earthing_place_of( standing, earthing_holder_of( earthing, standing ), place, earthing_line_of( earthing ) ) ) { return "! " + place.problem; }
     std::string text;
     for( auto const &part : place.parts ) { text += ( text.empty() ? "" : " + " ) + part.part; }
     return text;

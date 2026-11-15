@@ -12904,3 +12904,39 @@ msgstr "Długi (6131)"
 
 msgid "Earthing arm 6132"
 msgstr "Wysięgnik 6132"
+
+msgid "Group earthing and reinforcing feeders: the rope over the poles in sections (earthing about 3 km). Pick the rope, click the first and the last pole of the run, the way goes along the chains and is cut into sections"
+msgstr "Uszynienie grupowe i przewody wzmacniające: przewód po słupach w sekcjach (uszynienie po ok. 3 km). Wybierz przewód, kliknij pierwszy i ostatni słup odcinka – trasa idzie po łańcuchach i jest dzielona na sekcje"
+
+msgid "Group earthing"
+msgstr "Uszynienie grupowe"
+
+msgid "Rope"
+msgstr "Przewód"
+
+msgid "The rope ends on the arm"
+msgstr "Przewód kończy się na wysięgniku"
+
+msgid "Anchoring 23-0419"
+msgstr "Kotwienie 23-0419"
+
+msgid "The ropes end on the arms"
+msgstr "Przewody kończą się na wysięgnikach"
+
+msgid "Anchorings 23-0419 on both poles"
+msgstr "Kotwienia 23-0419 na obu słupach"
+
+msgid "%zu feeder sections over %.2f km"
+msgstr "%zu sekcji przewodu wzmacniającego na %.2f km"
+
+msgid "Arm"
+msgstr "Wysięgnik"
+
+msgid "New insulator"
+msgstr "Nowy izolator"
+
+msgid "Toward the track"
+msgstr "Do toru"
+
+msgid "feeder %s"
+msgstr "wzmacniający %s"

@@ -179,6 +179,10 @@ std::vector<std::size_t> catenary_earthing_path( std::size_t Index );
 int catenary_earthing_next( std::size_t Index );
 // uszynienie, przez którego słup idzie podwieszenie; -1 - żadne
 int catenary_earthing_of( std::size_t Suspension );
+// wszystkie sekcje (uszynienie i przewody wzmacniające), przez których słup idzie podwieszenie
+std::vector<int> catenary_earthings_of( std::size_t Suspension );
+// sekcja przewodu wzmacniającego (linia "feeder"), nie uszynienia
+bool catenary_earthing_feeder( std::size_t Index );
 // części stawiane na słupie Pole uszynienia (np. "6130-02 + 6130 + 6130-00"), albo "! <czemu się nie da>"
 std::string catenary_earthing_holder_text( std::size_t Index, std::string const &Pole );
 std::string catenary_scene_new_earthing_name( std::string const &File );

@@ -285,6 +285,28 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 auto const key { Tokens[ index++ ] };
                 if( key == "endearthing_line" ) { closed = true; break; }
                 if( key == "diameter" ) { number( line.diameter, good ); }
+                else if( key == "feeder" ) { line.feeder = true; }
+                else if( key == "description" ) {
+                    // description <słowa...> enddescription
+                    std::string text;
+                    while( index < count && Tokens[ index ] != "enddescription" ) { text += ( text.empty() ? "" : " " ) + Tokens[ index++ ]; }
+                    if( index < count ) { ++index; } else { good = false; }
+                    line.description = text;
+                }
+                else if( key == "arms" ) {
+                    // arms <wysięgnik> ... (do następnego słowa kluczowego - nazwy wpisów earthing_arm)
+                    static std::set<std::string> const keywords { "endearthing_line", "diameter", "feeder", "description", "arms", "insulator", "insulator_new",
+                        "mass", "tension", "gantry", "gantry_arm", "brackets", "jumper", "guide", "chain" };
+                    while( index < count && keywords.count( Tokens[ index ] ) == 0 ) { line.arms.push_back( Tokens[ index++ ] ); }
+                    if( line.arms.empty() ) { good = false; }
+                }
+                else if( key == "insulator" || key == "insulator_new" ) {
+                    // insulator <część> wire <z>
+                    auto &part { key == "insulator" ? line.insulator : line.insulator_new };
+                    auto &wire { key == "insulator" ? line.insulator_wire : line.insulator_new_wire };
+                    if( index < count ) { part = Tokens[ index++ ]; } else { good = false; }
+                    if( index < count && Tokens[ index ] == "wire" ) { ++index; number( wire, good ); } else { good = false; }
+                }
                 else if( key == "mass" ) { number( line.mass, good ); }
                 else if( key == "tension" ) { number( line.tension, good ); }
                 else if( key == "gantry" ) {
@@ -366,9 +388,16 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     number( mount.second, good );
                     if( good ) { arm.mounts.push_back( mount ); }
                 }
+                else if( key == "profile" ) {
+                    // profile <mocowanie> <szerokość słupa> - wysięgniki starej normy wg ceownika słupa
+                    std::pair<std::string, double> profile;
+                    if( index < count ) { profile.first = Tokens[ index++ ]; } else { good = false; }
+                    number( profile.second, good );
+                    if( good ) { arm.profiles.push_back( profile ); }
+                }
                 else { report( entry, "unknown keyword \"" + key + "\"" ); good = false; --index; }
             }
-            if( good && closed && arm.mounts.empty() ) { report( entry, "needs at least one \"mount\"" ); continue; }
+            if( good && closed && arm.mounts.empty() && arm.profiles.empty() ) { report( entry, "needs at least one \"mount\" or \"profile\"" ); continue; }
             if( false == good || false == closed ) {
                 if( good ) { report( entry, "missing \"endearthing_arm\"" ); } else if( Errors.empty() || Errors.back().find( entry ) == std::string::npos ) { report( entry, "bad or missing value" ); }
                 skip();
@@ -416,6 +445,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     else if( key == "earthing" ) { text( pole.earthing ); }
                     else if( key == "earthing_back" ) { text( pole.earthing_back ); }
                     else if( key == "earthing_arm" ) { text( pole.earthing_arm ); }
+                    else if( key == "feeder" ) { pole.feeder = true; }
                     else { report( entry, "unknown keyword \"" + key + "\"" ); good = false; --index; }
                 }
                 else {
