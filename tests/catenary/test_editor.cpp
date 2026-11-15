@@ -627,23 +627,24 @@ int main( int, char *argv[] ) {
                 if( entry6130.find( std::string( "components/" ) + name + ".t3d" ) != std::string::npos ) { made[ name ] = entry6130.substr( entry6130.find( " angles " ) ); }
             }
         }
-        // 1611-11: głębokość u góry 0,200, 0,0122 m/m; wysięgnik 0,5 m niżej niż domyślnie - nadal 6130-01
+        // 1611-11: głębokość u góry 0,200, 0,0122 m/m; wysięgnik 0,5 m niżej niż domyślnie - nadal najkrótsze śruby (6130-01, do 0,223)
         std::printf( "  uszynienie z 6130: %s | czesci %zu | e2: %s | e3: %s\n", line6130.c_str(), catenary_earthing_parts( 0 ),
             catenary_earthing_holder_text( 0, "e2" ).c_str(), catenary_earthing_holder_text( 0, "e3" ).c_str() );
         for( auto const &item : made ) { std::printf( "    %s%s\n", item.first.c_str(), item.second.c_str() ); }
-        good6130 = good6130 && made.count( "6130-01" ) && made.count( "6130" ) && made.count( "6130-00" ) && made.count( "6120-01" )
-            && catenary_earthing_parts( 0 ) == 5 && made[ "6130-01" ] == made[ "6130" ] && made[ "6130-00" ] != made[ "6130-01" ];
-        // tekstury: wysięgnik lpn w katalogu tekstury osprzętu, mocowanie osprzęt
+        // wysięgnik w modelu mocowania (bez osobnego "6130"), tył 6130-00 bez obrotu (Jan 2026-11-16)
+        good6130 = good6130 && made.count( "6130-01" ) && 0 == made.count( "6130" ) && made.count( "6130-00" ) && made.count( "6120-01" )
+            && catenary_earthing_parts( 0 ) == 4 && made[ "6130-00" ] == made[ "6130-01" ];
+        // tekstury: wszystkie części wysięgnika na teksturze uszynienia (przy samej "siec" - uszynienia_used)
         for( auto i { from }; i < simulation::State.created.size(); ++i ) {
             auto const &entry6130 { simulation::State.created[ i ].entry };
-            if( entry6130.find( "components/6130.t3d " ) != std::string::npos ) { good6130 = good6130 && entry6130.find( ".t3d siec_trakcyjna/lpn_used " ) != std::string::npos; }
-            if( entry6130.find( "components/6130-01.t3d " ) != std::string::npos ) { good6130 = good6130 && entry6130.find( ".t3d siec_trakcyjna/siec " ) != std::string::npos; }
+            if( entry6130.find( "components/6130-0" ) != std::string::npos ) { good6130 = good6130 && entry6130.find( ".t3d siec_trakcyjna/uszynienia_used " ) != std::string::npos; }
+            if( entry6130.find( "components/6120-01.t3d " ) != std::string::npos ) { good6130 = good6130 && entry6130.find( ".t3d siec_trakcyjna/siec " ) != std::string::npos; }
         }
         // za głęboko (śruby za krótkie): 3 m w dół - 0,237 m, wystarcza 6130-02
         arm.raise = -3.0; custom.set_holder( arm );
         good6130 = good6130 && catenary_earthing_update( 0, custom ) && catenary_earthing_holder_text( 0, "e2" ).find( "6130-02" ) == 0;
         std::printf( "    e2 trzy metry nizej: %s\n", catenary_earthing_holder_text( 0, "e2" ).c_str() );
-        check( good6130, "uszynienie: wysiegnik 6130 z mocowaniem wg glebokosci slupa, tyl 6130-00 obrocony, uchwyt od toru, wysokosc; zapis i odczyt" );
+        check( good6130, "uszynienie: wysiegnik 6130 z mocowaniem wg glebokosci slupa, tyl 6130-00 bez obrotu, tekstura uszynienia, uchwyt od toru, wysokosc; zapis i odczyt" );
     }
 
     // 6a6. sekcje uszynienia (Jan 2026-11-09): "from ... to" po łańcuchu, końce z kotwieniem 0492 i punkt izolujący 0493 między
@@ -713,11 +714,11 @@ int main( int, char *argv[] ) {
             for( auto i { from }; i < simulation::State.created.size(); ++i ) {
                 auto const &e { simulation::State.created[ i ].entry };
                 brackets += ( e.find( "components/5100-" ) != std::string::npos );
-                arms += ( e.find( "components/6130.t3d" ) != std::string::npos );
+                arms += ( e.find( "components/6130-0" ) != std::string::npos && e.find( "components/6130-00" ) == std::string::npos );
             }
             // składa się us2 (6130 na g6, bez uchwytów) i us1 (punkt izolujący na styku; uchwyty 5100 x4 na g1)
             std::printf( "    6130 na koncu us2: uchwytow 5100 %d, wysiegnikow %d, czesci us2 %zu\n", brackets, arms, catenary_earthing_parts( 1 ) );
-            good = good && brackets == 4 && arms == 1 && catenary_earthing_parts( 1 ) == 2 + 3 + 5;
+            good = good && brackets == 4 && arms == 1 && catenary_earthing_parts( 1 ) == 2 + 3 + 4;
         }
         // słup wstawiony do łańcucha między g1 i g2 - sam wchodzi do sekcji us1
         auto extra { entry };

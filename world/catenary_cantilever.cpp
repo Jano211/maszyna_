@@ -337,7 +337,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
         }
 
         if( token == "earthing_arm" ) {
-            // earthing_arm <wysięgnik> back <tył> wire <x> <y> <z> plate <m> mount <mocowanie> <głębokość max> ... endearthing_arm
+            // earthing_arm <nazwa> [body <wysięgnik>] back <tył> wire <x> <y> <z> plate <m> mount <mocowanie> <głębokość max> ... endearthing_arm
             if( index >= count ) { report( "", "\"earthing_arm\" without a name" ); break; }
             catenary::earthing_arm arm;
             arm.name = Tokens[ index++ ];
@@ -348,6 +348,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 auto const key { Tokens[ index++ ] };
                 if( key == "endearthing_arm" ) { closed = true; break; }
                 if( key == "back" ) { if( index < count ) { arm.back = Tokens[ index++ ]; } else { good = false; } }
+                else if( key == "body" ) { if( index < count ) { arm.body = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "wire" ) { for( auto &value : arm.wire ) { number( value, good ); } }
                 else if( key == "plate" ) { number( arm.plate, good ); }
                 else if( key == "skin" ) { if( index < count ) { arm.skin = Tokens[ index++ ]; } else { good = false; } }

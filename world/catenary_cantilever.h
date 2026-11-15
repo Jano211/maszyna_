@@ -172,17 +172,19 @@ struct cantilever_mount {
     double attach_z() const { return point[ 1 ] + hinge_eye[ 1 ]; }
 };
 
-// wysięgnik przewodu uszyniającego (karta 0806, modele Jana 2026-11-08): sam wysięgnik (osobna tekstura, mało faz LOD) stoi w tym
-// samym zerze i obrocie co jego mocowanie; mocowanie dobierane wg głębokości słupa na wysokości śrub (długość śrub), tył po drugiej
-// stronie słupa obrócony o 180 stopni. Układ jak w mocowaniach: zero na płaszczyźnie przylegania, słup w +Y, Z w górę
+// wysięgnik przewodu uszyniającego (karta 0806, modele Jana 2026-11-08, od 2026-11-16 wysięgnik w jednym modelu z mocowaniem):
+// mocowanie dobierane wg głębokości słupa na wysokości śrub (długość śrub), osobny wysięgnik (body, jeśli jest) w tym samym zerze
+// i obrocie, tył na tylnej ścianie słupa (model ułożony tak, jak tam siedzi - bez obrotu). Układ jak w mocowaniach: zero na
+// płaszczyźnie przylegania, słup w +Y, Z w górę. Wszystkie części na teksturze z "skin"
 struct earthing_arm {
-    std::string name;                   // model samego wysięgnika
+    std::string name;                   // nazwa wpisu (klucz "earthing_arm" słupa)
+    std::string body;                   // osobny model wysięgnika stawiany na mocowaniu; pusty - wysięgnik jest w modelu mocowania
     std::string back;                   // tył mocowania (płaskownik z nakrętkami)
     double wire[ 3 ] { 0.0, 0.0, 0.0 }; // punkt liny względem zera mocowania
     double plate { 0.0 };               // połowa wysokości płyty mocowania (zero mocowania najwyżej tyle pod wierzchem słupa)
-    std::string skin;                   // nazwa pliku tekstury samego wysięgnika (mapa -1): wstawiana w miejsce nazwy pliku tekstury
-                                        // osprzętu, dopisek zużycia zostaje (siec_trakcyjna/siec_used -> siec_trakcyjna/lpn_used)
-    std::string skin_default;           // tekstura wysięgnika przy teksturze osprzętu bez dopisku zużycia (sama "siec"), np. lpn_used
+    std::string skin;                   // nazwa pliku tekstury części wysięgnika (mapa -1): wstawiana w miejsce nazwy pliku tekstury
+                                        // osprzętu, dopisek zużycia zostaje (siec_trakcyjna/siec_used -> siec_trakcyjna/uszynienia_used)
+    std::string skin_default;           // tekstura wysięgnika przy teksturze osprzętu bez dopisku zużycia (sama "siec"), np. uszynienia_used
     std::vector<std::pair<std::string, double>> mounts; // mocowanie i największa głębokość słupa, na którą wystarcza śrub (rosnąco)
     // mocowanie na słup o tej głębokości; puste - śruby za krótkie
     std::string mount_for( double const Depth ) const {

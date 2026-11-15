@@ -1,8 +1,41 @@
-# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-15)
+# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-16)
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – 2026-11-15 (najnowsze) – pył na słupach i osprzęcie (shader)
+## START TUTAJ – 2026-11-16 (najnowsze) – nowe modele uszynienia i przewodu wzmacniającego
+
+**Zrobione 16.11 (testy te/tc OK, w exe NIESPRAWDZONE):**
+- Wysięgnik uszyniający 6130: wysięgnik jest teraz w jednym modelu z mocowaniem (`6130-01/02/03`, osobnego `6130` już nie ma) –
+  `earthing_arm` ma opcjonalne `body` (osobny wysięgnik); bez niego stawiane są tylko mocowanie i tył. Śruby: -01 do Y 0,253, -02 0,273, -03 0,293
+  (jak dotąd, po poprawce użytkownika 16.11) → `mount 6130-01 0.223 / 6130-02 0.243 / 6130-03 0.263`.
+  Punkt liny (0, −0,7962, 0,7496) – wysięgnik podniesiony o 10 cm wg karty. Tył `6130-00` w modelu już obrócony (płyta w +Y, tak
+  jak siedzi na tylnej ścianie) – kod go nie obraca. Wykonania 6130-04/05 są dla słupów ETG (strunobetonowych) – słupów ETG
+  w danych jeszcze nie ma, nie wpisane.
+- Tekstura: WSZYSTKIE części wysięgnika (mocowanie, tył) biorą teksturę z wpisu: `skin uszynienia skin_default uszynienia_used`
+  („siec” w nazwie tekstury osprzętu → „uszynienia”, dopisek zużycia zostaje). Uchwyt 6120 dalej na osprzęcie.
+- Tekstury uszynienia posortowane na G: na wzór 161x/lpn: `textures/siec_trakcyjna/uszynienia_{new,used,old,extreme}.tga` + `.mat`,
+  `normals/uszynienia_<zużycie>_normal|_specgloss`, AO pominięte. Stare podfoldery new/used/old/extreme – do usunięcia przez użytkownika.
+- `G:\Maszyna2510\data\traction_supports.txt` wgrany (CRLF, md5 15b96ef39946d5b0bb3acb6c0f779b60).
+
+**Nowe modele w `components` (16.11), jeszcze NIEPODPIĘTE w exe:**
+- `6131-01..05` – dłuższy wysięg uszyniający (lina Y −1,3151; -04 −1,4121, -05 −1,4396; Z 0,7496); `6132-01` – płyta ±0,33,
+  lina (0, −1,1319, 0,7776), własny tył. Do jakich słupów – DO USTALENIA z użytkownikiem. `6130-00` pasuje do wszystkich poza
+  ESN-*, 4950 i 6132-01 (użytkownik).
+- Wysięgniki przewodu wzmacniającego (punkt `eye` = zaczep uchwytu 0301): `4910-01/02`, `4920-01/02` (eye Z −0,05; Y −0,785 /
+  −1,785), `4930-01/02`, `4940-01/02` (eye Z 0,8526; Y −1,335 / −1,634), `4950-01` (płyta ±0,33, własny tył; eye −1,1255 / 0,8807),
+  -01 śruby do Y 0,293, -02 do 0,253 (dwa warianty – tak ma być, użytkownik 16.11); stara norma: `ESN-2141-12..20` (eye −0,5633 /
+  −0,0526, wg profilu ceownika słupa), `ESN-2510-12..18` (eye −1,8355), `ESN-2635A` (słup ŻK, eye −0,5783). Uchwyty przewodu na
+  izolatorze obrotowym `0301-05/051/07/071/09/091` (zero u góry, w zaczepie; model w dół do −0,56…−0,73, punkt `wire` dodany przez
+  użytkownika 16.11: Z −0,52 dla -05/-07, −0,64 dla -051/-071, −0,56 dla -09, −0,68 dla -091). Przewodu wzmacniającego w kodzie nie ma w ogóle – do zaprojektowania.
+  Pozostałe wykonania z ESN-98 (bramki, słupy kratowe, ES/EST) użytkownik odpuścił – brak starych bramek i rysunków.
+- `7500-01` (1 przewód jezdny) i `7500-02` (2 przewody) – izolatory sekcyjne: zero na jednym końcu, `wire` na drugim (X −2,906),
+  `eye_1..4` (X −0,82 / −2,07, Y ±0,17 w -01, ±0,203 w -02, Z 0,0825) – zaczepy linek podwieszających do liny nośnej (karta katalogowa). Stary izolator
+  sekcyjny: ESN-106A (lina nośna przerwana izolatorem ESN-2025 w łącznikach 2063 z zaciskami 2027/70-BN; pod nim 2065-N, drut
+  przerwany zaciskami 2034-BN, ślizgi TS-2068 w uchwytach 2067-N, płozy 2066-BN; dwa wieszaki V z linki Cu 10 mm² 1,4 m z jarzm
+  2011-BN). Kart 2065/2067/2068 brak – użytkownik modeluje 2065 z rysunku 106A. Nigdzie niepodpięte.
+- Stary katalog ESN (skany sprzed Kolprojektu 1973): spis i notatki w `KATALOG_ESN_SPIS.md` i `KATALOG_ESN.md` (ten folder).
+
+## START TUTAJ – 2026-11-15 – pył na słupach i osprzęcie (shader)
 
 **Zrobione 15.11 (w exe NIESPRAWDZONE, skompilowane tylko shadery – glslang, ogl46 i vk14 – i testy te/tsc):** brązowo-miedziany pył
 i ogólny brud nakładany shaderem `mat_normalmap_specgloss` według położenia w świecie, żeby słup i przykręcone do niego mocowania
