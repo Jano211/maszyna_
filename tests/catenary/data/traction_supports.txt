@@ -84,6 +84,8 @@ mount 4690-05 console 0.785 -0.785 0.0 back 4690-06 endmount
 //   brackets = przegub 4430 kotwienia na slupie w parze uchwytow jak w kotwieniu stalym sieci (urzadzenie 0403 w traction_tensioners.txt,
 //   wg typu slupu), na scianie slupa od strony przesla, w osi slupa, na wysokosci liny. Wysiegnik 6130 na slupie koncowym: kotwienie
 //   na jego koncu (wysokosc wysiegnika), bez uchwytow.
+//   gantry_arm = wysiegnik 6132 na dzwigarze bramki zamiast uchwytu 6840 (uzytkownik 2026-11-16): zero "drop" m pod zerem 6840,
+//   obrocony o 90 stopni - wysiegnik wzdluz toru. Polozenie i kierunek NA OKO (drop 0,90 ~ dol dzwigara 600x800) - do poprawki.
 //   gantry = uchwyt na dzwigarze bramki 13-0807 na zwisach bramek w trasie sekcji: zero na gorze dzwigara (zero zwisu + top 0,90 z kart),
 //   punkt liny "line" modelu 6840-01; przesuwany wzdluz dzwigara ustawieniem slupa (shift).
 //   jumper = przylacze 13-0885 na kazdym slupie (chyba ze wylaczone - nojumper): linka AFL 95 (srednica 13,5 mm ZALOZONA), zacisk na
@@ -92,6 +94,7 @@ mount 4690-05 console 0.785 -0.785 0.0 back 4690-06 endmount
 earthing_line AFL120 diameter 0.0155 mass 0.494 tension 200
   guide 5180-07 -0.14724 0.0 -0.00227 -0.07392 0.0 -0.03375 -0.04314 0.00006 -0.07688
   gantry 6840-01 top 0.90 wire 0.0 0.0 0.131
+  gantry_arm 6132-01 drop 0.90 wire 0.0 -1.1319 0.7776
   brackets 0403
   jumper diameter 0.0135 along 0.15 rise 0.25
   chain anchor 4430-01 0.0747 7150-01 0.8324 4720-01 0.10 4420-01 0.93 5180-07 0.14724
@@ -110,9 +113,11 @@ endearthing_line
 //   _extreme); skin_default = gdy tekstura osprzetu nie ma dopisku zuzycia (sama "siec").
 //   Modele 2026-11-16: 6130-01/02/03 sruby do Y 0,253 / 0,273 / 0,293, punkt liny (0, -0,7962, 0,7496); wykonania 6130-04/05 sa dla
 //   slupow ETG (strunobetonowych - jeszcze bez modeli slupow, nie wpisane); 6131-01..05 dluzszy wysieg (lina Y -1,3151, -04 -1,4121,
-//   -05 -1,4396) i 6132-01 (plyta 0,66 m, wlasny tyl) - do ktorych slupow, do ustalenia z uzytkownikiem.
+//   -05 -1,4396) - ten sam wysiegnik dluzszy, wybierany w edytorze ("long" uchwytu, slowo "long" wpisu 6130).
+//   6132-01 (plyta 0,66 m, sruby przez dzwigar do Y 0,639) - na dzwigary bramek: "gantry_arm" w earthing_line.
 //   Przymiarka do slupow, nie z karty (karta niejasna) - do poprawki wg dopiskow z karty.
-earthing_arm 6130 back 6130-00 wire 0.0 -0.7962 0.7496 plate 0.09 skin uszynienia skin_default uszynienia_used mount 6130-01 0.223 mount 6130-02 0.243 mount 6130-03 0.263 endearthing_arm
+earthing_arm 6130 long 6131 back 6130-00 wire 0.0 -0.7962 0.7496 plate 0.09 skin uszynienia skin_default uszynienia_used mount 6130-01 0.223 mount 6130-02 0.243 mount 6130-03 0.263 endearthing_arm
+earthing_arm 6131 back 6130-00 wire 0.0 -1.3151 0.7496 plate 0.09 skin uszynienia skin_default uszynienia_used mount 6131-01 0.223 mount 6131-02 0.243 mount 6131-03 0.263 endearthing_arm
 
 // ---- slupy -----------------------------------------------------------------------------------------------------
 // uszynienie grupowe: "earthing" = uchwyt liny 6120 (karta 0805) na gorze slupa; wykonania wg Jana 2026-10-25: -01 C120-160,

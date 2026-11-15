@@ -178,6 +178,7 @@ struct cantilever_mount {
 // płaszczyźnie przylegania, słup w +Y, Z w górę. Wszystkie części na teksturze z "skin"
 struct earthing_arm {
     std::string name;                   // nazwa wpisu (klucz "earthing_arm" słupa)
+    std::string longer;                 // wpis wysięgnika dłuższego (6130 -> 6131), wybierany ustawieniem "long" uchwytu
     std::string body;                   // osobny model wysięgnika stawiany na mocowaniu; pusty - wysięgnik jest w modelu mocowania
     std::string back;                   // tył mocowania (płaskownik z nakrętkami)
     double wire[ 3 ] { 0.0, 0.0, 0.0 }; // punkt liny względem zera mocowania
@@ -213,6 +214,11 @@ struct earthing_line {
     std::string gantry_part;
     double gantry_top { 0.90 };
     double gantry_wire[ 3 ] { 0.0, 0.0, 0.0 };
+    // wysięgnik na dźwigarze bramki (6132, Jan 2026-11-16; "gantry_arm <model> drop <m> wire <x> <y> <z>"): zero modelu "drop" m pod
+    // zerem uchwytu 6840 (górą dźwigara), ułożony jak 6840; punkt liny względem zera modelu. Położenie NA OKO - do poprawki
+    std::string gantry_arm;
+    double gantry_arm_drop { 0.0 };
+    double gantry_arm_wire[ 3 ] { 0.0, 0.0, 0.0 };
     // przyłącze 13-0885 (linka od liny do konstrukcji): średnica, zacisk na linie "along" od uchwytu w stronę przęsła, łuk "rise" nad
     // zaciskiem, końcówka na wierzchu słupa ("drop" pod liną - gdy słup nie ma podanego wierzchu)
     // zamocowanie przegubu 4430 kotwienia końca sekcji na słupie: uchwyty z urządzenia kotwienia stałego sieci (traction_tensioners.txt,
