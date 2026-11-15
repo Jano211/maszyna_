@@ -15,14 +15,14 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   („siec” w nazwie tekstury osprzętu → „uszynienia”, dopisek zużycia zostaje). Uchwyt 6120 dalej na osprzęcie.
 - Tekstury uszynienia posortowane na G: na wzór 161x/lpn: `textures/siec_trakcyjna/uszynienia_{new,used,old,extreme}.tga` + `.mat`,
   `normals/uszynienia_<zużycie>_normal|_specgloss`, AO pominięte. Stare podfoldery new/used/old/extreme – do usunięcia przez użytkownika.
-- `G:\Maszyna2510\data\traction_supports.txt` wgrany (CRLF, md5 b4cea2687dfb826b736700c54546bb14 po 6131/6132), lang/editor_pl.po z G: + 2 nowe wpisy (G: ma wpisy spoza tej gałęzi – NIE nadpisywać wersją z repo).
+- `G:\Maszyna2510\data\traction_supports.txt` wgrany (CRLF, md5 5e93aabc6690bf873978b43b8f3fe4a5 po 6131/6132 i drop 0), lang/editor_pl.po z G: + 2 nowe wpisy (G: ma wpisy spoza tej gałęzi – NIE nadpisywać wersją z repo).
 
 **Zrobione 16.11 w nocy (testy te OK, w exe NIESPRAWDZONE):**
 - 6131 = ten sam wysięgnik co 6130, tylko dłuższy: wpis `earthing_arm 6131` (lina Y −1,3151), 6130 ma `long 6131`; w uchwycie
   słowo `long` (edytor: „Długi (6131)” przy wysięgniku). 
-- 6132-01 na dźwigarach bramek: `gantry_arm 6132-01 drop 0.90 wire 0 −1.1319 0.7776` w `earthing_line`; na zwisie bramki `arm`
-  uchwytu stawia 6132 zamiast 6840 (edytor: „Wysięgnik 6132”). Zero 0,90 pod zerem 6840 (≈ dół dźwigara 600×800), obrót 90° –
-  wysięgnik wzdłuż toru (−X układu zwisu). WSZYSTKO NA OKO – do obejrzenia w exe.
+- 6132-01 na dźwigarach bramek: `gantry_arm 6132-01 drop 0.0 wire 0 −1.1319 0.7776` w `earthing_line`; na zwisie bramki `arm`
+  uchwytu stawia 6132 zamiast 6840 (edytor: „Wysięgnik 6132”; oba do wyboru). Zero na wysokości zera 6840 (+0,90 od mocowania
+  zwisu – użytkownik 16.11), obrót 90° – wysięgnik wzdłuż toru (−X układu zwisu, kierunek NA OKO) – do obejrzenia w exe.
 - Izolatory sekcyjne z modelami zamiast brył: `resin` → 7500-01 / 7500-02 wg liczby przewodów jezdnych typu sieci, `ceramic` → stary
   ESN-106A: `esn_2065` (WYMIARY NA OKO w kodzie: długość 1,30, uszy X −0,20/−1,10, Y ±0,10, Z 0,35 – po eksporcie modelu przepisać
   z jego punktów `wire`/`eye_1..4`; stałe kSection* w catenary_scene.cpp), w linie nośnej `esn_2025` w łącznikach 2063 (bryła
