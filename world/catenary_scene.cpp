@@ -3408,6 +3408,9 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
         auto const jumper = [ & ]( std::size_t const Pole, glm::dvec3 const &Rope, glm::dvec3 const &Toward ) {
             auto const *line { earthing_line_of( earthing ) };
             if( line == nullptr || line->jumper_diameter <= 0.0 ) { return; }
+            // słup z kotwieniem końca sekcji (13-0491 / 13-0492): bez przyłącza - przewód idzie dalej z zacisku końcowego do
+            // ogranicznika niskonapięciowego (użytkownik 2026-11-16; modelu ogranicznika jeszcze nie ma, więc na razie nic)
+            if( earthing.anchored.count( Pole ) ) { return; }
             auto const holder { earthing_holder_of( earthing, Pole ) };
             earthing_place place;
             if( holder.nojumper || false == earthing_place_of( Pole, holder, place, earthing_line_of( earthing ) ) || false == place.has_lug ) { return; }

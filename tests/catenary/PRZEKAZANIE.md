@@ -34,6 +34,10 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   przewody (m.in. w łańcuchu 23-0419).
 - G: `data\traction_supports.txt` (md5 cf15e024dbbf17cb698e44bac46d4d93 po tyłach 6130-00 do 49xx) i `lang\editor_pl.po` (d2b9759c7732badc74ba894137276b2b, wersja z G: + 12 wpisów).
 
+- Uszynienie: na słupie z kotwieniem końca sekcji (13-0491 / 13-0492) nie ma już przyłącza 13-0885 do słupa (użytkownik 16.11) –
+  w terenie przewód idzie dalej z zacisku końcowego do ogranicznika niskonapięciowego. Ogranicznika (modelu) jeszcze nie ma – na razie
+  nic nie rysujemy; po modelu: przewód od zacisku 5180-07 do ogranicznika (miejsce wg Iet-106, niżej w notatkach).
+
 **Do zrobienia:** obejrzeć w exe (strona wysięgnika, wysokość, izolator 0301 pod eye, kotwienie 23-0419 – kierunek 4710/7210, 4950 na
 bramce); modele 7230-01, 6513, 6514, 5120-05; połączenia z siecią (57/94A/96/97B); izolator 2065 – iskrzenie > 40 km/h, łamanie
 pantografu > 50 km/h (punkt 2 niżej, niezrobione).
