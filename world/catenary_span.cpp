@@ -489,16 +489,83 @@ catenary_span_solid( TTraction &Traction, glm::dvec3 const &Camera ) {
     std::vector<catenary::solid_vertex> wires, fittings;
     catenary::build_solid( *definition( Traction ), geometry, wires, fittings );
     if( wires.empty() ) { return {}; }
-    // ogranicznik na skrzyżowaniu nad rozjazdem (33-0561): na tym przęśle, gdy przewód drugiego idzie nad nim wyżej o 0-3 cm
+    // ogranicznik na skrzyżowaniu nad rozjazdem (33-0561): przewody dwóch łańcuchów krzyżują się w planie bliżej niż 3 cm w pionie.
+    // Które przęsło jest dolne (szlakowe - ogranicznik na nim), decyduje raz cały odcinek obu łańcuchów wokół skrzyżowania (to przęsło
+    // z sąsiednimi i przęsła drugiego łańcucha z sąsiednimi): suma różnic wysokości we wszystkich przejściach - nie każde przejście
+    // osobno, bo przewód rozjazdowy w "V" (przechodzi nad szlakowymi i po chwili wraca, użytkownik 2026-11-16) w jednym przejściu
+    // wypadał niżej i ogranicznik przeskakiwał na niego. Przejścia na tym samym dolnym przewodzie - jeden ogranicznik od pierwszego do
+    // ostatniego; rysuje go przęsło, w którym leży jego środek (ogranicznik może sięgać przez koniec przęsła)
     if( CatenaryCrossingCandidates != nullptr ) {
         auto const radius { 0.5 * catenary::wire_diameter( definition( Traction )->contact_wire ) };
-        for( auto *other : CatenaryCrossingCandidates( Traction ) ) {
-            if( other == nullptr || other == &Traction || definition( *other ) == nullptr ) { continue; }
-            catenary::span_geometry othergeometry;
-            if( false == build( *other, othergeometry ) ) { continue; }
+        std::vector<std::pair<TTraction *, catenary::span_geometry>> mine;
+        auto const add_mine = [ & ]( TTraction *Span ) {
+            if( Span == nullptr || definition( *Span ) == nullptr ) { return; }
+            if( std::any_of( mine.begin(), mine.end(), [ Span ]( auto const &M ) { return M.first == Span; } ) ) { return; }
+            catenary::span_geometry built;
+            if( Span == &Traction ) { built = geometry; }
+            else if( false == build( *Span, built ) ) { return; }
+            mine.emplace_back( Span, std::move( built ) );
+        };
+        add_mine( &Traction );
+        add_mine( Traction.hvNext[ 0 ] );
+        add_mine( Traction.hvNext[ 1 ] );
+        auto const ismine = [ & ]( TTraction const *Span ) { return std::any_of( mine.begin(), mine.end(), [ Span ]( auto const &M ) { return M.first == Span; } ); };
+        // przęsła innych łańcuchów przy tym odcinku, z sąsiednimi
+        std::vector<TTraction *> others;
+        auto const add_other = [ & ]( TTraction *Span ) {
+            if( Span == nullptr || ismine( Span ) || definition( *Span ) == nullptr ) { return; }
+            if( std::find( others.begin(), others.end(), Span ) == others.end() ) { others.push_back( Span ); }
+        };
+        for( std::size_t k = 0; k < mine.size(); ++k ) {
+            for( auto *other : CatenaryCrossingCandidates( *mine[ k ].first ) ) {
+                add_other( other );
+                if( other != nullptr ) { add_other( other->hvNext[ 0 ] ); add_other( other->hvNext[ 1 ] ); }
+            }
+        }
+        // podział na ciągłe odcinki (przęsła połączone końcami) - każdy odcinek drugiego łańcucha osobno
+        std::vector<bool> used( others.size(), false );
+        for( std::size_t start = 0; start < others.size(); ++start ) {
+            if( used[ start ] ) { continue; }
+            std::vector<std::size_t> part { start };
+            used[ start ] = true;
+            for( std::size_t k = 0; k < part.size(); ++k ) {
+                for( std::size_t j = 0; j < others.size(); ++j ) {
+                    if( used[ j ] ) { continue; }
+                    auto const *a { others[ part[ k ] ] }, *b { others[ j ] };
+                    if( a->hvNext[ 0 ] == b || a->hvNext[ 1 ] == b || b->hvNext[ 0 ] == a || b->hvNext[ 1 ] == a ) { used[ j ] = true; part.push_back( j ); }
+                }
+            }
+            std::vector<catenary::crossing_raw> points;
+            std::vector<TTraction const *> owners;
+            for( auto const index : part ) {
+                catenary::span_geometry othergeometry;
+                if( false == build( *others[ index ], othergeometry ) ) { continue; }
+                for( auto const &item : mine ) {
+                    catenary::crossing_points( item.second, othergeometry, catenary::kCrossingLimiterGap, points );
+                    owners.resize( points.size(), item.first );
+                }
+            }
+            if( points.empty() ) { continue; }
+            // dolne jest to przęsło, gdy drugi łańcuch idzie średnio wyżej (remis - rozstrzyga nazwa, żeby oba łańcuchy zgodziły się)
+            auto sum { 0.0 };
+            for( auto const &point : points ) { sum += point.gap; }
+            auto const lower { sum > 1e-6 || ( std::abs( sum ) <= 1e-6 && Traction.m_name < others[ part.front() ]->m_name ) };
+            if( false == lower ) { continue; }
             std::vector<catenary::crossing_point> crossings;
-            catenary::find_crossings( geometry, othergeometry, crossings );
+            catenary::group_crossings( points, crossings );
             for( auto const &crossing : crossings ) {
+                // środek ogranicznika - w którym przęśle tego łańcucha (najbliższy punkt przejścia)
+                auto const &a { crossing.position };
+                auto const &b { crossing.spread ? crossing.last : crossing.position };
+                catenary::vec3 const middle { 0.5 * ( a.x + b.x ), 0.5 * ( a.y + b.y ), 0.5 * ( a.z + b.z ) };
+                std::size_t nearest { 0 };
+                auto best { 1e30 };
+                for( std::size_t k = 0; k < points.size(); ++k ) {
+                    auto const &p { points[ k ].position };
+                    auto const distance { std::hypot( p.x - middle.x, p.z - middle.z ) };
+                    if( distance < best ) { best = distance; nearest = k; }
+                }
+                if( owners[ nearest ] != &Traction ) { continue; }
                 catenary::build_crossing_limiter( crossing, radius, wires, fittings );
             }
         }

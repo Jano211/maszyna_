@@ -172,7 +172,22 @@ struct crossing_point {
     vec3 position;      // punkt na dolnym przewodzie (tego przęsła) pod skrzyżowaniem
     vec3 along;         // kierunek dolnego przewodu, poziomy, jednostkowy
     double gap { 0.0 }; // m, o ile przewód drugiego przęsła jest wyżej
+    // ogranicznik na kilku przejściach naraz (przewód rozjazdowy w "V" przechodzi nad dolnym i wraca, użytkownik 2026-11-16: ogranicznik
+    // zaczyna się przed pierwszym przejściem i kończy za drugim): position - pierwsze, last - ostatnie przejście na tym przewodzie
+    bool spread { false };
+    vec3 last { 0.0, 0.0, 0.0 };
 };
+// przecięcie przewodów jezdnych dwóch przęseł w planie, w którym przewody są w pionie bliżej niż Limit (w obie strony): punkt na przewodzie
+// przęsła Mine, jego kierunek i różnica wysokości (drugie minus to, ze znakiem)
+struct crossing_raw {
+    vec3 position;
+    vec3 along;
+    double gap { 0.0 };
+};
+void crossing_points( span_geometry const &Mine, span_geometry const &Other, double Limit, std::vector<crossing_raw> &Output );
+// przejścia na tych samych dolnych przewodach łączone w ograniczniki: punkty na jednym przewodzie (do 3 cm w bok od jego kierunku)
+// do 25 m od siebie - jeden ogranicznik od pierwszego do ostatniego (spread), pojedynczy punkt - jak dotąd 2 m w jego miejscu
+void group_crossings( std::vector<crossing_raw> const &Points, std::vector<crossing_point> &Output );
 // skrzyżowania przewodów jezdnych tego przęsła (Mine) z przewodami drugiego (Other), w których drugie idzie wyżej o (0, kCrossingLimiterGap).
 // Ogranicznik osobny na każdym dolnym przewodzie; przecięcia tego samego dolnego przewodu z dwoma górnymi (do 2 m wzdłuż, ok. 0,7 m
 // przy skosie 1:9) łączone w jedno, w środku między nimi

@@ -437,5 +437,34 @@ int main( int argc, char *argv[] ) {
         std::printf( "skrzyzowanie nad rozjazdem (33-0561): ogranicznik przy 1 cm, bez przy 0 i 5 cm, po jednym na przewod: %s\n", good ? "OK" : "BLAD" );
         failed = failed || !good;
     }
+    // przewod rozjazdowy w "V" (uzytkownik 2026-11-16): przechodzi nad dolnym i wraca - raz 1,2 cm wyzej, raz 0,8 cm nizej (przyblizenie
+    // geometrii); crossing_points bierze oba (|roznica| < 3 cm), group_crossings robi z nich jeden ogranicznik od pierwszego do ostatniego
+    {
+        using catenary::element_kind;
+        catenary::span_geometry low, vee;
+        low.elements.push_back( { { -30.0, 5.40, 0.0 }, { 30.0, 5.40, 0.0 }, element_kind::contact } );
+        auto const vshape = [ & ]( double Half ) {
+            catenary::span_geometry g;
+            g.elements.push_back( { { -30.0, 5.412, -3.0 }, { 0.0, 5.402, 0.5 }, element_kind::contact } );
+            g.elements.push_back( { { 0.0, 5.402, 0.5 }, { 2.0 * Half, 5.332, -3.0 }, element_kind::contact } );
+            return g;
+        };
+        bool good { true };
+        std::vector<catenary::crossing_raw> points;
+        catenary::crossing_points( low, vshape( 30.0 ), catenary::kCrossingLimiterGap, points );
+        good = good && points.size() == 2 && ( points[ 0 ].gap > 0.0 ) != ( points[ 1 ].gap > 0.0 );
+        std::vector<catenary::crossing_point> grouped;
+        catenary::group_crossings( points, grouped );
+        // przejscia ok. 9 m od siebie: jeden ogranicznik rozciagniety od pierwszego do ostatniego
+        good = good && grouped.size() == 1 && grouped[ 0 ].spread && std::abs( std::abs( grouped[ 0 ].last.x - grouped[ 0 ].position.x ) - std::abs( points[ 1 ].position.x - points[ 0 ].position.x ) ) < 1e-6;
+        std::vector<catenary::solid_vertex> wires, fittings;
+        if( false == grouped.empty() ) { catenary::build_crossing_limiter( grouped[ 0 ], 0.006, wires, fittings ); }
+        double xmin { 1e9 }, xmax { -1e9 };
+        for( auto const &v : wires ) { xmin = std::min( xmin, v.position.x ); xmax = std::max( xmax, v.position.x ); }
+        auto const reach { std::abs( points[ 1 ].position.x - points[ 0 ].position.x ) };
+        good = good && std::abs( ( xmax - xmin ) - ( reach + 2.0 ) ) < 1e-6;
+        std::printf( "przewod rozjazdowy w V: dwa przejscia (%.2f m od siebie), jeden ogranicznik od pierwszego do ostatniego: %s\n", reach, good ? "OK" : "BLAD" );
+        failed = failed || !good;
+    }
     return failed ? 1 : 0;
 }

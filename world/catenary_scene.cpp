@@ -337,6 +337,9 @@ text_number( double const Value, int const Precision = 4 ) {
 // a przy wpisie ze słupem oś słupa na wysokości główki szyny. Umbrella: ustawienia strony parasola (tylko przy słupie);
 // obrót zwisu na dźwigarze bramki względem płaszczyzny wysięgnika (stopnie; 0 do ok. 2° skosu - zwis idzie za wysięgnikiem)
 double drop_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Pole, double Heading );
+// obrót dźwigara względem płaszczyzny wysięgnika zwisu (stopnie, bez progu 2°) - dla tego, co jedzie po dźwigarze (uchwyty uszynienia,
+// wysięgniki 6132 / 4950 przesuwane wzdłuż dźwigara); 0 - zwis nie na dźwigarze
+double drop_beam_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Pole, double Heading );
 // bramka, na której dźwigarze wisi zwis wpisu (nullptr, gdy żadna)
 scene_gantry const *drop_gantry( catenary::suspension const &Data, catenary::cantilever_pole const &Pole );
 std::size_t suspension_named( std::string const &File, std::string const &Name );
@@ -1074,6 +1077,12 @@ drop_gantry( catenary::suspension const &Data, catenary::cantilever_pole const &
 
 double
 drop_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Pole, double const Heading ) {
+    auto const turn { drop_beam_turn( Data, Pole, Heading ) };
+    return ( std::abs( turn ) > kDropSkewLimit ? turn : 0.0 );
+}
+
+double
+drop_beam_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Pole, double const Heading ) {
     auto const *gantry { drop_gantry( Data, Pole ) };
     if( gantry == nullptr ) { return 0.0; }
     auto const *catalog { cantilevers() };
@@ -1089,8 +1098,7 @@ drop_turn( catenary::suspension const &Data, catenary::cantilever_pole const &Po
     auto alongx { -bx * std::cos( Heading ) + bz * std::sin( Heading ) };
     auto alongy { bx * std::sin( Heading ) + bz * std::cos( Heading ) };
     if( alongy < 0.0 ) { alongx = -alongx; alongy = -alongy; }
-    auto const turn { std::atan2( -alongx, alongy ) * 180.0 / 3.14159265358979323846 };
-    return ( std::abs( turn ) > kDropSkewLimit ? turn : 0.0 );
+    return std::atan2( -alongx, alongy ) * 180.0 / 3.14159265358979323846;
 }
 } // namespace
 
@@ -2955,6 +2963,29 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
             std::copy( std::begin( rotated ), std::end( rotated ), placement->rotation );
         }
     }
+    // zwis bramki: wszystko na dźwigarze ułożone i przesuwane wzdłuż dźwigara, także przy jego skosie do toru poniżej 2° (zwis wisi wtedy
+    // w płaszczyźnie wysięgnika, ale dźwigar biegnie skośnie - użytkownik 2026-11-16: po przesunięciu o 5 m wysięgnik wystawał za dźwigar)
+    if( ongantry && false == onmast ) {
+        auto const turn { drop_beam_turn( data, *pole, Place.heading ) * 3.14159265358979323846 / 180.0 };
+        if( std::abs( turn ) > 1e-9 ) {
+            auto const c { std::cos( turn ) }, s { std::sin( turn ) };
+            std::vector<catenary::cantilever_placement *> all { &wire };
+            for( auto &placement : Place.parts ) { all.push_back( &placement ); }
+            for( auto *placement : all ) {
+                auto const x { placement->position[ 0 ] }, y { placement->position[ 1 ] };
+                placement->position[ 0 ] = c * x - s * y;
+                placement->position[ 1 ] = s * x + c * y;
+                double rotated[ 9 ];
+                auto const &r { placement->rotation };
+                for( int column = 0; column < 3; ++column ) {
+                    rotated[ 0 + column ] = c * r[ 0 + column ] - s * r[ 3 + column ];
+                    rotated[ 3 + column ] = s * r[ 0 + column ] + c * r[ 3 + column ];
+                    rotated[ 6 + column ] = r[ 6 + column ];
+                }
+                std::copy( std::begin( rotated ), std::end( rotated ), placement->rotation );
+            }
+        }
+    }
     // izolator obrotowy odciągnięty przez przewód (zdjęcie użytkownika 2026-11-16): oś izolatora (-Z modelu) obrócona najkrótszą drogą
     // na kierunek wypadkowej Pull, przewód w jego punkcie "wire" na tej osi
     if( Pull != nullptr && hangerindex < Place.parts.size() ) {
@@ -3726,11 +3757,19 @@ section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<caten
         auto const step { std::min( 0.5, 0.25 * length ) / length };
         auto ropealong { ropeat( std::min( 1.0, t + step ) ) - ropeat( std::max( 0.0, t - step ) ) };
         ropealong = glm::length( ropealong ) > 1e-6 ? glm::normalize( ropealong ) : along;
-        // część z zerem w From, osią -X wzdłuż Direction (poziomo); zwraca położenie punktu Point modelu w scenerii
+        // część z zerem w From, osią -X wzdłuż Direction - także ze spadkiem (użytkownik 2026-11-16: izolator w linie nośnej ma iść
+        // w kącie opadu liny, nie poziomo); Y modelu zostaje poziomo, prostopadle; zwraca położenie punktu Point modelu w scenerii
         auto const spawn = [ & ]( std::string const &Part, glm::dvec3 const &From, glm::dvec3 Direction, double const ( *Points )[ 3 ], int const Count, glm::dvec3 *Out ) {
+            if( glm::length( Direction ) < 1e-6 ) { return; }
+            Direction = glm::normalize( Direction );
+            // spadek: +X modelu idzie w -Direction, w układzie części (X - poziomo w -Direction, Z w górę) to ( poziomo, 0, -Direction.y )
+            auto const rise { -Direction.y };
+            auto const level { std::sqrt( std::max( 0.0, 1.0 - rise * rise ) ) };
             Direction.y = 0.0;
             if( glm::length( Direction ) < 1e-6 ) { return; }
             Direction = glm::normalize( Direction );
+            // obrót części (kolumny - osie modelu): X ( level, 0, rise ), Y ( 0, 1, 0 ), Z = X x Y = ( -rise, 0, level )
+            double const pitch[ 9 ] { level, 0.0, -rise, 0.0, 1.0, 0.0, rise, 0.0, level };
             // kierunek "do konstrukcji" (Y modelu) prostopadły; z dwóch możliwych ten, przy którym +X modelu wypada w -Direction
             auto heading { std::atan2( -Direction.z, Direction.x ) };
             catenary::cantilever_placement probe;
@@ -3741,9 +3780,12 @@ section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<caten
                 heading += M_PI;
             }
             catenary::cantilever_placement placement;
+            std::copy( std::begin( pitch ), std::end( pitch ), placement.rotation );
             for( int k = 0; k < Count; ++k ) {
                 catenary::cantilever_placement point;
-                std::copy( std::begin( Points[ k ] ), std::end( Points[ k ] ), point.position );
+                for( int row = 0; row < 3; ++row ) {
+                    point.position[ row ] = pitch[ row * 3 + 0 ] * Points[ k ][ 0 ] + pitch[ row * 3 + 1 ] * Points[ k ][ 1 ] + pitch[ row * 3 + 2 ] * Points[ k ][ 2 ];
+                }
                 auto const moved { catenary::cantilever_to_scene( point, heading ) };
                 Out[ k ] = From + glm::dvec3 { moved.offset[ 0 ], moved.offset[ 1 ], moved.offset[ 2 ] };
             }
