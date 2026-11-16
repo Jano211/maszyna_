@@ -42,10 +42,18 @@ Są: 1491–1493 (pale), 161x (1611/1613/1614/1617), 1665–1667, 1701, maszty b
 - [ ] Kotwienie środkowe: zaciski 5560 / 5570 na linie nośnej, złączka 6410 na przewodzie, uchwyt 4590 (0416, do dźwigara bramki);
       obejma liny kotwienia na teowniku bez siodła (dziś drugi 4160-01).
 - [ ] Uchwyty kotwień 4580 (wspólne z D).
-- [ ] ★ Kotwienie słupów do ziemi (użytkownik 16.11 23:05): odciągi słupów kotwowych do gruntu – lina z kotwą gruntową / płytą
-      kotwiącą, uchwyty na słupie, śruba rzymska; karty i części do ustalenia (zastrzał 4800 wyrzucony wcześniej). Kod: wpis przy
-      słupie kotwowym, kierunek przedłużenia łańcucha.
-
+- [ ] ★ Kotwienie słupów do ziemi = ODCIĄGI PRĘTOWE słupów kotwowych (tom 4 `z- KATALOG 4 -z.pdf` dział 1300–1599, strony PDF;
+      stary `kolprojekt2.pdf` te same numery, s. 10–44):
+      - odciągi: 33-1550 (s. 37) 35 kN – dwa pręty z nakrętką rzymską pośrodku, ucha M24 na końcach, góra 7,10 m nad fundamentem,
+        w poziomie 8,10 m ±0,20 (ok. 41°), obejma na słupie wg szerokości a 210/310/410 mm (wyk. 1–3; 11–13 z tulejami izolacyjnymi,
+        41–46 kg); 23-1540 (s. 36) to samo skrócone; 33-1560 (s. 38) 22 kN; 13-1570 / 13-1580 (s. 39–40) z izolacją 22 / 35 kN;
+        23-1590 (s. 41) segment odciągu dla terenów górniczych; stary katalog: odciąg 3,5 T / 2,2 T (s. 31–32), górnicze (s. 43–44).
+      - głowice fundamentu odciągu: 23-1321 jednoprętowy 45° (s. 7), 23-1322 jednoprętowy 60° (s. 8), 1331 dwuprętowy (s. 9),
+        1341/1344/1345 słup i odciąg z rozporą (ceownikowy / bramka / przestrzenny, s. 10–12), 1381/1384/1385 ze studzienką (s. 17–19).
+      - fundamenty: 1411 prefabrykowany fundament odciągu (s. 20), palowe odciągu 13-1495 BI-A / PI-K i 13-1497 BIII-A / PIII-K (s. 33–34).
+      - Podział wykonań odciągów: 1 – słup stalowy indywidualny i bramkowy, 2 – żelbetowy, 3 – przestrzenny 400×600.
+      Modele: pręt górny z uchem i obejmą (wg a), pręt dolny z uchem, nakrętka rzymska (albo całość + pręty skalowane), głowica
+      i fundament odciągu. Kod: odciąg przy słupie kotwowym w przedłużeniu linii kotwienia (kierunek od łańcucha), długość z wysokości.
 ## F. Odciągi sieci (0311–0326)
 - [ ] 6303-7 końcówka liny odciągowej na linie nośnej; 5640-1 zacisk (odciągi pośrednie); 5270-3 zaciski (razem z kauszą, po 2–3,
       jak na gruncie); 6301-3 kausza; w 0326 dodatkowo 6301-1, 6303-1, 6311-1 ×2.
