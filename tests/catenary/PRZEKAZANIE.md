@@ -33,6 +33,13 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 **Do sprawdzenia w exe:** łuk z przewodem wzmacniającym – kierunek odchylenia (do środka łuku), czy przewód trafia w zacisk 0301,
 czy izolator nie wchodzi w wysięgnik / słup przy dużych kątach; 4950 na bramkach (też się odchyla).
 
+**Pył – wydajność (16.11 21:30):** użytkownik: „efekt przedni, ale chyba wpierdala trochę klatek – jak sieć schodzi z widoku, jest
+szybciej”. Nie wiadomo, czy to pył, czy sama geometria sieci – test: `strength 0` w `data\traction_dust.txt` (restart, bez
+kompilacji). Na razie w dust.glsl (ogl46 i vk14) drobniejsze oktawy szumu wygaszane z odległością i dalej w ogóle nie liczone:
+0,25 m – 25…45 m, 1 m – 90…160 m (`DUST_FINE_FADE`, `DUST_MEDIUM_FADE`); przy `contrast 0` szum pomijany. Skompilowane glslangiem
+(ogl46 -G, vk14 -V), wgrane na G: (md5 9f24618107e1b376a4888e91c3f07351, LF). Następny krok, jeśli dalej za wolno: szum z małej
+tekstury 3D (jeden odczyt zamiast 8–24 haszy).
+
 ## START TUTAJ – 2026-11-16 02:00 – zrzutka na nowy czat
 
 **Jak pracujemy (bez zmian):** commit prosto na `siec-gl46` → push → merge do `wszystko-gl46` → push (płytki klon, fetch z refspec
