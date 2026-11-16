@@ -20,9 +20,14 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   o ok. 50° do środka łuku, na sąsiednich ok. 31°; na prostej przy równych przęsłach pionowo. Fizycznie się zgadza (siła boczna
   T·a/R ≈ 530 N przy ciężarze przęsła ≈ 440 N) – na łukach odchylenia są duże, jak na zdjęciu.
 - ZAŁOŻENIA (do potwierdzenia z użytkownikiem): (1) maks. odchylenie od pionu 80° (`kFeederSwingMax`) – nie wiadomo, kiedy izolator
-  zahacza o wysięgnik; (2) ciężar samego izolatora z uchwytem pominięty (brak danych); (3) koniec sekcji „na wysięgniku” (jeden sąsiad)
+  zahacza o wysięgnik (użytkownik 16.11: „może ciut za dużo” – zostaje, skręcimy, gdy będzie się ewidentnie wbijał); (2) ciężar
+  izolatora z uchwytem i zawieszką (użytkownik 16.11): izolator 6,2 kg + uchwyt 1,3 + zawieszka 2,5–3,1 → razem 10,5 kg (AFL95)
+  … 11 kg (AFL240), pomiędzy liniowo wg masy przewodu; izolator jak pręt na przegubie – jego ciężar liczony w połowie, reszta na końcu
+  (prostuje izolator: na teście 6a8 g3 ok. 46° zamiast 50°); (3) koniec sekcji „na wysięgniku” (jeden sąsiad)
   – izolator pionowo, chyba że na tym słupie zaczyna/kończy się inna sekcja tego samego przewodu (wtedy drugi sąsiad z niej); sam
-  naciąg położyłby izolator poziomo; (4) koniec z kotwieniem 23-0419 – bez zmian (łańcuch zamiast uchwytu); (5) uszynienie (6120/6130,
+  naciąg położyłby izolator poziomo; użytkownik 16.11: zakończenie przewodu wzmacniającego bez kotwienia na izolatorze 0301 „jest
+  niemożliwe” – taki koniec (bez 23-0419 i bez innej sekcji tego przewodu na słupie) idzie do logu; edytor nadal pozwala go wybrać
+  (DO USTALENIA: czy edytor ma wymuszać 23-0419 na końcach); (4) koniec z kotwieniem 23-0419 – bez zmian (łańcuch zamiast uchwytu); (5) uszynienie (6120/6130,
   zacisk sztywno na wysięgniku) – bez odchylania.
 
 **Do sprawdzenia w exe:** łuk z przewodem wzmacniającym – kierunek odchylenia (do środka łuku), czy przewód trafia w zacisk 0301,
