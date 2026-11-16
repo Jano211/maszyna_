@@ -947,15 +947,15 @@ int main( int, char *argv[] ) {
         cParser directive( "td_izolator_test.scm endcatenary" );
         catenary_scene_load( directive );
         catenary_scene_resolve();
-        // stary izolator (ceramic, karta 23-0436): element 7230-01, w linie nośnej ESN-2025 i dwa zaciski 5120 (modele 2026-11-16)
+        // stary izolator (ceramic, karta 23-0436): 7230-01 w przewodzie, 7210-01 w linie nośnej, nic więcej (modele 2026-11-16)
         std::map<std::string, int> sectionparts;
         for( auto i { madefrom }; i < simulation::State.created.size(); ++i ) {
-            for( auto const *name : { "7230-01", "esn_2025", "5120-01", "7500-01", "7500-02" } ) {
+            for( auto const *name : { "7230-01", "7210-01", "esn_2025", "5120-01", "7500-01", "7500-02" } ) {
                 if( simulation::State.created[ i ].entry.find( std::string( "components/" ) + name + ".t3d" ) != std::string::npos ) { ++sectionparts[ name ]; }
             }
         }
-        std::printf( "  izolator sekcyjny ceramic: 7230 %d, esn_2025 %d, 5120 %d\n", sectionparts[ "7230-01" ], sectionparts[ "esn_2025" ], sectionparts[ "5120-01" ] );
-        good = good && sectionparts[ "7230-01" ] >= 1 && sectionparts[ "esn_2025" ] >= 1 && sectionparts[ "5120-01" ] >= 2 && sectionparts[ "7500-01" ] == 0;
+        std::printf( "  izolator sekcyjny ceramic: 7230 %d, 7210 %d, esn_2025 %d, 5120 %d\n", sectionparts[ "7230-01" ], sectionparts[ "7210-01" ], sectionparts[ "esn_2025" ], sectionparts[ "5120-01" ] );
+        good = good && sectionparts[ "7230-01" ] == 1 && sectionparts[ "7210-01" ] == 1 && sectionparts[ "esn_2025" ] == 0 && sectionparts[ "5120-01" ] == 0 && sectionparts[ "7500-01" ] == 0;
         good = good && mock_span_bodies.size() == 3 && mock_span_bodies[ 0 ].find( "pwr01" ) == 0 && mock_span_bodies[ 1 ].find( "pwr01" ) == 0 && mock_span_bodies[ 2 ].find( "pwr09" ) == 0 && errors.empty();
         std::remove( "tests/catenary/td_izolator_test.scm" );
         check( good, "izolator sekcyjny: zapis i odczyt, przesla za nim zasila jego zasilacz" );
