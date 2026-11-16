@@ -4,6 +4,7 @@ Stan na 2026-10-31 (bieżący stan i kolejność prac: PRZEKAZANIE.md, sekcja ST
 (https://claude.ai/artifact/LboXDQjty15vbb7ieh8AUn) – Jan może odhaczać tam; przy zmianach przenosić tutaj.
 Zestawienie z notatek w `tests/catenary/*.md` (PRZEKAZANIE, KONCEPCJA, KONCEPCJA_EDYTOR, BRAMKI, KOTWIENIA, GLOWACKI,
 ROZSZERZANIE) i z pracy nad kotwieniami 23–24.10.
+Modele do zrobienia (od A do Z, stan 16.11): MODELE.md; zasilanie (odłączniki, odgromniki): ZASILANIE.md.
 
 Jan 2026-10-24 13:24: „do żadnych złożeń na ten moment nie mam uwag” – złożenia wysięgników (rurowe, teowniki) i
 założenia przy nich uznane za przyjęte (odhaczone niżej).
