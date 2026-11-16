@@ -1,6 +1,32 @@
-# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-16 02:00)
+# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-16 21:30)
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
+
+## START TUTAJ – 2026-11-16 wieczór – izolatory przewodu wzmacniającego odciągane przez przewód
+
+**Prośba użytkownika 16.11 (zdjęcie: izolator na końcu wysięgnika wyraźnie odchylony w stronę przewodu):** izolatory obrotowe
+0301 przewodu wzmacniającego mają się odchylać tak, jak ciągnie je przewód – „tam jest największy efekt”.
+
+**Zrobione (testy te/tsc/tc/tk OK, składnia catenary_scene.cpp z nagłówkami exe OK, w exe NIESPRAWDZONE):**
+- `earthing_feeder_pull()` (catenary_scene.cpp): wypadkowa sił, którymi przęsła do obu sąsiednich słupów ciągną zacisk – naciąg
+  poziomy `tension` przewodu w stronę każdego sąsiada + składowa pionowa z paraboli przęsła `H·h/a − w·a/2` (h – różnica wysokości
+  zacisków, a – długość w planie, w – ciężar przewodu na metr). Izolator wisi w `eye` wzdłuż tej siły: `earthing_place_of(…, Pull)`
+  obraca 0301 najkrótszą drogą (oś −Z modelu na kierunek siły), przewód w jego punkcie `wire` na tej osi.
+- Wszystkie miejsca, które stawiają uchwyt albo biorą punkt przewodu (stawianie części, lina w przęsłach, kotwienie, punkt izolujący,
+  tekst w edytorze) idą przez `earthing_place_at( sekcja, słup, place )` – izolator i przewód zawsze w tym samym miejscu.
+- Punkty sąsiadów i zacisku do liczenia siły – NIEODCHYLONE (jednoznacznie, bez iteracji; różnica o długość izolatora na przęśle
+  kilkudziesięciu metrów pomijalna).
+- Wynik (test 6a8, AFL185, przęsła 60 m, środkowy słup przesunięty w bok o 4 m ≈ łuk R 450 m): izolator na tym słupie odchylony
+  o ok. 50° do środka łuku, na sąsiednich ok. 31°; na prostej przy równych przęsłach pionowo. Fizycznie się zgadza (siła boczna
+  T·a/R ≈ 530 N przy ciężarze przęsła ≈ 440 N) – na łukach odchylenia są duże, jak na zdjęciu.
+- ZAŁOŻENIA (do potwierdzenia z użytkownikiem): (1) maks. odchylenie od pionu 80° (`kFeederSwingMax`) – nie wiadomo, kiedy izolator
+  zahacza o wysięgnik; (2) ciężar samego izolatora z uchwytem pominięty (brak danych); (3) koniec sekcji „na wysięgniku” (jeden sąsiad)
+  – izolator pionowo, chyba że na tym słupie zaczyna/kończy się inna sekcja tego samego przewodu (wtedy drugi sąsiad z niej); sam
+  naciąg położyłby izolator poziomo; (4) koniec z kotwieniem 23-0419 – bez zmian (łańcuch zamiast uchwytu); (5) uszynienie (6120/6130,
+  zacisk sztywno na wysięgniku) – bez odchylania.
+
+**Do sprawdzenia w exe:** łuk z przewodem wzmacniającym – kierunek odchylenia (do środka łuku), czy przewód trafia w zacisk 0301,
+czy izolator nie wchodzi w wysięgnik / słup przy dużych kątach; 4950 na bramkach (też się odchyla).
 
 ## START TUTAJ – 2026-11-16 02:00 – zrzutka na nowy czat
 

@@ -2773,8 +2773,10 @@ earthing_line_of( scene_earthing const &Earthing ) {
 }
 
 // uchwyt 6120 (karta 0805) albo wysięgnik przewodu uszyniającego 6130 (karta 0806) na słupie podwieszenia z ustawieniami Holder
+// Pull - przewód wzmacniający: kierunek (scenerii, jednostkowy), w którym wypadkowa sił z przęseł odciąga izolator obrotowy 0301
+// od pionu (izolator wisi w eye wysięgnika wzdłuż tego kierunku); brak - izolator pionowo
 bool
-earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const &Holder, earthing_place &Place, catenary::earthing_line const *Line ) {
+earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const &Holder, earthing_place &Place, catenary::earthing_line const *Line, glm::dvec3 const *Pull = nullptr ) {
     auto const *catalog { cantilevers() };
     auto const standing { earthing_pole( Suspension ) };
     if( catalog == nullptr || standing >= Suspensions.size() ) { Place.problem = "no pole"; return false; }
@@ -2901,10 +2903,14 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     }
     // przewód wzmacniający: uchwyt na izolatorze obrotowym 0301 zawieszony w punkcie eye wysięgnika (zero izolatora u góry, w zaczepie),
     // przewód w jego punkcie "wire"; nowe izolatory (-051/-071/-091) ustawieniem "new"
+    auto hangerindex { Place.parts.size() };   // izolator 0301 w Place.parts (brak - size)
+    auto hangerwire { 0.0 };                   // Z punktu "wire" izolatora względem jego zera (ujemne - w dół)
     if( feeder ) {
         auto const fresh { Holder.fresh && false == line->insulator_new.empty() };
         auto const &insulator { fresh ? line->insulator_new : line->insulator };
         if( false == insulator.empty() ) {
+            hangerindex = Place.parts.size();
+            hangerwire = ( fresh ? line->insulator_new_wire : line->insulator_wire );
             auto hanger { wire };
             hanger.role = "earthing_arm";   // 0301 na teksturze uszynienia (użytkownik 2026-11-16)
             hanger.part = insulator;
@@ -2947,6 +2953,39 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
                 rotated[ 6 + column ] = s * r[ 3 + column ] + c * r[ 6 + column ];
             }
             std::copy( std::begin( rotated ), std::end( rotated ), placement->rotation );
+        }
+    }
+    // izolator obrotowy odciągnięty przez przewód (zdjęcie użytkownika 2026-11-16): oś izolatora (-Z modelu) obrócona najkrótszą drogą
+    // na kierunek wypadkowej Pull, przewód w jego punkcie "wire" na tej osi
+    if( Pull != nullptr && hangerindex < Place.parts.size() ) {
+        auto &hanger { Place.parts[ hangerindex ] };
+        // kierunek scenerii -> układ wysięgnika słupa (jak earthing_to_pole z Direction)
+        auto const hc { std::cos( Place.heading ) }, hs { std::sin( Place.heading ) };
+        glm::dvec3 target { -( Pull->x * hc - Pull->z * hs ), Pull->x * hs + Pull->z * hc, Pull->y };
+        auto &r { hanger.rotation };
+        glm::dvec3 const down { -r[ 2 ], -r[ 5 ], -r[ 8 ] };
+        auto const length { glm::length( target ) };
+        if( length > 1e-6 ) {
+            target = target * ( 1.0 / length );
+            auto axis { glm::cross( down, target ) };
+            auto const s { glm::length( axis ) }, c { glm::dot( down, target ) };
+            if( s > 1e-9 ) {
+                axis = axis * ( 1.0 / s );
+                // macierz obrotu (Rodrigues) i złożenie z obrotem izolatora: kolumny = osie modelu w układzie wysięgnika słupa
+                double q[ 9 ];
+                auto const t { 1.0 - c };
+                q[ 0 ] = c + axis.x * axis.x * t;          q[ 1 ] = axis.x * axis.y * t - axis.z * s; q[ 2 ] = axis.x * axis.z * t + axis.y * s;
+                q[ 3 ] = axis.y * axis.x * t + axis.z * s; q[ 4 ] = c + axis.y * axis.y * t;          q[ 5 ] = axis.y * axis.z * t - axis.x * s;
+                q[ 6 ] = axis.z * axis.x * t - axis.y * s; q[ 7 ] = axis.z * axis.y * t + axis.x * s; q[ 8 ] = c + axis.z * axis.z * t;
+                double rotated[ 9 ];
+                for( int row = 0; row < 3; ++row ) {
+                    for( int column = 0; column < 3; ++column ) {
+                        rotated[ row * 3 + column ] = q[ row * 3 + 0 ] * r[ 0 * 3 + column ] + q[ row * 3 + 1 ] * r[ 1 * 3 + column ] + q[ row * 3 + 2 ] * r[ 2 * 3 + column ];
+                    }
+                }
+                std::copy( std::begin( rotated ), std::end( rotated ), r );
+            }
+            for( int axis3 = 0; axis3 < 3; ++axis3 ) { wire.position[ axis3 ] = hanger.position[ axis3 ] + hangerwire * r[ axis3 * 3 + 2 ]; }
         }
     }
     auto const part { catenary::cantilever_to_scene( wire, Place.heading ) };
@@ -3205,6 +3244,89 @@ earthing_split_partner( std::string const &File, std::size_t const Pole, scene_e
     return Earthings.size();
 }
 
+// największe odchylenie izolatora obrotowego przewodu wzmacniającego od pionu (ZAŁOŻENIE: 80 stopni, nie wiadomo, gdzie izolator
+// zahacza o wysięgnik; przy wypadkowej skierowanej w górę izolator kładzie się na tym kącie)
+double const kFeederSwingMax { 80.0 * 3.14159265358979323846 / 180.0 };
+
+// przewód wzmacniający (zdjęcie użytkownika 2026-11-16, "tam jest największy efekt"): kierunek, w którym przewód odciąga izolator
+// obrotowy 0301 na słupie Standing sekcji Earthing - wypadkowa sił, którymi przęsła do obu sąsiednich słupów ciągną zacisk: naciąg
+// poziomy (tension przewodu) w stronę sąsiada plus składowa pionowa z paraboli przęsła (H*h/a - w*a/2, h - różnica wysokości, a - długość
+// w planie). Na prostej przy równych przęsłach izolator wisi pionowo, na łuku odchyla się do środka łuku, przy różnych wysokościach
+// sąsiadów - wzdłuż toru. Punkty sąsiadów i zacisku - nieodchylone (różnica o długość izolatora na przęśle kilkudziesięciu metrów
+// jest pomijalna, a liczenie zostaje jednoznaczne: ten sam wynik przy stawianiu uchwytów i rysowaniu przewodu). Ciężar samego izolatora
+// z uchwytem pominięty (nieznany). Koniec sekcji z kotwieniem - bez (łańcuch zamiast uchwytu); koniec "na wysięgniku" - drugi
+// sąsiad z sekcji tego samego przewodu, która zaczyna się albo kończy na tym słupie; bez niego izolator wisi pionowo (sam naciąg
+// położyłby go poziomo - koniec przewodu na izolatorze obrotowym w terenie nie występuje)
+bool
+earthing_feeder_pull( scene_earthing const &Earthing, std::size_t const Standing, glm::dvec3 &Pull ) {
+    auto const *line { earthing_line_of( Earthing ) };
+    if( line == nullptr || false == line->feeder || line->tension <= 0.0 || line->insulator.empty() ) { return false; }
+    auto const &own { Earthing.path.empty() ? earthing_route_of( Earthing ) : Earthing.path };
+    if( own.size() < 2 ) { return false; }
+    auto const anchoredend = [ & ]( std::string const &Kind ) { return false == Kind.empty() && line->chain( Kind ) != nullptr; };
+    if( ( own.front() == Standing && anchoredend( Earthing.data.start ) ) || ( own.back() == Standing && anchoredend( Earthing.data.end ) ) ) { return false; }
+    // sąsiedzi: słup i sekcja, z której bierze się ustawienia jego uchwytu
+    std::vector<std::pair<std::size_t, scene_earthing const *>> neighbours;
+    auto const collect = [ & ]( scene_earthing const &Section, std::vector<std::size_t> const &Path ) {
+        auto const found { std::find( Path.begin(), Path.end(), Standing ) };
+        if( found == Path.end() ) { return; }
+        auto const index { static_cast<std::size_t>( found - Path.begin() ) };
+        for( auto const other : { index > 0 ? Path[ index - 1 ] : Suspensions.size(), index + 1 < Path.size() ? Path[ index + 1 ] : Suspensions.size() } ) {
+            if( other >= Suspensions.size() || other == Standing ) { continue; }
+            if( std::none_of( neighbours.begin(), neighbours.end(), [ other ]( auto const &N ) { return N.first == other; } ) ) { neighbours.emplace_back( other, &Section ); }
+        }
+    };
+    collect( Earthing, own );
+    if( neighbours.size() < 2 ) {
+        for( auto const &other : Earthings ) {
+            if( &other == &Earthing || other.removed || other.file != Earthing.file || earthing_line_of( other ) != line ) { continue; }
+            auto const route { other.path.empty() ? earthing_route_of( other ) : other.path };
+            if( route.empty() || ( route.front() != Standing && route.back() != Standing ) ) { continue; }
+            collect( other, route );
+            if( neighbours.size() >= 2 ) { break; }
+        }
+    }
+    if( neighbours.size() < 2 ) { return false; }
+    earthing_place here;
+    if( false == earthing_place_of( Standing, earthing_holder_of( Earthing, Standing ), here, line ) ) { return false; }
+    auto const horizontal { line->tension * 10.0 };   // daN -> N
+    auto const weight { line->mass * 9.81 };          // N/m
+    glm::dvec3 force { 0.0 };
+    std::size_t used { 0 };
+    for( auto const &neighbour : neighbours ) {
+        earthing_place there;
+        if( false == earthing_place_of( neighbour.first, earthing_holder_of( *neighbour.second, neighbour.first ), there, line ) ) { continue; }
+        auto way { there.wire - here.wire };
+        auto const rise { way.y };
+        way.y = 0.0;
+        auto const span { glm::length( way ) };
+        if( span < 0.5 ) { continue; }
+        force = force + way * ( horizontal / span );
+        force.y += horizontal * rise / span - 0.5 * weight * span;
+        ++used;
+    }
+    if( used < 2 ) { return false; }
+    // kierunek osi izolatora od zaczepu do zacisku = kierunek siły, którą przewód ciągnie zacisk; nie dalej niż kFeederSwingMax od pionu
+    glm::dvec3 across { force.x, 0.0, force.z };
+    auto const side { glm::length( across ) };
+    if( side < 1e-6 ) { return false; }
+    across = across * ( 1.0 / side );
+    auto const down { -force.y };
+    auto angle { down > 0.0 ? std::atan2( side, down ) : kFeederSwingMax };
+    angle = std::min( angle, kFeederSwingMax );
+    if( angle < 1e-4 ) { return false; }
+    Pull = across * std::sin( angle ) - glm::dvec3 { 0.0, std::cos( angle ), 0.0 };
+    return true;
+}
+
+// uchwyt na słupie Standing sekcji Earthing: ustawienia z sekcji, jej przewód, izolator przewodu wzmacniającego odciągnięty przez przęsła
+bool
+earthing_place_at( scene_earthing const &Earthing, std::size_t const Standing, earthing_place &Place ) {
+    glm::dvec3 pull;
+    auto const pulled { earthing_feeder_pull( Earthing, Standing, pull ) };
+    return earthing_place_of( Standing, earthing_holder_of( Earthing, Standing ), Place, earthing_line_of( Earthing ), pulled ? &pull : nullptr );
+}
+
 // wstawia uchwyty uszynienia na słupach i części końców sekcji (albo usuwa, gdy uszynienie usunięte). zwraca liczbę wstawionych modeli
 std::size_t
 assemble_earthing( scene_earthing &Earthing ) {
@@ -3256,7 +3378,7 @@ assemble_earthing( scene_earthing &Earthing ) {
     for( std::size_t k = 0; k < Earthing.path.size(); ++k ) {
         auto const standing { Earthing.path[ k ] };
         earthing_place place;
-        if( false == earthing_place_of( standing, earthing_holder_of( Earthing, standing ), place, earthing_line_of( Earthing ) ) ) {
+        if( false == earthing_place_at( Earthing, standing, place ) ) {
             WriteLog( ( "Catenary: earthing \"" + Earthing.data.name + "\" goes over \"" + Suspensions[ standing ].data.name + "\": " + place.problem ).c_str() );
             continue;
         }
@@ -3266,7 +3388,7 @@ assemble_earthing( scene_earthing &Earthing ) {
         if( links != nullptr ) {
             auto const neighbour { Earthing.path[ k == 0 ? 1 : last - 1 ] };
             earthing_place other;
-            if( earthing_place_of( neighbour, earthing_holder_of( Earthing, neighbour ), other, earthing_line_of( Earthing ) ) ) {
+            if( earthing_place_at( Earthing, neighbour, other ) ) {
                 auto way { other.wire - place.wire };
                 way.y = 0.0;
                 if( glm::length( way ) > 0.1 ) {
@@ -3340,7 +3462,7 @@ assemble_earthing( scene_earthing &Earthing ) {
                 auto const partner { earthing_split_partner( Earthing.file, next, &Earthing ) };
                 if( partner >= Earthings.size() ) { continue; }
                 earthing_place other;
-                if( false == earthing_place_of( next, earthing_holder_of( Earthings[ partner ], next ), other, earthing_line_of( Earthings[ partner ] ) ) ) { break; }
+                if( false == earthing_place_at( Earthings[ partner ], next, other ) ) { break; }
                 auto const &links { *line->chain( "split" ) };
                 auto total { 0.0 };
                 for( auto const &link : links ) { total += link.length; }
@@ -3400,7 +3522,7 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
             auto const anchored { earthing.anchored.find( Pole ) };
             if( anchored != earthing.anchored.end() ) { Point = anchored->second; return true; }
             earthing_place place;
-            if( false == earthing_place_of( Pole, earthing_holder_of( earthing, Pole ), place, earthing_line_of( earthing ) ) ) { return false; }
+            if( false == earthing_place_at( earthing, Pole, place ) ) { return false; }
             Point = place.wire;
             return true;
         };
@@ -3462,7 +3584,7 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
             auto const partner { earthing_split_partner( earthing.file, earthing.split_next, &earthing ) };
             earthing_place other;
             if( point( poles.back(), first ) && partner < Earthings.size()
-             && earthing_place_of( earthing.split_next, earthing_holder_of( Earthings[ partner ], earthing.split_next ), other, earthing_line_of( Earthings[ partner ] ) ) ) {
+             && earthing_place_at( Earthings[ partner ], earthing.split_next, other ) ) {
                 earthing_rope_piece( first, earthing.split_from, Solid, earthing_line_of( earthing ) );
                 earthing_rope_piece( earthing.split_to, other.wire, Solid, earthing_line_of( earthing ) );
                 tails( earthing.split_next );
@@ -5262,7 +5384,7 @@ catenary_earthing_holder_text( std::size_t const Index, std::string const &Pole 
         if( line != nullptr && line->feeder ) { return "23-0419"; }
         return ( kind == "anchor" ? "13-0491" : "13-0492" );
     }
-    if( false == earthing_place_of( standing, earthing_holder_of( earthing, standing ), place, earthing_line_of( earthing ) ) ) { return "! " + place.problem; }
+    if( false == earthing_place_at( earthing, standing, place ) ) { return "! " + place.problem; }
     std::string text;
     for( auto const &part : place.parts ) { text += ( text.empty() ? "" : " + " ) + part.part; }
     return text;

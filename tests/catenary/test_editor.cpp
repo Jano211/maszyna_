@@ -808,6 +808,53 @@ int main( int, char *argv[] ) {
         check( good, "przewod wzmacniajacy: sekcja z line AFL95, wysiegniki 49xx wg glebokosci, izolatory 0301, kotwienie 23-0419" );
     }
 
+    // 6a8. przewód wzmacniający - izolator obrotowy 0301 odciągnięty przez przewód (zdjęcie użytkownika 2026-11-16): na prostej przy równych
+    // przęsłach wszystkie izolatory jednakowo (pionowo), na łuku (środkowy słup przesunięty w bok) izolator na nim odchylony do środka łuku;
+    // końce sekcji bez kotwienia (jeden sąsiad) - pionowo
+    {
+        auto const insulators = [ & ]( double const Bend ) {
+            std::vector<catenary::suspension> poles;
+            for( int k = 0; k < 5; ++k ) {
+                auto item { entry };
+                item.name = "g" + std::to_string( k + 1 );
+                item.at[ 2 ] = item.rope[ 2 ] = item.pole[ 2 ] = 60.0 * k;
+                if( k == 2 ) { item.at[ 0 ] += Bend; item.rope[ 0 ] += Bend; item.pole[ 0 ] += Bend; }
+                poles.push_back( item );
+            }
+            catenary::chain line;
+            line.name = "ng"; line.power = "pwr01"; line.type = "C120-2C"; line.suspensions = { "g1", "g2", "g3", "g4", "g5" };
+            catenary::earthing feeder;
+            feeder.name = "wz2"; feeder.line = "AFL185"; feeder.from = "g1"; feeder.to = "g5";
+            std::string text;
+            for( auto const &item : poles ) { text += catenary::write_suspension( item ) + "\n"; }
+            text += catenary::write_earthing( feeder ) + "\n" + catenary::write_chain( line ) + "\n";
+            { std::ofstream out { "tests/catenary/td_wzm_luk_test.scm", std::ios::binary }; out << text; }
+            catenary_scene_clear(); errors.clear(); logs.clear(); mock_span_bodies.clear(); mock_span_names.clear();
+            auto const before { simulation::State.created.size() };
+            cParser directive( "td_wzm_luk_test.scm endcatenary" );
+            catenary_scene_load( directive );
+            catenary_scene_resolve();
+            std::vector<std::string> angles;   // kąty 0301 po kolei (słupy g1..g5)
+            for( auto i { before }; i < simulation::State.created.size(); ++i ) {
+                auto const &e { simulation::State.created[ i ].entry };
+                if( e.find( "components/0301" ) == std::string::npos ) { continue; }
+                auto const at { e.find( " angles " ) };
+                angles.push_back( at == std::string::npos ? std::string() : e.substr( at + 8, e.find( " endmodel" ) - at - 8 ) );
+            }
+            std::remove( "tests/catenary/td_wzm_luk_test.scm" );
+            return angles;
+        };
+        auto const straight { insulators( 0.0 ) }, bent { insulators( 4.0 ) };
+        auto good { straight.size() == 5 && bent.size() == 5 };
+        if( good ) {
+            for( auto const &a : straight ) { good = good && a == straight[ 0 ]; }
+            good = good && bent[ 0 ] == straight[ 0 ] && bent[ 4 ] == straight[ 4 ] && bent[ 2 ] != straight[ 2 ] && bent[ 1 ] != straight[ 1 ];
+        }
+        std::printf( "  0301 na prostej: %s | na luku: g2 %s, g3 %s\n", straight.empty() ? "-" : straight[ 0 ].c_str(),
+            bent.size() > 1 ? bent[ 1 ].c_str() : "-", bent.size() > 2 ? bent[ 2 ].c_str() : "-" );
+        check( good, "przewod wzmacniajacy: izolator 0301 odciagniety przez przewod na luku, na prostej i na koncach pionowo" );
+    }
+
     // 6a5. uszynienie przez słup z kilkoma wysięgnikami (para rozstawionych + trzeci w osi słupa): jeden uchwyt na słup, obrócony
     // jak słup (płaszczyzna przez konsolę), nie w stronę rozstawionych wysięgników
     {
