@@ -21,7 +21,7 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 - Przyjęte przez użytkownika (16.11: „spoko”): AFL-6 95/185/240 średnica 13,5/19,0/21,8 mm, masa 0,382/0,755/0,964 kg/m, naciąg 400 daN; brak
   przyłączy do sieci (57/94A/96/97B) – przewód wzmacniający nie zmienia jeszcze prądów.
 - Kod: `earthing.line`, `earthing_holder.feeder_arm/fresh`, `earthing_line.feeder/arms/insulator*/description`, `earthing_arm.profiles`,
-  `cantilever_pole.feeder`; `earthing_place_of(…, Line)` – przewód sekcji (`earthing_line_of`) zamiast pierwszego z danych (też lina,
+  `cantilever_pole.feeder`; 4910–4940 z tyłem 6130-00 jak w uszynieniu (użytkownik 16.11); `earthing_place_of(…, Line)` – przewód sekcji (`earthing_line_of`) zamiast pierwszego z danych (też lina,
   zwis, zawinięcia w zaciskach). Następna sekcja i partner punktu izolującego – tylko z tym samym przewodem. Test `te` 6a7.
 - Edytor (zakładka Uszynienie): wybór „Przewód” (uszynienie / AFL…) dla nowego odcinka, końce 23-0419; klik słupa pokazuje WSZYSTKIE
   sekcje przez niego (`catenary_earthings_of`) – przy przewodzie wzmacniającym: wysięgnik z listy, „Nowy izolator”, „Do toru”, wysokość;
@@ -32,7 +32,7 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   Linki L10 w „V”: para uszu 7230 do ucha 7210 nad nią. Użytkownik: „tyle wystarczy + linki, nic więcej nie trzeba dokładać” – bez
   łączników 6513, zacisków 5120 i płóz (są w modelach albo zbędne). esn_2025 zostaje osobnym wariantem pod kotwienia i nietypowe
   przewody (m.in. w łańcuchu 23-0419).
-- G: `data\traction_supports.txt` (md5 b8815389282adbefa962d91cabe5f653 po teksturach 49xx) i `lang\editor_pl.po` (d2b9759c7732badc74ba894137276b2b, wersja z G: + 12 wpisów).
+- G: `data\traction_supports.txt` (md5 cf15e024dbbf17cb698e44bac46d4d93 po tyłach 6130-00 do 49xx) i `lang\editor_pl.po` (d2b9759c7732badc74ba894137276b2b, wersja z G: + 12 wpisów).
 
 **Do zrobienia:** obejrzeć w exe (strona wysięgnika, wysokość, izolator 0301 pod eye, kotwienie 23-0419 – kierunek 4710/7210, 4950 na
 bramce); modele 7230-01, 6513, 6514, 5120-05; połączenia z siecią (57/94A/96/97B); izolator 2065 – iskrzenie > 40 km/h, łamanie

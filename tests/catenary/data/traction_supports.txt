@@ -163,13 +163,14 @@ endearthing_line
 
 // wysiegniki przewodu wzmacniajacego (modele 2026-11-16, punkt eye = zaczep uchwytu 0301): mocowanie wg glebokosci slupa jak 6130
 // (-02 sruby do Y 0,253 -> slup do 0,223; -01 do 0,293 -> do 0,263; uzytkownik: wlasciwe -01 na 1601/1602, -02 na 1604/1605/1701/1711,
-// na innych slupach tylko gdy pasuja wymiarem). 4910 krotki, 4920 dlugi, 4930 / 4940 esowe (eye nad plyta).
+// na innych slupach tylko gdy pasuja wymiarem). 4910 krotki, 4920 dlugi, 4930 / 4940 esowe (eye nad plyta). Tyl 6130-00 jak
+// w uszynieniu (uzytkownik 2026-11-16).
 // Stara norma: ESN-2141 (wysieg 650) i ESN-2510 (wydluzony, 1900) - wykonanie wg profilu ceownika slupa (width), bez regulacji;
 // ESN-2635A - na slup zelbetowy ZK (takich slupow w danych brak - mocowanie dopuszczone do 0,40, wybierac recznie).
-earthing_arm 4910 wire 0.0 -0.78512 -0.05265 plate 0.09 skin uszynienia skin_default uszynienia_used mount 4910-02 0.223 mount 4910-01 0.263 endearthing_arm
-earthing_arm 4920 wire 0.0 -1.78474 -0.05211 plate 0.09 skin uszynienia skin_default uszynienia_used mount 4920-02 0.223 mount 4920-01 0.263 endearthing_arm
-earthing_arm 4930 wire 0.0 -1.33503 0.85265 plate 0.09 skin uszynienia skin_default uszynienia_used mount 4930-02 0.223 mount 4930-01 0.263 endearthing_arm
-earthing_arm 4940 wire 0.0 -1.63444 0.85265 plate 0.09 skin uszynienia skin_default uszynienia_used mount 4940-02 0.223 mount 4940-01 0.263 endearthing_arm
+earthing_arm 4910 back 6130-00 wire 0.0 -0.78512 -0.05265 plate 0.09 skin uszynienia skin_default uszynienia_used mount 4910-02 0.223 mount 4910-01 0.263 endearthing_arm
+earthing_arm 4920 back 6130-00 wire 0.0 -1.78474 -0.05211 plate 0.09 skin uszynienia skin_default uszynienia_used mount 4920-02 0.223 mount 4920-01 0.263 endearthing_arm
+earthing_arm 4930 back 6130-00 wire 0.0 -1.33503 0.85265 plate 0.09 skin uszynienia skin_default uszynienia_used mount 4930-02 0.223 mount 4930-01 0.263 endearthing_arm
+earthing_arm 4940 back 6130-00 wire 0.0 -1.63444 0.85265 plate 0.09 skin uszynienia skin_default uszynienia_used mount 4940-02 0.223 mount 4940-01 0.263 endearthing_arm
 earthing_arm ESN-2141 wire 0.0 -0.56326 -0.0526 plate 0.08 skin uszynienia skin_default uszynienia_used profile ESN-2141-12 0.12 profile ESN-2141-14 0.14 profile ESN-2141-16 0.16 profile ESN-2141-18 0.18 profile ESN-2141-20 0.20 endearthing_arm
 earthing_arm ESN-2510 wire 0.0 -1.83554 -0.05211 plate 0.08 skin uszynienia skin_default uszynienia_used profile ESN-2510-12 0.12 profile ESN-2510-14 0.14 profile ESN-2510-16 0.16 profile ESN-2510-18 0.18 endearthing_arm
 earthing_arm ESN-2635A wire 0.0 -0.57826 -0.0526 plate 0.08 skin uszynienia skin_default uszynienia_used mount ESN-2635A 0.40 endearthing_arm

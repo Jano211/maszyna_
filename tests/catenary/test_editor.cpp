@@ -788,7 +788,7 @@ int main( int, char *argv[] ) {
             // 49xx i 0301 na teksturze uszynienia
             if( ( e.find( "components/49" ) != std::string::npos || e.find( "components/0301" ) != std::string::npos ) && e.find( "/uszynienia" ) != std::string::npos ) { ++onskin; }
         }
-        good = good && onskin == 6;
+        good = good && onskin == 6;   // 49xx i 0301 (tył 6130-00 osobno)
         std::string list;
         for( auto const &item : made ) { list += " " + item.first + "x" + std::to_string( item.second ); }
         std::printf( "  przewod wzmacniajacy (na teksturze uszynienia %d): %zu slupow, czesci %zu; wstawione:%s\n", onskin, catenary_earthing_poles( 0 ).size(), catenary_earthing_parts( 0 ), list.c_str() );
@@ -797,8 +797,8 @@ int main( int, char *argv[] ) {
             catenary_earthing_holder_text( 0, "f3" ).c_str(), catenary_earthing_holder_text( 0, "f4" ).c_str() );
         good = good && made[ "4910-02" ] == 2 && made[ "4930-02" ] == 1 && made[ "0301-05" ] == 2 && made[ "0301-051" ] == 1
             && made[ "4450-01" ] == 1 && made[ "4710-01" ] == 1 && made[ "esn_2025" ] == 1 && made[ "4420-01" ] == 1 && made[ "5180-07" ] == 1
-            && made[ "6120-01" ] == 0 && catenary_earthing_holder_text( 0, "f1" ) == "23-0419"
-            && catenary_earthing_holder_text( 0, "f2" ) == "4910-02 + 0301-05";
+            && made[ "6120-01" ] == 0 && made[ "6130-00" ] == 3 && catenary_earthing_holder_text( 0, "f1" ) == "23-0419"
+            && catenary_earthing_holder_text( 0, "f2" ) == "4910-02 + 6130-00 + 0301-05";
         // przewód w przęsłach (lina rysowana z przęsłami łańcucha) - przęsło f2-f3 istnieje
         good = good && std::find( mock_span_names.begin(), mock_span_names.end(), std::string( "nf_1" ) ) != mock_span_names.end();
         std::remove( "tests/catenary/td_wzmacniajacy_test.scm" );
