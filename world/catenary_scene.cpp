@@ -3465,29 +3465,26 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
 
 // izolator sekcyjny w przęśle (Jan 2026-10-25, w połowie; 2026-10-30: "at" m od podwieszenia "after"; modele 2026-11-16):
 // "resin" - 7500-01 (sieć z jednym przewodem jezdnym) albo 7500-02 (dwa przewody) wg typu sieci; "ceramic" - stary izolator sekcyjny
-// wg karty 23-0436 starego Kolprojektu (kolprojekt1.pdf s. 163; następca ESN-106A, użytkownik 2026-11-16): w przewodzie jezdnym
-// izolator 7230-1 (poz. 11) z płozami 6514-1/-2 i zaciskami 5110-1, w linie nośnej izolator 7210-1 (= ESN-2025, model esn_2025)
-// w łącznikach 6513-1 (poz. 8) z zaciskami 5120-5 (poz. 3); linki L10 1,5 m (poz. 12, z uchwytami 4230-1 / 6301-1 / 6311-1)
-// w "V" do liny. Dedykowane modele 7210, 7230, 5120-05, 6513, 6514 dostarczy użytkownik - do tego czasu esn_2025 (zostaje jako
-// osobny wariant pod kotwienia i nietypowe przewody), bryła 6513 i 5120-01. Modele leżą wzdłuż przewodu: zero na jednym końcu, drugi koniec ("wire")
-// w -X; linki podwieszające z uszu eye_1..eye_4 do liny nośnej w "V" (para uszu do jednego punktu liny).
-// Przewód liczony prosto między końcami (ZAŁOŻENIE: bez strzałki), lina nośna z parabolą (w połowie ok. 1/10 wysokości
-// konstrukcyjnej niżej). Element nie wychodzi poza przęsło. Bez modelu izolatora liny nośnej nowego (7500) i łącznika 6513 - bryły
-// zastępcze; modeli 7230 / 6514 / 5120-05 jeszcze nie ma (7230 - wymiary NA OKO, 5120-01 w miejscu 5120-05)
+// wg karty 23-0436 starego Kolprojektu (kolprojekt1.pdf s. 163; następca ESN-106A): izolator 7230-01 w przewodzie jezdnym i 7210-01
+// w linie nośnej (modele użytkownika 2026-11-16, płozy i łączniki są w modelach - użytkownik: "tyle wystarczy + linki, nic więcej nie
+// trzeba dokładać"; esn_2025 zostaje osobnym wariantem pod kotwienia). Linki podwieszające w "V": 7500 - para uszu eye_1/2 i eye_3/4
+// do liny nad środkiem pary; 7230 - para uszu do ucha eye_1 / eye_2 izolatora 7210 nad nią.
+// 7500 leży wzdłuż przewodu z drugim końcem ("wire") w -X, 7210 i 7230 - w +X. Przewód liczony prosto między końcami (ZAŁOŻENIE: bez
+// strzałki), lina nośna z parabolą (w połowie ok. 1/10 wysokości konstrukcyjnej niżej). Element nie wychodzi poza przęsło. Izolator
+// liny nośnej przy 7500 - bryła zastępcza (modelu brak)
 struct section_model {
     char const *model;
     double length;              // od zera do punktu "wire" (wzdłuż -X)
     double eyes[ 4 ][ 3 ];      // eye_1..eye_4 (1, 2 - jedna para, 3, 4 - druga)
 };
-// z modeli w G:\Maszyna2510\models\siec_trakcyjna\components (2026-11-16); 7230-01 - WYMIARY NA OKO z rysunków 23-0436 / ESN-106A
-// (modelu jeszcze nie było: do poprawki wg punktów modelu; eye - zaczepy linek pionowych, para na każdym końcu)
+// z modeli w G:\Maszyna2510\models\siec_trakcyjna\components (2026-11-16); 7230-01 - eye_1, eye_2 (jedna para), eye_3, eye_4
 section_model const kSection7500_1 { "7500-01", 2.906, { { -0.8157, -0.1674, 0.0825 }, { -0.8157, 0.1672, 0.0825 }, { -2.0724, -0.1674, 0.0825 }, { -2.0724, 0.1672, 0.0825 } } };
 section_model const kSection7500_2 { "7500-02", 2.906, { { -0.8257, -0.2033, 0.0825 }, { -0.8257, 0.2031, 0.0825 }, { -2.0799, -0.2033, 0.0825 }, { -2.0799, 0.2031, 0.0825 } } };
-section_model const kSection7230 { "7230-01", 1.30, { { -0.20, -0.10, 0.35 }, { -0.20, 0.10, 0.35 }, { -1.10, -0.10, 0.35 }, { -1.10, 0.10, 0.35 } } };
+section_model const kSection7230 { "7230-01", 1.00, { { 0.14053, 0.14006, 0.02891 }, { 0.14053, -0.13997, 0.02891 }, { 0.86659, 0.14006, 0.02891 }, { 0.86659, -0.13997, 0.02891 } } };
+// 7210-01 w linie nośnej: zero na jednym końcu, "wire" 1,10 m w +X, ucha linek eye_1 / eye_2 pod izolatorem
+double constexpr kSection7210 { 1.10 };
+double const kSection7210Eyes[ 2 ][ 3 ] { { 0.15304, 0.0, -0.07808 }, { 0.94825, 0.0, -0.07808 } };
 double constexpr kSectionHangerRadius { 0.0025 };   // linka Cu 10 mm2
-double constexpr kSectionLink6513 { 0.30 };         // łącznik 6513-1 (karta 23-0436 poz. 8) - NA OKO (pół długości 7210, rysunek)
-double constexpr kSectionClamp { 0.058 };           // zacisk 5120 (5120-05 wg karty - modelu brak, stoi 5120-01): zero - wejście liny
-double constexpr kSectionRopeInsulator { 0.6004 };  // 7210-1 = ESN-2025 (model esn_2025): zero - hole_1
 
 void
 section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
@@ -3547,26 +3544,25 @@ section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<caten
                 Chain.span_parts[ Span ].push_back( model );
             }
         };
-        // element na przewodzie: zero na końcu od strony "a", drugi koniec w stronę "b"
+        // element na przewodzie: zero na końcu od strony "a", drugi koniec w stronę "b" (7230: +X modelu w stronę "b", więc -X w stronę "a")
         glm::dvec3 eyes[ 4 ];
-        spawn( element.model, wire - along * half, along, element.eyes, 4, eyes );
-        // linki podwieszające w "V" (7500 i 7230 - użytkownik 2026-11-16): para uszu do punktu liny nad środkiem pary
-        for( int pair = 0; pair < 2; ++pair ) {
-            auto const middle { ( eyes[ 2 * pair ] + eyes[ 2 * pair + 1 ] ) * 0.5 };
-            auto const top { ropeat( std::clamp( t + glm::dot( middle - wire, along ) / length, 0.0, 1.0 ) ) };
-            for( int side = 0; side < 2; ++side ) { add_tube( Solid, { eyes[ 2 * pair + side ], top }, kSectionHangerRadius ); }
-        }
-        // lina nośna: stary - 7210 (ESN-2025) w łącznikach 6513 (bryła zastępcza) z zaciskami 5120; nowy - izolator liny bryłą zastępczą
+        spawn( element.model, wire - along * half, ceramic ? -along : along, element.eyes, 4, eyes );
         auto const ropealong { glm::length( ropeb - ropea ) > 1e-6 ? glm::normalize( ropeb - ropea ) : along };
         if( ceramic ) {
-            spawn( "esn_2025", rope - ropealong * ( 0.5 * kSectionRopeInsulator ), ropealong, nullptr, 0, nullptr );
-            for( int side = -1; side <= 1; side += 2 ) {
-                auto const inner { rope + ropealong * ( side * 0.5 * kSectionRopeInsulator ) };
-                add_box( Solid, inner + ropealong * ( side * 0.5 * kSectionLink6513 ), ropeb - ropea, kSectionLink6513, 0.04 );
-                spawn( "5120-01", inner + ropealong * ( side * ( kSectionLink6513 + kSectionClamp ) ), ropealong * double( side ), nullptr, 0, nullptr );
+            // 7210 w linie nośnej nad 7230, tak samo ułożony (zero od strony "a"); linki w "V" z par uszu 7230 do uszu 7210
+            glm::dvec3 tops[ 2 ];
+            spawn( "7210-01", rope - ropealong * ( 0.5 * kSection7210 ), -ropealong, kSection7210Eyes, 2, tops );
+            for( int pair = 0; pair < 2; ++pair ) {
+                for( int side = 0; side < 2; ++side ) { add_tube( Solid, { eyes[ 2 * pair + side ], tops[ pair ] }, kSectionHangerRadius ); }
             }
         }
         else {
+            // linki podwieszające w "V": para uszu do punktu liny nad środkiem pary; izolator liny - bryła zastępcza
+            for( int pair = 0; pair < 2; ++pair ) {
+                auto const middle { ( eyes[ 2 * pair ] + eyes[ 2 * pair + 1 ] ) * 0.5 };
+                auto const top { ropeat( std::clamp( t + glm::dot( middle - wire, along ) / length, 0.0, 1.0 ) ) };
+                for( int side = 0; side < 2; ++side ) { add_tube( Solid, { eyes[ 2 * pair + side ], top }, kSectionHangerRadius ); }
+            }
             add_box( Solid, rope, ropeb - ropea, 0.6, 0.07 );
         }
         return;

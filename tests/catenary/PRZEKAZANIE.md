@@ -26,13 +26,12 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 - Edytor (zakładka Uszynienie): wybór „Przewód” (uszynienie / AFL…) dla nowego odcinka, końce 23-0419; klik słupa pokazuje WSZYSTKIE
   sekcje przez niego (`catenary_earthings_of`) – przy przewodzie wzmacniającym: wysięgnik z listy, „Nowy izolator”, „Do toru”, wysokość;
   na zwisie bramki: wzdłuż dźwigara + „Nowy izolator”. Lista sekcji: dopisek „wzmacniający <przewód>”, końce brak / 23-0419.
-- Stary izolator sekcyjny (`ceramic`) przerobiony wg karty 23-0436 (kolprojekt1.pdf s. 163; użytkownik: ESN-106 przeniesione do starego
-  Kolprojektu, główne części 7210 = ESN-2025 i 7230): w przewodzie jezdnym `7230-01` (dawniej esn_2065; wymiary dalej NA OKO – po eksporcie
-  przepisać punkty `wire`/`eye_1..4` do kSection7230), w linie nośnej 7210 (esn_2025) w łącznikach 6513-1 (bryła zastępcza) z zaciskami
-  5120 (wg karty 5120-5 – modelu brak, stoi 5120-01), linki L10 (poz. 12) w „V” (użytkownik 16.11). Użytkownik dostarczy gotowe
-  5120-05, 6513, 6514 i dedykowane 7210 / 7230 – wtedy podmienić w section_insulator (esn_2025 zostaje jako osobny wariant pod
-  kotwienia i nietypowe przewody, m.in. w łańcuchu 23-0419). Pozostałe części karty (5110-1,
-  5320-1, 5360-1, 6514-1/-2 płozy, 4230-1, 6301-1, 6311-1) – bez modeli, niepodpięte.
+- Stary izolator sekcyjny (`ceramic`) wg karty 23-0436 (kolprojekt1.pdf s. 163; ESN-106 przeniesione do starego Kolprojektu):
+  modele użytkownika 16.11 `7230-01` w przewodzie jezdnym (zero na końcu, `wire` 1,00 m w +X, `eye_1/2` i `eye_3/4` – pary uszu) i
+  `7210-01` w linie nośnej (`wire` 1,10 m w +X, `eye_1` / `eye_2` pod izolatorem); oba z zerem od strony podwieszenia „after”.
+  Linki L10 w „V”: para uszu 7230 do ucha 7210 nad nią. Użytkownik: „tyle wystarczy + linki, nic więcej nie trzeba dokładać” – bez
+  łączników 6513, zacisków 5120 i płóz (są w modelach albo zbędne). esn_2025 zostaje osobnym wariantem pod kotwienia i nietypowe
+  przewody (m.in. w łańcuchu 23-0419).
 - G: `data\traction_supports.txt` (md5 b8815389282adbefa962d91cabe5f653 po teksturach 49xx) i `lang\editor_pl.po` (d2b9759c7732badc74ba894137276b2b, wersja z G: + 12 wpisów).
 
 **Do zrobienia:** obejrzeć w exe (strona wysięgnika, wysokość, izolator 0301 pod eye, kotwienie 23-0419 – kierunek 4710/7210, 4950 na
