@@ -2047,6 +2047,7 @@ span_shared( scene_chain const &Chain, std::size_t const Span ) {
     for( auto const &shared : data.shared ) { if( shared.first == key ) { return shared.second ? 1 : 0; } }
     return -1;
 }
+std::string section_gap_text( scene_chain const &Chain, std::size_t Span, double const *WireA, double const *WireB );
 // treść wpisu node traction dla przęsła k łańcucha; pusta, gdy brakuje podwieszenia. Przęsło do kotwienia bez wieszaków
 std::string
 span_body( scene_chain const &Chain, std::size_t const Span ) {
@@ -2110,6 +2111,8 @@ span_body( scene_chain const &Chain, std::size_t const Span ) {
         if( anchor == nullptr || false == anchor->has_messenger2 ) { continue; }
         body += std::string( " rope2 " ) + ( end == 0 ? "start " : "end " ) + point_text( anchor->messenger2 );
     }
+    // izolator sekcyjny: przewody i lina nie rysowane w jego miejscu
+    body += section_gap_text( Chain, Span, wirea, wireb );
     return body + " endtraction";
 }
 
@@ -3491,30 +3494,91 @@ double constexpr kSection7210 { 1.10 };
 double const kSection7210Eyes[ 2 ][ 3 ] { { 0.15304, 0.0, -0.07808 }, { 0.94825, 0.0, -0.07808 } };
 double constexpr kSectionHangerRadius { 0.0025 };   // linka Cu 10 mm2
 
+// lina nośna nad 7500 (karta 43-0439, użytkownik 2026-11-16): izolator 7150-1 z zaciskami 5120-6/-7 po obu stronach (model 5120-01;
+// zero w otworze, lina wchodzi 0,058 dalej). Dwie liny nośne (sieci 32, 35) - na razie tylko górna. 7510 (karta 0440) - modelu brak
+double constexpr kSection7150 { 0.8324 };
+double constexpr kSection5120 { 0.058 };
+
+// położenie izolatora sekcyjnego w przęśle: część na przewodzie, środek (ułamek długości przewodu a-b), połowa długości w przewodzie
+// i w linie nośnej (to, czego przęsło nie rysuje). false - izolator nie w tym przęśle albo brak punktów
+struct section_layout {
+    section_model const *element { nullptr };
+    bool ceramic { false };
+    double t { 0.5 };
+    double length { 0.0 };          // przewód a-b, m
+    double contact_half { 0.0 };    // m
+    double rope_half { 0.0 };       // m
+};
+
+bool
+section_layout_of( scene_chain const &Chain, std::size_t const Span, catenary::chain::section_insulator const &Insulator, double const *WireA, double const *WireB, section_layout &Layout ) {
+    auto const &data { Chain.data };
+    auto const offset { data.anchor_start.empty() ? 0u : 1u };
+    auto const found { std::find( data.suspensions.begin(), data.suspensions.end(), Insulator.after ) };
+    if( found == data.suspensions.end() || static_cast<std::size_t>( found - data.suspensions.begin() ) + offset != Span ) { return false; }
+    glm::dvec3 const a { WireA[ 0 ], WireA[ 1 ], WireA[ 2 ] }, b { WireB[ 0 ], WireB[ 1 ], WireB[ 2 ] };
+    Layout.ceramic = ( Insulator.kind == "ceramic" );
+    auto const *type { data.type.empty() ? nullptr : catenary::types().find( data.type ) };
+    Layout.element = Layout.ceramic ? &kSection7230 : ( type != nullptr && type->type.contact_count >= 2 ? &kSection7500_2 : &kSection7500_1 );
+    Layout.length = std::max( glm::length( b - a ), 1e-3 );
+    Layout.contact_half = 0.5 * Layout.element->length;
+    Layout.rope_half = Layout.ceramic ? 0.5 * kSection7210 : 0.5 * kSection7150 + kSection5120;
+    auto const half { std::max( Layout.contact_half, Layout.rope_half ) };
+    Layout.t = Insulator.at < 0.0 ? 0.5 : std::clamp( Insulator.at / Layout.length, std::min( 0.5, half / Layout.length ), std::max( 0.5, 1.0 - half / Layout.length ) );
+    return true;
+}
+
+// dopisek przęsła "gap": przewody jezdne i lina nośna nie rysowane w miejscu izolatora sekcyjnego (w planie od pierwszego końca)
+std::string
+section_gap_text( scene_chain const &Chain, std::size_t const Span, double const *WireA, double const *WireB ) {
+    std::string text;
+    for( auto const &insulator : Chain.data.insulators ) {
+        section_layout layout;
+        if( false == section_layout_of( Chain, Span, insulator, WireA, WireB, layout ) ) { continue; }
+        auto const plan { std::hypot( WireB[ 0 ] - WireA[ 0 ], WireB[ 2 ] - WireA[ 2 ] ) };
+        auto const scale { plan / layout.length };
+        auto const center { layout.t * plan };
+        text += " gap contact " + text_number( center - layout.contact_half * scale, 3 ) + " " + text_number( center + layout.contact_half * scale, 3 );
+        text += " gap messenger " + text_number( center - layout.rope_half * scale, 3 ) + " " + text_number( center + layout.rope_half * scale, 3 );
+        break;  // jedna przerwa na przęsło (dopisek ma jedną parę na przewód)
+    }
+    return text;
+}
+
 void
 section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
     auto const &data { Chain.data };
-    auto const offset { data.anchor_start.empty() ? 0u : 1u };
     auto const *catalog { cantilevers() };
     for( auto const &insulator : data.insulators ) {
-        auto const found { std::find( data.suspensions.begin(), data.suspensions.end(), insulator.after ) };
-        if( found == data.suspensions.end() || static_cast<std::size_t>( found - data.suspensions.begin() ) + offset != Span ) { continue; }
         double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ];
         bool anchoreda, anchoredb;
         if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) ) { return; }
+        section_layout layout;
+        if( false == section_layout_of( Chain, Span, insulator, wa, wb, layout ) ) { continue; }
         glm::dvec3 const a { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, b { wb[ 0 ], wb[ 1 ], wb[ 2 ] };
-        auto const ceramic { insulator.kind == "ceramic" };
-        auto const *type { data.type.empty() ? nullptr : catenary::types().find( data.type ) };
-        auto const &element { ceramic ? kSection7230 : ( type != nullptr && type->type.contact_count >= 2 ? kSection7500_2 : kSection7500_1 ) };
-        auto const length { std::max( glm::length( b - a ), 1e-3 ) };
-        auto const half { 0.5 * element.length };
-        auto const t { insulator.at < 0.0 ? 0.5 : std::clamp( insulator.at / length, std::min( 0.5, half / length ), std::max( 0.5, 1.0 - half / length ) ) };
+        auto const ceramic { layout.ceramic };
+        auto const &element { *layout.element };
+        auto const length { layout.length };
+        auto const half { layout.contact_half };
+        auto const t { layout.t };
         auto const along { ( b - a ) / length };
         auto const wire { a + ( b - a ) * t };
+        auto const plan { std::hypot( wb[ 0 ] - wa[ 0 ], wb[ 2 ] - wa[ 2 ] ) };
         auto const height { 0.5 * ( ( ra[ 1 ] - wa[ 1 ] ) + ( rb[ 1 ] - wb[ 1 ] ) ) };
         glm::dvec3 const ropea { ra[ 0 ], ra[ 1 ], ra[ 2 ] }, ropeb { rb[ 0 ], rb[ 1 ], rb[ 2 ] };
-        auto const ropeat = [ & ]( double const T ) { return ropea + ( ropeb - ropea ) * T - glm::dvec3 { 0.0, 0.4 * height * T * ( 1.0 - T ), 0.0 }; };
+        // lina nośna w ułamku T długości przewodu: z przęsła policzonego wg typu sieci (dokładnie tam, gdzie rysowana), bez niego -
+        // przybliżenie parabolą (w połowie ok. 1/10 wysokości konstrukcyjnej niżej)
+        auto *span { Span < Chain.spans.size() ? Chain.spans[ Span ] : nullptr };
+        auto const ropeat = [ & ]( double const T ) {
+            glm::dvec3 point;
+            if( span != nullptr && catenary_span_point( *span, T * plan, true, point ) ) { return point; }
+            return ropea + ( ropeb - ropea ) * T - glm::dvec3 { 0.0, 0.4 * height * T * ( 1.0 - T ), 0.0 };
+        };
         auto const rope { ropeat( t ) };
+        // kierunek liny przy izolatorze (w planie jak przęsło, spadek z liny po obu stronach)
+        auto const step { std::min( 0.5, 0.25 * length ) / length };
+        auto ropealong { ropeat( std::min( 1.0, t + step ) ) - ropeat( std::max( 0.0, t - step ) ) };
+        ropealong = glm::length( ropealong ) > 1e-6 ? glm::normalize( ropealong ) : along;
         // część z zerem w From, osią -X wzdłuż Direction (poziomo); zwraca położenie punktu Point modelu w scenerii
         auto const spawn = [ & ]( std::string const &Part, glm::dvec3 const &From, glm::dvec3 Direction, double const ( *Points )[ 3 ], int const Count, glm::dvec3 *Out ) {
             Direction.y = 0.0;
@@ -3552,7 +3616,6 @@ section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<caten
         // element na przewodzie: zero na końcu od strony "a", drugi koniec w stronę "b" (7230: +X modelu w stronę "b", więc -X w stronę "a")
         glm::dvec3 eyes[ 4 ];
         spawn( element.model, wire - along * half, ceramic ? -along : along, element.eyes, 4, eyes );
-        auto const ropealong { glm::length( ropeb - ropea ) > 1e-6 ? glm::normalize( ropeb - ropea ) : along };
         if( ceramic ) {
             // 7210 w linie nośnej nad 7230, tak samo ułożony (zero od strony "a"); linki w "V" z par uszu 7230 do uszu 7210
             glm::dvec3 tops[ 2 ];
@@ -3562,13 +3625,17 @@ section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<caten
             }
         }
         else {
-            // linki podwieszające w "V": para uszu do punktu liny nad środkiem pary; izolator liny - bryła zastępcza
+            // 7150 w linie nośnej (karta 0439; zero w otworze od strony "a", drugi otwór w stronę "b" - jak w łańcuchach, w -X) z zaciskami
+            // 5120 na obu końcach; linki podwieszające w "V": para uszu do punktu liny nad środkiem pary
+            auto const start { rope - ropealong * ( 0.5 * kSection7150 ) };
+            spawn( "7150-01", start, ropealong, nullptr, 0, nullptr );
+            spawn( "5120-01", start, -ropealong, nullptr, 0, nullptr );
+            spawn( "5120-01", start + ropealong * kSection7150, ropealong, nullptr, 0, nullptr );
             for( int pair = 0; pair < 2; ++pair ) {
                 auto const middle { ( eyes[ 2 * pair ] + eyes[ 2 * pair + 1 ] ) * 0.5 };
                 auto const top { ropeat( std::clamp( t + glm::dot( middle - wire, along ) / length, 0.0, 1.0 ) ) };
                 for( int side = 0; side < 2; ++side ) { add_tube( Solid, { eyes[ 2 * pair + side ], top }, kSectionHangerRadius ); }
             }
-            add_box( Solid, rope, ropeb - ropea, 0.6, 0.07 );
         }
         return;
     }

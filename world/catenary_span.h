@@ -37,6 +37,13 @@ void catenary_span_assign( TTraction &Traction, std::string const &Symbol, doubl
     glm::dvec3 const *Rope2 = nullptr, bool const *Rope2set = nullptr, double const *Spread = nullptr, double const *Pull = nullptr );
 // Pull (dopisek "pull <od> <całość>"): przęsło jest częścią rozpiętości między podwieszeniami przedzielonej odciągami sieci - zaczyna się
 // <od> m od pierwszego podwieszenia rozpiętości o długości <całość>. Wieszaki z tablicy dla całej rozpiętości, przy odciągu bez linki Y
+// izolator sekcyjny w przęśle (dopisek "gap contact <od> <do>" / "gap messenger <od> <do>"): odcinki przewodów jezdnych i liny nośnej,
+// w których miejscu stoi izolator - nie rysowane, razem z wieszakami w nich. Odległości w planie od pierwszego końca przęsła (pPoint1),
+// wzdłuż kierunku przęsła; Contact / Messenger nullptr = bez przerwy
+void catenary_span_gaps( TTraction &Traction, double const *Contact, double const *Messenger );
+// punkt liny nośnej (Messenger) albo osi przewodów jezdnych w odległości Along w planie od pierwszego końca przęsła, z przęsła
+// policzonego wg typu sieci (bez przerw na izolator); false, gdy przęsło nie jest liczone wg typu
+bool catenary_span_point( TTraction &Traction, double Along, bool Messenger, glm::dvec3 &Point );
 // symbol typu sieci przypisany przęsłu; pusty gdy brak
 std::string catenary_span_symbol( TTraction const &Traction );
 // odcinki przęsła policzone wg typu sieci, dopisywane do Vertices; false gdy przęsło ma być narysowane po staremu
