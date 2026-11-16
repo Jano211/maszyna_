@@ -2826,8 +2826,8 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     front.position[ 2 ] = height;
     catenary::cantilever_placement wire { front };
     if( ongantry && usearm ) {
-        // wysięgnik 6132 na dźwigarze (na teksturze uszynienia jak 6130); przewód wzmacniający - 4950 (na teksturze osprzętu)
-        front.role = feeder ? "earthing" : "earthing_arm";
+        // wysięgnik 6132 na dźwigarze, przewód wzmacniający - 4950 (oba na teksturze uszynienia jak 6130)
+        front.role = "earthing_arm";
         front.part = line->gantry_arm;
         front.position[ 1 ] = Holder.shift;
         front.position[ 2 ] -= line->gantry_arm_drop;
@@ -2863,8 +2863,8 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
         }
         // wszystkie części wysięgnika (mocowanie, osobny wysięgnik, tył) na teksturze z wpisu (Jan 2026-11-16: klocki 6130/6131/6132
         // na teksturze uszynienia w 4 wariantach zużycia)
-        // przewód wzmacniający: wysięgniki 49xx na teksturze osprzętu, chyba że wpis ma własną ("skin")
-        front.role = ( feeder && arm->skin.empty() ) ? "earthing" : "earthing_arm";
+        // przewód wzmacniający: wysięgniki 49xx na teksturze uszynienia (użytkownik 2026-11-16) - "skin" wpisu
+        front.role = "earthing_arm";
         front.part = mount;
         Place.parts.push_back( front );
         Place.arm_skin = arm->skin;
@@ -2901,8 +2901,11 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
         auto const &insulator { fresh ? line->insulator_new : line->insulator };
         if( false == insulator.empty() ) {
             auto hanger { wire };
-            hanger.role = "earthing";
+            hanger.role = "earthing_arm";   // 0301 na teksturze uszynienia (użytkownik 2026-11-16)
             hanger.part = insulator;
+            if( Place.arm_skin.empty() ) {
+                if( auto const *any { catalog->earthing_arm( "6130" ) }; any != nullptr ) { Place.arm_skin = any->skin; Place.arm_skin_default = any->skin_default; }
+            }
             Place.parts.push_back( hanger );
             wire.position[ 2 ] += ( fresh ? line->insulator_new_wire : line->insulator_wire );
         }
@@ -3464,10 +3467,10 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
 // "resin" - 7500-01 (sieć z jednym przewodem jezdnym) albo 7500-02 (dwa przewody) wg typu sieci; "ceramic" - stary izolator sekcyjny
 // wg karty 23-0436 starego Kolprojektu (kolprojekt1.pdf s. 163; następca ESN-106A, użytkownik 2026-11-16): w przewodzie jezdnym
 // izolator 7230-1 (poz. 11) z płozami 6514-1/-2 i zaciskami 5110-1, w linie nośnej izolator 7210-1 (= ESN-2025, model esn_2025)
-// w łącznikach 6513-1 (poz. 8) z zaciskami 5120-5 (poz. 3); dwie linki L10 1,5 m (poz. 12, z uchwytami 4230-1 / 6301-1 / 6311-1)
-// pionowo z łączników do końców izolatora w przewodzie. Modele leżą wzdłuż przewodu: zero na jednym końcu, drugi koniec ("wire")
-// w -X; 7500: linki podwieszające z uszu eye_1..eye_4 do liny nośnej w "V" (para uszu do jednego punktu liny, karta), 7230: jedna
-// linka pionowo nad środkiem każdej pary uszu.
+// w łącznikach 6513-1 (poz. 8) z zaciskami 5120-5 (poz. 3); linki L10 1,5 m (poz. 12, z uchwytami 4230-1 / 6301-1 / 6311-1)
+// w "V" do liny. Dedykowane modele 7210, 7230, 5120-05, 6513, 6514 dostarczy użytkownik - do tego czasu esn_2025 (zostaje jako
+// osobny wariant pod kotwienia i nietypowe przewody), bryła 6513 i 5120-01. Modele leżą wzdłuż przewodu: zero na jednym końcu, drugi koniec ("wire")
+// w -X; linki podwieszające z uszu eye_1..eye_4 do liny nośnej w "V" (para uszu do jednego punktu liny).
 // Przewód liczony prosto między końcami (ZAŁOŻENIE: bez strzałki), lina nośna z parabolą (w połowie ok. 1/10 wysokości
 // konstrukcyjnej niżej). Element nie wychodzi poza przęsło. Bez modelu izolatora liny nośnej nowego (7500) i łącznika 6513 - bryły
 // zastępcze; modeli 7230 / 6514 / 5120-05 jeszcze nie ma (7230 - wymiary NA OKO, 5120-01 w miejscu 5120-05)
@@ -3547,12 +3550,10 @@ section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<caten
         // element na przewodzie: zero na końcu od strony "a", drugi koniec w stronę "b"
         glm::dvec3 eyes[ 4 ];
         spawn( element.model, wire - along * half, along, element.eyes, 4, eyes );
-        // linki podwieszające: 7500 - w "V", para uszu do punktu liny nad środkiem pary; 7230 (23-0436) - jedna linka pionowo
-        // ze środka pary do liny (łącznika 6513) nad nim
+        // linki podwieszające w "V" (7500 i 7230 - użytkownik 2026-11-16): para uszu do punktu liny nad środkiem pary
         for( int pair = 0; pair < 2; ++pair ) {
             auto const middle { ( eyes[ 2 * pair ] + eyes[ 2 * pair + 1 ] ) * 0.5 };
             auto const top { ropeat( std::clamp( t + glm::dot( middle - wire, along ) / length, 0.0, 1.0 ) ) };
-            if( ceramic ) { add_tube( Solid, { middle, top }, kSectionHangerRadius ); continue; }
             for( int side = 0; side < 2; ++side ) { add_tube( Solid, { eyes[ 2 * pair + side ], top }, kSectionHangerRadius ); }
         }
         // lina nośna: stary - 7210 (ESN-2025) w łącznikach 6513 (bryła zastępcza) z zaciskami 5120; nowy - izolator liny bryłą zastępczą

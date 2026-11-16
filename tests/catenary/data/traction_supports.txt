@@ -125,7 +125,8 @@ earthing_arm 6131 back 6130-00 wire 0.0 -1.3151 0.7496 plate 0.09 skin uszynieni
 //   na slupach (slowo "feeder" slupa) wysiegnik z listy "arms" (pierwszy domyslny, inny ustawieniem uchwytu "feeder_arm <nazwa>"),
 //   plyta tuz pod wierzchem slupa, domyslnie od toru ("away" przeklada do toru); w punkcie eye wysiegnika uchwyt na izolatorze
 //   obrotowym 0301 ("insulator <czesc> wire <z>" - Z punktu wire modelu; "insulator_new" - na nowych izolatorach, ustawienie "new");
-//   na zwisach bramek wysiegnik 4950-01 (gantry_arm, ulozony jak 6132 - NA OKO); bez przylaczy 13-0885.
+//   na zwisach bramek wysiegnik 4950-01 (gantry_arm, ulozony jak 6132 - NA OKO); bez przylaczy 13-0885. 49xx, 4950 i 0301 na teksturze
+//   uszynienia (uzytkownik 2026-11-16; "skin" wysiegnikow, 4950 i 0301 bez wpisu - jak 6130).
 //   -05 AFL95, -07 AFL185, -09 AFL240; "1" na koncu (-051/-071/-091) - to samo na nowych izolatorach (uzytkownik 2026-11-16).
 //   Koniec "anchor" = kotwienie przewodu wzmacniajacego, karta 23-0419 starego Kolprojektu (kolprojekt1.pdf s. 157): od czola
 //   konstrukcji 4450-1, 4710-1, izolator 7210-1 (= ESN-2025, model esn_2025), 4420-1, zacisk 5180-4 (AFL50-95) / 5180-7 (AFL120-185) -
@@ -165,13 +166,13 @@ endearthing_line
 // na innych slupach tylko gdy pasuja wymiarem). 4910 krotki, 4920 dlugi, 4930 / 4940 esowe (eye nad plyta).
 // Stara norma: ESN-2141 (wysieg 650) i ESN-2510 (wydluzony, 1900) - wykonanie wg profilu ceownika slupa (width), bez regulacji;
 // ESN-2635A - na slup zelbetowy ZK (takich slupow w danych brak - mocowanie dopuszczone do 0,40, wybierac recznie).
-earthing_arm 4910 wire 0.0 -0.78512 -0.05265 plate 0.09 mount 4910-02 0.223 mount 4910-01 0.263 endearthing_arm
-earthing_arm 4920 wire 0.0 -1.78474 -0.05211 plate 0.09 mount 4920-02 0.223 mount 4920-01 0.263 endearthing_arm
-earthing_arm 4930 wire 0.0 -1.33503 0.85265 plate 0.09 mount 4930-02 0.223 mount 4930-01 0.263 endearthing_arm
-earthing_arm 4940 wire 0.0 -1.63444 0.85265 plate 0.09 mount 4940-02 0.223 mount 4940-01 0.263 endearthing_arm
-earthing_arm ESN-2141 wire 0.0 -0.56326 -0.0526 plate 0.08 profile ESN-2141-12 0.12 profile ESN-2141-14 0.14 profile ESN-2141-16 0.16 profile ESN-2141-18 0.18 profile ESN-2141-20 0.20 endearthing_arm
-earthing_arm ESN-2510 wire 0.0 -1.83554 -0.05211 plate 0.08 profile ESN-2510-12 0.12 profile ESN-2510-14 0.14 profile ESN-2510-16 0.16 profile ESN-2510-18 0.18 endearthing_arm
-earthing_arm ESN-2635A wire 0.0 -0.57826 -0.0526 plate 0.08 mount ESN-2635A 0.40 endearthing_arm
+earthing_arm 4910 wire 0.0 -0.78512 -0.05265 plate 0.09 skin uszynienia skin_default uszynienia_used mount 4910-02 0.223 mount 4910-01 0.263 endearthing_arm
+earthing_arm 4920 wire 0.0 -1.78474 -0.05211 plate 0.09 skin uszynienia skin_default uszynienia_used mount 4920-02 0.223 mount 4920-01 0.263 endearthing_arm
+earthing_arm 4930 wire 0.0 -1.33503 0.85265 plate 0.09 skin uszynienia skin_default uszynienia_used mount 4930-02 0.223 mount 4930-01 0.263 endearthing_arm
+earthing_arm 4940 wire 0.0 -1.63444 0.85265 plate 0.09 skin uszynienia skin_default uszynienia_used mount 4940-02 0.223 mount 4940-01 0.263 endearthing_arm
+earthing_arm ESN-2141 wire 0.0 -0.56326 -0.0526 plate 0.08 skin uszynienia skin_default uszynienia_used profile ESN-2141-12 0.12 profile ESN-2141-14 0.14 profile ESN-2141-16 0.16 profile ESN-2141-18 0.18 profile ESN-2141-20 0.20 endearthing_arm
+earthing_arm ESN-2510 wire 0.0 -1.83554 -0.05211 plate 0.08 skin uszynienia skin_default uszynienia_used profile ESN-2510-12 0.12 profile ESN-2510-14 0.14 profile ESN-2510-16 0.16 profile ESN-2510-18 0.18 endearthing_arm
+earthing_arm ESN-2635A wire 0.0 -0.57826 -0.0526 plate 0.08 skin uszynienia skin_default uszynienia_used mount ESN-2635A 0.40 endearthing_arm
 
 // ---- slupy -----------------------------------------------------------------------------------------------------
 // uszynienie grupowe: "earthing" = uchwyt liny 6120 (karta 0805) na gorze slupa; wykonania wg Jana 2026-10-25: -01 C120-160,

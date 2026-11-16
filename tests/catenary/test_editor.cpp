@@ -779,15 +779,19 @@ int main( int, char *argv[] ) {
         catenary_scene_resolve();
         std::map<std::string, int> made;
         std::string arm2;
+        int onskin { 0 };
         for( auto i { before }; i < simulation::State.created.size(); ++i ) {
             auto const &e { simulation::State.created[ i ].entry };
             auto const at { e.find( "components/" ) };
             if( at == std::string::npos ) { continue; }
             ++made[ e.substr( at + 11, e.find( ".t3d" ) - at - 11 ) ];
+            // 49xx i 0301 na teksturze uszynienia
+            if( ( e.find( "components/49" ) != std::string::npos || e.find( "components/0301" ) != std::string::npos ) && e.find( "/uszynienia" ) != std::string::npos ) { ++onskin; }
         }
+        good = good && onskin == 6;
         std::string list;
         for( auto const &item : made ) { list += " " + item.first + "x" + std::to_string( item.second ); }
-        std::printf( "  przewod wzmacniajacy: %zu slupow, czesci %zu; wstawione:%s\n", catenary_earthing_poles( 0 ).size(), catenary_earthing_parts( 0 ), list.c_str() );
+        std::printf( "  przewod wzmacniajacy (na teksturze uszynienia %d): %zu slupow, czesci %zu; wstawione:%s\n", onskin, catenary_earthing_poles( 0 ).size(), catenary_earthing_parts( 0 ), list.c_str() );
         for( auto const &l : logs ) { if( l.find( "earthing" ) != std::string::npos ) { std::printf( "    %s\n", l.c_str() ); } }
         std::printf( "    f1 %s, f2 %s, f3 %s, f4 %s\n", catenary_earthing_holder_text( 0, "f1" ).c_str(), catenary_earthing_holder_text( 0, "f2" ).c_str(),
             catenary_earthing_holder_text( 0, "f3" ).c_str(), catenary_earthing_holder_text( 0, "f4" ).c_str() );
