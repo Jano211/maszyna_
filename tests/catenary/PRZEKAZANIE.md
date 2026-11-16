@@ -21,7 +21,9 @@ Nazwa exe na G: (`eu07-x64_…_4f6a0df3-dirty`) nie mówi, z jakiego kodu jest b
   z 2× 5120-01 w linie (karta 43-0439); przęsło nie rysuje przewodów i liny w miejscu izolatora (dopisek `gap`), izolator liny
   na linie policzonej wg typu sieci.
 
-**Do sprawdzenia w exe (pierwsze, co zrobić w nowym czacie – zapytać użytkownika o wynik):**
+**Użytkownik 16.11 02:04 po przebudowie: „działa wszystko” – punkty niżej obejrzane w exe, uwag brak (szczegóły, jeśli się pojawią, w nowym czacie).**
+
+**Było do sprawdzenia w exe:**
 1. Izolator sekcyjny ceramiczny i żywiczny: czy przewody/lina są wycięte w dobrym miejscu, czy 7210/7150 siedzą na linie, kierunek
    modeli 7230/7210 (zero od strony podwieszenia „after”), linki V.
 2. Przewód wzmacniający: strona i wysokość 49xx, 0301 pod `eye`, kotwienie 23-0419 (kierunek 4710/7210), 4950 na dźwigarze nad nogą
