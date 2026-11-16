@@ -1,8 +1,39 @@
-# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-16 noc)
+# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-16 02:00)
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
-## START TUTAJ – 2026-11-16 noc (najnowsze) – przewód wzmacniający, stary izolator sekcyjny wg 23-0436
+## START TUTAJ – 2026-11-16 02:00 – zrzutka na nowy czat
+
+**Jak pracujemy (bez zmian):** commit prosto na `siec-gl46` → push → merge do `wszystko-gl46` → push (płytki klon, fetch z refspec
+`+refs/heads/wszystko-gl46:refs/remotes/origin/wszystko-gl46`). Commity jako `Claude <noreply@anthropic.com>` + Co-Authored-By, notatki
+w tym samym commicie co kod. Dane na `G:\Maszyna2510\data\` i `lang\editor_pl.po` (CRLF; przed zapisem porównać z repo, po zapisie md5).
+Testy: `sh tests/catenary/build.sh`, potem `tests/catenary/{te,tsc,tk} tests/catenary/data/` i `tests/catenary/tc` – uruchamiać z
+katalogu repo (z argumentem katalogu danych, inaczej wywrotka „construction from null”). Składnia plików exe: skrypt `-fsyntax-only`
+(niżej, 25.10) – w nowym kontenerze: `git submodule update --init --depth 1 ref/glm ref/glfw ref/json`, include'y `-Iref/openal/include
+-Iref/glad/include -Iref/glm -Iref/glfw/include -Iref/json/include -Iglobal_include` i katalogi źródeł BEZ `-Iwidgets` (psuje <istream>).
+Nazwa exe na G: (`eu07-x64_…_4f6a0df3-dirty`) nie mówi, z jakiego kodu jest build – sprawdzać po logu (jakie modele się ładują).
+
+**Stan na koniec 16.11 (wszystko wypchnięte; w exe NIESPRAWDZONE od 01:47, użytkownik musi zrobić pull i przebudować):**
+- Przewód wzmacniający (AFL95/185/240) – szczegóły w sekcji niżej („16.11 noc”). Ostatnie poprawki: tyły 6130-00 przy 4910–4940,
+  tekstura uszynienia dla 49xx/4950/0301, na nogach bramek (3112 itd.) 4950 na dźwigarze nad nogą, 6132/4950 bez obrotu o 90°
+  („Obróć” w edytorze), uszynienie bez przyłącza 13-0885 na słupach z kotwieniem końca sekcji.
+- Izolatory sekcyjne: ceramiczny = tylko modele 7230-01 + 7210-01 + linki w „V” (użytkownik: nic więcej); żywiczny 7500 + 7150-01
+  z 2× 5120-01 w linie (karta 43-0439); przęsło nie rysuje przewodów i liny w miejscu izolatora (dopisek `gap`), izolator liny
+  na linie policzonej wg typu sieci.
+
+**Do sprawdzenia w exe (pierwsze, co zrobić w nowym czacie – zapytać użytkownika o wynik):**
+1. Izolator sekcyjny ceramiczny i żywiczny: czy przewody/lina są wycięte w dobrym miejscu, czy 7210/7150 siedzą na linie, kierunek
+   modeli 7230/7210 (zero od strony podwieszenia „after”), linki V.
+2. Przewód wzmacniający: strona i wysokość 49xx, 0301 pod `eye`, kotwienie 23-0419 (kierunek 4710/7210), 4950 na dźwigarze nad nogą
+   i na zwisach (domyślne miejsce nad osią nogi – do oceny), tyły 6130-00.
+3. Log nie powinien już sypać co klatkę „pole 3112 takes no feeder arm”.
+
+**Otwarte / na później:** ogranicznik niskonapięciowy (brak modelu; przewód od 5180-07 na kotwieniu uszynienia do niego);
+połączenia przewodu wzmacniającego z siecią (karty 57/94A/96/97B) i jego wpływ na prądy; izolator 2065/7230 – iskrzenie > 40 km/h,
+łamanie pantografu > 50 km/h (75%); 7510 (karta 0440) – brak modelu; izolator żywiczny w sieciach z dwiema linami nośnymi (32, 35) –
+na razie tylko górna; słupy 1601/1602/1604/1605/1711 dla 49xx – dojdą z modelami (słowo `feeder` w traction_supports.txt).
+
+## START TUTAJ – 2026-11-16 noc – przewód wzmacniający, stary izolator sekcyjny wg 23-0436
 
 **Zrobione 16.11 w nocy (testy te/tsc/tc/tk OK, składnia plików exe OK, w exe NIESPRAWDZONE):**
 - Przewód wzmacniający = sekcje uszynienia z innym przewodem: wpis `node … earthing line AFL95 from <słup> to <słup> [start/end anchor]
