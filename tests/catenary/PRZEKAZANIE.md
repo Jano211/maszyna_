@@ -33,6 +33,20 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 **Do sprawdzenia w exe:** łuk z przewodem wzmacniającym – kierunek odchylenia (do środka łuku), czy przewód trafia w zacisk 0301,
 czy izolator nie wchodzi w wysięgnik / słup przy dużych kątach; 4950 na bramkach (też się odchyla).
 
+**16.11 ok. 22:00 (testy t/te/tsc/tc/tk OK, składnia exe OK, w exe NIESPRAWDZONE):**
+- Ogranicznik 33-0561 przy przewodzie rozjazdowym w „V” (przechodzi nad szlakowym i wraca; lk61_dev, s0108 – odtworzone z pliku
+  l61_siec_nowa.scm: l8_16/l8_17 nad l7_13, przejścia 1,07 m od siebie, różnice +1,28 / −0,84 cm): wcześniej każde przejście
+  osobno, więc w jednym ogranicznik siadał na przewodzie rozjazdowym. Teraz `crossing_points` (|różnica| < 3 cm, ze znakiem) dla
+  przęsła z sąsiednimi × odcinek drugiego łańcucha z sąsiednimi; dolne = suma różnic > 0 (remis – nazwa); `group_crossings`:
+  przejścia na jednym przewodzie (3 cm w bok, do 25 m) → jeden ogranicznik; ponad 2 m – `spread`: przewód 1 m przed pierwszym
+  i za ostatnim przejściem, zaciski 0,9 m (użytkownik: „zamykał całość przed pierwszym przejściem i kończył się za drugim”).
+  Rysuje przęsło, w którym leży środek. `find_crossings` (stare) zostało dla testu `t`.
+- Izolatory sekcyjne: części w przewodzie i linie (7210, 7150, 5120, 7230, 7500) ze spadkiem liny/przewodu (spawn w `section_insulator`
+  – obrót o oś Y modelu, Y poziomo), linki V z uszu też.
+- Uszynienie / przewód wzmacniający na zwisie bramki: części obrócone o pełny skos dźwigara (`drop_beam_turn`, bez progu 2°), więc
+  przesuw `shift` idzie wzdłuż dźwigara. DO ZROBIENIA (użytkownik 22:09): przypinać do bramki, nie do zwisu – domyślnie skraj
+  dźwigara, zakres przesuwu z wymiaru dźwigara; zwisy przesuwane w edytorze nie trzymają się osi dźwigara (do zbadania).
+
 **Pył – wydajność (16.11 21:30):** użytkownik: „efekt przedni, ale chyba wpierdala trochę klatek – jak sieć schodzi z widoku, jest
 szybciej”. Nie wiadomo, czy to pył, czy sama geometria sieci – test: `strength 0` w `data\traction_dust.txt` (restart, bez
 kompilacji). Na razie w dust.glsl (ogl46 i vk14) drobniejsze oktawy szumu wygaszane z odległością i dalej w ogóle nie liczone:

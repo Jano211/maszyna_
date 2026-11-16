@@ -656,12 +656,106 @@ void find_crossings( span_geometry const &Mine, span_geometry const &Other, std:
     }
 }
 
+void crossing_points( span_geometry const &Mine, span_geometry const &Other, double const Limit, std::vector<crossing_raw> &Output ) {
+
+    for( auto const &a : Mine.elements ) {
+        if( a.kind != element_kind::contact ) { continue; }
+        auto const ax { a.to.x - a.from.x }, az { a.to.z - a.from.z };
+        auto const length { std::sqrt( ax * ax + az * az ) };
+        if( length < 1e-6 ) { continue; }
+        for( auto const &b : Other.elements ) {
+            if( b.kind != element_kind::contact ) { continue; }
+            auto const bx { b.to.x - b.from.x }, bz { b.to.z - b.from.z };
+            auto const denominator { ax * bz - az * bx };
+            if( std::abs( denominator ) < 1e-9 ) { continue; }
+            auto const cx { b.from.x - a.from.x }, cz { b.from.z - a.from.z };
+            auto const t { ( cx * bz - cz * bx ) / denominator };
+            auto const u { ( cx * az - cz * ax ) / denominator };
+            if( t < 0.0 || t > 1.0 || u < 0.0 || u > 1.0 ) { continue; }
+            auto const mine { a.from + ( a.to - a.from ) * t };
+            auto const other { b.from + ( b.to - b.from ) * u };
+            auto const gap { other.y - mine.y };
+            if( std::abs( gap ) >= Limit ) { continue; }
+            // ten sam punkt na styku dwóch odcinków przewodu (t = 1 i t = 0) - raz
+            auto const duplicate { std::any_of( Output.begin(), Output.end(), [ & ]( crossing_raw const &P ) { return norm( P.position - mine ) < 1e-3 && std::abs( P.gap - gap ) < 1e-4; } ) };
+            if( duplicate ) { continue; }
+            Output.push_back( { mine, { ax / length, 0.0, az / length }, gap } );
+        }
+    }
+}
+
+void group_crossings( std::vector<crossing_raw> const &Points, std::vector<crossing_point> &Output ) {
+
+    struct group { std::vector<std::size_t> members; vec3 along; };
+    std::vector<group> groups;
+    for( std::size_t i = 0; i < Points.size(); ++i ) {
+        auto const &point { Points[ i ] };
+        auto joined { false };
+        for( auto &item : groups ) {
+            // na tym samym przewodzie: blisko w bok od kierunku przewodu względem któregokolwiek punktu grupy, nie dalej niż 25 m
+            for( auto const member : item.members ) {
+                auto const offset { point.position - Points[ member ].position };
+                auto const &along { Points[ member ].along };
+                auto const aside { std::abs( along.x * offset.z - along.z * offset.x ) };
+                if( aside <= 0.03 && std::hypot( offset.x, offset.z ) <= 25.0 ) { joined = true; break; }
+            }
+            if( joined ) { item.members.push_back( i ); break; }
+        }
+        if( false == joined ) { groups.push_back( { { i }, point.along } ); }
+    }
+    for( auto const &item : groups ) {
+        // skrajne punkty wzdłuż przewodu
+        auto const &along { item.along };
+        auto const &origin { Points[ item.members.front() ].position };
+        auto low { item.members.front() }, high { item.members.front() };
+        double lowest { 0.0 }, highest { 0.0 };
+        auto gap { 0.0 };
+        for( auto const member : item.members ) {
+            auto const offset { Points[ member ].position - origin };
+            auto const at { along.x * offset.x + along.z * offset.z };
+            if( at < lowest ) { lowest = at; low = member; }
+            if( at > highest ) { highest = at; high = member; }
+            gap = std::max( gap, std::abs( Points[ member ].gap ) );
+        }
+        crossing_point crossing;
+        crossing.along = along;
+        crossing.gap = gap;
+        // przejścia bliżej niż 2 m (dwa przewody górne nad jednym dolnym, skos 1:9) - jak dotąd jeden 2-metrowy ogranicznik w środku
+        if( highest - lowest <= 2.0 ) {
+            vec3 sum { 0.0, 0.0, 0.0 };
+            for( auto const member : item.members ) { sum = sum + Points[ member ].position; }
+            crossing.position = sum * ( 1.0 / item.members.size() );
+        }
+        else {
+            crossing.position = Points[ low ].position;
+            crossing.last = Points[ high ].position;
+            crossing.spread = true;
+            auto direction { crossing.last - crossing.position };
+            direction.y = 0.0;
+            crossing.along = direction * ( 1.0 / norm( direction ) );
+        }
+        Output.push_back( crossing );
+    }
+}
+
 void build_crossing_limiter( crossing_point const &Crossing, double const Radius, std::vector<solid_vertex> &Wires, std::vector<solid_vertex> &Fittings ) {
 
     // ZAŁOŻENIE do czasu modelu 5380-1: oś odcinka nad osią dolnego przewodu o kCrossingLimiterGap + 2 promienie, tak że spód odcinka
     // jest nad wierzchem górnego przewodu przy największej dopuszczalnej różnicy wysokości
     auto const lift { kCrossingLimiterGap + 2.0 * Radius };
     auto const &along { Crossing.along };
+    if( Crossing.spread ) {
+        // od przed pierwszym do za ostatnim przejściem: odcinek przewodu 1,0 m poza skrajne przejścia, zaciski 0,9 m poza nie
+        auto first { Crossing.position - along * 1.0 }, second { Crossing.last + along * 1.0 };
+        first.y += lift; second.y += lift;
+        add_prism( Wires, first, second, Radius, 6 );
+        for( auto const &clamp : { Crossing.position - along * 0.9, Crossing.last + along * 0.9 } ) {
+            auto center { clamp };
+            center.y += 0.5 * lift;
+            add_box( Fittings, center, along, 0.08, 0.04, lift + 2.0 * Radius );
+        }
+        return;
+    }
     auto top { Crossing.position };
     top.y += lift;
     // odcinek 2,0 m przewodu jezdnego (poz. 2/3 karty), wzdłuż dolnego przewodu
