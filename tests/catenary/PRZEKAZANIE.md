@@ -1,6 +1,42 @@
-# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-16 21:30)
+# Sieć trakcyjna w exe MaSzyny: przekazanie (początek 2026-10-11, stan na 2026-11-16 23:15)
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
+
+## START TUTAJ – 2026-11-16 23:15 – zrzutka na nowy czat
+
+**Jak pracujemy:** bez zmian (wyżej w sekcji 02:00): commit na `siec-gl46` → push → merge do `wszystko-gl46` → push; notatki w tym
+samym commicie; dane na `G:\Maszyna2510\data\`, tłumaczenia `lang\editor_pl.po` (CRLF, md5 po zapisie). Test na prawdziwych danych
+użytkownika: `G:\Maszyna2510\scenery\l61\siec\l61_siec_nowa.scm` (lk61_dev.scn) – wczytany w atrapie testów (komentarze `//`
+trzeba wyciąć, `hvNext` łączyć po końcach przęseł, `catenary_span_assign` z typem z treści przęsła). Dostęp przez most: G:\Maszyna2510
+i E:\SYF\INNE\PDF\Katalog ESN (katalogi; tom 2 ma warstwę tekstu tylko na pierwszych stronach, reszta OCR / okiem).
+
+**Zrobione 16.11 wieczorem (wszystko wypchnięte; w exe NIESPRAWDZONE – użytkownik zrobi pull i przebuduje):**
+1. Izolatory 0301 przewodu wzmacniającego odchylane przez przewód (wypadkowa naciągu i ciężaru, ciężar izolatora z uchwytem
+   10,5–11 kg, maks. 80°) – sekcja niżej „16.11 wieczór”. Koniec przewodu wzmacniającego bez kotwienia → log (użytkownik: niemożliwe).
+2. Ogranicznik 33-0561 przy przewodzie rozjazdowym w „V” (rola dolny/górny dla całego odcinka, jeden ogranicznik od pierwszego do
+   ostatniego przejścia) – sprawdzić na lk61_dev przy s0108.
+3. Izolatory sekcyjne (7210/7150/5120/7230/7500) w spadku liny / przewodu.
+4. Uszynienie i przewód wzmacniający na bramce przypięte do dźwigara (`shift` = od końca przy słupie 0; domyślnie 1 m od skraju przy
+   poprzednim słupie sekcji), suwak w zakresie dźwigara + „Wg poprzedniego słupu”.
+5. Pył (shader): drobne oktawy szumu wygaszane z odległością, wgrane na G:. Spadek klatek okazał się od ORTOFOTO (nie od pyłu):
+   ortofoto robi w głównym wątku wysyłanie tekstur (kafel 4K = 64 MB naraz), dopasowanie do terenu i budowę geometrii – NIE RUSZAMY
+   (użytkownik przekaże uwagi koledze; jeśli odpowie, że to przez sieć – wtedy przerobimy).
+6. Rozeznanie w katalogach: `ZASILANIE.md` (odłączniki 0661–0677 + zamocowania 0541–0549, odgromniki 0681–0684, połączenia 0639–0656,
+   iskiernik J-250 0831), `MODELE.md` – lista modeli od A do Z (kopia na G: `models\siec_trakcyjna\MODELE_DO_ZROBIENIA.txt`), z
+   odciągami prętowymi słupów kotwowych (tom 4: 1540–1590, głowice 1321–1385, fundamenty 1411/1495/1497).
+
+**Użytkownik sprawdza 17.11 (po pullu i przebudowie):** (a) czy zasilacze za izolatorami sekcyjnymi działają (lok traci napięcie
+za izolatorem przy wyłączonym zasilaczu); (b) punkt 4 – uchwyty na bramce; (c) punkt 2 – ogranicznik przy s0108; (d) punkt 3;
+(e) punkt 1 na łuku.
+
+**Następne (kolejność):**
+1. Zwisy bramek przesuwane w edytorze nie trzymają się osi dźwigara („wyznaczają środek dźwigara przy wstawieniu, potem jadą lokalną
+   osią”) – zbadać przesuw zwisu w `editormodecatenary.cpp` (przeciąganie zwisu po dźwigarze, 30.10) przy skośnej bramce.
+2. Zasilanie wg ZASILANIE.md: podstacje, odłączniki ze stanem otwarty/zamknięty (zwiera sekcje), odgromniki jako model; odłączniki na
+   osobnej teksturze `odlaczniki_*` (użytkownik 16.11). „Opus magnum”: wyjść z kabiny i przełączyć odłącznik na słupie (też pod
+   multiplayer) – najpierw sprawdzić, co MaSzyna umie poza kabiną.
+3. Odciągi prętowe słupów kotwowych (kod: przy słupie kotwowym w przedłużeniu linii kotwienia) – po modelach.
+4. Atlas `siec`: użytkownik planuje warianty zużycia + przepakowanie UV + maski z vertex colorów – kod bez zmian (nazwy zostają).
 
 ## START TUTAJ – 2026-11-16 wieczór – izolatory przewodu wzmacniającego odciągane przez przewód
 
