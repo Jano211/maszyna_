@@ -41,6 +41,8 @@ struct catenary_span {
     double spread[ 2 ] { 0.0, 0.0 };                            // rozstaw przewodów w uchwytach na końcach z dopisku "spread"
     bool pulled { false };                                      // część rozpiętości przedzielonej odciągami sieci (dopisek "pull")
     double pull[ 2 ] { 0.0, 0.0 };                              // początek przęsła od pierwszego podwieszenia rozpiętości i jej długość
+    bool gapped[ 2 ] { false, false };                          // przerwa na izolator sekcyjny: [0] przewody jezdne, [1] lina nośna
+    double gap[ 2 ][ 2 ] { { 0.0, 0.0 }, { 0.0, 0.0 } };          // od - do, w planie od pPoint1
 };
 
 namespace {
@@ -169,9 +171,66 @@ solve_joined( TTraction &Traction, catenary::span_solution &Solution ) {
     return true;
 }
 
-// zbiera elementy przęsła: policzone, z linkami Y uzgodnionymi z sąsiadami także w planie
+// odległość punktu w planie od pierwszego końca przęsła, wzdłuż przęsła
+double
+plan_along( TTraction const &Traction, catenary::vec3 const &Point ) {
+    auto const dx { Traction.pPoint2.x - Traction.pPoint1.x }, dz { Traction.pPoint2.z - Traction.pPoint1.z };
+    auto const length { std::hypot( dx, dz ) };
+    if( length < 1e-6 ) { return 0.0; }
+    return ( ( Point.x - Traction.pPoint1.x ) * dx + ( Point.z - Traction.pPoint1.z ) * dz ) / length;
+}
+
+// przerwy na izolator sekcyjny: odcinki przewodów jezdnych i liny nośnej w przerwie wycięte, wieszaki i ich uchwyty w przerwach usunięte
+void
+cut_gaps( TTraction const &Traction, catenary::span_geometry &Geometry ) {
+    if( false == static_cast<bool>( Traction.m_catenaryspan ) ) { return; }
+    auto const &span { *Traction.m_catenaryspan };
+    if( false == span.gapped[ 0 ] && false == span.gapped[ 1 ] ) { return; }
+    auto const inside = [ & ]( int const Which, double const At ) {
+        return span.gapped[ Which ] && At > span.gap[ Which ][ 0 ] && At < span.gap[ Which ][ 1 ];
+    };
+    auto const lerp = []( catenary::vec3 const &A, catenary::vec3 const &B, double const T ) {
+        return catenary::vec3 { A.x + ( B.x - A.x ) * T, A.y + ( B.y - A.y ) * T, A.z + ( B.z - A.z ) * T };
+    };
+    std::vector<catenary::span_element> kept;
+    kept.reserve( Geometry.elements.size() );
+    for( auto const &element : Geometry.elements ) {
+        auto const which { element.kind == catenary::element_kind::contact ? 0 : element.kind == catenary::element_kind::messenger ? 1 : -1 };
+        auto const a { plan_along( Traction, element.from ) }, b { plan_along( Traction, element.to ) };
+        if( which < 0 ) {
+            // wieszak z liny na przewód (albo inny łącznik) w przerwie którejkolwiek - bez niego
+            if( element.kind == catenary::element_kind::hanger && ( inside( 0, a ) || inside( 1, a ) ) ) { continue; }
+            kept.push_back( element );
+            continue;
+        }
+        if( false == span.gapped[ which ] ) { kept.push_back( element ); continue; }
+        auto const g0 { span.gap[ which ][ 0 ] }, g1 { span.gap[ which ][ 1 ] };
+        auto const lo { std::min( a, b ) }, hi { std::max( a, b ) };
+        if( hi <= g0 || lo >= g1 || hi - lo < 1e-9 ) { kept.push_back( element ); continue; }
+        // części odcinka przed przerwą i za nią
+        auto const at = [ & ]( double const D ) { return lerp( element.from, element.to, ( D - a ) / ( b - a ) ); };
+        if( lo < g0 ) {
+            auto piece { element };
+            if( a < b ) { piece.to = at( g0 ); } else { piece.from = at( g0 ); }
+            kept.push_back( piece );
+        }
+        if( hi > g1 ) {
+            auto piece { element };
+            if( a < b ) { piece.from = at( g1 ); } else { piece.to = at( g1 ); }
+            kept.push_back( piece );
+        }
+    }
+    Geometry.elements.swap( kept );
+    Geometry.fittings.erase(
+        std::remove_if( Geometry.fittings.begin(), Geometry.fittings.end(), [ & ]( catenary::span_fitting const &F ) {
+            auto const d { plan_along( Traction, F.position ) };
+            return ( F.kind == catenary::fitting_kind::rope_clamp || F.kind == catenary::fitting_kind::wire_clamp ) && ( inside( 0, d ) || inside( 1, d ) ); } ),
+        Geometry.fittings.end() );
+}
+
+// zbiera elementy przęsła: policzone, z linkami Y uzgodnionymi z sąsiadami także w planie; Gaps - z przerwami na izolator sekcyjny
 bool
-build( TTraction &Traction, catenary::span_geometry &Geometry ) {
+build( TTraction &Traction, catenary::span_geometry &Geometry, bool const Gaps = true ) {
 
     catenary::span_solution solution;
     if( false == solve_joined( Traction, solution ) ) { return false; }
@@ -190,6 +249,7 @@ build( TTraction &Traction, catenary::span_geometry &Geometry ) {
                 catenary::make_y_side( neighboursolution, points( neighbour ), Traction.iNext[ end ] == 1 ) );
     }
     catenary::build_geometry( *definition( Traction ), solution, spanpoints, Traction.WireOffset, Geometry, plans[ 0 ], plans[ 1 ] );
+    if( Gaps ) { cut_gaps( Traction, Geometry ); }
     return true;
 }
 
@@ -514,4 +574,44 @@ catenary_span_attach( TTraction &Traction, std::vector<catenary::solid_vertex> c
     drop_solid( Traction );
     Traction.m_catenaryspan->attached = Triangles;
     return ( Traction.m_catenaryspan->definition != nullptr );
+}
+
+// przerwy na izolator sekcyjny (dopisek "gap"); linie i bryły zrobią się od nowa przy tworzeniu geometrii
+void
+catenary_span_gaps( TTraction &Traction, double const *Contact, double const *Messenger ) {
+    if( false == static_cast<bool>( Traction.m_catenaryspan ) ) { return; }
+    auto &span { *Traction.m_catenaryspan };
+    double const *given[ 2 ] { Contact, Messenger };
+    for( int which = 0; which < 2; ++which ) {
+        span.gapped[ which ] = ( given[ which ] != nullptr && given[ which ][ 1 ] > given[ which ][ 0 ] );
+        if( span.gapped[ which ] ) { span.gap[ which ][ 0 ] = given[ which ][ 0 ]; span.gap[ which ][ 1 ] = given[ which ][ 1 ]; }
+    }
+}
+
+// punkt liny nośnej albo osi przewodów jezdnych w odległości Along w planie od pierwszego końca (średnia z przewodów, które tam są)
+bool
+catenary_span_point( TTraction &Traction, double const Along, bool const Messenger, glm::dvec3 &Point ) {
+    if( definition( Traction ) == nullptr ) { return false; }
+    catenary::span_geometry geometry;
+    if( false == build( Traction, geometry, false ) ) { return false; }
+    auto const kind { Messenger ? catenary::element_kind::messenger : catenary::element_kind::contact };
+    double sum[ 3 ] { 0.0, 0.0, 0.0 };
+    int count { 0 };
+    for( auto const &element : geometry.elements ) {
+        if( element.kind != kind ) { continue; }
+        auto const a { plan_along( Traction, element.from ) }, b { plan_along( Traction, element.to ) };
+        if( std::abs( b - a ) < 1e-9 || Along < std::min( a, b ) || Along > std::max( a, b ) ) { continue; }
+        auto const t { ( Along - a ) / ( b - a ) };
+        sum[ 0 ] += element.from.x + ( element.to.x - element.from.x ) * t;
+        sum[ 1 ] += element.from.y + ( element.to.y - element.from.y ) * t;
+        sum[ 2 ] += element.from.z + ( element.to.z - element.from.z ) * t;
+        ++count;
+        // lina nośna: pierwsza (górna) wystarczy - druga lina biegnie obok niej
+        if( Messenger ) { break; }
+    }
+    if( count == 0 ) { return false; }
+    Point.x = sum[ 0 ] / count;
+    Point.y = sum[ 1 ] / count;
+    Point.z = sum[ 2 ] / count;
+    return true;
 }

@@ -146,6 +146,8 @@ TTraction::Load( cParser *parser, glm::dvec3 const &pOrigin ) {
     double catenaryspread[ 2 ] { 0.0, 0.0 };
     double catenarypull[ 2 ] { 0.0, 0.0 };
     bool catenarypulled { false };
+    double catenarygap[ 2 ][ 2 ] { { 0.0, 0.0 }, { 0.0, 0.0 } };
+    bool catenarygapped[ 2 ] { false, false };
     while( false == token.empty()
         && token != "endtraction" ) {
 
@@ -178,6 +180,14 @@ TTraction::Load( cParser *parser, glm::dvec3 const &pOrigin ) {
             *parser >> catenarypull[ 0 ] >> catenarypull[ 1 ];
             catenarypulled = true;
         }
+        else if( token == "gap" ) {
+            // izolator sekcyjny: "gap contact|messenger <od> <do>" - odcinek przewodów jezdnych / liny nośnej w miejscu izolatora,
+            // w planie od pierwszego końca przęsła (nie rysowany)
+            auto const which { parser->getToken<std::string>() == "messenger" ? 1 : 0 };
+            parser->getTokens( 2 );
+            *parser >> catenarygap[ which ][ 0 ] >> catenarygap[ which ][ 1 ];
+            catenarygapped[ which ] = true;
+        }
         else if( token == "tension" ) {
             // naciąg liny nośnej i przewodów jezdnych w daN inny niż w typie sieci (brakujące ciężary w kotwieniu)
             parser->getTokens( 2 );
@@ -188,6 +198,7 @@ TTraction::Load( cParser *parser, glm::dvec3 const &pOrigin ) {
 
     Init(); // przeliczenie parametrów
     catenary_span_assign( *this, catenarytype, catenarytension[ 0 ], catenarytension[ 1 ], catenaryrope2, catenaryrope2set, catenaryspread, catenarypulled ? catenarypull : nullptr );
+    catenary_span_gaps( *this, catenarygapped[ 0 ] ? catenarygap[ 0 ] : nullptr, catenarygapped[ 1 ] ? catenarygap[ 1 ] : nullptr );
 
     // calculate traction location
     location( glm::mix( pPoint2, pPoint1, 0.5 ) );

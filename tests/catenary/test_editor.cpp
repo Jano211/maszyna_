@@ -960,6 +960,36 @@ int main( int, char *argv[] ) {
         std::printf( "  izolator sekcyjny ceramic: 7230 %d, 7210 %d, esn_2025 %d, 5120 %d\n", sectionparts[ "7230-01" ], sectionparts[ "7210-01" ], sectionparts[ "esn_2025" ], sectionparts[ "5120-01" ] );
         good = good && sectionparts[ "7230-01" ] == 1 && sectionparts[ "7210-01" ] == 1 && sectionparts[ "esn_2025" ] == 0 && sectionparts[ "5120-01" ] == 0 && sectionparts[ "7500-01" ] == 0;
         good = good && mock_span_bodies.size() == 3 && mock_span_bodies[ 0 ].find( "pwr01" ) == 0 && mock_span_bodies[ 1 ].find( "pwr01" ) == 0 && mock_span_bodies[ 2 ].find( "pwr09" ) == 0 && errors.empty();
+        // przęsło z izolatorem: przewody i lina nie rysowane w jego miejscu (dopisek "gap"), inne przęsła bez przerwy
+        {
+            auto const &body { mock_span_bodies[ 1 ] };
+            auto const at { body.find( " gap contact " ) };
+            double c0 { 0.0 }, c1 { 0.0 }, m0 { 0.0 }, m1 { 0.0 };
+            if( at != std::string::npos ) {
+                std::istringstream gap { body.substr( at + 13 ) };
+                std::string word;
+                gap >> c0 >> c1 >> word >> word >> m0 >> m1;
+            }
+            std::printf( "  przerwa: przewody %.3f-%.3f, lina %.3f-%.3f\n", c0, c1, m0, m1 );
+            // 7230 1,00 m, 7210 1,10 m wokół 12,5 m od i2
+            good = good && at != std::string::npos && std::abs( c0 - 12.0 ) < 0.01 && std::abs( c1 - 13.0 ) < 0.01 && std::abs( m0 - 11.95 ) < 0.01 && std::abs( m1 - 13.05 ) < 0.01
+                && mock_span_bodies[ 0 ].find( " gap " ) == std::string::npos && mock_span_bodies[ 2 ].find( " gap " ) == std::string::npos;
+        }
+        // żywiczny (karta 0439): 7500-02 (dwa przewody C120-2C), w linie nośnej 7150 z dwoma zaciskami 5120
+        {
+            auto changed { *catenary_chain_get( 0 ) };
+            changed.insulators.front().kind = "resin";
+            auto const from { simulation::State.created.size() };
+            catenary_chain_update( 0, changed );
+            std::map<std::string, int> resin;
+            for( auto i { from }; i < simulation::State.created.size(); ++i ) {
+                for( auto const *name : { "7500-02", "7150-01", "5120-01", "7230-01" } ) {
+                    if( simulation::State.created[ i ].entry.find( std::string( "components/" ) + name + ".t3d" ) != std::string::npos ) { ++resin[ name ]; }
+                }
+            }
+            std::printf( "  izolator sekcyjny resin: 7500-02 %d, 7150 %d, 5120 %d\n", resin[ "7500-02" ], resin[ "7150-01" ], resin[ "5120-01" ] );
+            good = good && resin[ "7500-02" ] == 1 && resin[ "7150-01" ] == 1 && resin[ "5120-01" ] == 2 && resin[ "7230-01" ] == 0;
+        }
         std::remove( "tests/catenary/td_izolator_test.scm" );
         check( good, "izolator sekcyjny: zapis i odczyt, przesla za nim zasila jego zasilacz" );
     }

@@ -34,6 +34,14 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   przewody (m.in. w łańcuchu 23-0419).
 - G: `data\traction_supports.txt` (md5 cf15e024dbbf17cb698e44bac46d4d93 po tyłach 6130-00 do 49xx) i `lang\editor_pl.po` (d2b9759c7732badc74ba894137276b2b, wersja z G: + 12 wpisów).
 
+- Izolatory sekcyjne (16.11 ~02:00): przęsło z izolatorem dostaje dopisek `gap contact <od> <do> gap messenger <od> <do>` (w planie od
+  pierwszego końca przęsła) – `catenary_span_gaps` wycina przewody jezdne i linę nośną w miejscu izolatora razem z wieszakami i ich
+  uchwytami (linie i bryły; starsze exe dopisek pomijają). Lina nośna przy izolatorze z przęsła policzonego wg typu sieci
+  (`catenary_span_point`), nie z paraboli – izolator liny siedzi na rysowanej linie (bez typu sieci dalej parabola). Żywiczny wg karty
+  43-0439 („z- KATALOG 1 -z.pdf” s. 101): w linie nośnej 7150-01 z zaciskami 5120-01 po obu stronach (5120-6/-7; przerwa w linie
+  0,8324 + 2×0,058); sieci z dwiema linami (32, 35) – na razie izolator tylko w górnej. 7510 (karta 0440) – modelu brak, pominięty.
+  Ceramiczny: 7230 1,00 m, 7210 1,10 m. W logu użytkownika z 01:47 ładował się jeszcze esn_2025 przy izolatorze – exe sprzed
+  commita z 7210 (po pull przebudować).
 - Bramki (użytkownik 16.11): 6132 i 4950 na dźwigarze BEZ obrotu o 90° (był zły) – ułożone jak 6840, wysięgnik wzdłuż dźwigara,
   „Obróć” (`away`) przekłada na drugą stronę. Przewód wzmacniający przez nogę bramki (słup `gantry`, np. 3112 – noga nie ma mocowania
   pod wzmacniający): 4950 na dźwigarze nad nogą, zero = spód dźwigara tej bramki (mast_low/high, jak zero zwisu) + 0,90, przesuw
