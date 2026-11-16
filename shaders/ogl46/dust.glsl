@@ -50,12 +50,22 @@ float dust_value_noise(vec3 p, float period)
 	return mix(mix(mix(c000, c100, u.x), mix(c010, c110, u.x), u.y), mix(mix(c001, c101, u.x), mix(c011, c111, u.x), u.y), u.z);
 }
 
-// patches of the dust, -1 to 1, at a world position (relative to the start of the period)
-float dust_patches(vec3 world)
+// distances (metres from the camera) over which the finer octaves fade to their mean and then aren't computed at all: further
+// away their cells are below a pixel anyway, and the noise is most of the cost of the dust (8 hashes per octave)
+const vec2 DUST_FINE_FADE = vec2(25.0, 45.0);     // the 0.25 m cells
+const vec2 DUST_MEDIUM_FADE = vec2(90.0, 160.0);  // the 1 m cells
+
+// patches of the dust, -1 to 1, at a world position (relative to the start of the period), Range - distance from the camera
+float dust_patches(vec3 world, float range)
 {
-	float noise = 0.5 * dust_value_noise(world * 0.25, DUST_PERIOD * 0.25)
-		+ 0.3 * dust_value_noise(world, DUST_PERIOD)
-		+ 0.2 * dust_value_noise(world * 4.0, DUST_PERIOD * 4.0);
+	float noise = 0.5 * dust_value_noise(world * 0.25, DUST_PERIOD * 0.25);
+	float medium = 0.5;
+	if (range < DUST_MEDIUM_FADE.y)
+		medium = mix(dust_value_noise(world, DUST_PERIOD), 0.5, smoothstep(DUST_MEDIUM_FADE.x, DUST_MEDIUM_FADE.y, range));
+	float fine = 0.5;
+	if (range < DUST_FINE_FADE.y)
+		fine = mix(dust_value_noise(world * 4.0, DUST_PERIOD * 4.0), 0.5, smoothstep(DUST_FINE_FADE.x, DUST_FINE_FADE.y, range));
+	noise += 0.3 * medium + 0.2 * fine;
 	// the sum keeps close to the middle: stretched to the whole range
 	return clamp((noise - 0.5) * 2.5, -1.0, 1.0);
 }
@@ -96,7 +106,7 @@ float dust_amount(vec3 view, vec3 normal, vec2 rail, float scale)
 	float amount = dust_color.a * scale * facing * dust_profile_at(height);
 	if (amount <= 0.0)
 		return 0.0;
-	float patches = dust_patches(dust_origin.xyz + world);
+	float patches = (dust_params.z > 0.0 ? dust_patches(dust_origin.xyz + world, length(view)) : 0.0);
 	return clamp(amount * (1.0 + dust_params.z * patches), 0.0, 1.0);
 }
 
