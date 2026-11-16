@@ -2784,7 +2784,10 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     // przewód wzmacniający: zawsze na wysięgniku (49xx na słupie, gantry_arm na dźwigarze bramki)
     auto const feeder { line->feeder };
     auto const usearm { feeder || Holder.arm };
-    auto const ongantry { false == pole->drop.empty() };
+    // przewód wzmacniający przez nogę bramki (wysięgnik na słupie bramki): na nodze nie ma mocowania, więc 4950 na dźwigarze nad nią
+    // (użytkownik 2026-11-16); zero jak zero zwisu - spód dźwigara na poziomie tej bramki
+    auto const onmast { feeder && pole->gantry };
+    auto const ongantry { false == pole->drop.empty() || onmast };
     if( ongantry && false == feeder && line->gantry_part.empty() ) { Place.problem = "no gantry holder (6840) in the data"; return false; }
     catenary::earthing_arm const *arm { nullptr };
     if( feeder && false == ongantry ) {
@@ -2817,6 +2820,10 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
                   : pole->mount_max > 0.0 ? pole->mount_max + kEarthingMargin : pole->top - 0.10 ) + Holder.raise };
     if( pole->top > 0.0 ) { height = std::min( height, pole->top - ( arm != nullptr ? arm->plate : 0.02 ) ); }
     if( ongantry ) { height = line->gantry_top + std::max( 0.0, Holder.raise ); }   // zero zwisu to zero dźwigara
+    if( onmast ) {
+        auto const *gantry { gantry_at_mast( data.pole_type, data.pole ) };
+        height += ( gantry != nullptr && gantry->high ? pole->mast_high : pole->mast_low );
+    }
     auto const depth { pole->depth( height ) };
     auto const face { -0.5 * depth };
     Place.parts.clear();
@@ -2834,16 +2841,11 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
         Place.arm_skin = "uszynienia";
         Place.arm_skin_default = "uszynienia_used";
         if( auto const *any { catalog->earthing_arm( "6130" ) }; any != nullptr ) { Place.arm_skin = any->skin; Place.arm_skin_default = any->skin_default; }
-        // płyta na czole dźwigara, wysięgnik wzdłuż toru (układ zwisu: Y wzdłuż dźwigara, X wzdłuż toru): obrót o 90 stopni wokół
-        // pionu - Y modelu na X układu (wysięgnik, -Y modelu, w -X; kierunek NA OKO)
-        double const turn[ 9 ] { 0.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
-        std::copy( std::begin( turn ), std::end( turn ), front.rotation );
+        // ułożony jak 6840, bez obrotu: wysięgnik (-Y modelu) wzdłuż dźwigara (użytkownik 2026-11-16: obrót o 90 stopni był zły);
+        // "away" przekłada go na drugą stronę
         Place.parts.push_back( front );
         wire = front;
-        auto const *w { line->gantry_arm_wire };
-        wire.position[ 0 ] += turn[ 0 ] * w[ 0 ] + turn[ 1 ] * w[ 1 ] + turn[ 2 ] * w[ 2 ];
-        wire.position[ 1 ] += turn[ 3 ] * w[ 0 ] + turn[ 4 ] * w[ 1 ] + turn[ 5 ] * w[ 2 ];
-        wire.position[ 2 ] += turn[ 6 ] * w[ 0 ] + turn[ 7 ] * w[ 1 ] + turn[ 8 ] * w[ 2 ];
+        for( int axis = 0; axis < 3; ++axis ) { wire.position[ axis ] += line->gantry_arm_wire[ axis ]; }
     }
     else if( ongantry ) {
         front.part = line->gantry_part;

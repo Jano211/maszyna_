@@ -34,6 +34,10 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   przewody (m.in. w łańcuchu 23-0419).
 - G: `data\traction_supports.txt` (md5 cf15e024dbbf17cb698e44bac46d4d93 po tyłach 6130-00 do 49xx) i `lang\editor_pl.po` (d2b9759c7732badc74ba894137276b2b, wersja z G: + 12 wpisów).
 
+- Bramki (użytkownik 16.11): 6132 i 4950 na dźwigarze BEZ obrotu o 90° (był zły) – ułożone jak 6840, wysięgnik wzdłuż dźwigara,
+  „Obróć” (`away`) przekłada na drugą stronę. Przewód wzmacniający przez nogę bramki (słup `gantry`, np. 3112 – noga nie ma mocowania
+  pod wzmacniający): 4950 na dźwigarze nad nogą, zero = spód dźwigara tej bramki (mast_low/high, jak zero zwisu) + 0,90, przesuw
+  wzdłuż dźwigara (`shift`, domyślnie nad osią nogi – do obejrzenia). Edytor: suwak „Wzdłuż dźwigara” + „Obróć” także dla nóg bramek.
 - Uszynienie: na słupie z kotwieniem końca sekcji (13-0491 / 13-0492) nie ma już przyłącza 13-0885 do słupa (użytkownik 16.11) –
   w terenie przewód idzie dalej z zacisku końcowego do ogranicznika niskonapięciowego. Ogranicznika (modelu) jeszcze nie ma – na razie
   nic nie rysujemy; po modelu: przewód od zacisku 5180-07 do ogranicznika (miejsce wg Iet-106, niżej w notatkach).
