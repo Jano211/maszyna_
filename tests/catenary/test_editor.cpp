@@ -855,6 +855,58 @@ int main( int, char *argv[] ) {
         check( good, "przewod wzmacniajacy: izolator 0301 odciagniety przez przewod na luku, na prostej i na koncach pionowo" );
     }
 
+    // 6a9. uszynienie przez bramkę (użytkownik 2026-11-16): uchwyt 6840 przypięty do dźwigara, nie do zwisu - domyślnie 1 m od skraju
+    // bliższego poprzedniemu słupowi sekcji, "shift" - odległość wzdłuż dźwigara od końca przy słupie 0; przy skośnym dźwigarze na jego osi
+    {
+        catenary::gantry gate;
+        gate.name = "gb"; gate.beam = "E100"; gate.side = -1; gate.high = true;
+        gate.masts[ 0 ] = "3031-1"; gate.masts[ 1 ] = "3032-1";
+        gate.points[ 0 ][ 0 ] = -3.0; gate.points[ 0 ][ 1 ] = 0.2; gate.points[ 0 ][ 2 ] = 100.0;
+        gate.points[ 1 ][ 0 ] = 6.992; gate.points[ 1 ][ 1 ] = 0.2; gate.points[ 1 ][ 2 ] = 100.3;
+        auto p1 { entry }, p3 { entry };
+        p1.name = "gp1"; p3.name = "gp3";
+        p1.at[ 2 ] = p1.rope[ 2 ] = p1.pole[ 2 ] = 40.0; p3.at[ 2 ] = p3.rope[ 2 ] = p3.pole[ 2 ] = 160.0;
+        catenary::suspension drop;
+        drop.name = "gd"; drop.card = 1112; drop.execution = 1; drop.range_max = 1000;
+        drop.has_at = true; drop.at[ 0 ] = 0.687; drop.at[ 1 ] = 5.8; drop.at[ 2 ] = 100.0 + 0.3 * ( -1.313 + 3.0 ) / 9.992;
+        drop.has_rope = true; drop.rope[ 0 ] = 0.687; drop.rope[ 1 ] = 7.5; drop.rope[ 2 ] = drop.at[ 2 ];
+        drop.has_pole = true; drop.pole_type = "4850-3"; drop.pole[ 0 ] = -1.313; drop.pole[ 1 ] = 0.2 + 7.75; drop.pole[ 2 ] = drop.at[ 2 ];
+        catenary::chain line;
+        line.name = "ng"; line.power = "pwr01"; line.type = "C120-2C"; line.suspensions = { "gp1", "gd", "gp3" };
+        auto const run = [ & ]( double const Shift ) {
+            catenary::earthing section;
+            section.name = "ug"; section.from = "gp1"; section.to = "gp3";
+            if( Shift > 0.0 ) { catenary::earthing_holder holder; holder.pole = "gd"; holder.shift = Shift; section.set_holder( holder ); }
+            std::string text { catenary::write_gantry( gate ) + "\n" };
+            for( auto const *item : { &p1, &drop, &p3 } ) { text += catenary::write_suspension( *item ) + "\n"; }
+            text += catenary::write_chain( line ) + "\n" + catenary::write_earthing( section ) + "\n";
+            { std::ofstream out { "tests/catenary/td_uszynienie_bramka_test.scm", std::ios::binary }; out << text; }
+            catenary_scene_clear(); errors.clear(); logs.clear();
+            auto const from { simulation::State.created.size() };
+            cParser directive( "td_uszynienie_bramka_test.scm endcatenary" );
+            catenary_scene_load( directive );
+            catenary_scene_resolve();
+            glm::dvec3 at { 1e9, 0.0, 0.0 };
+            for( auto i { from }; i < simulation::State.created.size(); ++i ) {
+                if( simulation::State.created[ i ].entry.find( "components/6840" ) != std::string::npos ) { at = simulation::State.created[ i ].position; }
+            }
+            std::remove( "tests/catenary/td_uszynienie_bramka_test.scm" );
+            return at;
+        };
+        // koniec dźwigara przy słupie 0: ściana słupa (offset 0,121 wzdłuż dźwigara)
+        auto const length { std::hypot( 9.992, 0.3 ) };
+        auto const onbeam = [ & ]( double const Along ) {
+            auto const t { ( 0.121 + Along ) / length };
+            return glm::dvec3 { -3.0 + 9.992 * t, 0.0, 100.0 + 0.3 * t };
+        };
+        auto const auto_spot { run( 0.0 ) }, moved { run( 5.0 ) };
+        auto const want_auto { onbeam( 1.0 ) }, want_moved { onbeam( 5.0 ) };
+        std::printf( "  6840 na bramce: samo %.3f %.3f (chce %.3f %.3f), shift 5 m %.3f %.3f (chce %.3f %.3f)\n", auto_spot.x, auto_spot.z, want_auto.x, want_auto.z,
+            moved.x, moved.z, want_moved.x, want_moved.z );
+        auto const close = []( glm::dvec3 const &A, glm::dvec3 const &B ) { return std::hypot( A.x - B.x, A.z - B.z ) < 0.02; };
+        check( close( auto_spot, want_auto ) && close( moved, want_moved ), "uszynienie na bramce: uchwyt na dzwigarze 1 m od skraju przy poprzednim slupie, shift od slupa 0, po osi skosnego dzwigara" );
+    }
+
     // 6a5. uszynienie przez słup z kilkoma wysięgnikami (para rozstawionych + trzeci w osi słupa): jeden uchwyt na słup, obrócony
     // jak słup (płaszczyzna przez konsolę), nie w stronę rozstawionych wysięgników
     {

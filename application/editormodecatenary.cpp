@@ -5027,12 +5027,28 @@ void catenary_editor::render_catenary_earthing_ui()
 			{
 				// a drop of a gantry: holder 6840 on the top of the beam (card 13-0807), moved along the beam; a feeder - always the arm 4950,
 				// also over a leg of a gantry (the leg takes no feeder arm)
-				auto shift{static_cast<float>(holder.shift)};
-				ImGui::SetNextItemWidth(170.0f);
-				if (ImGui::SliderFloat(STR_C("Along the beam"), &shift, -5.0f, 5.0f, "%+.2f m"))
+				// the place along the beam, from its end at mast 0 (the user 2026-11-16: fixed to the gantry, not to the drop); by default 1 m
+				// from the end nearer to the previous pole of the section, within the length of the beam
+				double length{0.0}, at{0.0};
+				if (catenary_earthing_beam(static_cast<std::size_t>(section), pole, length, at))
 				{
-					holder.shift = std::round(shift * 100.0f) / 100.0;
-					changed = true;
+					auto shift{static_cast<float>(at)};
+					auto const low{static_cast<float>(std::min(1.0, 0.5 * length))}, high{static_cast<float>(std::max(length - 1.0, 0.5 * length))};
+					ImGui::SetNextItemWidth(170.0f);
+					if (ImGui::SliderFloat(STR_C("Along the beam"), &shift, low, high, "%.2f m"))
+					{
+						holder.shift = std::max(0.01, std::round(shift * 100.0f) / 100.0);
+						changed = true;
+					}
+					if (holder.shift > 0.0)
+					{
+						ImGui::SameLine();
+						if (ImGui::SmallButton(STR_C("By the previous pole")))
+						{
+							holder.shift = 0.0;
+							changed = true;
+						}
+					}
 				}
 				if (feeder)
 				{

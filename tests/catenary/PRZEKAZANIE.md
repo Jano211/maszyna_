@@ -44,8 +44,18 @@ czy izolator nie wchodzi w wysięgnik / słup przy dużych kątach; 4950 na bram
 - Izolatory sekcyjne: części w przewodzie i linie (7210, 7150, 5120, 7230, 7500) ze spadkiem liny/przewodu (spawn w `section_insulator`
   – obrót o oś Y modelu, Y poziomo), linki V z uszu też.
 - Uszynienie / przewód wzmacniający na zwisie bramki: części obrócone o pełny skos dźwigara (`drop_beam_turn`, bez progu 2°), więc
-  przesuw `shift` idzie wzdłuż dźwigara. DO ZROBIENIA (użytkownik 22:09): przypinać do bramki, nie do zwisu – domyślnie skraj
-  dźwigara, zakres przesuwu z wymiaru dźwigara; zwisy przesuwane w edytorze nie trzymają się osi dźwigara (do zbadania).
+  przesuw idzie wzdłuż dźwigara.
+- Uszynienie / przewód wzmacniający na bramce (zwis albo noga) PRZYPIĘTE DO DŹWIGARA (użytkownik 16.11 22:41): `shift` uchwytu =
+  odległość wzdłuż dźwigara od jego końca przy słupie 0 (ściana słupa, `gantry_beam_ends`); 0 = samo: 1 m od skraju bliższego
+  POPRZEDNIEMU słupowi sekcji (pierwszy w sekcji – od słupu 0); zakres 1 m … długość − 1 m (`earthing_beam_spot`, `kBeamEndMargin`).
+  Uwaga: dawne `shift` (względem zwisu, ±5 m) znaczy teraz co innego – sprawdzić pliki z przesuniętymi uchwytami na bramkach.
+  Edytor: suwak „Wzdłuż dźwigara” w zakresie dźwigara + „Wg poprzedniego słupu” (wraca do domyślnego); API `catenary_earthing_beam`.
+  Test `te` 6a9 (skośny dźwigar). `lang\editor_pl.po` na G: + 1 wpis (md5 74f1f8460072dabbb9fb4cd6f7af9842).
+- NASTĘPNE: zwisy przesuwane w edytorze nie trzymają się osi dźwigara (użytkownik: „wyznaczają środek dźwigara tylko przy
+  wstawieniu, potem jadą lokalną osią”) – do zbadania po sprawdzeniu powyższego.
+- Zasilanie – plan zaakceptowany 16.11: podstacje (zasilacz + model, w edytorze), odłączniki sekcyjne na słupach (karta 0641) ze
+  stanem otwarty/zamknięty, odgromniki – sam model. Marzenie użytkownika („opus magnum”): wyjść z kabiny, podejść do słupa
+  i wyłączyć prąd odłącznikiem (też pod przyszły multiplayer). Użytkownik sprawdzi 17.11, czy zasilacze za izolatorami działają.
 
 **Pył – wydajność (16.11 21:30):** użytkownik: „efekt przedni, ale chyba wpierdala trochę klatek – jak sieć schodzi z widoku, jest
 szybciej”. Nie wiadomo, czy to pył, czy sama geometria sieci – test: `strength 0` w `data\traction_dust.txt` (restart, bez

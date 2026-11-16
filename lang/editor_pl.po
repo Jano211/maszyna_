@@ -12844,6 +12844,9 @@ msgstr "Uszynienie grupowe: lina po wierzchach słupów w sekcjach po ok. 3 km (
 msgid "Along the beam"
 msgstr "Wzdłuż dźwigara"
 
+msgid "By the previous pole"
+msgstr "Wg poprzedniego słupu"
+
 msgid "Connection 13-0885"
 msgstr "Przyłącze 13-0885"
 

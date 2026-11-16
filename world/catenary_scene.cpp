@@ -2781,10 +2781,57 @@ earthing_line_of( scene_earthing const &Earthing ) {
 }
 
 // uchwyt 6120 (karta 0805) albo wysięgnik przewodu uszyniającego 6130 (karta 0806) na słupie podwieszenia z ustawieniami Holder
+// dźwigar bramki, na której stoi słup wpisu (zwis albo noga): końce spodu dźwigara; false - nie na bramce
+bool
+earthing_beam_ends( catenary::suspension const &Data, catenary::cantilever_pole const &Pole, glm::dvec3 &From, glm::dvec3 &To ) {
+    auto const *catalog { cantilevers() };
+    if( catalog == nullptr ) { return false; }
+    catenary::gantry const *gantry { nullptr };
+    if( false == Pole.drop.empty() ) {
+        auto const *found { drop_gantry( Data, Pole ) };
+        gantry = ( found != nullptr ? &found->data : nullptr );
+    }
+    else if( Pole.gantry && Data.has_pole ) { gantry = gantry_at_mast( Data.pole_type, Data.pole ); }
+    if( gantry == nullptr ) { return false; }
+    auto const *first { catalog->mast( gantry->masts[ 0 ] ) };
+    auto const *second { gantry->masts[ 1 ].empty() ? nullptr : catalog->mast( gantry->masts[ 1 ] ) };
+    auto const *beam { catalog->beam( gantry->beam ) };
+    if( first == nullptr || beam == nullptr || ( second == nullptr && false == gantry->masts[ 1 ].empty() ) ) { return false; }
+    double from[ 3 ], to[ 3 ];
+    gantry_beam_ends( *gantry, *first, second, beam->span, from, to );
+    From = { from[ 0 ], from[ 1 ], from[ 2 ] };
+    To = { to[ 0 ], to[ 1 ], to[ 2 ] };
+    return true;
+}
+
+// miejsce uchwytu / wysięgnika na dźwigarze bramki: Shift - odległość wzdłuż dźwigara od końca przy słupie 0 (0 = samo: 1 m od skraju
+// bliższego punktowi Previous, bez niego od słupa 0 - użytkownik 2026-11-16, 1 m na szerokość słupa, mocowania i tył wysięgnika);
+// w zakresie od 1 m do długości dźwigara bez 1 m. Length - długość dźwigara w planie, At - wybrane miejsce, Spot - punkt na osi
+// spodu dźwigara (scenerii)
+double constexpr kBeamEndMargin { 1.0 };
+bool
+earthing_beam_spot( catenary::suspension const &Data, catenary::cantilever_pole const &Pole, double const Shift, glm::dvec3 const *Previous,
+    double &Length, double &At, glm::dvec3 &Spot ) {
+    glm::dvec3 from, to;
+    if( false == earthing_beam_ends( Data, Pole, from, to ) ) { return false; }
+    Length = std::hypot( to.x - from.x, to.z - from.z );
+    if( Length < 1e-3 ) { return false; }
+    auto const low { std::min( kBeamEndMargin, 0.5 * Length ) }, high { std::max( Length - kBeamEndMargin, 0.5 * Length ) };
+    if( Shift > 0.0 ) { At = std::clamp( Shift, low, high ); }
+    else if( Previous != nullptr ) {
+        auto const a { std::hypot( Previous->x - from.x, Previous->z - from.z ) }, b { std::hypot( Previous->x - to.x, Previous->z - to.z ) };
+        At = ( a <= b ? low : high );
+    }
+    else { At = low; }
+    Spot = from + ( to - from ) * ( At / Length );
+    return true;
+}
+
 // Pull - przewód wzmacniający: kierunek (scenerii, jednostkowy), w którym wypadkowa sił z przęseł odciąga izolator obrotowy 0301
 // od pionu (izolator wisi w eye wysięgnika wzdłuż tego kierunku); brak - izolator pionowo
+// Previous - słup przed tym w sekcji (punkt w scenerii; nullptr - pierwszy): na bramce wybiera domyślny skraj dźwigara
 bool
-earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const &Holder, earthing_place &Place, catenary::earthing_line const *Line, glm::dvec3 const *Pull = nullptr ) {
+earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const &Holder, earthing_place &Place, catenary::earthing_line const *Line, glm::dvec3 const *Pull = nullptr, glm::dvec3 const *Previous = nullptr ) {
     auto const *catalog { cantilevers() };
     auto const standing { earthing_pole( Suspension ) };
     if( catalog == nullptr || standing >= Suspensions.size() ) { Place.problem = "no pole"; return false; }
@@ -2849,7 +2896,7 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
         // wysięgnik 6132 na dźwigarze, przewód wzmacniający - 4950 (oba na teksturze uszynienia jak 6130)
         front.role = "earthing_arm";
         front.part = line->gantry_arm;
-        front.position[ 1 ] = Holder.shift;
+        front.position[ 1 ] = 0.0;   // miejsce na dźwigarze - niżej (earthing_beam_spot)
         front.position[ 2 ] -= line->gantry_arm_drop;
         Place.arm_skin = "uszynienia";
         Place.arm_skin_default = "uszynienia_used";
@@ -2862,7 +2909,7 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
     }
     else if( ongantry ) {
         front.part = line->gantry_part;
-        front.position[ 1 ] = Holder.shift;
+        front.position[ 1 ] = 0.0;
         Place.parts.push_back( front );
         wire = front;
         for( int axis = 0; axis < 3; ++axis ) { wire.position[ axis ] += line->gantry_wire[ axis ]; }
@@ -2984,6 +3031,20 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
                 }
                 std::copy( std::begin( rotated ), std::end( rotated ), placement->rotation );
             }
+        }
+    }
+    // miejsce na dźwigarze bramki (użytkownik 2026-11-16: przypinane do bramki, nie do zwisu / nogi): odległość wzdłuż dźwigara od jego
+    // końca przy słupie 0; domyślnie 1 m od skraju bliższego poprzedniemu słupowi sekcji (pierwszy w sekcji - od strony słupu 0)
+    if( ongantry ) {
+        double length { 0.0 }, at { 0.0 };
+        glm::dvec3 spot;
+        if( earthing_beam_spot( data, *pole, Holder.shift, Previous, length, at, spot ) ) {
+            auto const c { std::cos( Place.heading ) }, s { std::sin( Place.heading ) };
+            auto const dx { spot.x - Place.origin.x }, dz { spot.z - Place.origin.z };
+            auto const x { -( dx * c - dz * s ) }, y { dx * s + dz * c };
+            std::vector<catenary::cantilever_placement *> all { &wire };
+            for( auto &placement : Place.parts ) { all.push_back( &placement ); }
+            for( auto *placement : all ) { placement->position[ 0 ] += x; placement->position[ 1 ] += y; }
         }
     }
     // izolator obrotowy odciągnięty przez przewód (zdjęcie użytkownika 2026-11-16): oś izolatora (-Z modelu) obrócona najkrótszą drogą
@@ -3280,6 +3341,18 @@ earthing_split_partner( std::string const &File, std::size_t const Pole, scene_e
 double const kFeederHangerLight { 10.5 }, kFeederHangerHeavy { 11.0 }, kFeederLineLight { 0.382 }, kFeederLineHeavy { 0.964 };
 double const kFeederInsulatorMass { 6.2 };
 
+// słup przed Standing w sekcji Earthing (oś słupa w scenerii); false - Standing pierwszy albo nie w sekcji
+bool
+earthing_previous( scene_earthing const &Earthing, std::size_t const Standing, glm::dvec3 &Point ) {
+    auto const &path { Earthing.path.empty() ? earthing_route_of( Earthing ) : Earthing.path };
+    auto const found { std::find( path.begin(), path.end(), Standing ) };
+    if( found == path.end() || found == path.begin() ) { return false; }
+    auto const &data { Suspensions[ *( found - 1 ) ].data };
+    if( false == data.has_pole ) { return false; }
+    Point = { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
+    return true;
+}
+
 // największe odchylenie izolatora obrotowego przewodu wzmacniającego od pionu (ZAŁOŻENIE: 80 stopni, nie wiadomo, gdzie izolator
 // zahacza o wysięgnik; przy wypadkowej skierowanej w górę izolator kładzie się na tym kącie)
 double const kFeederSwingMax { 80.0 * 3.14159265358979323846 / 180.0 };
@@ -3326,14 +3399,18 @@ earthing_feeder_pull( scene_earthing const &Earthing, std::size_t const Standing
     }
     if( neighbours.size() < 2 ) { return false; }
     earthing_place here;
-    if( false == earthing_place_of( Standing, earthing_holder_of( Earthing, Standing ), here, line ) ) { return false; }
+    glm::dvec3 previous;
+    auto const before { earthing_previous( Earthing, Standing, previous ) };
+    if( false == earthing_place_of( Standing, earthing_holder_of( Earthing, Standing ), here, line, nullptr, before ? &previous : nullptr ) ) { return false; }
     auto const horizontal { line->tension * 10.0 };   // daN -> N
     auto const weight { line->mass * 9.81 };          // N/m
     glm::dvec3 force { 0.0 };
     std::size_t used { 0 };
     for( auto const &neighbour : neighbours ) {
         earthing_place there;
-        if( false == earthing_place_of( neighbour.first, earthing_holder_of( *neighbour.second, neighbour.first ), there, line ) ) { continue; }
+        glm::dvec3 behind;
+        auto const back { earthing_previous( *neighbour.second, neighbour.first, behind ) };
+        if( false == earthing_place_of( neighbour.first, earthing_holder_of( *neighbour.second, neighbour.first ), there, line, nullptr, back ? &behind : nullptr ) ) { continue; }
         auto way { there.wire - here.wire };
         auto const rise { way.y };
         way.y = 0.0;
@@ -3359,12 +3436,14 @@ earthing_feeder_pull( scene_earthing const &Earthing, std::size_t const Standing
     return true;
 }
 
-// uchwyt na słupie Standing sekcji Earthing: ustawienia z sekcji, jej przewód, izolator przewodu wzmacniającego odciągnięty przez przęsła
+// uchwyt na słupie Standing sekcji Earthing: ustawienia z sekcji, jej przewód, izolator przewodu wzmacniającego odciągnięty przez przęsła,
+// na bramce skraj dźwigara wg poprzedniego słupu sekcji
 bool
 earthing_place_at( scene_earthing const &Earthing, std::size_t const Standing, earthing_place &Place ) {
-    glm::dvec3 pull;
+    glm::dvec3 pull, previous;
     auto const pulled { earthing_feeder_pull( Earthing, Standing, pull ) };
-    return earthing_place_of( Standing, earthing_holder_of( Earthing, Standing ), Place, earthing_line_of( Earthing ), pulled ? &pull : nullptr );
+    auto const before { earthing_previous( Earthing, Standing, previous ) };
+    return earthing_place_of( Standing, earthing_holder_of( Earthing, Standing ), Place, earthing_line_of( Earthing ), pulled ? &pull : nullptr, before ? &previous : nullptr );
 }
 
 // wstawia uchwyty uszynienia na słupach i części końców sekcji (albo usuwa, gdy uszynienie usunięte). zwraca liczbę wstawionych modeli
@@ -5437,6 +5516,21 @@ catenary_earthing_of( std::size_t const Suspension ) {
         if( std::find( earthing.path.begin(), earthing.path.end(), standing ) != earthing.path.end() ) { return static_cast<int>( k ); }
     }
     return -1;
+}
+
+bool
+catenary_earthing_beam( std::size_t const Index, std::string const &Pole, double &Length, double &At ) {
+    if( Index >= Earthings.size() || Earthings[ Index ].removed ) { return false; }
+    auto const &earthing { Earthings[ Index ] };
+    auto const standing { earthing_pole( suspension_named( earthing.file, Pole ) ) };
+    auto const *catalog { cantilevers() };
+    if( standing >= Suspensions.size() || catalog == nullptr ) { return false; }
+    auto const &data { Suspensions[ standing ].data };
+    auto const *pole { data.has_pole ? catalog->pole( data.pole_type ) : nullptr };
+    if( pole == nullptr ) { return false; }
+    glm::dvec3 previous, spot;
+    auto const before { earthing_previous( earthing, standing, previous ) };
+    return earthing_beam_spot( data, *pole, earthing_holder_of( earthing, standing ).shift, before ? &previous : nullptr, Length, At, spot );
 }
 
 std::string

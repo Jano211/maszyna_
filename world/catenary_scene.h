@@ -185,6 +185,9 @@ std::vector<int> catenary_earthings_of( std::size_t Suspension );
 bool catenary_earthing_feeder( std::size_t Index );
 // części stawiane na słupie Pole uszynienia (np. "6130-02 + 6130 + 6130-00"), albo "! <czemu się nie da>"
 std::string catenary_earthing_holder_text( std::size_t Index, std::string const &Pole );
+// uchwyt sekcji Index na słupie Pole, który stoi na bramce (zwis albo noga): długość dźwigara w planie i miejsce uchwytu wzdłuż niego
+// (od końca przy słupie 0; przy shift 0 - domyślne); false, gdy słup nie na bramce
+bool catenary_earthing_beam( std::size_t Index, std::string const &Pole, double &Length, double &At );
 std::string catenary_scene_new_earthing_name( std::string const &File );
 
 // ---- kotwienia (wpisy "anchor" w pliku sieci): słup kotwowy z urządzeniem naprężającym ---------------------------------
