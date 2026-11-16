@@ -42,6 +42,9 @@ Są: 1491–1493 (pale), 161x (1611/1613/1614/1617), 1665–1667, 1701, maszty b
 - [ ] Kotwienie środkowe: zaciski 5560 / 5570 na linie nośnej, złączka 6410 na przewodzie, uchwyt 4590 (0416, do dźwigara bramki);
       obejma liny kotwienia na teowniku bez siodła (dziś drugi 4160-01).
 - [ ] Uchwyty kotwień 4580 (wspólne z D).
+- [ ] ★ Kotwienie słupów do ziemi (użytkownik 16.11 23:05): odciągi słupów kotwowych do gruntu – lina z kotwą gruntową / płytą
+      kotwiącą, uchwyty na słupie, śruba rzymska; karty i części do ustalenia (zastrzał 4800 wyrzucony wcześniej). Kod: wpis przy
+      słupie kotwowym, kierunek przedłużenia łańcucha.
 
 ## F. Odciągi sieci (0311–0326)
 - [ ] 6303-7 końcówka liny odciągowej na linie nośnej; 5640-1 zacisk (odciągi pośrednie); 5270-3 zaciski (razem z kauszą, po 2–3,
