@@ -3244,6 +3244,11 @@ earthing_split_partner( std::string const &File, std::size_t const Pole, scene_e
     return Earthings.size();
 }
 
+// ciężar izolatora 0301 z uchwytem i zawieszką (użytkownik 2026-11-16): 10,5 kg przy najlżejszym przewodzie (AFL95, 0,382 kg/m),
+// 11 kg przy najcięższym (AFL240, 0,964 kg/m), pomiędzy liniowo wg masy przewodu; sam izolator 6,2 kg
+double const kFeederHangerLight { 10.5 }, kFeederHangerHeavy { 11.0 }, kFeederLineLight { 0.382 }, kFeederLineHeavy { 0.964 };
+double const kFeederInsulatorMass { 6.2 };
+
 // największe odchylenie izolatora obrotowego przewodu wzmacniającego od pionu (ZAŁOŻENIE: 80 stopni, nie wiadomo, gdzie izolator
 // zahacza o wysięgnik; przy wypadkowej skierowanej w górę izolator kładzie się na tym kącie)
 double const kFeederSwingMax { 80.0 * 3.14159265358979323846 / 180.0 };
@@ -3253,8 +3258,10 @@ double const kFeederSwingMax { 80.0 * 3.14159265358979323846 / 180.0 };
 // poziomy (tension przewodu) w stronę sąsiada plus składowa pionowa z paraboli przęsła (H*h/a - w*a/2, h - różnica wysokości, a - długość
 // w planie). Na prostej przy równych przęsłach izolator wisi pionowo, na łuku odchyla się do środka łuku, przy różnych wysokościach
 // sąsiadów - wzdłuż toru. Punkty sąsiadów i zacisku - nieodchylone (różnica o długość izolatora na przęśle kilkudziesięciu metrów
-// jest pomijalna, a liczenie zostaje jednoznaczne: ten sam wynik przy stawianiu uchwytów i rysowaniu przewodu). Ciężar samego izolatora
-// z uchwytem pominięty (nieznany). Koniec sekcji z kotwieniem - bez (łańcuch zamiast uchwytu); koniec "na wysięgniku" - drugi
+// jest pomijalna, a liczenie zostaje jednoznaczne: ten sam wynik przy stawianiu uchwytów i rysowaniu przewodu). Ciężar izolatora
+// z uchwytem i zawieszką (użytkownik 2026-11-16: izolator 6,2 kg, uchwyt 1,3 kg, zawieszka 2,5-3,1 kg wg przewodu; razem 10,5 kg dla
+// najlżejszego, 11 kg dla najcięższego przewodu, reszta pomiędzy) - izolator jak pręt na przegubie: jego ciężar w połowie długości
+// (pół ciężaru na końcu), uchwyt i zawieszka na końcu; dokłada się do pionowej siły przewodu i prostuje izolator. Koniec sekcji z kotwieniem - bez (łańcuch zamiast uchwytu); koniec "na wysięgniku" - drugi
 // sąsiad z sekcji tego samego przewodu, która zaczyna się albo kończy na tym słupie; bez niego izolator wisi pionowo (sam naciąg
 // położyłby go poziomo - koniec przewodu na izolatorze obrotowym w terenie nie występuje)
 bool
@@ -3311,7 +3318,9 @@ earthing_feeder_pull( scene_earthing const &Earthing, std::size_t const Standing
     auto const side { glm::length( across ) };
     if( side < 1e-6 ) { return false; }
     across = across * ( 1.0 / side );
-    auto const down { -force.y };
+    auto const blend { std::clamp( ( line->mass - kFeederLineLight ) / ( kFeederLineHeavy - kFeederLineLight ), 0.0, 1.0 ) };
+    auto const hanger { kFeederHangerLight + ( kFeederHangerHeavy - kFeederHangerLight ) * blend };
+    auto const down { -force.y + ( hanger - 0.5 * kFeederInsulatorMass ) * 9.81 };
     auto angle { down > 0.0 ? std::atan2( side, down ) : kFeederSwingMax };
     angle = std::min( angle, kFeederSwingMax );
     if( angle < 1e-4 ) { return false; }
@@ -3375,6 +3384,22 @@ assemble_earthing( scene_earthing &Earthing ) {
         }
     };
     auto const last { Earthing.path.empty() ? 0 : Earthing.path.size() - 1 };
+    // przewód wzmacniający nie może kończyć się na izolatorze 0301 bez kotwienia (użytkownik 2026-11-16: "niemożliwe") - koniec bez
+    // kotwienia 23-0419, na którym nie zaczyna się ani nie kończy inna sekcja tego przewodu, do logu (izolator tam wisi pionowo)
+    if( line != nullptr && line->feeder && Earthing.path.size() >= 2 ) {
+        for( auto const end : { std::size_t { 0 }, last } ) {
+            auto const &kind { end == 0 ? Earthing.data.start : Earthing.data.end };
+            if( false == kind.empty() && line->chain( kind ) != nullptr ) { continue; }
+            auto const pole { Earthing.path[ end ] };
+            auto const continued { std::any_of( Earthings.begin(), Earthings.end(), [ & ]( scene_earthing const &Other ) {
+                if( &Other == &Earthing || Other.removed || Other.file != Earthing.file || earthing_line_of( Other ) != line ) { return false; }
+                auto const route { Other.path.empty() ? earthing_route_of( Other ) : Other.path };
+                return false == route.empty() && ( route.front() == pole || route.back() == pole ); } ) };
+            if( false == continued ) {
+                WriteLog( ( "Catenary: feeder \"" + Earthing.data.name + "\" ends at \"" + Suspensions[ pole ].data.name + "\" without an anchoring (23-0419) - a feeder can't end on an insulator 0301" ).c_str() );
+            }
+        }
+    }
     for( std::size_t k = 0; k < Earthing.path.size(); ++k ) {
         auto const standing { Earthing.path[ k ] };
         earthing_place place;
