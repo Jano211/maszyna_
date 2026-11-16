@@ -5023,9 +5023,10 @@ void catenary_editor::render_catenary_earthing_ui()
 			auto changed{false};
 			auto const *catalog{catenary_scene_catalog()};
 			auto const *type{catalog != nullptr && selected->has_pole ? catalog->pole(selected->pole_type) : nullptr};
-			if (type != nullptr && false == type->drop.empty())
+			if (type != nullptr && (false == type->drop.empty() || (feeder && type->gantry)))
 			{
-				// a drop of a gantry: holder 6840 on the top of the beam (card 13-0807), moved along the beam; a feeder - always the arm 4950
+				// a drop of a gantry: holder 6840 on the top of the beam (card 13-0807), moved along the beam; a feeder - always the arm 4950,
+				// also over a leg of a gantry (the leg takes no feeder arm)
 				auto shift{static_cast<float>(holder.shift)};
 				ImGui::SetNextItemWidth(170.0f);
 				if (ImGui::SliderFloat(STR_C("Along the beam"), &shift, -5.0f, 5.0f, "%+.2f m"))
@@ -5042,6 +5043,12 @@ void catenary_editor::render_catenary_earthing_ui()
 				{
 					ImGui::SameLine();
 					changed |= ImGui::Checkbox(STR_C("Earthing arm 6132"), &holder.arm);
+				}
+				// the arm on the beam (6132, 4950) to the other side of the beam
+				if (feeder || holder.arm)
+				{
+					ImGui::SameLine();
+					changed |= ImGui::Checkbox(STR_C("Turn around"), &holder.away);
 				}
 			}
 			else if (feeder)

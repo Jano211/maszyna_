@@ -751,6 +751,8 @@ int main( int, char *argv[] ) {
             auto item { entry };
             item.name = "f" + std::to_string( k + 1 );
             item.at[ 2 ] = item.rope[ 2 ] = item.pole[ 2 ] = 60.0 * k;
+            // f3 na nodze bramki: noga nie nosi wysięgnika przewodu wzmacniającego - 4950 na dźwigarze nad nią (użytkownik 2026-11-16)
+            if( k == 2 ) { item.pole_type = "3031-1"; }
             poles.push_back( item );
         }
         catenary::chain line;
@@ -795,9 +797,10 @@ int main( int, char *argv[] ) {
         for( auto const &l : logs ) { if( l.find( "earthing" ) != std::string::npos ) { std::printf( "    %s\n", l.c_str() ); } }
         std::printf( "    f1 %s, f2 %s, f3 %s, f4 %s\n", catenary_earthing_holder_text( 0, "f1" ).c_str(), catenary_earthing_holder_text( 0, "f2" ).c_str(),
             catenary_earthing_holder_text( 0, "f3" ).c_str(), catenary_earthing_holder_text( 0, "f4" ).c_str() );
-        good = good && made[ "4910-02" ] == 2 && made[ "4930-02" ] == 1 && made[ "0301-05" ] == 2 && made[ "0301-051" ] == 1
+        good = good && made[ "4910-02" ] == 2 && made[ "4950-01" ] == 1 && made[ "0301-05" ] == 2 && made[ "0301-051" ] == 1
             && made[ "4450-01" ] == 1 && made[ "4710-01" ] == 1 && made[ "esn_2025" ] == 1 && made[ "4420-01" ] == 1 && made[ "5180-07" ] == 1
-            && made[ "6120-01" ] == 0 && made[ "6130-00" ] == 3 && catenary_earthing_holder_text( 0, "f1" ) == "23-0419"
+            && made[ "6120-01" ] == 0 && made[ "6130-00" ] == 2 && catenary_earthing_holder_text( 0, "f1" ) == "23-0419"
+            && catenary_earthing_holder_text( 0, "f3" ) == "4950-01 + 0301-051"
             && catenary_earthing_holder_text( 0, "f2" ) == "4910-02 + 6130-00 + 0301-05";
         // przewód w przęsłach (lina rysowana z przęsłami łańcucha) - przęsło f2-f3 istnieje
         good = good && std::find( mock_span_names.begin(), mock_span_names.end(), std::string( "nf_1" ) ) != mock_span_names.end();
