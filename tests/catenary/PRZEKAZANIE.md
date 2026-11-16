@@ -17,8 +17,8 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   słupa (profil ceownika, wpisy `profile`), ESN-2635A (ŻK) dopuszczony do 0,40 – tylko ręcznie. Słup musi mieć słowo `feeder`
   (dopisane do wszystkich słupów z 6130 i do 1701 – użytkownik: „właściwe” słupy 1601/1602 (-01) i 1604/1605/1701/1711 (-02) dojdą
   z modelami, na innych tylko gdy pasuje wymiarem). Uchwyt 0301 zawieszony w `eye` wysięgnika, przewód w jego `wire`.
-- Tekstura: 49xx i 0301 na teksturze osprzętu (role „earthing”); wpis wysięgnika z `skin` przełączy na własną – DO USTALENIA, na czym są.
-- ZAŁOŻENIA (do potwierdzenia): AFL-6 95/185/240 średnica 13,5/19,0/21,8 mm, masa 0,382/0,755/0,964 kg/m, naciąg 400 daN; brak
+- Tekstura: 49xx, 4950 i 0301 na teksturze uszynienia (użytkownik 16.11) – `skin uszynienia` we wpisach 49xx/ESN, 4950 i 0301 biorą ją z 6130.
+- Przyjęte przez użytkownika (16.11: „spoko”): AFL-6 95/185/240 średnica 13,5/19,0/21,8 mm, masa 0,382/0,755/0,964 kg/m, naciąg 400 daN; brak
   przyłączy do sieci (57/94A/96/97B) – przewód wzmacniający nie zmienia jeszcze prądów.
 - Kod: `earthing.line`, `earthing_holder.feeder_arm/fresh`, `earthing_line.feeder/arms/insulator*/description`, `earthing_arm.profiles`,
   `cantilever_pole.feeder`; `earthing_place_of(…, Line)` – przewód sekcji (`earthing_line_of`) zamiast pierwszego z danych (też lina,
@@ -29,9 +29,11 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 - Stary izolator sekcyjny (`ceramic`) przerobiony wg karty 23-0436 (kolprojekt1.pdf s. 163; użytkownik: ESN-106 przeniesione do starego
   Kolprojektu, główne części 7210 = ESN-2025 i 7230): w przewodzie jezdnym `7230-01` (dawniej esn_2065; wymiary dalej NA OKO – po eksporcie
   przepisać punkty `wire`/`eye_1..4` do kSection7230), w linie nośnej 7210 (esn_2025) w łącznikach 6513-1 (bryła zastępcza) z zaciskami
-  5120 (wg karty 5120-5 – modelu brak, stoi 5120-01), dwie linki L10 pionowo (poz. 12) zamiast „V”. Pozostałe części karty (5110-1,
+  5120 (wg karty 5120-5 – modelu brak, stoi 5120-01), linki L10 (poz. 12) w „V” (użytkownik 16.11). Użytkownik dostarczy gotowe
+  5120-05, 6513, 6514 i dedykowane 7210 / 7230 – wtedy podmienić w section_insulator (esn_2025 zostaje jako osobny wariant pod
+  kotwienia i nietypowe przewody, m.in. w łańcuchu 23-0419). Pozostałe części karty (5110-1,
   5320-1, 5360-1, 6514-1/-2 płozy, 4230-1, 6301-1, 6311-1) – bez modeli, niepodpięte.
-- G: `data\traction_supports.txt` (md5 664685b769d7803866d99c1e2a318823) i `lang\editor_pl.po` (d2b9759c7732badc74ba894137276b2b, wersja z G: + 12 wpisów).
+- G: `data\traction_supports.txt` (md5 b8815389282adbefa962d91cabe5f653 po teksturach 49xx) i `lang\editor_pl.po` (d2b9759c7732badc74ba894137276b2b, wersja z G: + 12 wpisów).
 
 **Do zrobienia:** obejrzeć w exe (strona wysięgnika, wysokość, izolator 0301 pod eye, kotwienie 23-0419 – kierunek 4710/7210, 4950 na
 bramce); modele 7230-01, 6513, 6514, 5120-05; połączenia z siecią (57/94A/96/97B); izolator 2065 – iskrzenie > 40 km/h, łamanie
