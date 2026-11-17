@@ -22,8 +22,20 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
    składania) liczone co klatkę → teraz tylko po zmianie któregoś wpisu (`nested_key`). Zwis nie jechał przy przeciąganiu (para
    brana jak parasol) → przeciąganie zwisu przesuwa oba (`catenary_apply_to`, jedno cofnięcie na całe przeciąganie), wewnętrzny
    dostaje zwis zewnętrznego i jest wpasowywany od nowa.
-6. Zasilanie: nie da się wstawić zasilaczy (tractionpowersource) ani łatwo zmienić zasilacza przed / za izolatorem – użytkownik chce
-   osobnej zakładki z faktycznym wstawianiem zasilaczy (lokalizacje z mapy). W ROBOCIE.
+6. Zasilanie: nie dało się wstawić zasilaczy (tractionpowersource) ani łatwo zmienić zasilacza przed / za izolatorem. Nowa strona
+   „Zasilanie” (strona 6, przycisk na pasku): nowy zasilacz (nazwa, napięcie, rezystancja, prąd, wyłączniki, rekuperacja, kabina
+   sekcyjna) wstawiany LPM na mapie; lista zasilaczy scenerii; zaznaczony – zmiana parametrów, przesunięcie LPM, usunięcie; zasilacze
+   dorobione przez symulator (nazwa z łańcucha bez definicji w scenerii) – „wstaw pod tą nazwą” nadaje im miejsce i zapis; lista
+   izolatorów sekcyjnych z zasilaczem przed (pierwszy – zasilacz łańcucha, do zmiany) i za (do zmiany). Znaczniki zasilaczy w widoku
+   na tej stronie.
+   ZAPIS: zasilacze to zwykłe wpisy node … tractionpowersource … end w plikach warstw. Po zmianie edytor przepisuje WSZYSTKIE zasilacze
+   każdej warstwy (bez szablonów) jak bloki sieci (`catenary_power_lines`, editormode.cpp save): blok „tractionpowersource” zamyka się
+   gołym „end” (scenelayerssave.cpp node_definitions); warstwa, która dostaje zasilacze, dostaje też od nowa swoje wpisy sieci inline
+   (bo bloki wszystkich rodzajów z listy są z niej usuwane). Położenie przez `context_insert().to_local`. Usunięty zasilacz zostaje
+   w Powergrid do ponownego wczytania (przęsła mogą go trzymać), tylko nie jest zapisywany ani pokazywany. Bez cofania (Ctrl+Z).
+   NIESPRAWDZONE: zapis do pliku warstwy z blokiem origin, zasilacze w szablonach (pomijane).
+7. Wysięgnik zagnieżdżony: przy tej samej odległości od osi toru nie da się kliknąć wewnętrznego – w sekcji „Drugi wysięgnik”
+   przycisk „Zaznacz wewnętrzny / zewnętrzny”.
 
 ## START TUTAJ – 2026-11-17 13:40 – wysięgniki zagnieżdżone na jednym zwisie
 

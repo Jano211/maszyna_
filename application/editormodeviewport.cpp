@@ -212,6 +212,7 @@ void editor_mode::work_area_tools(std::vector<tool_button> &Buttons)
 		Buttons.push_back({icon::gantry, STR_C("Semi-gantries"), nullptr, STR_C("Semi-gantries: the mast with its beam in one model (1901), T gantries; the cantilevers on their drops"), page == 4, [this]() { catenary_choose_page(4); }});
 		Buttons.push_back({icon::wires, STR_C("Anchors"), nullptr, STR_C("The anchors of the chain selected: at its ends (tensioning devices, fixed) and the middle anchor"), page == 5, [this]() { catenary_choose_page(5); }});
 		Buttons.push_back({icon::wires, STR_C("Earthing"), nullptr, STR_C("Group earthing: the rope over the tops of the poles in sections of about 3 km (cards 0805-0807)"), page == 3, [this]() { catenary_choose_page(3); }});
+		Buttons.push_back({icon::wires, STR_C("Power"), nullptr, STR_C("Power sources (substations, section cabins) placed on the map, the section insulators with the power sources before and after them"), page == 6, [this]() { catenary_choose_page(6); }});
 		break;
 	}
 	case work_area::roads:

@@ -12951,3 +12951,159 @@ msgstr "Na drugi koniec"
 
 msgid "The holder goes 1 m from the other end of the beam; an arm (6132, 4950) is turned around with it"
 msgstr "Uchwyt idzie 1 m od drugiego końca dźwigara; wysięgnik (6132, 4950) obraca się razem z nim"
+
+msgid "Select the outer one"
+msgstr "Zaznacz zewnętrzny"
+
+msgid "Select the inner one"
+msgstr "Zaznacz wewnętrzny"
+
+msgid "The other cantilever of the pair gets selected: its card, stagger, mounts and chain are set in the panel then"
+msgstr "Zaznacza drugi wysięgnik pary: jego kartę, odsuw, mocowania i łańcuch ustawia się wtedy w panelu"
+
+msgid "(the inner one selected)"
+msgstr "(zaznaczony wewnętrzny)"
+
+msgid "(the outer one selected)"
+msgstr "(zaznaczony zewnętrzny)"
+
+msgid "Power source %s moved"
+msgstr "Zasilacz %s przesunięty"
+
+msgid "The power source needs a name without spaces"
+msgstr "Zasilacz musi mieć nazwę bez spacji"
+
+msgid "A power source named %s is in the scenery already"
+msgstr "Zasilacz o nazwie %s już jest w scenerii"
+
+msgid "The scenery wasn't opened for editing: the power source would have nowhere to be written"
+msgstr "Sceneria nie jest otwarta do edycji: zasilacza nie byłoby gdzie zapisać"
+
+msgid "Power source %s (made up by the simulator so far) placed here: it's written with the scenery now"
+msgstr "Zasilacz %s (dotąd dorabiany przez symulator) postawiony tutaj: teraz zapisuje się razem ze scenerią"
+
+msgid "Power source %s placed: chains and section insulators can take it now; it's written with the scenery"
+msgstr "Zasilacz %s postawiony: łańcuchy i izolatory sekcyjne mogą go już brać; zapisuje się razem ze scenerią"
+
+msgid "Power sources of the scenery (tractionpowersource): substations and section cabins, placed where the map shows them. The chains take one as their power source, a section insulator another one after it"
+msgstr "Zasilacze scenerii (tractionpowersource): podstacje i kabiny sekcyjne, stawiane tam, gdzie pokazuje je mapa. Łańcuch bierze jeden jako swój zasilacz, izolator sekcyjny – inny za sobą"
+
+msgid "New power source"
+msgstr "Nowy zasilacz"
+
+msgid "Internal resistance (ohm)"
+msgstr "Rezystancja wewnętrzna (Ω)"
+
+msgid "Maximum current (A)"
+msgstr "Prąd maksymalny (A)"
+
+msgid "Fast fuse time (s)"
+msgstr "Czas szybkiego wyłącznika (s)"
+
+msgid "Fast fuse repetitions"
+msgstr "Powtórzenia szybkiego wyłącznika"
+
+msgid "Slow fuse time (s)"
+msgstr "Czas wolnego wyłącznika (s)"
+
+msgid "Recuperation"
+msgstr "Rekuperacja"
+
+msgid "Section cabin (no source)"
+msgstr "Kabina sekcyjna (nie zasila)"
+
+msgid "\"section\": not a source of power, it only tells the current at which the section is cut off"
+msgstr "„section”: nie jest źródłem zasilania, podaje tylko prąd, przy którym sekcja jest odłączana"
+
+msgid "Stop placing (Esc)"
+msgstr "Przerwij wstawianie (Esc)"
+
+msgid "Place: LMB on the map"
+msgstr "Wstaw: LPM na mapie"
+
+msgid "LMB where the substation stands: the power source goes there"
+msgstr "LPM tam, gdzie stoi podstacja: tam pójdzie zasilacz"
+
+msgid "Power sources in the scenery"
+msgstr "Zasilacze w scenerii"
+
+msgid "%s  %.0f V  - made up by the simulator for the traction, not in the scenery: place it under this name"
+msgstr "%s  %.0f V  – dorobiony przez symulator dla sieci, nie ma go w scenerii: wstaw go pod tą nazwą"
+
+msgid "%s  %.0f V  %.1f km away%s"
+msgstr "%s  %.0f V  %.1f km stąd%s"
+
+msgid " (template)"
+msgstr " (szablon)"
+
+msgid "Its name is in \"New power source\": place it on the map"
+msgstr "Jego nazwa jest w „Nowy zasilacz”: wstaw go na mapie"
+
+msgid "None yet"
+msgstr "Jeszcze żadnego"
+
+msgid "Power source %s"
+msgstr "Zasilacz %s"
+
+msgid "Defined by an include template: changed there, not here"
+msgstr "Zdefiniowany w szablonie include: zmienia się go tam, nie tutaj"
+
+msgid "Voltage (V)##selected"
+msgstr "Napięcie (V)##selected"
+
+msgid "Internal resistance (ohm)##selected"
+msgstr "Rezystancja wewnętrzna (Ω)##selected"
+
+msgid "Maximum current (A)##selected"
+msgstr "Prąd maksymalny (A)##selected"
+
+msgid "Fast fuse time (s)##selected"
+msgstr "Czas szybkiego wyłącznika (s)##selected"
+
+msgid "Fast fuse repetitions##selected"
+msgstr "Powtórzenia szybkiego wyłącznika##selected"
+
+msgid "Slow fuse time (s)##selected"
+msgstr "Czas wolnego wyłącznika (s)##selected"
+
+msgid "Recuperation##selected"
+msgstr "Rekuperacja##selected"
+
+msgid "Section cabin (no source)##selected"
+msgstr "Kabina sekcyjna (nie zasila)##selected"
+
+msgid "Stop moving"
+msgstr "Przerwij przesuwanie"
+
+msgid "Move: LMB on the map"
+msgstr "Przesuń: LPM na mapie"
+
+msgid "Power source %s removed: the chains which take it keep its name until they get another one"
+msgstr "Zasilacz %s usunięty: łańcuchy, które go biorą, zostają z jego nazwą, dopóki nie dostaną innego"
+
+msgid "%s, after %s (%s)"
+msgstr "%s, za %s (%s)"
+
+msgid "Before"
+msgstr "Przed"
+
+msgid "Before: %s"
+msgstr "Przed: %s"
+
+msgid "After"
+msgstr "Za"
+
+msgid "No section insulators yet (set on the poles page, in the chain of the pole before it)"
+msgstr "Jeszcze żadnego izolatora sekcyjnego (ustawia się na stronie słupów, w łańcuchu słupa przed nim)"
+
+msgid "Click: the power source goes here"
+msgstr "Klik: zasilacz idzie tutaj"
+
+msgid "Click: a new power source here (Esc cancels)"
+msgstr "Klik: nowy zasilacz tutaj (Esc przerywa)"
+
+msgid "Power"
+msgstr "Zasilanie"
+
+msgid "Power sources (substations, section cabins) placed on the map, the section insulators with the power sources before and after them"
+msgstr "Zasilacze (podstacje, kabiny sekcyjne) stawiane na mapie, izolatory sekcyjne z zasilaczami przed nimi i za nimi"

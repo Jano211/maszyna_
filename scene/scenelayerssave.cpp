@@ -688,7 +688,8 @@ std::vector<source_span> node_definitions(std::string const &Text, std::set<std:
 		auto const kind{word(begin, end)};
 		if (Kinds.count(kind) == 0)
 			continue;
-		auto const closing{"end" + kind};
+		// a power source closes with a bare "end" (node ... tractionpowersource ... end)
+		auto const closing{kind == "tractionpowersource" ? std::string{"end"} : "end" + kind};
 		while (next(begin, end))
 			if (word(begin, end) == closing)
 			{

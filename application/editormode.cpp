@@ -2971,6 +2971,10 @@ std::string editor_mode::convert_ground()
     return summary;
 }
 
+// the power sources of the power page (editormodecatenary.cpp)
+std::map<scene::layer_handle, std::vector<std::string>> catenary_power_lines();
+void catenary_power_saved();
+
 bool editor_mode::save()
 {
     if (scene::Layers.empty())
@@ -3036,6 +3040,35 @@ bool editor_mode::save()
         catenaryblocks.lines[target] = catenary_scene_entries(file);
         catenaryinline.push_back(file);
     }
+    // power sources placed or changed on the power page: all of them in each layer touched, written anew like the catenary nodes.
+    // a layer which gets them anew loses its other node blocks of these kinds too, so its catenary entries go with them
+    if (auto const power{catenary_power_lines()}; false == power.empty())
+    {
+        catenaryblocks.kinds.insert("tractionpowersource");
+        // a layer which gets its catenary anew keeps its power sources: in the list too (with none - nothing to keep)
+        for (auto const &[layer, lines] : power)
+        {
+            auto const target{scene::Layers.resolve(layer)};
+            if (false == scene::Layers.accepts(target))
+            {
+                ui()->set_status(STR("The power sources couldn't be saved: their scenery file can't be rewritten"), true);
+                return false;
+            }
+            if (catenaryblocks.lines.count(target) == 0)
+            {
+                auto &kept{catenaryblocks.lines[target]};
+                for (auto const &file : catenary_scene_files())
+                    if (catenary_scene_file_inline(file) && same_file(scene::Layers.layer(target).name, file))
+                    {
+                        auto const entries{catenary_scene_entries(file)};
+                        kept.insert(kept.end(), entries.begin(), entries.end());
+                        catenaryinline.push_back(file);
+                    }
+            }
+            auto &text{catenaryblocks.lines[target]};
+            text.insert(text.end(), lines.begin(), lines.end());
+        }
+    }
     if (catenary_scene_changed())
     {
         std::string message;
@@ -3079,8 +3112,11 @@ bool editor_mode::save()
         starter_trainset(trailing);
     auto const result = scene::Layers.save(rootstatements, trailing, layerstatements, &catenaryblocks);
     if (result.success)
+    {
         for (auto const &file : catenaryinline)
             catenary_scene_file_saved(file);
+        catenary_power_saved();
+    }
     if (result.success && controls)
         m_turntable_included = true;
     if (result.success && noses)

@@ -37,7 +37,7 @@ struct catenary_editor
 	using track_intent = editor_mode::track_intent;
 	using key_hint = editor_mode::key_hint;
 	// what a catenary intent (track_intent::kind::catenary) is about, in its detail
-	enum class intent_detail { place, select, chain, gantry, mast, anchor };
+	enum class intent_detail { place, select, chain, gantry, mast, anchor, power };
 	static bool is_intent(track_intent const &Intent, intent_detail const Detail)
 	{
 		return Intent.what == track_intent::kind::catenary && Intent.detail == static_cast<int>(Detail);
@@ -108,7 +108,21 @@ struct catenary_editor
 		// nested cantilevers: the check of the pair (two probes) made again only when one of them changes, not every frame
 		std::string nested_key;
 		std::string nested_text;
-		bool nested_drag{false}; // a drop with nested cantilevers being dragged: the undo of both taken already
+		bool nested_drag{false};
+		// power page (6): placing a power source (tractionpowersource) where the substation stands, the one selected, the settings of
+		// a new one; moving the selected one to the next click
+		bool power_placing{false};
+		bool power_moving{false};
+		std::string power_selected;
+		char power_name[64]{""};
+		float power_voltage{3000.0f};
+		float power_resistance{0.2f};
+		float power_current{4500.0f};
+		float power_fast{1.0f};
+		int power_repeat{3};
+		float power_slow{60.0f};
+		bool power_recuperation{false};
+		bool power_section{false}; // a drop with nested cantilevers being dragged: the undo of both taken already
 		// group earthing (page 3): the first and the last pole clicked, the way along the chains between them cut into sections
 		bool earthing_building{false};
 		std::vector<std::string> earthing_poles; // the poles clicked (first, last)
@@ -336,6 +350,10 @@ struct catenary_editor
 	void render_catenary_insulator(std::size_t const Chain);
 	void render_catenary_shared(std::size_t const Chain);
 	void render_catenary_earthing_ui();
+	// power page: the power sources of the scenery (tractionpowersource) placed and edited, the section insulators of the chains with
+	// their power sources before and after
+	void render_catenary_power_ui();
+	void catenary_power_place(glm::dvec3 const &Point);
 	// picking the poles of the earthing given up (Esc)
 	void catenary_earthing_finish();
 	// the sections of the way picked made and put into the file
