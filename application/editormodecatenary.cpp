@@ -293,6 +293,10 @@ void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data
 	Data.strut_shift = Current.strut_shift; // the bottom mount too
 	Data.turn_by_hand = Current.turn_by_hand; // and the cantilever turned by hand
 	Data.lean = Current.lean;             // and so does the lean of the pole
+	Data.stay_gap = Current.stay_gap;     // and the corrections from the ground (the user 2026-11-18)
+	Data.arms_spread = Current.arms_spread;
+	Data.rope_shift = Current.rope_shift;
+	Data.cord_shift = Current.cord_shift;
 	if (false == Current.above_pole)
 		return;
 	Data.above_pole = true;
@@ -8031,7 +8035,8 @@ void catenary_editor::render_catenary_cantilever_ui()
 		return;
 	// the adjustments of the cantilever and the pole: folded, the title says when one of them is set
 	{
-		auto const set{data->stay_shift != 0.0 || data->strut_shift != 0.0 || data->turn_by_hand != 0.0 || data->lean != 0.0 || has_brace(*data)};
+		auto const set{data->stay_shift != 0.0 || data->strut_shift != 0.0 || data->turn_by_hand != 0.0 || data->lean != 0.0 || has_brace(*data) || data->stay_gap != 0.0 || data->arms_spread != 0.0 || data->rope_shift != 0.0 || data->cord_shift != 0.0
+		               || std::any_of(data->overrides.begin(), data->overrides.end(), [](auto const &O) { return O.first == "strut" || O.first == "stay" || O.first == "steady"; })};
 		if (ImGui::CollapsingHeader(set ? STR_C("Adjustments (set)###adjustments") : STR_C("Adjustments###adjustments")))
 		{
 			// the top mount of a tubular cantilever moved up or down: the solver takes a shorter or a longer stay tube or rod
@@ -8115,6 +8120,111 @@ void catenary_editor::render_catenary_cantilever_ui()
 					}
 					ImGui::PopItemWidth();
 				}
+			}
+			// corrections from the ground (the user 2026-11-18, expert mode): the tubes of other executions, the stay clamp 4070 along the
+			// strut, the spacing of the arms of a set made of members (127x), the messenger along the cantilever, the cord clamp on the
+			// steady arm tube 6011 / 6111. The card stays, the solver takes them into account
+			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && tool.expert)
+			{
+				auto const index{static_cast<std::size_t>(tool.selected)};
+				auto const *catalog{catenary_scene_catalog()};
+				auto const *scheme{catalog != nullptr ? catalog->scheme(data->card, data->execution) : nullptr};
+				auto const apply = [&](catenary::suspension const &Changed, bool const Drag) {
+					// one drag of a slider is taken back at once
+					if (false == Drag || tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
+					{
+						tool.shift_group = ++tool.group;
+						tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
+					}
+					catenary_scene_update(index, Changed);
+					tool.probed = false;
+				};
+				// a value set by a slider with a checkbox: off - 0 (the solver's own)
+				auto const corrected = [&](char const *Label, char const *Tip, double const &Field, double const Start, float const Low, float const High, double catenary::suspension::*Member) {
+					ImGui::PushID(Label);
+					auto on{Field != 0.0};
+					if (ImGui::Checkbox(Label, &on))
+					{
+						auto changed{*data};
+						changed.*Member = on ? Start : 0.0;
+						apply(changed, false);
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", Tip);
+					if (on && Field != 0.0)
+					{
+						ImGui::SameLine();
+						auto value{static_cast<float>(Field)};
+						ImGui::PushItemWidth(160.0f);
+						if (ImGui::SliderFloat("m", &value, Low, High, "%+.3f"))
+						{
+							auto changed{*data};
+							changed.*Member = std::abs(value) < 0.0005f ? (Start > 0.0 ? 0.001 : 0.0005) : std::round(value * 1000.0f) / 1000.0;
+							apply(changed, true);
+						}
+						ImGui::PopItemWidth();
+					}
+					ImGui::PopID();
+				};
+				ImGui::SeparatorText(STR_C("Corrections from the ground"));
+				// tubes: the parts of the card in the families the user named, any execution of the same family
+				if (scheme != nullptr)
+				{
+					static char const *const families[]{"6001", "6002", "6003", "6007", "6011", "6111"};
+					for (auto const &[role, card] : scheme->roles)
+					{
+						if (card.size() < 4 || std::find_if(std::begin(families), std::end(families), [&](char const *F) { return card.compare(0, 4, F) == 0; }) == std::end(families))
+							continue;
+						std::vector<std::string> list;
+						for (auto const &[name, part] : catalog->parts())
+							if (name.compare(0, 4, card, 0, 4) == 0 && name.size() > 4 && name[4] == '-')
+								list.push_back(name);
+						if (list.size() < 2)
+							continue;
+						auto const own{std::find_if(data->overrides.begin(), data->overrides.end(), [&](auto const &O) { return O.first == role; })};
+						auto const current{own != data->overrides.end() ? own->second : std::string()};
+						auto const shown{current.empty() ? format(STR_C("%s (card)"), card.c_str()) : current};
+						ImGui::PushItemWidth(160.0f);
+						if (ImGui::BeginCombo(format(STR_C("Tube: %s"), role.c_str()).c_str(), shown.c_str()))
+						{
+							auto pick = [&](std::string const &Part) {
+								auto changed{*data};
+								std::erase_if(changed.overrides, [&](std::pair<std::string, std::string> const &O) { return O.first == role; });
+								if (false == Part.empty() && Part != card)
+									changed.overrides.emplace_back(role, Part);
+								apply(changed, false);
+							};
+							if (ImGui::Selectable(format(STR_C("%s (card)"), card.c_str()).c_str(), current.empty()))
+								pick({});
+							for (auto const &part : list)
+								if (part != card)
+								{
+									auto const *found{catalog->part(part)};
+									if (ImGui::Selectable(format("%s  %.3f m", part.c_str(), found != nullptr ? found->length : 0.0).c_str(), part == current))
+										pick(part);
+								}
+							ImGui::EndCombo();
+						}
+						ImGui::PopItemWidth();
+						if (ImGui::IsItemHovered())
+							ImGui::SetTooltip("%s", STR_C("Another execution (length) of this tube than the card has, as found on the ground; the solver assembles the cantilever with it and warns if it doesn't reach"));
+					}
+				}
+				if (scheme != nullptr && scheme->roles.count("stay_clamp"))
+					corrected(STR_C("Stay clamp 4070 along the strut"), STR_C("The stay clamp from the head clamp along the strut, set by hand instead of the 0.10-0.30 m of the cards"), data->stay_gap, 0.15, 0.02f, 1.0f, &catenary::suspension::stay_gap);
+				// the arms of a set made of members (127x and alike): half their spacing along the track
+				if (scheme != nullptr && scheme->roles.count("arms"))
+					if (auto const *set{catalog->part(scheme->roles.at("arms"))}; set != nullptr && false == set->members.empty())
+					{
+						double start{0.0};
+						for (auto const &member : set->members)
+							start = std::max(start, std::abs(member.position[0]));
+						if (start > 0.0)
+							corrected(STR_C("Spacing of the arms (half)"), STR_C("The arms of the set further apart or closer along the track: half of their spacing (from the middle to each of them)"), data->arms_spread, start, 0.02f, 0.8f, &catenary::suspension::arms_spread);
+					}
+				corrected(STR_C("Messenger along the cantilever"), STR_C("The messenger (and its clamp on the tube) moved across the track along the cantilever, towards the pole (+) or away from it (-)"), data->rope_shift, 0.05, -0.8f, 0.8f, &catenary::suspension::rope_shift);
+				if (scheme != nullptr && std::any_of(scheme->roles.begin(), scheme->roles.end(), [](auto const &R) { return R.second.compare(0, 4, "6011") == 0 || R.second.compare(0, 4, "6111") == 0; }))
+					corrected(STR_C("Cord clamp along the steady arm"), STR_C("The clamp of the cord on the steady arm tube 6011 / 6111 moved along it, towards the pole (+) or away from it (-)"), data->cord_shift, 0.05, -0.8f, 0.8f, &catenary::suspension::cord_shift);
 			}
 			// the cantilever turned by hand on its hinge (on top of the turn from the temperature)
 			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole)

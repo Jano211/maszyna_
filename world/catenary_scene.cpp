@@ -516,6 +516,10 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     for( auto const &replacement : data.overrides ) {
         input.overrides[ replacement.first ] = replacement.second;
     }
+    // korekty z terenu (użytkownik 2026-11-18): dla solvera pod kluczami z "#", których żadna rola nie ma
+    if( data.stay_gap > 0.0 ) { input.overrides[ "#stay_gap" ] = std::to_string( data.stay_gap ); }
+    if( data.arms_spread > 0.0 ) { input.overrides[ "#arms_spread" ] = std::to_string( data.arms_spread ); }
+    if( data.cord_shift != 0.0 ) { input.overrides[ "#cord_shift" ] = std::to_string( data.cord_shift ); }
 
     catenary::cantilever_pole const *pole { nullptr };
     catenary::cantilever_pole onmast;
@@ -862,10 +866,13 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
 
 
 // punkty wpisu z punktami podanymi wprost; Attach to oś słupa (wpis ze słupem) albo pion przez zaczepy
+void rope_of( catenary::suspension const &Data, double *Rope );
+
 void
 entry_points( catenary::suspension const &Data, glm::dvec3 &Wire, glm::dvec3 &Rope, glm::dvec3 &Attach ) {
     Wire = { Data.at[ 0 ], Data.at[ 1 ], Data.at[ 2 ] };
     Rope = { Data.rope[ 0 ], Data.rope[ 1 ], Data.rope[ 2 ] };
+    if( Data.rope_shift != 0.0 ) { double rope[ 3 ]; rope_of( Data, rope ); Rope = { rope[ 0 ], rope[ 1 ], rope[ 2 ] }; }
     Attach = ( Data.has_pole ? glm::dvec3 { Data.pole[ 0 ], Data.pole[ 1 ], Data.pole[ 2 ] } : glm::dvec3 { Data.attach[ 0 ], Data.attach[ 1 ], Data.attach[ 2 ] } );
 }
 
@@ -925,7 +932,7 @@ assemble_alone( std::size_t const Index, catenary::cantilever_catalog const &Cat
     entry_points( suspension.data, wire, rope, attach );
     // linę nośną łańcucha w tym miejscu trzyma inny wysięgnik: linki i zaczepy celują w nią
     auto const held { held_rope_at( Index, rope ) };
-    auto const *ropepoint { held || suspension.data.has_rope ? &rope : nullptr };
+    auto const *ropepoint { held || suspension.data.has_rope || suspension.data.rope_shift != 0.0 ? &rope : nullptr };
     // słup stawia inny wpis (trzeci wysięgnik przy rozstawionych)
     catenary::cantilever_umbrella own;
     own.pole = false == suspension.data.shared_pole;
@@ -1699,12 +1706,23 @@ point_text( double const *Point ) {
 // lina nośna podwieszenia: podana wprost albo nad przewodem na wysokości konstrukcyjnej karty
 void
 rope_of( catenary::suspension const &Data, double *Rope ) {
-    if( Data.has_rope ) { for( int i = 0; i < 3; ++i ) { Rope[ i ] = Data.rope[ i ]; } return; }
-    auto const *catalog { cantilevers() };
-    auto const *scheme { catalog != nullptr ? catalog->scheme( Data.card, Data.execution ) : nullptr };
-    Rope[ 0 ] = Data.at[ 0 ];
-    Rope[ 1 ] = Data.at[ 1 ] + ( scheme != nullptr ? scheme->height : 1.70 );
-    Rope[ 2 ] = Data.at[ 2 ];
+    if( Data.has_rope ) { for( int i = 0; i < 3; ++i ) { Rope[ i ] = Data.rope[ i ]; } }
+    else {
+        auto const *catalog { cantilevers() };
+        auto const *scheme { catalog != nullptr ? catalog->scheme( Data.card, Data.execution ) : nullptr };
+        Rope[ 0 ] = Data.at[ 0 ];
+        Rope[ 1 ] = Data.at[ 1 ] + ( scheme != nullptr ? scheme->height : 1.70 );
+        Rope[ 2 ] = Data.at[ 2 ];
+    }
+    // lina przesunięta wzdłuż wysięgnika (korekta z terenu, użytkownik 2026-11-18): poziomo od przewodów w stronę konstrukcji
+    if( Data.rope_shift != 0.0 ) {
+        auto const *toward { Data.has_pole ? Data.pole : Data.has_attach ? Data.attach : nullptr };
+        if( toward != nullptr ) {
+            auto const dx { toward[ 0 ] - Data.at[ 0 ] }, dz { toward[ 2 ] - Data.at[ 2 ] };
+            auto const length { std::hypot( dx, dz ) };
+            if( length > 1e-3 ) { Rope[ 0 ] += Data.rope_shift * dx / length; Rope[ 2 ] += Data.rope_shift * dz / length; }
+        }
+    }
 }
 
 // punkty końca przęsła: przewód jezdny i lina nośna. Miejsce k w łańcuchu z kotwieniami: najpierw kotwienie początkowe (gdy
@@ -4806,7 +4824,7 @@ catenary_scene_probe( catenary::suspension const &Data, catenary::cantilever_res
     probe.data = Data;
     glm::dvec3 wire, rope, attach;
     entry_points( Data, wire, rope, attach );
-    return assemble( probe, *catalog, wire, ( Data.has_rope ? &rope : nullptr ), attach, nullptr, &Result ) > 0;
+    return assemble( probe, *catalog, wire, ( Data.has_rope || Data.rope_shift != 0.0 ? &rope : nullptr ), attach, nullptr, &Result ) > 0;
 }
 
 bool
