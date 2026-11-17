@@ -58,6 +58,19 @@ struct suspension {
     // przechył słupa w poprzek toru (Jan 2026-10-19): słup razem z mocowaniami pochylony o tyle stopni w stronę toru (ujemny - od toru),
     // obrót wokół jego podstawy; wysięgnik składa się do przechylonych mocowań. Wpis "lean <stopnie>" (do ±10°, w edytorze ±1,5°, w trybie eksperta ±10°); parasole i rozstawione bez przechyłu
     double lean { 0.0 };
+    // korekty wysięgnika z terenu (użytkownik 2026-11-18, tryb eksperta; karta zostaje, solver bierze je pod uwagę):
+    // stay_gap - odstęp uchwytu odciągu 4070 od uchwytu głównego wzdłuż ukośnika wymuszony (zamiast doboru 0,10-0,30 m z kart),
+    // metry, 0 = dobór solvera; wpis "stay_gap <m>"
+    double stay_gap { 0.0 };
+    // arms_spread - zestaw ramion złożony z członów (127x: dwa 6203-11 + 4110 na +-0,13 m wzdłuż toru): połowa rozstawu członów
+    // wzdłuż toru, metry, 0 = z danych zestawu; wpis "arms_spread <m>"
+    double arms_spread { 0.0 };
+    // rope_shift - lina nośna (a za nią jej uchwyt na rurze) przesunięta poziomo wzdłuż wysięgnika, dodatnio w stronę konstrukcji,
+    // metry; wpis "rope_shift <m>"
+    double rope_shift { 0.0 };
+    // cord_shift - obejma linki na wysięgu pomocniczym (6011, 6111) przesunięta wzdłuż niego, dodatnio w stronę konstrukcji, metry;
+    // wpis "cord_shift <m>"
+    double cord_shift { 0.0 };
     bool   has_spread { false };
     double spread[ 3 ] { 0.0, 0.0, 0.0 };
     // odciąg sieci wielotorowy (karty 0315/0316, 0325/0326 - pośrednie): ten odciąg nie ma słupa, jego lina idzie dalej od odciągu

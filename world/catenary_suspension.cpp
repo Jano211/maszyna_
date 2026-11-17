@@ -34,7 +34,7 @@ std::string normalize_path( std::string Path ) {
 
 // słowa kluczowe wewnątrz wpisu podwieszenia
 bool is_keyword( std::string const &Token ) {
-    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "strut_shift", "turn_by_hand", "lean", "pull_from", "endsuspension" };
+    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "strut_shift", "turn_by_hand", "lean", "pull_from", "stay_gap", "arms_spread", "rope_shift", "cord_shift", "endsuspension" };
     return keywords.find( Token ) != keywords.end();
 }
 
@@ -381,6 +381,22 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 if( list.size() == 1 && to_number( list[ 0 ], entry.strut_shift ) && std::abs( entry.strut_shift ) <= 0.5 + 1e-9 ) {}
                 else { report( entry.name, "\"strut_shift\" needs one number from -0.5 to 0.5: the bottom (strut) mount moved up (+) or down (-), metres" ); entry.strut_shift = 0.0; good = false; }
             }
+            else if( key == "stay_gap" ) {
+                if( list.size() == 1 && to_number( list[ 0 ], entry.stay_gap ) && entry.stay_gap >= 0.0 && entry.stay_gap <= 1.0 + 1e-9 ) {}
+                else { report( entry.name, "\"stay_gap\" needs one number from 0 to 1: the stay clamp from the head clamp along the strut, metres" ); entry.stay_gap = 0.0; good = false; }
+            }
+            else if( key == "arms_spread" ) {
+                if( list.size() == 1 && to_number( list[ 0 ], entry.arms_spread ) && entry.arms_spread >= 0.0 && entry.arms_spread <= 1.0 + 1e-9 ) {}
+                else { report( entry.name, "\"arms_spread\" needs one number from 0 to 1: half the spacing of the arms of the set along the track, metres" ); entry.arms_spread = 0.0; good = false; }
+            }
+            else if( key == "cord_shift" ) {
+                if( list.size() == 1 && to_number( list[ 0 ], entry.cord_shift ) && std::abs( entry.cord_shift ) <= 1.0 + 1e-9 ) {}
+                else { report( entry.name, "\"cord_shift\" needs one number from -1 to 1: the cord clamp moved along the steady arm tube, towards the pole (+), metres" ); entry.cord_shift = 0.0; good = false; }
+            }
+            else if( key == "rope_shift" ) {
+                if( list.size() == 1 && to_number( list[ 0 ], entry.rope_shift ) && std::abs( entry.rope_shift ) <= 1.0 + 1e-9 ) {}
+                else { report( entry.name, "\"rope_shift\" needs one number from -1 to 1: the messenger moved along the cantilever, towards the pole (+), metres" ); entry.rope_shift = 0.0; good = false; }
+            }
             else if( key == "turn_by_hand" ) {
                 if( list.size() == 1 && to_number( list[ 0 ], entry.turn_by_hand ) && std::abs( entry.turn_by_hand ) <= 30.0 + 1e-9 ) {}
                 else { report( entry.name, "\"turn_by_hand\" needs one number of degrees, up to 30: the cantilever turned on its hinge" ); entry.turn_by_hand = 0.0; good = false; }
@@ -471,6 +487,10 @@ std::string write_suspension( suspension const &Entry ) {
     if( Entry.strut_shift != 0.0 ) { text += " strut_shift " + number( Entry.strut_shift, 3 ); }
     if( Entry.turn_by_hand != 0.0 ) { text += " turn_by_hand " + number( Entry.turn_by_hand, 2 ); }
     if( Entry.lean != 0.0 ) { text += " lean " + number( Entry.lean, 2 ); }
+    if( Entry.stay_gap != 0.0 ) { text += " stay_gap " + number( Entry.stay_gap, 3 ); }
+    if( Entry.arms_spread != 0.0 ) { text += " arms_spread " + number( Entry.arms_spread, 3 ); }
+    if( Entry.rope_shift != 0.0 ) { text += " rope_shift " + number( Entry.rope_shift, 3 ); }
+    if( Entry.cord_shift != 0.0 ) { text += " cord_shift " + number( Entry.cord_shift, 3 ); }
     if( false == Entry.pull_from.empty() ) { text += " pull_from " + Entry.pull_from; }
     return text + " endsuspension";
 }

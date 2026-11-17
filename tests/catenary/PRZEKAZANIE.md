@@ -2,6 +2,24 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-18 00:15 – korekty wysięgnika z terenu
+
+**Prośba użytkownika (zwis na Brochowie: rura o parę wykonań krótsza, uchwyt liny przesunięty po rurze, szerszy rozstaw łapek
+w 127x, przesuw 4070 po ukośniku, obejma linki na 6011/6111 regulowana).** Użytkownik prosi, żeby NIE nazywać ręcznego składania
+„pizzą” (to było jednorazowe porównanie) – mówić „ręczne składanie wysięgników”.
+
+**Zrobione (testy t/ts/te/tsc/tk/tc OK, składnia editormodecatenary.cpp OK, solver sprawdzony skryptem na 1270-3, 1271-3, 751-2;
+w exe NIESPRAWDZONE):** w sekcji „Korekty” panelu wysięgnika, tylko w trybie eksperta, „Korekty z terenu”:
+- „Rura: <rola>” – dowolne wykonanie tej samej rodziny (6001, 6002, 6003, 6007, 6011, 6111 – tylko role, które karta ma), jako
+  `override <rola> <część>`; solver ostrzega, gdy rura nie sięga (np. 1271-3 z 6001-01: „0,797 m too short for the head_clamp”).
+- `stay_gap <m>` – odstęp 4070 od uchwytu głównego wymuszony (min = zalecany = max w `rules.stay_gap*` assemblera, klucz
+  `#stay_gap` w overrides wejścia solvera); otwory końcówki odciągu są skokowe – najbliższy (0,40 → 0,426).
+- `arms_spread <m>` – połowa rozstawu członów zestawu ramion wzdłuż toru (zestawy z „member”, np. 6203-1111: ±0,13), `#arms_spread`.
+- `rope_shift <m>` – lina nośna poziomo wzdłuż wysięgnika (+ do konstrukcji) w `rope_of` / `entry_points`: łańcuch i uchwyt 4140
+  idą za nią.
+- `cord_shift <m>` – obejma linki na wysięgu pomocniczym (punkt `registration` assemblera, Y + przesunięcie), `#cord_shift`.
+- Korekty zostają przy zmianie karty / przeciąganiu (`keep_lifted`).
+
 ## START TUTAJ – 2026-11-17 wieczór – uwagi użytkownika po teście (16.11 + zagnieżdżone)
 
 **Uwagi użytkownika 17.11 ok. 22:45 i co zrobione (składnia exe OK, testy te/tsc/tk/tc OK, w exe NIESPRAWDZONE):**

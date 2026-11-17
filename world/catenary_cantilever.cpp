@@ -934,6 +934,10 @@ public:
         m_points[ "steady_mount" ] = to_vec( Input.steady_mount );
         if( Registration != nullptr ) { m_points[ "registration" ] = { Registration->clamp, Registration->tube }; }
         for( auto const &point : Input.points ) { m_points[ point.first ] = to_vec( point.second ); }
+        // obejma linki na wysięgu pomocniczym (6011, 6111) przesunięta wzdłuż niego (korekta z terenu, użytkownik 2026-11-18)
+        if( auto const shift { Input.overrides.find( "#cord_shift" ) }; shift != Input.overrides.end() && m_points.count( "registration" ) ) {
+            m_points[ "registration" ].y += std::stod( shift->second );
+        }
     }
 
     bool run( std::vector<cantilever_step> const &Steps ) {
@@ -1018,6 +1022,11 @@ private:
             auto const tail { Text.substr( dot + 1 ) };
             if( head == "rules" ) {
                 auto const &rules { m_catalog.rules };
+                // odstęp uchwytu odciągu wymuszony we wpisie (korekta z terenu): najmniejszy, zalecany i największy naraz
+                if( tail.compare( 0, 8, "stay_gap" ) == 0 ) {
+                    auto const forced { m_input.overrides.find( "#stay_gap" ) };
+                    if( forced != m_input.overrides.end() ) { return std::stod( forced->second ); }
+                }
                 if( tail == "stay_gap_min" ) { return rules.stay_gap_min; }
                 if( tail == "stay_gap" ) { return rules.stay_gap; }
                 if( tail == "stay_gap_max" ) { return rules.stay_gap_max; }
@@ -1117,14 +1126,17 @@ private:
             put( placement );
         }
         else {
-            // zestaw z osobnych modeli: każdy składnik w swoim położeniu i obrocie wokół pionu, cały zestaw obracany jak zwykły
+            // zestaw z osobnych modeli: każdy składnik w swoim położeniu i obrocie wokół pionu, cały zestaw obracany jak zwykły.
+            // rozstaw członów wzdłuż toru wymuszony we wpisie (korekta z terenu): połowa rozstawu zamiast X z danych
             auto const &wire { m_points[ "wire" ] };
+            auto const forced { m_input.overrides.find( "#arms_spread" ) };
+            auto const spread { forced != m_input.overrides.end() ? std::stod( forced->second ) : 0.0 };
             for( std::size_t index = 0; index < set.members.size(); ++index ) {
                 auto const &member { set.members[ index ] };
                 cantilever_placement placement;
                 placement.role = setrole + "." + std::to_string( index + 1 );
                 placement.part = member.part;
-                placement.position[ 0 ] = side * member.position[ 0 ];
+                placement.position[ 0 ] = side * ( spread > 0.0 && std::abs( member.position[ 0 ] ) > 1e-6 ? std::copysign( spread, member.position[ 0 ] ) : member.position[ 0 ] );
                 placement.position[ 1 ] = wire.y + side * member.position[ 1 ];
                 placement.position[ 2 ] = wire.z + member.position[ 2 ];
                 auto const angle { member.yaw * 3.14159265358979323846 / 180.0 };

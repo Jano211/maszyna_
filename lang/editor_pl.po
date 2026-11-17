@@ -13107,3 +13107,36 @@ msgstr "Zasilanie"
 
 msgid "Power sources (substations, section cabins) placed on the map, the section insulators with the power sources before and after them"
 msgstr "Zasilacze (podstacje, kabiny sekcyjne) stawiane na mapie, izolatory sekcyjne z zasilaczami przed nimi i za nimi"
+
+msgid "Corrections from the ground"
+msgstr "Korekty z terenu"
+
+msgid "Tube: %s"
+msgstr "Rura: %s"
+
+msgid "Another execution (length) of this tube than the card has, as found on the ground; the solver assembles the cantilever with it and warns if it doesn't reach"
+msgstr "Inne wykonanie (długość) tej rury niż na karcie, tak jak w terenie; solver składa z nią wysięgnik i ostrzega, jeśli nie sięga"
+
+msgid "Stay clamp 4070 along the strut"
+msgstr "Uchwyt odciągu 4070 po ukośniku"
+
+msgid "The stay clamp from the head clamp along the strut, set by hand instead of the 0.10-0.30 m of the cards"
+msgstr "Odstęp uchwytu odciągu od uchwytu głównego wzdłuż ukośnika, ustawiony ręcznie zamiast 0,10–0,30 m z kart"
+
+msgid "Spacing of the arms (half)"
+msgstr "Rozstaw łapek (połowa)"
+
+msgid "The arms of the set further apart or closer along the track: half of their spacing (from the middle to each of them)"
+msgstr "Łapki zestawu dalej od siebie albo bliżej wzdłuż toru: połowa rozstawu (od środka do każdej z nich)"
+
+msgid "Messenger along the cantilever"
+msgstr "Lina nośna wzdłuż wysięgnika"
+
+msgid "The messenger (and its clamp on the tube) moved across the track along the cantilever, towards the pole (+) or away from it (-)"
+msgstr "Lina nośna (i jej uchwyt na rurze) przesunięta w poprzek toru wzdłuż wysięgnika, w stronę słupa (+) albo od niego (-)"
+
+msgid "Cord clamp along the steady arm"
+msgstr "Obejma linki na wysięgu pomocniczym"
+
+msgid "The clamp of the cord on the steady arm tube 6011 / 6111 moved along it, towards the pole (+) or away from it (-)"
+msgstr "Obejma linki na rurze wysięgu pomocniczego 6011 / 6111 przesunięta po niej, w stronę słupa (+) albo od niego (-)"
