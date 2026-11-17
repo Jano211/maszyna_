@@ -8230,8 +8230,8 @@ void catenary_editor::render_catenary_cantilever_ui()
 						auto changed{*data};
 						if (on)
 						{
-							// the band: the cord clamp of the card to start with, picked from the clamps below
-							changed.cord_band = scheme->roles.count("cord_clamp") ? scheme->roles.at("cord_clamp") : std::string{"4210-02"};
+							// the band 4500-01 (the user 2026-11-18), another one can be picked from the list
+							changed.cord_band = catalog->part("4500-01") != nullptr ? std::string{"4500-01"} : scheme->roles.count("cord_clamp") ? scheme->roles.at("cord_clamp") : std::string{"4210-02"};
 							changed.cord_band_at = 0.50;
 						}
 						else
@@ -8247,7 +8247,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 						if (ImGui::BeginCombo("##band", data->cord_band.c_str()))
 						{
 							for (auto const &[name, part] : catalog->parts())
-								if (part.kind == "clamp" && ImGui::Selectable(name.c_str(), name == data->cord_band))
+								if ((part.kind == "clamp" || part.kind == "head") && ImGui::Selectable(name.c_str(), name == data->cord_band))
 								{
 									auto changed{*data};
 									changed.cord_band = name;

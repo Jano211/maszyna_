@@ -45,8 +45,8 @@ w exe NIESPRAWDZONE):** w sekcji „Korekty” panelu wysięgnika, tylko w trybi
   wymuszane jako override (wcześniej wybór karty nie wymuszał jej, gdy stay_shift dobrał inną).
 - (00:50) `cord_band <część> <m>` – linka z 6011 na opaskę na ukośniku zamiast do uchwytu liny (Brochów): opaska na osi ukośnika
   w odległości od uchwytu głównego w stronę konstrukcji (`stretch` roli cord w assemblerze, rola części `cord_band`), linka do jej
-  ucha. Część opaski do wyboru z części kind clamp; domyślnie obejma linki z karty (4210-02) jako zastępcza – użytkownik: właściwa
-  opaska to „chyba drugie wykonanie tej z 6011, gdzieś w grupie 07XX” – DO USTALENIA numer i model.
+  ucha. Opaska domyślnie 4500-01 (użytkownik 00:40), do wyboru z części kind clamp / head; 4500 (punkt „eye” w modelu) stawiana jak
+  w 100x – ucho w dół (+z modelu wzdłuż strut.down), obejma bez punktu „eye” – jak uchwyt główny.
 
 ## START TUTAJ – 2026-11-17 wieczór – uwagi użytkownika po teście (16.11 + zagnieżdżone)
 

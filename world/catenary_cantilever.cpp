@@ -1852,8 +1852,12 @@ private:
                     else {
                         auto const station { strut->second.stations.at( "head_clamp" ) - std::stod( at->second ) };
                         auto const axis { strut->second.at( station ) };
-                        put( place( "cord_band", bandpart->name, axis, direction( "strut.down" ), rest_axis( "-z" ) ) );
-                        to = axis - strut->second.normal * bandpart->eye;
+                        // opaska z punktem "eye" w modelu (4500: ucho w +Z modelu) - jak 4500 na rurze w 100x, ucho w dół;
+                        // obejma z samym "eye" (odległość ucha od osi) - jak uchwyt główny
+                        auto const eyepoint { bandpart->points.find( "eye" ) };
+                        auto const witheye { eyepoint != bandpart->points.end() };
+                        put( place( "cord_band", bandpart->name, axis, direction( "strut.down" ), rest_axis( witheye ? "+z" : "-z" ) ) );
+                        to = axis - strut->second.normal * ( witheye ? eyepoint->second.second : bandpart->eye );
                     }
                 }
             }
