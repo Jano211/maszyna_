@@ -12943,3 +12943,45 @@ msgstr "Do toru"
 
 msgid "feeder %s"
 msgstr "wzmacniający %s"
+
+msgid "Nested cantilevers: one of them doesn't assemble or has no stay and strut mounts, see the log"
+msgstr "Wysięgniki zagnieżdżone: któryś się nie składa albo nie ma mocowań odciągu i ukośnika, zobacz log"
+
+msgid "the wires of the inner cantilever aren't closer to the pole than those of the outer one"
+msgstr "przewody wewnętrznego wysięgnika nie są bliżej słupa niż przewody zewnętrznego"
+
+msgid "the top mount of the inner one is %.2f m too high"
+msgstr "górne mocowanie wewnętrznego jest o %.2f m za wysoko"
+
+msgid "the bottom mount of the inner one is %.2f m too low"
+msgstr "dolne mocowanie wewnętrznego jest o %.2f m za nisko"
+
+msgid "the mounts of the inner one meet each other"
+msgstr "mocowania wewnętrznego wchodzą na siebie"
+
+msgid "Nested cantilever %s inside %s (card %d execution %d): hang it in its own chain; the stagger of the panel moves its wires, \"Fit inside\" puts its mounts between those of the outer one again"
+msgstr "Wysięgnik zagnieżdżony %s wewnątrz %s (karta %d, wykonanie %d): podepnij go do jego własnego łańcucha; odsuw z panelu przesuwa jego przewody, „Wpasuj do środka” znowu wstawia jego mocowania między mocowania zewnętrznego"
+
+msgid "Nested cantilevers: %s - pick a shorter card for the inner one, move its wires or move the mounts by hand"
+msgstr "Wysięgniki zagnieżdżone: %s – wybierz krótszą kartę dla wewnętrznego, przesuń jego przewody albo przesuń mocowania ręcznie"
+
+msgid "Nested cantilevers: the inner one fits inside the outer one"
+msgstr "Wysięgniki zagnieżdżone: wewnętrzny mieści się w zewnętrznym"
+
+msgid "Nested cantilevers: %s inside %s"
+msgstr "Wysięgniki zagnieżdżone: %s wewnątrz %s"
+
+msgid "The inner one fits inside the outer one"
+msgstr "Wewnętrzny mieści się w zewnętrznym"
+
+msgid "Fit inside"
+msgstr "Wpasuj do środka"
+
+msgid "The top and bottom mounts of the inner cantilever go between those of the outer one (shifts of the mounts, up to 0.5 m)"
+msgstr "Górne i dolne mocowanie wewnętrznego wysięgnika idą między mocowania zewnętrznego (przesunięcie mocowań, do 0,5 m)"
+
+msgid "Nested cantilever"
+msgstr "Wysięgnik zagnieżdżony"
+
+msgid "Rare (one known: a drop at Wroclaw Brochow): a second cantilever to this track inside this one, on the same pole or drop, for another chain (a tension overlap, by a turnout); its mounts go between the mounts of this one"
+msgstr "Rzadkie (znane jedno: zwis na Wrocławiu Brochowie): drugi wysięgnik do tego toru wewnątrz tego, na tym samym słupie albo zwisie, dla innego łańcucha (przęsło naprężenia, przy rozjeździe); jego mocowania idą między mocowania tego"

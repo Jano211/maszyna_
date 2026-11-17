@@ -388,6 +388,12 @@ struct catenary_editor
 	void catenary_pair_move(std::size_t Selected, glm::dvec3 const &Foot, bool Panel);
 	// a third cantilever on the pole of spread cantilevers, in the axis of the pole, to the same track (shared_pole)
 	void catenary_third_create(std::size_t Index);
+	// a cantilever nested inside this one on the same pole or drop (rare: one known pair, a drop at Wroclaw Brochow), to the same
+	// track, for another chain: its mounts between the mounts of this one (shared_pole)
+	void catenary_nested_create(std::size_t Index);
+	// the inner cantilever of a nested pair (Index: either of them) moved with stay_shift / strut_shift between the mounts of the
+	// outer one; Quiet - only a problem goes to the status line. False when it isn't a nested pair or it doesn't fit
+	bool catenary_nested_fit(std::size_t Index, bool Quiet);
 	// a messenger only cantilever higher on the same pole, holding the messenger of the chain at Index (and where it held it)
 	void catenary_rope_lift_create(std::size_t Index, std::size_t Chain);
 	// a whole tension overlap from the template picked (data/traction_overlaps.txt) with its first crossing pole at the click
