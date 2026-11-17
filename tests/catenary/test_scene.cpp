@@ -135,7 +135,7 @@ int main( int, char *argv[] ) {
     { std::ofstream out { "tests/catenary/Siec_Test.scm" };
       out << "node 1000 0 p1 suspension scheme 1112 1 at 0 5.8 80 pole 1701 -2.4 0.2 80 umbrella u1 endsuspension\n"
              "node 1000 0 p2 suspension scheme 1112 1 at -4.8 5.8 80 pole 1701 -2.4 0.2 80 umbrella u1 endsuspension\n"
-             "node 1000 0 p3 suspension scheme 1112 1 at 0 5.8 90 pole 1701 -2.4 0.2 90 umbrella u2 endsuspension\n"; }   // parasol bez pary
+             "node 1000 0 p3 suspension scheme 1112 1 at 0 5.8 90 pole 1701 -2.4 0.2 90 umbrella u2 endsuspension\n"; }   // sam na slupie (nazwa parasola bez znaczenia)
     cParser umbrellafile( "Siec_Test.scm endcatenary" );
     catenary_scene_load( umbrellafile );
     catenary_scene_resolve();
@@ -148,9 +148,9 @@ int main( int, char *argv[] ) {
     }
     auto const umbrellaparts { created.size() - umbrellabefore };
     // p3 bez pary składa się sam: 23 części, w tym słup i 2 tyły
-    auto const umbrellagood { umbrellaparts == 21 + 20 + 23 && poles == 2 && backs == 2 && nuts == 2 && errors.size() == 1 };
+    auto const umbrellagood { umbrellaparts == 21 + 20 + 23 && poles == 2 && backs == 2 && nuts == 2 && errors.empty() };
     for( auto const &line : errors ) { std::printf( "  %s\n", line.c_str() ); }
-    std::printf( "parasol: czesci %zu (ma byc 64), slupow %zu (2), tylow %zu (2), polowek z nakretkami %zu (2), bledow %zu (1)  %s\n", umbrellaparts, poles, backs, nuts, errors.size(), umbrellagood ? "OK" : "BLAD" );
+    std::printf( "parasol: czesci %zu (ma byc 64), slupow %zu (2), tylow %zu (2), polowek z nakretkami %zu (2), bledow %zu (0 - wysiegniki laczy wspolny slup, nazwa parasola niepotrzebna)  %s\n", umbrellaparts, poles, backs, nuts, errors.size(), umbrellagood ? "OK" : "BLAD" );
     catenary_scene_clear();
 
     // zestaw izolatorów 25 kV: 1116-1 z krótszymi rurami (jak w td_katalog); izolatory 7020-25 i 7100-25, zestaw "99" nie istnieje

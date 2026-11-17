@@ -3150,36 +3150,27 @@ void catenary_editor::catenary_umbrella_place(catenary_spot const &Spot)
 	++tool.group;
 	auto const file{catenary_scene_file_of(from)};
 	auto sourcedata{*source};
-	tool.undo.push_back({tool.group, false, from, sourcedata, std::nullopt, false});
 	if (sourcedata.name.empty())
-		sourcedata.name = catenary_scene_new_name(file); // a pole from before the editor had no name
-	// a name of the umbrella no other suspension has
-	std::string name;
-	for (int k = 1; name.empty(); ++k)
 	{
-		auto const candidate{"parasol_" + sourcedata.name + (k > 1 ? "_" + std::to_string(k) : std::string{})};
-		auto used{false};
-		for (std::size_t index = 0; index < catenary_scene_size() && false == used; ++index)
-			if (auto const *data{catenary_scene_get(index)}; data != nullptr && data->umbrella == candidate)
-				used = true;
-		if (false == used)
-			name = candidate;
+		// a pole from before the editor had no name
+		tool.undo.push_back({tool.group, false, from, sourcedata, std::nullopt, false});
+		sourcedata.name = catenary_scene_new_name(file);
+		catenary_scene_update(from, sourcedata);
+		if (auto found{tool.spots.find(from)}; found != tool.spots.end())
+			found->second.data = sourcedata;
 	}
-	// the first one named first, so that the second gets a name of its own
-	sourcedata.umbrella = name;
-	catenary_scene_update(from, sourcedata);
-	if (auto found{tool.spots.find(from)}; found != tool.spots.end())
-		found->second.data = sourcedata;
+	// no names of pairs any more (the user 2026-11-18): the cantilevers at one place of a pole go together by themselves
 	auto data{Spot.data};
 	data.name = catenary_scene_new_name(file);
 	data.skin = sourcedata.skin;
-	data.umbrella = name;
+	data.umbrella.clear();
+	data.shared_pole = false;
 	auto const index{catenary_scene_add(file, data)};
 	tool.spots[index] = Spot;
 	tool.spots[index].data = data;
 	tool.undo.push_back({tool.group, false, index, std::nullopt, std::nullopt, false});
 	catenary_select(static_cast<int>(index));
-	tool.status = format(STR_C("Umbrella %s: the second cantilever (card %d execution %d, A = %.2f m) on pole %s of %s; hang its wires with the button below or C"), name.c_str(), Spot.card, data.execution, Spot.reach, data.pole_type.c_str(), sourcedata.name.c_str());
+	tool.status = format(STR_C("Umbrella: the cantilever (card %d execution %d, A = %.2f m) on pole %s of %s; hang its wires with the button below or C"), Spot.card, data.execution, Spot.reach, data.pole_type.c_str(), sourcedata.name.c_str());
 	if (catenary_scene_parts(index) == 0)
 		tool.status += STR(" - the cantilever didn't assemble, see the log");
 }
@@ -3215,7 +3206,7 @@ void catenary_editor::catenary_spread_create(std::size_t const Index)
 	auto const steadyonly{scheme != nullptr && scheme->roles.count("strut") == 0 && scheme->roles.count("stay") == 0};
 	auto const consolename{pole == nullptr ? std::string{} : steadyonly && false == pole->steady_console.empty() ? pole->steady_console : pole->console};
 	auto const *console{false == consolename.empty() ? catalog->mount(consolename) : nullptr};
-	if (current == nullptr || found == nullptr || false == current->has_pole || false == current->umbrella.empty())
+	if (current == nullptr || found == nullptr || false == current->has_pole || current->has_spread)
 		return;
 	if (console == nullptr || false == console->console)
 	{
@@ -3346,18 +3337,31 @@ double constexpr kNestedStagger{0.20};
 
 namespace
 {
-// a nested pair on the pole of Index: two cantilevers on it, none of an umbrella or spread; Outer stands the pole, Inner shares it
+// nested cantilevers on the pole of Index (the user 2026-11-18: any number of cantilevers on a pole, each on its own): the ones in the
+// axis of the pole (not spread) on the same side as Index; Outer - the longest of them, Inner - Index, or the next longest when
+// Index is the outer one. false with fewer than two there
 bool nested_pair(std::size_t const Index, std::size_t &Outer, std::size_t &Inner)
 {
-	auto const sharers{pole_sharers(Index)};
-	if (sharers.size() != 2)
+	auto const *own{catenary_scene_get(Index)};
+	if (own == nullptr || false == own->has_pole || own->has_spread)
 		return false;
-	auto const *a{catenary_scene_get(sharers[0])};
-	auto const *b{catenary_scene_get(sharers[1])};
-	if (a == nullptr || b == nullptr || false == a->umbrella.empty() || false == b->umbrella.empty() || a->has_spread || b->has_spread || a->shared_pole == b->shared_pole)
+	glm::dvec2 const out{own->at[0] - own->pole[0], own->at[2] - own->pole[2]};
+	std::vector<std::pair<double, std::size_t>> same;
+	for (auto const index : pole_sharers(Index))
+	{
+		auto const *data{catenary_scene_get(index)};
+		if (data == nullptr || data->has_spread)
+			continue;
+		glm::dvec2 const other{data->at[0] - data->pole[0], data->at[2] - data->pole[2]};
+		if (glm::dot(out, other) <= 0.0)
+			continue;
+		same.emplace_back(glm::length(other), index);
+	}
+	if (same.size() < 2)
 		return false;
-	Outer = a->shared_pole ? sharers[1] : sharers[0];
-	Inner = a->shared_pole ? sharers[0] : sharers[1];
+	std::sort(same.begin(), same.end(), [](auto const &L, auto const &R) { return L.first > R.first; });
+	Outer = same[0].second;
+	Inner = (Index == Outer ? same[1].second : Index);
 	return true;
 }
 
@@ -3406,7 +3410,7 @@ void catenary_editor::catenary_nested_create(std::size_t const Index)
 	auto &tool{m_catenary};
 	auto const *current{catenary_scene_get(Index)};
 	auto const *found{catenary_spot_of(Index)};
-	if (current == nullptr || found == nullptr || found->track == nullptr || false == current->has_pole || current->shared_pole || false == current->umbrella.empty() || pole_sharers(Index).size() != 1)
+	if (current == nullptr || found == nullptr || found->track == nullptr || false == current->has_pole || current->has_spread)
 		return;
 	auto const sourcedata{*current};
 	auto const source{*found};
@@ -3475,7 +3479,7 @@ bool catenary_editor::catenary_nested_fit(std::size_t const Index, bool const Qu
 	// moved in only as far as needed: down from under the top mount of the outer one, up from over its bottom mount (the shifts
 	// pick the stay and the strut from their families, so the result is probed again)
 	auto changed{*innerdata};
-	auto const clamp = [](double const Value) { return std::clamp(Value, -0.5, 0.5); };
+	auto const clamp = [](double const Value) { return std::clamp(Value, -1.0, 1.0); };
 	if (innerstay > outerstay - kNestedGap)
 		changed.stay_shift = clamp(changed.stay_shift + (outerstay - kNestedGap) - innerstay);
 	if (innerstrut < outerstrut + kNestedGap)
@@ -4531,12 +4535,9 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		{
 			// only what is put together on one pole (an umbrella, spread cantilevers, a cantilever sharing the pole): two poles which
 			// only ended up in one place (dragged into each other) come apart again
+			// (the user 2026-11-18: all the cantilevers on one pole go together, whatever they are to each other)
 			for (auto const index : pole_sharers(static_cast<std::size_t>(tool.selected)))
-			{
-				auto const *other{catenary_scene_get(index)};
-				if (index == static_cast<std::size_t>(tool.selected) || (other != nullptr && ((false == own->umbrella.empty() && other->umbrella == own->umbrella) || other->shared_pole || own->shared_pole)))
-					tool.drag_pole.push_back(index);
-			}
+				tool.drag_pole.push_back(index);
 		}
 		return;
 	}
@@ -7912,121 +7913,111 @@ void catenary_editor::render_catenary_cantilever_ui()
 	data = catenary_scene_get(static_cast<std::size_t>(tool.selected));
 	if (data == nullptr)
 		return;
-	// a second cantilever on the pole: umbrella, spread cantilevers
-	if (ImGui::CollapsingHeader(false == data->umbrella.empty() ? (data->has_spread ? STR_C("Second cantilever: spread###second") : STR_C("Second cantilever: umbrella###second")) : STR_C("Second cantilever###second")))
+	// the cantilevers on this pole or drop (the user 2026-11-18): each one on its own, they share only the pole / drop and the console
+	// on each side; any number of them (umbrella, spread, in the axis, nested), the scenery puts them together by the place of the pole
 	{
+		auto const selected{static_cast<std::size_t>(tool.selected)};
+		auto const sharers{pole_sharers(selected)};
+		auto const title{sharers.size() > 1 ? format(STR_C("Cantilevers on this pole: %zu###second"), sharers.size()) : std::string{STR_C("More cantilevers on this pole###second")}};
+		if (data->has_pole && ImGui::CollapsingHeader(title.c_str()))
 		{
-			// an umbrella: the second cantilever on this pole (or drop), to the track on its other side
-			if (data->umbrella.empty())
+			// all of them, to pick one (two at one place can't be told apart by a click in the view)
+			if (sharers.size() > 1)
 			{
-				if (ImGui::Button(tool.umbrella_from >= 0 ? STR_C("Stop the umbrella") : STR_C("Umbrella: a cantilever to the other track")))
+				glm::dvec2 const out{data->at[0] - data->pole[0], data->at[2] - data->pole[2]};
+				for (auto const index : sharers)
 				{
-					tool.umbrella_from = tool.umbrella_from >= 0 ? -1 : tool.selected;
-					tool.connect_from = -1;
-					tool.anchor_pick = -1;
-					tool.status = tool.umbrella_from >= 0 ? STR("LMB by the track on the other side of the pole: the second cantilever goes on this pole, with the settings of the panel") : std::string{};
-				}
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("Two cantilevers on one pole or drop, to the tracks on both sides of it; on adjustable mounts (band round the pole) they share the double mounts 4640-4670 at one height"));
-				auto const *ownscheme{catalog->scheme(data->card, data->execution)};
-				auto const steadyonly{ownscheme != nullptr && ownscheme->roles.count("strut") == 0 && ownscheme->roles.count("stay") == 0};
-				if (auto const *own{catalog->pole(data->pole_type)}; tool.expert && own != nullptr && (steadyonly ? false == own->steady_console.empty() : false == own->console.empty()))
-				{
-					ImGui::SameLine();
-					if (ImGui::Button(STR_C("Spread cantilevers")))
-					{
-						catenary_spread_create(static_cast<std::size_t>(tool.selected));
-						data = tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr;
-						if (data == nullptr)
-							return;
-					}
-					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("Two cantilevers to this track on consoles 4890 (cards 0517/0518), 1.19 m apart along it: this one goes onto the first mount, the second onto the other; each can then hold any chain or only its messenger or its wires"));
-				}
-				// nested cantilevers: rare, so only in the expert mode and only by hand
-				std::size_t outer, inner;
-				if (nested_pair(static_cast<std::size_t>(tool.selected), outer, inner))
-				{
-					auto const *outerdata{catenary_scene_get(outer)};
-					auto const *innerdata{catenary_scene_get(inner)};
-					if (outerdata != nullptr && innerdata != nullptr)
-					{
-						ImGui::TextUnformatted(format(STR_C("Nested cantilevers: %s inside %s"), innerdata->name.c_str(), outerdata->name.c_str()).c_str());
-						auto const key{catenary::write_suspension(*outerdata) + "\n" + catenary::write_suspension(*innerdata)};
-						if (key != tool.nested_key)
-						{
-							tool.nested_key = key;
-							tool.nested_text = nested_problem(*outerdata, *innerdata);
-						}
-						auto const &problem{tool.nested_text};
-						if (problem.empty())
-							ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1.0f), "%s", STR_C("The inner one fits inside the outer one"));
-						else
-							ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s", problem.c_str());
-						if (ImGui::SmallButton(STR_C("Fit inside")))
-						{
-							++tool.group;
-							catenary_nested_fit(static_cast<std::size_t>(tool.selected), false);
-						}
-						if (ImGui::IsItemHovered())
-							ImGui::SetTooltip("%s", STR_C("The top and bottom mounts of the inner cantilever go between those of the outer one (shifts of the mounts, up to 0.5 m)"));
-						// both stand at one drop: a click in the view hits one of them, so the other is selected from here (the user 2026-11-17)
-						ImGui::SameLine();
-						auto const innerselected{static_cast<std::size_t>(tool.selected) == inner};
-						if (ImGui::SmallButton(innerselected ? STR_C("Select the outer one") : STR_C("Select the inner one")))
-						{
-							catenary_select(static_cast<int>(innerselected ? outer : inner)); // the panel shows it from the next frame
-						}
-						if (ImGui::IsItemHovered())
-							ImGui::SetTooltip("%s", STR_C("The other cantilever of the pair gets selected: its card, stagger, mounts and chain are set in the panel then"));
-						ImGui::SameLine();
-						ImGui::TextDisabled("%s", innerselected ? STR_C("(the inner one selected)") : STR_C("(the outer one selected)"));
-					}
-				}
-				else if (tool.expert && data->has_pole && false == data->shared_pole && pole_sharers(static_cast<std::size_t>(tool.selected)).size() == 1)
-				{
-					if (ImGui::Button(STR_C("Nested cantilever")))
-					{
-						catenary_nested_create(static_cast<std::size_t>(tool.selected));
-						data = tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr;
-						if (data == nullptr)
-							return;
-					}
-					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("Rare (one known: a drop at Wroclaw Brochow): a second cantilever to this track inside this one, on the same pole or drop, for another chain (a tension overlap, by a turnout); its mounts go between the mounts of this one"));
+					auto const *other{catenary_scene_get(index)};
+					if (other == nullptr)
+						continue;
+					glm::dvec2 const way{other->at[0] - other->pole[0], other->at[2] - other->pole[2]};
+					auto const label{format(STR_C("%s  %04d-%d  %s, %s, A %.2f m"), other->name.c_str(), other->card, other->execution, glm::dot(out, way) >= 0.0 ? STR_C("this side") : STR_C("other side"),
+					                        other->has_spread ? STR_C("on the console") : STR_C("in the axis"), glm::length(way))};
+					ImGui::PushID(static_cast<int>(index));
+					if (ImGui::Selectable(label.c_str(), index == selected))
+						catenary_select(static_cast<int>(index)); // the panel shows it from the next frame
+					ImGui::PopID();
 				}
 			}
-			else
+			// more of them
+			if (ImGui::Button(tool.umbrella_from >= 0 ? STR_C("Stop the umbrella") : STR_C("Umbrella: a cantilever to the other track")))
 			{
-				std::string partner;
-				for (std::size_t index = 0; index < catenary_scene_size(); ++index)
-					if (auto const *other{catenary_scene_get(index)}; other != nullptr && static_cast<int>(index) != tool.selected && other->umbrella == data->umbrella)
-						partner = other->name;
-				ImGui::TextUnformatted(format(data->has_spread ? STR_C("Spread cantilevers %s with %s") : STR_C("Umbrella %s with %s"), data->umbrella.c_str(), partner.empty() ? "-" : partner.c_str()).c_str());
-				if (data->has_spread && tool.expert)
-				{
-					// a third one on the same pole, in its axis on its own mounts (messenger only by the spread ones holding the wires)
-					if (ImGui::SmallButton(STR_C("A cantilever in the axis of the pole")))
-					{
-						catenary_third_create(static_cast<std::size_t>(tool.selected));
-						data = tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr;
-						if (data == nullptr)
-							return;
-					}
-					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("A third cantilever to this track on the same pole, in its axis on the usual mounts (move them apart from the consoles by hand if they meet); the pole stays one"));
-					ImGui::SameLine();
-				}
+				tool.umbrella_from = tool.umbrella_from >= 0 ? -1 : tool.selected;
+				tool.connect_from = -1;
+				tool.anchor_pick = -1;
+				tool.status = tool.umbrella_from >= 0 ? STR("LMB by the track on the other side of the pole: the second cantilever goes on this pole, with the settings of the panel") : std::string{};
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("A cantilever on this pole or drop to a track on its other side; on adjustable mounts (band round the pole) the cantilevers in the axis on both sides share the double mounts 4640-4670 at one height"));
+			auto const *ownscheme{catalog->scheme(data->card, data->execution)};
+			auto const steadyonly{ownscheme != nullptr && ownscheme->roles.count("strut") == 0 && ownscheme->roles.count("stay") == 0};
+			if (auto const *own{catalog->pole(data->pole_type)}; tool.expert && false == data->has_spread && own != nullptr && (steadyonly ? false == own->steady_console.empty() : false == own->console.empty()))
+			{
 				ImGui::SameLine();
-				if (ImGui::SmallButton(STR_C("Separate")))
+				if (ImGui::Button(STR_C("Spread cantilevers")))
 				{
-					catenary_umbrella_break(static_cast<std::size_t>(tool.selected));
-					data = catenary_scene_get(static_cast<std::size_t>(tool.selected));
+					catenary_spread_create(selected);
+					data = tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr;
 					if (data == nullptr)
 						return;
 				}
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("The two cantilevers stay where they are, each on its own single mounts"));
+					ImGui::SetTooltip("%s", STR_C("Two cantilevers to this track on consoles 4890 (cards 0517/0518), 1.19 m apart along it: this one goes onto the first mount, the second onto the other; each can then hold any chain or only its messenger or its wires"));
+			}
+			if (tool.expert && data->has_spread)
+			{
+				ImGui::SameLine();
+				if (ImGui::Button(STR_C("A cantilever in the axis of the pole")))
+				{
+					catenary_third_create(selected);
+					data = tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr;
+					if (data == nullptr)
+						return;
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("A cantilever to this track on the same pole, in its axis on the usual mounts (move them apart from the consoles by hand if they meet); the pole stays one"));
+			}
+			if (tool.expert && false == data->has_spread)
+			{
+				ImGui::SameLine();
+				if (ImGui::Button(STR_C("Nested cantilever")))
+				{
+					catenary_nested_create(selected);
+					data = tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr;
+					if (data == nullptr)
+						return;
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("Rare (one known: a drop at Wroclaw Brochow): a second cantilever to this track inside this one, on the same pole or drop, for another chain (a tension overlap, by a turnout); its mounts go between the mounts of this one"));
+			}
+			// nested ones: the check of the selected one against the outer one
+			std::size_t outer, inner;
+			if (nested_pair(selected, outer, inner))
+			{
+				auto const *outerdata{catenary_scene_get(outer)};
+				auto const *innerdata{catenary_scene_get(inner)};
+				if (outerdata != nullptr && innerdata != nullptr)
+				{
+					ImGui::TextUnformatted(format(STR_C("Nested cantilevers: %s inside %s"), innerdata->name.c_str(), outerdata->name.c_str()).c_str());
+					auto const key{catenary::write_suspension(*outerdata) + "\n" + catenary::write_suspension(*innerdata)};
+					if (key != tool.nested_key)
+					{
+						tool.nested_key = key;
+						tool.nested_text = nested_problem(*outerdata, *innerdata);
+					}
+					auto const &problem{tool.nested_text};
+					if (problem.empty())
+						ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1.0f), "%s", STR_C("The inner one fits inside the outer one"));
+					else
+						ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s", problem.c_str());
+					if (ImGui::SmallButton(STR_C("Fit inside")))
+					{
+						++tool.group;
+						catenary_nested_fit(selected, false);
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("The top and bottom mounts of the inner cantilever go between those of the outer one (shifts of the mounts, up to 1 m)"));
+				}
 			}
 		}
 	}
@@ -8057,13 +8048,13 @@ void catenary_editor::render_catenary_cantilever_ui()
 					}
 				}
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("The top (stay) mount up or down from the card by up to 0.50 m, e.g. where something is in the way on the pole; the stay tube or rod is taken shorter or longer to fit"));
+					ImGui::SetTooltip("%s", STR_C("The top (stay) mount up or down from the card by up to 1 m, e.g. where something is in the way on the pole; the stay tube or rod is taken shorter or longer to fit"));
 				if (enabled)
 				{
 					ImGui::SameLine();
 					auto shift{static_cast<float>(data->stay_shift)};
 					ImGui::PushItemWidth(160.0f);
-					if (ImGui::SliderFloat(STR_C("m##stayshift"), &shift, -0.50f, 0.50f, "%+.2f"))
+					if (ImGui::SliderFloat(STR_C("m##stayshift"), &shift, -1.0f, 1.0f, "%+.2f"))
 					{
 						shift = std::round(shift * 100.0f) / 100.0f;
 						auto changed{*data};
@@ -8098,13 +8089,13 @@ void catenary_editor::render_catenary_cantilever_ui()
 					}
 				}
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("The bottom (strut) mount up or down from the card by up to 0.50 m, e.g. where something is in the way on the pole; the strut tube is taken shorter or longer to fit"));
+					ImGui::SetTooltip("%s", STR_C("The bottom (strut) mount up or down from the card by up to 1 m, e.g. where something is in the way on the pole; the strut tube is taken shorter or longer to fit"));
 				if (enabled)
 				{
 					ImGui::SameLine();
 					auto shift{static_cast<float>(data->strut_shift)};
 					ImGui::PushItemWidth(160.0f);
-					if (ImGui::SliderFloat(STR_C("m##strutshift"), &shift, -0.50f, 0.50f, "%+.2f"))
+					if (ImGui::SliderFloat(STR_C("m##strutshift"), &shift, -1.0f, 1.0f, "%+.2f"))
 					{
 						shift = std::round(shift * 100.0f) / 100.0f;
 						auto changed{*data};
@@ -10100,35 +10091,51 @@ void catenary_editor::catenary_drag_update()
 				tool.status = format(STR_C("No card for A = %.2f m here: the drop stays where it was"), moved.reach);
 			return;
 		}
-		// nested cantilevers on a drop (the user 2026-11-17): both go along the beam together, the inner one fitted again
-		if (std::size_t outer, inner; drop && shared && nested_pair(static_cast<std::size_t>(tool.selected), outer, inner))
+		// several cantilevers on a drop (the user 2026-11-18): all of them go along the beam together, on one drop, each by its own
+		// wires; nested ones fitted again
+		if (drop && shared)
 		{
+			auto const members{tool.drag_pole};
 			glm::dvec3 from, to;
-			if (false == catenary_drop_beam(outer, from, to))
+			if (false == catenary_drop_beam(members.front(), from, to))
 				return;
 			auto const cursor{plan_of(e.cursor_level(from.y))};
 			auto const u{plan_of(to) - plan_of(from)};
 			auto const along{glm::dot(cursor - plan_of(from), u) / std::max(glm::dot(u, u), 1e-9)};
-			catenary_spot first, second;
-			if (false == catenary_drop_spot(outer, along, first) || false == catenary_drop_spot(inner, along, second))
+			std::vector<catenary_spot> spots(members.size());
+			for (std::size_t k = 0; k < members.size(); ++k)
+				if (false == catenary_drop_spot(members[k], along, spots[k]))
+				{
+					tool.status = format(STR_C("No card for A = %.2f m here: the drop stays where it was"), spots[k].reach);
+					return;
+				}
+			// one drop: the others hang on the drop of the first one
+			for (std::size_t k = 1; k < members.size(); ++k)
 			{
-				tool.status = format(STR_C("No card for A = %.2f m here: the drop stays where it was"), first.card == 0 ? first.reach : second.reach);
-				return;
+				spots[k].data.pole_type = spots[0].data.pole_type;
+				std::copy(std::begin(spots[0].data.pole), std::end(spots[0].data.pole), spots[k].data.pole);
 			}
-			// one drop: the inner one hangs on the drop of the outer one
-			second.data.pole_type = first.data.pole_type;
-			std::copy(std::begin(first.data.pole), std::end(first.data.pole), second.data.pole);
+			// spread ones keep their place on the console against the drop
+			for (std::size_t k = 0; k < members.size(); ++k)
+				if (auto const *before{catenary_scene_get(members[k])}; before != nullptr && before->has_spread)
+				{
+					spots[k].data.has_spread = true;
+					for (int c : {0, 2})
+						spots[k].data.spread[c] = before->spread[c] + (spots[k].data.pole[c] - before->pole[c]);
+					spots[k].data.spread[1] = spots[k].data.pole[1];
+				}
 			// one step of the undo for the whole drag
 			if (false == tool.nested_drag)
 			{
 				tool.nested_drag = true;
 				++tool.group;
-				tool.undo.push_back({tool.group, false, outer, *catenary_scene_get(outer), std::nullopt, false});
-				tool.undo.push_back({tool.group, false, inner, *catenary_scene_get(inner), std::nullopt, false});
+				for (auto const index : members)
+					tool.undo.push_back({tool.group, false, index, *catenary_scene_get(index), std::nullopt, false});
 			}
-			catenary_apply_to(outer, first);
-			catenary_apply_to(inner, second);
-			catenary_nested_fit(inner, true);
+			for (std::size_t k = 0; k < members.size(); ++k)
+				catenary_apply_to(members[k], spots[k]);
+			for (auto const index : members)
+				catenary_nested_fit(index, true);
 			return;
 		}
 		if (drop || (own != nullptr && own->gantry))

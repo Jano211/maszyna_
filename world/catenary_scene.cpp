@@ -557,7 +557,8 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             lowered.mount_stay += data.stay_shift;
             auto umbrella { Umbrella != nullptr ? *Umbrella : catenary::cantilever_umbrella() };
             umbrella.turn = drop_turn( data, *pole, heading );
-            umbrella.lean = ( data.umbrella.empty() && false == data.shared_pole && false == pole->gantry ? data.lean : 0.0 );
+            // przechył tylko słupa z jednym wysięgnikiem (grupa przekazuje swój, zerowy)
+            umbrella.lean = ( Umbrella == nullptr && false == pole->gantry ? data.lean : 0.0 );
             return catenary::solve_cantilever_on_pole( Catalog, lowered, *pole, reach, Attach.y - Wire.y, input.messenger, Overrides, umbrella, Result );
         }
         auto attempt { input };
@@ -606,7 +607,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             fits.emplace_back( tube, candidates );
         }
     }
-    // górne mocowanie przesunięte (stay_shift, ±0,5 m - Jan 2026-10-26): odciąg (rura albo pręt) dobierany z tej samej rodziny części,
+    // górne mocowanie przesunięte (stay_shift, ±1 m - Jan 2026-10-26, zakres od 2026-11-18): odciąg (rura albo pręt) dobierany z tej samej rodziny części,
     // najbliższe długości najpierw (przy równej liczbie uwag zostaje karta); bez podmiany, gdy odciąg podano w scenerii
     if( data.stay_shift != 0.0 && scheme->roles.count( "stay" ) && std::none_of( data.overrides.begin(), data.overrides.end(), []( std::pair<std::string, std::string> const &O ) { return O.first == "stay"; } )
      && std::none_of( fits.begin(), fits.end(), []( auto const &Fit ) { return Fit.first == "stay"; } ) ) {
@@ -625,7 +626,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             if( candidates.size() > 1 ) { fits.emplace_back( "stay", candidates ); }
         }
     }
-    // dolne mocowanie przesunięte (strut_shift, ±0,5 m - Jan 2026-11-04): ukośnik dobierany z tej samej rodziny części jak odciąg przy
+    // dolne mocowanie przesunięte (strut_shift, ±1 m - Jan 2026-11-04): ukośnik dobierany z tej samej rodziny części jak odciąg przy
     // stay_shift; bez podmiany, gdy ukośnik podano w scenerii albo dobiera go już zestaw izolatorów
     if( data.strut_shift != 0.0 && scheme->roles.count( "strut" ) && std::none_of( data.overrides.begin(), data.overrides.end(), []( std::pair<std::string, std::string> const &O ) { return O.first == "strut"; } )
      && std::none_of( fits.begin(), fits.end(), []( auto const &Fit ) { return Fit.first == "strut"; } ) ) {
@@ -866,6 +867,24 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
 
 
 // punkty wpisu z punktami podanymi wprost; Attach to oś słupa (wpis ze słupem) albo pion przez zaczepy
+// wysięgniki jednego słupa (użytkownik 2026-11-18: parasol, rozstawione, zagnieżdżone itd. każde swoim tokiem, wspólne tylko słup /
+// zwis, konsole): wpisy z punktami i słupem tego samego typu w tym samym miejscu (do 0,05 m), z tego samego pliku, rosnąco.
+// Słup stawia pierwszy z nich
+std::vector<std::size_t>
+pole_group( std::size_t const Index ) {
+    std::vector<std::size_t> list;
+    if( Index >= Suspensions.size() || Suspensions[ Index ].removed ) { return list; }
+    auto const &own { Suspensions[ Index ] };
+    if( false == own.data.has_pole || false == own.data.has_at ) { list.push_back( Index ); return list; }
+    for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
+        auto const &other { Suspensions[ index ] };
+        if( other.removed || other.file != own.file || false == other.data.has_pole || false == other.data.has_at || other.data.pole_type != own.data.pole_type ) { continue; }
+        auto const dx { other.data.pole[ 0 ] - own.data.pole[ 0 ] }, dz { other.data.pole[ 2 ] - own.data.pole[ 2 ] };
+        if( dx * dx + dz * dz <= 0.05 * 0.05 ) { list.push_back( index ); }
+    }
+    return list;
+}
+
 void rope_of( catenary::suspension const &Data, double *Rope );
 
 void
@@ -935,7 +954,7 @@ assemble_alone( std::size_t const Index, catenary::cantilever_catalog const &Cat
     auto const *ropepoint { held || suspension.data.has_rope || suspension.data.rope_shift != 0.0 ? &rope : nullptr };
     // słup stawia inny wpis (trzeci wysięgnik przy rozstawionych)
     catenary::cantilever_umbrella own;
-    own.pole = false == suspension.data.shared_pole;
+    own.pole = pole_group( Index ).front() == Index;
     if( suspension.data.has_spread ) {
         // sam jeden na konsoli: płaszczyzna wysięgnika przez punkt mocowania na konsoli, konsole stawia on
         auto const &point { suspension.data.spread };
@@ -945,75 +964,84 @@ assemble_alone( std::size_t const Index, catenary::cantilever_catalog const &Cat
         own.console_x = glm::dot( attach - plane, glm::dvec3 { -std::cos( heading ), 0.0, std::sin( heading ) } );
         return assemble( suspension, Catalog, wire, ropepoint, plane, &own );
     }
-    return assemble( suspension, Catalog, wire, ropepoint, attach, ( suspension.data.shared_pole ? &own : nullptr ) );
+    return assemble( suspension, Catalog, wire, ropepoint, attach, ( own.pole ? nullptr : &own ) );
 }
 
-// parasol: oba wysięgniki składane najpierw osobno, żeby poznać wysokości mocowań, potem razem na wspólnym słupie
+// wszystkie wysięgniki jednego słupa (pole_group) razem (użytkownik 2026-11-18): każdy liczony najpierw osobno, żeby poznać
+// wysokości mocowań, potem razem. Wspólne są tylko słup / zwis (stawia go pierwszy wpis) i konsola rozstawionych na każdej
+// stronie (stawia ją pierwszy rozstawiony z tej strony). Strona - od słupa do przewodów, względem pierwszego wpisu. Mocowania
+// wspólne: rozstawieni po jednej stronie (konsola) - po dwóch, kolejno; wysięgniki w osi słupa po obu stronach (parasol) -
+// kolejno od najdłuższego, każdy z każdej strony najwyżej raz (mocowania dwustronne 4640-4670). Zagnieżdżone (dwa w osi po
+// jednej stronie) niczego nie dzielą - ich mocowania wpasowuje edytor
 void
-assemble_umbrella( std::string const &Name, std::vector<std::size_t> const &List, catenary::cantilever_catalog const &Catalog, std::size_t &Assembled, std::size_t &Parts, bool const Report = true ) {
+assemble_group( std::vector<std::size_t> const &List, catenary::cantilever_catalog const &Catalog, std::size_t &Assembled, std::size_t &Parts ) {
     auto const alone = [ & ]( std::size_t const Index ) {
         auto const count { assemble_alone( Index, Catalog ) };
         if( count > 0 ) { ++Assembled; Parts += count; }
     };
-    auto const &first { Suspensions[ List.front() ].data };
-    auto const *pole { Catalog.pole( first.pole_type ) };
-    auto paired { List.size() == 2 && pole != nullptr };
-    if( List.size() != 2 ) {
-        // w edytorze (kolejne zmiany obu wpisów pary) to stan chwilowy: komunikat tylko przy wczytaniu
-        if( Report ) { ErrorLog( "Bad scenario: umbrella \"" + Name + "\" has " + std::to_string( List.size() ) + " suspension(s), it needs exactly two; they're assembled separately" ); }
-    }
-    else {
-        auto const &second { Suspensions[ List.back() ].data };
-        auto const dx { second.pole[ 0 ] - first.pole[ 0 ] }, dy { second.pole[ 1 ] - first.pole[ 1 ] }, dz { second.pole[ 2 ] - first.pole[ 2 ] };
-        if( second.pole_type != first.pole_type || std::sqrt( dx * dx + dy * dy + dz * dz ) > 0.05 ) {
-            // w edytorze (kolejne zmiany obu wpisów pary) to stan chwilowy: komunikat tylko przy wczytaniu
-            if( Report ) { ErrorLog( "Bad scenario: umbrella \"" + Name + "\" has its suspensions on different poles; they're assembled separately" ); }
-            paired = false;
-        }
-    }
-    if( false == paired ) { for( auto const index : List ) { alone( index ); } return; }
-    // wysięgniki rozstawione: oba wpisy z punktem na konsoli; jeden bez niego - błąd, składane osobno
-    auto const spread { first.has_spread && Suspensions[ List.back() ].data.has_spread };
-    if( spread != ( first.has_spread || Suspensions[ List.back() ].data.has_spread ) ) {
-        // w edytorze (kolejne zmiany obu wpisów pary) to stan chwilowy: komunikat tylko przy wczytaniu
-        if( Report ) { ErrorLog( "Bad scenario: umbrella \"" + Name + "\" has \"spread\" in one suspension only; they're assembled separately" ); }
-        for( auto const index : List ) { alone( index ); }
-        return;
-    }
-    glm::dvec3 wires[ 2 ], ropes[ 2 ], poles[ 2 ], attach[ 2 ];
-    bool held[ 2 ] { false, false };    // punkt liny podany (wprost albo z wysięgnika, który ją tu trzyma)
-    catenary::cantilever_result probes[ 2 ];
-    catenary::cantilever_umbrella sides[ 2 ];
-    auto probed { true };
-    for( int side = 0; side < 2; ++side ) {
-        auto &suspension { Suspensions[ List[ side ] ] };
-        entry_points( suspension.data, wires[ side ], ropes[ side ], poles[ side ] );
-        held[ side ] = held_rope_at( List[ side ], ropes[ side ] ) || suspension.data.has_rope;
-        attach[ side ] = poles[ 0 ];
-        if( spread ) {
+    if( List.size() < 2 ) { for( auto const index : List ) { alone( index ); } return; }
+    auto const *pole { Catalog.pole( Suspensions[ List.front() ].data.pole_type ) };
+    if( pole == nullptr ) { for( auto const index : List ) { alone( index ); } return; }
+    auto const count { List.size() };
+    std::vector<glm::dvec3> wires( count ), ropes( count ), attach( count );
+    std::vector<bool> held( count, false );
+    std::vector<int> sides( count, 0 );
+    std::vector<catenary::cantilever_result> probes( count );
+    std::vector<catenary::cantilever_umbrella> own( count );
+    glm::dvec3 axis;
+    glm::dvec2 reference { 0.0 };
+    for( std::size_t k = 0; k < count; ++k ) {
+        auto &suspension { Suspensions[ List[ k ] ] };
+        glm::dvec3 polepoint;
+        entry_points( suspension.data, wires[ k ], ropes[ k ], polepoint );
+        if( k == 0 ) { axis = polepoint; }
+        held[ k ] = held_rope_at( List[ k ], ropes[ k ] ) || suspension.data.has_rope || suspension.data.rope_shift != 0.0;
+        glm::dvec2 const out { wires[ k ].x - axis.x, wires[ k ].z - axis.z };
+        if( k == 0 ) { reference = out; }
+        sides[ k ] = ( out.x * reference.x + out.y * reference.y >= 0.0 ? 0 : 1 );
+        attach[ k ] = axis;
+        own[ k ].pole = false;
+        own[ k ].console_parts = false;
+        if( suspension.data.has_spread ) {
             // płaszczyzna wysięgnika przez punkt mocowania na konsoli; oś słupa przesunięta od niej wzdłuż osi X wysięgnika
             auto const &point { suspension.data.spread };
-            attach[ side ] = { point[ 0 ], poles[ 0 ].y, point[ 2 ] };
-            auto const heading { std::atan2( attach[ side ].x - wires[ side ].x, attach[ side ].z - wires[ side ].z ) };
+            attach[ k ] = { point[ 0 ], axis.y, point[ 2 ] };
+            auto const heading { std::atan2( attach[ k ].x - wires[ k ].x, attach[ k ].z - wires[ k ].z ) };
             glm::dvec3 const xaxis { -std::cos( heading ), 0.0, std::sin( heading ) };
-            sides[ side ].spread = true;
-            sides[ side ].console_x = glm::dot( poles[ 0 ] - attach[ side ], xaxis );
+            own[ k ].spread = true;
+            own[ k ].console_x = glm::dot( axis - attach[ k ], xaxis );
         }
-        auto probe { sides[ side ] };
-        probe.console_parts = false;
-        probe.pole = false;
-        probed = probed && assemble( suspension, Catalog, wires[ side ], ( held[ side ] ? &ropes[ side ] : nullptr ), attach[ side ], ( spread ? &probe : nullptr ), &probes[ side ] ) > 0;
+        auto probe { own[ k ] };
+        if( assemble( suspension, Catalog, wires[ k ], ( held[ k ] ? &ropes[ k ] : nullptr ), attach[ k ], &probe, &probes[ k ] ) == 0 ) {
+            probes[ k ].values.clear();     // nie złożył się: niczego nie dzieli
+        }
     }
-    if( false == probed ) { for( auto const index : List ) { alone( index ); } return; }
-    if( spread ) { catenary::spread_mounts( *pole, probes[ 0 ], probes[ 1 ], sides[ 0 ], sides[ 1 ] ); }
-    else { catenary::umbrella_mounts( Catalog, *pole, probes[ 0 ], probes[ 1 ], sides[ 0 ], sides[ 1 ] ); }
-    sides[ 0 ].pole = false == first.shared_pole && false == Suspensions[ List.back() ].data.shared_pole;
-    sides[ 1 ].pole = false;
-    sides[ 1 ].console_parts = false;
+    // rozstawieni po jednej stronie: po dwóch na konsoli, kolejno
     for( int side = 0; side < 2; ++side ) {
-        auto &suspension { Suspensions[ List[ side ] ] };
-        auto const count { assemble( suspension, Catalog, wires[ side ], ( held[ side ] ? &ropes[ side ] : nullptr ), attach[ side ], &sides[ side ] ) };
-        if( count > 0 ) { ++Assembled; Parts += count; }
+        std::vector<std::size_t> spread;
+        for( std::size_t k = 0; k < count; ++k ) { if( sides[ k ] == side && own[ k ].spread ) { spread.push_back( k ); } }
+        for( std::size_t n = 0; n + 1 < spread.size(); n += 2 ) {
+            catenary::spread_mounts( *pole, probes[ spread[ n ] ], probes[ spread[ n + 1 ] ], own[ spread[ n ] ], own[ spread[ n + 1 ] ] );
+        }
+        if( false == spread.empty() ) { own[ spread.front() ].console_parts = true; }
+    }
+    // w osi słupa po obu stronach: pary od najdłuższego wysięgu z każdej strony
+    std::vector<std::size_t> axial[ 2 ];
+    for( std::size_t k = 0; k < count; ++k ) { if( false == own[ k ].spread ) { axial[ sides[ k ] ].push_back( k ); } }
+    for( auto &list : axial ) {
+        std::stable_sort( list.begin(), list.end(), [ & ]( std::size_t const L, std::size_t const R ) {
+            return glm::length( glm::dvec2 { wires[ L ].x - axis.x, wires[ L ].z - axis.z } ) > glm::length( glm::dvec2 { wires[ R ].x - axis.x, wires[ R ].z - axis.z } ); } );
+    }
+    for( std::size_t n = 0; n < std::min( axial[ 0 ].size(), axial[ 1 ].size() ); ++n ) {
+        auto const a { axial[ 0 ][ n ] }, b { axial[ 1 ][ n ] };
+        if( probes[ a ].values.empty() || probes[ b ].values.empty() ) { continue; }
+        catenary::umbrella_mounts( Catalog, *pole, probes[ a ], probes[ b ], own[ a ], own[ b ] );
+    }
+    own[ 0 ].pole = true;
+    for( std::size_t k = 0; k < count; ++k ) {
+        auto &suspension { Suspensions[ List[ k ] ] };
+        auto const parts { assemble( suspension, Catalog, wires[ k ], ( held[ k ] ? &ropes[ k ] : nullptr ), attach[ k ], &own[ k ] ) };
+        if( parts > 0 ) { ++Assembled; Parts += parts; }
     }
 }
 
@@ -1282,7 +1310,7 @@ assemble_anchor( scene_anchor &Anchor ) {
         // przechył słupa: jak w solve_cantilever_on_pole (bez parasoli, słupów dzielonych i słupów bramek)
         auto const &owner { Suspensions[ index ].data };
         auto const *ownerpole { catalog->pole( owner.pole_type ) };
-        if( owner.lean != 0.0 && owner.umbrella.empty() && false == owner.shared_pole && ownerpole != nullptr && false == ownerpole->gantry ) {
+        if( owner.lean != 0.0 && pole_group( index ).size() <= 1 && ownerpole != nullptr && false == ownerpole->gantry ) {
             lean = owner.lean * 3.14159265358979323846 / 180.0;
         }
     }
@@ -2741,18 +2769,9 @@ struct earthing_place {
 std::size_t
 earthing_pole( std::size_t const Suspension ) {
     if( Suspension >= Suspensions.size() || Suspensions[ Suspension ].removed ) { return Suspensions.size(); }
-    auto const &own { Suspensions[ Suspension ] };
-    if( false == own.data.has_pole ) { return Suspensions.size(); }
-    auto best { Suspensions.size() }, shared { Suspensions.size() };
-    for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
-        auto const &other { Suspensions[ index ] };
-        if( other.removed || other.file != own.file || false == other.data.has_pole || false == other.data.has_at || other.data.pole_type != own.data.pole_type ) { continue; }
-        auto const dx { other.data.pole[ 0 ] - own.data.pole[ 0 ] }, dz { other.data.pole[ 2 ] - own.data.pole[ 2 ] };
-        if( dx * dx + dz * dz > 0.05 * 0.05 ) { continue; }
-        if( false == other.data.shared_pole ) { if( best == Suspensions.size() ) { best = index; } }
-        else if( shared == Suspensions.size() ) { shared = index; }
-    }
-    return best != Suspensions.size() ? best : shared;
+    if( false == Suspensions[ Suspension ].data.has_pole ) { return Suspensions.size(); }
+    auto const group { pole_group( Suspension ) };
+    return group.empty() ? Suspensions.size() : group.front();
 }
 
 // ustawienia uchwytu na słupie Standing z listy uszynienia (wpis, który go wymienia; kilka wpisów jednego słupa - pierwszy z ustawieniami)
@@ -3009,7 +3028,7 @@ earthing_place_of( std::size_t const Suspension, catenary::earthing_holder const
         earthing_turn_around( lug );
     }
     // przechylony słup: uchwyt na jego szczycie idzie z nim
-    if( data.lean != 0.0 && data.umbrella.empty() && false == data.shared_pole ) {
+    if( data.lean != 0.0 && pole_group( standing ).size() <= 1 ) {
         auto const angle { data.lean * 3.14159265358979323846 / 180.0 };
         auto const c { std::cos( angle ) }, s { std::sin( angle ) };
         std::vector<catenary::cantilever_placement *> all { &wire, &lug };
@@ -3124,7 +3143,7 @@ earthing_graph_key( std::string const &File ) {
         auto const &data { suspension.data };
         mix( index );
         mix( text( data.name ) );
-        mix( ( data.has_pole ? 1 : 0 ) | ( data.has_at ? 2 : 0 ) | ( data.shared_pole ? 4 : 0 ) );
+        mix( ( data.has_pole ? 1 : 0 ) | ( data.has_at ? 2 : 0 ) );
         mix( text( data.pole_type ) );
         mix( static_cast<std::uint64_t>( std::llround( data.pole[ 0 ] * 1000.0 ) ) );
         mix( static_cast<std::uint64_t>( std::llround( data.pole[ 2 ] * 1000.0 ) ) );
@@ -3164,8 +3183,7 @@ earthing_standing_poles( std::string const &File ) {
                         auto const &other { Suspensions[ other_index ] };
                         auto const dx { other.data.pole[ 0 ] - own.data.pole[ 0 ] }, dz { other.data.pole[ 2 ] - own.data.pole[ 2 ] };
                         if( dx * dx + dz * dz > 0.05 * 0.05 ) { continue; }
-                        if( false == other.data.shared_pole ) { best = std::min( best, other_index ); }
-                        else { shared = std::min( shared, other_index ); }
+                        best = std::min( best, other_index );
                     }
                 }
             }
@@ -4122,16 +4140,6 @@ refresh_earthings( std::string const &File, bool const Force ) {
     }
 }
 
-// numery podwieszeń parasola o podanej nazwie (bez usuniętych)
-std::vector<std::size_t>
-umbrella_members( std::string const &Name ) {
-    std::vector<std::size_t> list;
-    for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
-        if( false == Suspensions[ index ].removed && Suspensions[ index ].data.has_at && Suspensions[ index ].data.umbrella == Name ) { list.push_back( index ); }
-    }
-    return list;
-}
-
 } // namespace
 
 namespace {
@@ -4438,7 +4446,7 @@ catenary_scene_resolve() {
     std::size_t complete { 0 };
     std::size_t assembled { 0 };
     std::size_t parts { 0 };
-    std::map<std::string, std::vector<std::size_t>> umbrellas;     // parasole: nazwa -> wpisy
+    std::vector<std::size_t> grouped;     // wysięgniki na słupach z kilkoma wysięgnikami: po pętli, całymi słupami
     for( ; Resolved < Suspensions.size(); ++Resolved ) {
         auto &suspension { Suspensions[ Resolved ] };
         if( suspension.removed ) { continue; }
@@ -4449,7 +4457,7 @@ catenary_scene_resolve() {
             ++complete;
             auto const *catalog { cantilevers() };
             if( catalog == nullptr ) { continue; }
-            if( false == data.umbrella.empty() ) { umbrellas[ data.umbrella ].push_back( Resolved ); continue; }   // parasole po pętli, parami
+            if( data.has_pole && pole_group( Resolved ).size() > 1 ) { grouped.push_back( Resolved ); continue; }
             auto const count { assemble_alone( Resolved, *catalog ) };
             if( count > 0 ) { ++assembled; parts += count; }
             continue;
@@ -4480,9 +4488,16 @@ catenary_scene_resolve() {
         find_spans( data.contact, suspension.contact );
         if( good ) { ++complete; }
     }
-    auto const *catalog { umbrellas.empty() ? nullptr : cantilevers() };
+    auto const *catalog { grouped.empty() ? nullptr : cantilevers() };
     if( catalog != nullptr ) {
-        for( auto const &umbrella : umbrellas ) { assemble_umbrella( umbrella.first, umbrella.second, *catalog, assembled, parts ); }
+        std::set<std::size_t> done;
+        for( auto const index : grouped ) {
+            if( done.count( index ) ) { continue; }
+            auto const group { pole_group( index ) };
+            done.insert( group.begin(), group.end() );
+            for( auto const member : group ) { drop_parts( Suspensions[ member ] ); }
+            assemble_group( group, *catalog, assembled, parts );
+        }
     }
     // kotwienia środkowe przy teownikach od nowa: obejma liny kotwienia staje obok siodła liny nośnej, a wysięgniki złożyły
     // się dopiero teraz (łańcuchy powstały przy wczytaniu)
@@ -4641,16 +4656,10 @@ reassemble( std::size_t const Index ) {
     auto &suspension { Suspensions[ Index ] };
     if( catalog == nullptr || suspension.removed || false == suspension.data.has_at ) { return; }
     std::size_t assembled { 0 }, parts { 0 };
-    if( false == suspension.data.umbrella.empty() ) {
-        auto const members { umbrella_members( suspension.data.umbrella ) };
-        // w edytorze parasol na chwilę ma jeden wysięgnik (drugi dopiero dochodzi albo właśnie odszedł): bez komunikatu
-        if( members.size() == 1 ) {
-            drop_parts( suspension );
-            assemble_alone( Index, *catalog );
-            return;
-        }
+    // słup z kilkoma wysięgnikami: wszystkie od nowa
+    if( auto const members { suspension.data.has_pole ? pole_group( Index ) : std::vector<std::size_t>{} }; members.size() > 1 ) {
         for( auto const index : members ) { drop_parts( Suspensions[ index ] ); }
-        assemble_umbrella( suspension.data.umbrella, members, *catalog, assembled, parts, false );
+        assemble_group( members, *catalog, assembled, parts );
         return;
     }
     drop_parts( suspension );
@@ -4751,15 +4760,16 @@ catenary_scene_update( std::size_t const Index, catenary::suspension const &Data
 
     if( Index >= Suspensions.size() || Suspensions[ Index ].removed ) { return false; }
     auto &suspension { Suspensions[ Index ] };
-    // zmiana nazwy parasola: stary partner zostaje sam i też musi się złożyć od nowa
-    auto const before { suspension.data.umbrella };
+    // słup przesunięty albo zmieniony: wysięgniki, które zostają na starym miejscu, składają się od nowa bez niego
+    auto const before { suspension.data.has_pole ? pole_group( Index ) : std::vector<std::size_t>{} };
     suspension.data = Data;
     auto const *file { file_named( suspension.file ) };
     suspension.skin = ( Data.skin.empty() ? ( file != nullptr ? file->skin : std::string() ) : Data.skin );
     mark_changed( suspension.file );
-    if( false == before.empty() && before != Data.umbrella ) {
-        drop_parts( suspension );
-        for( auto const index : umbrella_members( before ) ) { reassemble( index ); break; }
+    for( auto const index : before ) {
+        if( index == Index ) { continue; }
+        auto const now { pole_group( index ) };
+        if( std::find( now.begin(), now.end(), Index ) == now.end() ) { reassemble( index ); break; }
     }
     reassemble( Index );
     follow_chains( Index );
@@ -4772,13 +4782,12 @@ catenary_scene_remove( std::size_t const Index ) {
 
     if( Index >= Suspensions.size() || Suspensions[ Index ].removed ) { return; }
     auto &suspension { Suspensions[ Index ] };
-    auto const umbrella { suspension.data.umbrella };
+    auto const group { suspension.data.has_pole ? pole_group( Index ) : std::vector<std::size_t>{} };
     drop_parts( suspension );
     suspension.removed = true;
     mark_changed( suspension.file );
-    if( false == umbrella.empty() ) {
-        for( auto const index : umbrella_members( umbrella ) ) { reassemble( index ); break; }
-    }
+    // pozostałe wysięgniki słupa: od nowa (słup stawia teraz pierwszy z nich)
+    for( auto const index : group ) { if( index != Index ) { reassemble( index ); break; } }
     // z łańcuchów wypada; łańcuch z jednym podwieszeniem przestaje istnieć
     if( false == suspension.data.name.empty() ) {
         for( auto &chain : Chains ) {
