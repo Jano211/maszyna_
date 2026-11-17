@@ -390,8 +390,8 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else { report( entry.name, "\"arms_spread\" needs one number from 0 to 1: half the spacing of the arms of the set along the track, metres" ); entry.arms_spread = 0.0; good = false; }
             }
             else if( key == "cord_band" ) {
-                if( list.size() == 2 && to_number( list[ 1 ], entry.cord_band_at ) && entry.cord_band_at >= 0.0 && entry.cord_band_at <= 3.0 + 1e-9 ) { entry.cord_band = list[ 0 ]; }
-                else { report( entry.name, "\"cord_band\" needs a part and a number from 0 to 3: the band on the strut the cord goes to and its distance from the head clamp, metres" ); entry.cord_band.clear(); good = false; }
+                if( list.size() == 2 && to_number( list[ 1 ], entry.cord_band_at ) && std::abs( entry.cord_band_at ) <= 3.0 + 1e-9 ) { entry.cord_band = list[ 0 ]; }
+                else { report( entry.name, "\"cord_band\" needs a part and a number from -3 to 3: the band on the strut the cord goes to and its distance from the head clamp (+ towards the pole), metres" ); entry.cord_band.clear(); good = false; }
             }
             else if( key == "cord_shift" ) {
                 if( list.size() == 1 && to_number( list[ 0 ], entry.cord_shift ) && std::abs( entry.cord_shift ) <= 1.0 + 1e-9 ) {}

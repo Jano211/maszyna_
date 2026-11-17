@@ -8259,7 +8259,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 						ImGui::SameLine();
 						auto at{static_cast<float>(data->cord_band_at)};
 						ImGui::PushItemWidth(140.0f);
-						if (ImGui::SliderFloat(STR_C("m from the head clamp"), &at, 0.0f, 2.5f, "%.2f"))
+						if (ImGui::SliderFloat(STR_C("m from the head clamp"), &at, -2.5f, 2.5f, "%+.2f"))
 						{
 							auto changed{*data};
 							changed.cord_band_at = std::round(at * 100.0f) / 100.0;
