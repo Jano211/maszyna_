@@ -55,8 +55,19 @@ std::vector<catenary::overlap_card> const &catenary_scene_overlaps();
 // opisany katalog konstrukcji dla edytora (traction_catalog.txt): kategorie, grupy, rodziny kart, grupy słupów; pusty gdy brak pliku
 catenary::structure_catalog const &catenary_scene_structures();
 // do czego należy model wstawiony przez sieć (część wysięgnika, słupa, bramki, kotwienia): 1 podwieszenie, 2 bramka, 3 kotwienie,
-// 4 łańcuch (kotwienie środkowe); Index - jego numer. 0 gdy to nie część sieci
-int catenary_scene_part_owner( void const *Part, std::size_t &Index );
+// 4 łańcuch (kotwienie środkowe), 5 uszynienie / przewód wzmacniający (Index - podwieszenie stawiające najbliższy słup sekcji),
+// 6 izolator sekcyjny (Index - łańcuch, Span - przęsło); Index - jego numer. 0 gdy to nie część sieci
+// izolatory sekcyjne łańcucha, które stoją (mają części): miejsce, przęsło, zasilacze przed nim i za nim (do podglądu w edytorze)
+struct catenary_insulator_mark {
+    std::size_t insulator { 0 };            // numer na liście "insulator" łańcucha
+    std::size_t span { 0 };                 // przęsło (od punktu k do k+1, z kotwieniami)
+    std::string after;                      // podwieszenie przed nim
+    std::string kind;
+    double point[ 3 ] { 0.0, 0.0, 0.0 };     // środek części izolatora w scenerii
+    std::string power_before, power_after;
+};
+std::vector<catenary_insulator_mark> catenary_chain_insulators( std::size_t Index );
+int catenary_scene_part_owner( void const *Part, std::size_t &Index, std::size_t *Span = nullptr );
 // liczba miejsc na liście podwieszeń (z usuniętymi)
 std::size_t catenary_scene_size();
 // podwieszenie o podanym numerze; nullptr gdy usunięte albo numer spoza listy

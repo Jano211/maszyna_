@@ -3341,21 +3341,45 @@ earthing_split_partner( std::string const &File, std::size_t const Pole, scene_e
 double const kFeederHangerLight { 10.5 }, kFeederHangerHeavy { 11.0 }, kFeederLineLight { 0.382 }, kFeederLineHeavy { 0.964 };
 double const kFeederInsulatorMass { 6.2 };
 
-// słup przed Standing w sekcji Earthing (oś słupa w scenerii); false - Standing pierwszy albo nie w sekcji
+// miejsce liny na słupie przed Standing w sekcji Earthing (scenerii); false - Standing pierwszy albo nie w sekcji. Na zwisach bramek
+// (i na nogach przy przewodzie wzmacniającym) - punkt uchwytu na dźwigarze, liczony po kolei od początku sekcji: każda bramka bierze
+// skraj dźwigara po stronie liny z poprzedniego słupa (użytkownik 2026-11-17: przy bramkach obróconych naprzemiennie - zero raz po
+// prawej, raz po lewej - oś poprzedniego zwisu leżała w połowie obu skrajów i lina szła zygzakiem). Na zwykłym słupie - oś słupa
 bool
 earthing_previous( scene_earthing const &Earthing, std::size_t const Standing, glm::dvec3 &Point ) {
     auto const &path { Earthing.path.empty() ? earthing_route_of( Earthing ) : Earthing.path };
     auto const found { std::find( path.begin(), path.end(), Standing ) };
     if( found == path.end() || found == path.begin() ) { return false; }
-    auto const &data { Suspensions[ *( found - 1 ) ].data };
-    if( false == data.has_pole ) { return false; }
-    Point = { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
+    auto const *catalog { cantilevers() };
+    auto const *line { earthing_line_of( Earthing ) };
+    auto const feeder { line != nullptr && line->feeder };
+    auto have { false };
+    glm::dvec3 rope { 0.0 };
+    for( auto item { path.begin() }; item != found; ++item ) {
+        if( *item >= Suspensions.size() ) { have = false; continue; }
+        auto const &data { Suspensions[ *item ].data };
+        if( false == data.has_pole ) { have = false; continue; }
+        auto const *pole { catalog != nullptr ? catalog->pole( data.pole_type ) : nullptr };
+        if( pole != nullptr && ( false == pole->drop.empty() || ( feeder && pole->gantry ) ) ) {
+            double length { 0.0 }, at { 0.0 };
+            glm::dvec3 spot;
+            if( earthing_beam_spot( data, *pole, earthing_holder_of( Earthing, *item ).shift, have ? &rope : nullptr, length, at, spot ) ) {
+                rope = spot;
+                have = true;
+                continue;
+            }
+        }
+        rope = { data.pole[ 0 ], data.pole[ 1 ], data.pole[ 2 ] };
+        have = true;
+    }
+    if( false == have ) { return false; }
+    Point = rope;
     return true;
 }
 
-// największe odchylenie izolatora obrotowego przewodu wzmacniającego od pionu (ZAŁOŻENIE: 80 stopni, nie wiadomo, gdzie izolator
-// zahacza o wysięgnik; przy wypadkowej skierowanej w górę izolator kładzie się na tym kącie)
-double const kFeederSwingMax { 80.0 * 3.14159265358979323846 / 180.0 };
+// największe odchylenie izolatora obrotowego przewodu wzmacniającego od pionu (75 stopni - przy 80 izolator wchodził w wysięgnik,
+// użytkownik 2026-11-17; przy wypadkowej skierowanej w górę izolator kładzie się na tym kącie)
+double const kFeederSwingMax { 75.0 * 3.14159265358979323846 / 180.0 };
 
 // przewód wzmacniający (zdjęcie użytkownika 2026-11-16, "tam jest największy efekt"): kierunek, w którym przewód odciąga izolator
 // obrotowy 0301 na słupie Standing sekcji Earthing - wypadkowa sił, którymi przęsła do obu sąsiednich słupów ciągną zacisk: naciąg
@@ -4854,8 +4878,43 @@ catenary_scene_file_included( std::string const &File ) {
     if( auto *file { file_named( File ) }; file != nullptr ) { file->created = false; }
 }
 
+std::vector<catenary_insulator_mark>
+catenary_chain_insulators( std::size_t const Index ) {
+    std::vector<catenary_insulator_mark> marks;
+    if( Index >= Chains.size() || Chains[ Index ].removed ) { return marks; }
+    auto const &chain { Chains[ Index ] };
+    auto const offset { chain.data.anchor_start.empty() ? 0u : 1u };
+    for( std::size_t k = 0; k < chain.data.insulators.size(); ++k ) {
+        auto const &insulator { chain.data.insulators[ k ] };
+        auto const listed { std::find( chain.data.suspensions.begin(), chain.data.suspensions.end(), insulator.after ) };
+        if( listed == chain.data.suspensions.end() ) { continue; }
+        catenary_insulator_mark mark;
+        mark.insulator = k;
+        mark.span = static_cast<std::size_t>( listed - chain.data.suspensions.begin() ) + offset;
+        mark.after = insulator.after;
+        mark.kind = insulator.kind;
+        if( mark.span >= chain.span_parts.size() || chain.span_parts[ mark.span ].empty() ) { continue; }
+        auto const count { static_cast<double>( chain.span_parts[ mark.span ].size() ) };
+        for( auto const *part : chain.span_parts[ mark.span ] ) {
+            auto const where { part->location() };
+            mark.point[ 0 ] += where.x / count; mark.point[ 1 ] += where.y / count; mark.point[ 2 ] += where.z / count;
+        }
+        marks.push_back( mark );
+    }
+    // zasilacze: przęsła za izolatorem zasila jego "power" (puste - zasilacz łańcucha), przed nim - poprzedni izolator albo łańcuch
+    std::sort( marks.begin(), marks.end(), []( catenary_insulator_mark const &L, catenary_insulator_mark const &R ) { return L.span < R.span; } );
+    auto before { chain.data.power };
+    for( auto &mark : marks ) {
+        auto const &own { chain.data.insulators[ mark.insulator ].power };
+        mark.power_before = before;
+        mark.power_after = own.empty() ? chain.data.power : own;
+        before = mark.power_after;
+    }
+    return marks;
+}
+
 int
-catenary_scene_part_owner( void const *Part, std::size_t &Index ) {
+catenary_scene_part_owner( void const *Part, std::size_t &Index, std::size_t *Span ) {
     if( Part == nullptr ) { return 0; }
     auto const has = [ Part ]( std::vector<TAnimModel *> const &Parts ) {
         return std::any_of( Parts.begin(), Parts.end(), [ Part ]( TAnimModel const *Model ) { return static_cast<void const *>( Model ) == Part; } );
@@ -4871,6 +4930,29 @@ catenary_scene_part_owner( void const *Part, std::size_t &Index ) {
     }
     for( std::size_t index = 0; index < Chains.size(); ++index ) {
         if( false == Chains[ index ].removed && has( Chains[ index ].middle_parts ) ) { Index = index; return 4; }
+    }
+    // uszynienie / przewód wzmacniający (użytkownik 2026-11-17: zaznaczanie wprost klikiem w uchwyt albo wysięgnik): słup sekcji
+    // najbliższy części w planie (na bramce uchwyt bywa kilka metrów od zwisu, sąsiedni słup jest kilkadziesiąt metrów dalej)
+    for( auto const &earthing : Earthings ) {
+        if( earthing.removed ) { continue; }
+        auto const found { std::find_if( earthing.parts.begin(), earthing.parts.end(), [ Part ]( TAnimModel const *Model ) { return static_cast<void const *>( Model ) == Part; } ) };
+        if( found == earthing.parts.end() ) { continue; }
+        auto const where { ( *found )->location() };
+        auto best { std::numeric_limits<double>::max() };
+        for( auto const standing : earthing.path ) {
+            if( standing >= Suspensions.size() || false == Suspensions[ standing ].data.has_pole ) { continue; }
+            auto const &pole { Suspensions[ standing ].data.pole };
+            auto const distance { std::hypot( pole[ 0 ] - where.x, pole[ 2 ] - where.z ) };
+            if( distance < best ) { best = distance; Index = standing; }
+        }
+        if( best < std::numeric_limits<double>::max() ) { return 5; }
+    }
+    // izolator sekcyjny w przęśle łańcucha: Index - łańcuch, Span - przęsło (od punktu k do k+1, z kotwieniami)
+    for( std::size_t index = 0; index < Chains.size(); ++index ) {
+        if( Chains[ index ].removed ) { continue; }
+        for( std::size_t span = 0; span < Chains[ index ].span_parts.size(); ++span ) {
+            if( has( Chains[ index ].span_parts[ span ] ) ) { Index = index; if( Span != nullptr ) { *Span = span; } return 6; }
+        }
     }
     return 0;
 }

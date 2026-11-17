@@ -105,6 +105,10 @@ struct catenary_editor
 		bool stay_shift_open{false};
 		bool strut_shift_open{false}; // the bottom (strut) mount slider shown
 		bool turn_open{false};        // the turn by hand slider shown
+		// nested cantilevers: the check of the pair (two probes) made again only when one of them changes, not every frame
+		std::string nested_key;
+		std::string nested_text;
+		bool nested_drag{false}; // a drop with nested cantilevers being dragged: the undo of both taken already
 		// group earthing (page 3): the first and the last pole clicked, the way along the chains between them cut into sections
 		bool earthing_building{false};
 		std::vector<std::string> earthing_poles; // the poles clicked (first, last)
@@ -365,6 +369,8 @@ struct catenary_editor
 	void catenary_press(track_intent const &Intent);
 	void catenary_select(int const Index);
 	void catenary_apply(catenary_spot const &Spot);
+	// the spot put into the suspension at Index (what the panel doesn't set stays), without an undo step
+	void catenary_apply_to(std::size_t Index, catenary_spot const &Spot);
 	void catenary_copy(std::vector<std::size_t> const &Targets);
 	bool catenary_propose_toward(bool &Toward);
 	void catenary_place(catenary_spot const &Spot);
