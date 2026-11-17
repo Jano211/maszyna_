@@ -71,6 +71,11 @@ struct suspension {
     // cord_shift - obejma linki na wysięgu pomocniczym (6011, 6111) przesunięta wzdłuż niego, dodatnio w stronę konstrukcji, metry;
     // wpis "cord_shift <m>"
     double cord_shift { 0.0 };
+    // cord_band - linka od obejmy na wysięgu pomocniczym idzie nie do uchwytu liny nośnej, tylko do opaski na ukośniku (zwis na
+    // Brochowie, użytkownik 2026-11-18): część opaski i jej odległość od uchwytu głównego wzdłuż ukośnika w stronę konstrukcji,
+    // metry; pusta = jak w karcie. Wpis "cord_band <część> <m>"
+    std::string cord_band;
+    double cord_band_at { 0.0 };
     bool   has_spread { false };
     double spread[ 3 ] { 0.0, 0.0, 0.0 };
     // odciąg sieci wielotorowy (karty 0315/0316, 0325/0326 - pośrednie): ten odciąg nie ma słupa, jego lina idzie dalej od odciągu

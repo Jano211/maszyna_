@@ -13222,3 +13222,21 @@ msgstr "Wysięgnik do tego toru na tym samym słupie, w jego osi na zwykłych mo
 
 msgid "Umbrella: the cantilever (card %d execution %d, A = %.2f m) on pole %s of %s; hang its wires with the button below or C"
 msgstr "Parasol: wysięgnik (karta %d, wykonanie %d, A = %.2f m) na słupie %s wpisu %s; podwieś jego przewody przyciskiem niżej albo C"
+
+msgid "automatic (card %s)"
+msgstr "automatycznie (karta %s)"
+
+msgid "  (card)"
+msgstr "  (karta)"
+
+msgid "The tube of this execution (length) forced, as found on the ground, the card's one too; automatic - the card's one or the one the moved mounts take. The solver warns if it doesn't reach"
+msgstr "Rura tego wykonania (długości) wymuszona, tak jak w terenie, także ta z karty; automatycznie – z karty albo ta, którą dobierają przesunięte mocowania. Solver ostrzega, gdy nie sięga"
+
+msgid "Cord to a band on the strut"
+msgstr "Linka na opaskę na ukośniku"
+
+msgid "The cord from the steady arm goes up to a band on the strut, not to the messenger clamp; the band and its place along the strut from the head clamp are set here"
+msgstr "Linka z wysięgu pomocniczego idzie do opaski na ukośniku, a nie do uchwytu liny nośnej; opaskę i jej miejsce na ukośniku (od uchwytu głównego) ustawia się tutaj"
+
+msgid "m from the head clamp"
+msgstr "m od uchwytu głównego"

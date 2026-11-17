@@ -520,6 +520,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     if( data.stay_gap > 0.0 ) { input.overrides[ "#stay_gap" ] = std::to_string( data.stay_gap ); }
     if( data.arms_spread > 0.0 ) { input.overrides[ "#arms_spread" ] = std::to_string( data.arms_spread ); }
     if( data.cord_shift != 0.0 ) { input.overrides[ "#cord_shift" ] = std::to_string( data.cord_shift ); }
+    if( false == data.cord_band.empty() ) { input.overrides[ "#cord_band" ] = data.cord_band; input.overrides[ "#cord_band_at" ] = std::to_string( data.cord_band_at ); }
 
     catenary::cantilever_pole const *pole { nullptr };
     catenary::cantilever_pole onmast;

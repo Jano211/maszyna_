@@ -41,6 +41,12 @@ w exe NIESPRAWDZONE):** w sekcji „Korekty” panelu wysięgnika, tylko w trybi
   idą za nią.
 - `cord_shift <m>` – obejma linki na wysięgu pomocniczym (punkt `registration` assemblera, Y + przesunięcie), `#cord_shift`.
 - Korekty zostają przy zmianie karty / przeciąganiu (`keep_lifted`).
+- (00:50) Rura: „automatycznie (karta X)” = karta albo dobór przy przesuniętych mocowaniach; każde wykonanie z listy (także karty)
+  wymuszane jako override (wcześniej wybór karty nie wymuszał jej, gdy stay_shift dobrał inną).
+- (00:50) `cord_band <część> <m>` – linka z 6011 na opaskę na ukośniku zamiast do uchwytu liny (Brochów): opaska na osi ukośnika
+  w odległości od uchwytu głównego w stronę konstrukcji (`stretch` roli cord w assemblerze, rola części `cord_band`), linka do jej
+  ucha. Część opaski do wyboru z części kind clamp; domyślnie obejma linki z karty (4210-02) jako zastępcza – użytkownik: właściwa
+  opaska to „chyba drugie wykonanie tej z 6011, gdzieś w grupie 07XX” – DO USTALENIA numer i model.
 
 ## START TUTAJ – 2026-11-17 wieczór – uwagi użytkownika po teście (16.11 + zagnieżdżone)
 
