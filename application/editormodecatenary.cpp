@@ -665,6 +665,7 @@ struct catenary_view_flags
 	bool pantograph{false}; // the pantograph head over the tracks around the camera
 	bool placing{true}; // what a click puts: the track axis, the span counter
 	bool earthing{true}; // the sections of the group earthing, each in its own colour, with the name and length
+	bool insulators{true}; // the section insulators: a mark with the power sources before and after (the user 2026-11-17)
 };
 catenary_view_flags CatenaryView;
 
@@ -684,6 +685,7 @@ std::pair<char const *, bool catenary_view_flags::*> const kViewNames[] = {
 	{"pantograph", &catenary_view_flags::pantograph},
 	{"placing", &catenary_view_flags::placing},
 	{"earthing", &catenary_view_flags::earthing},
+	{"insulators", &catenary_view_flags::insulators},
 };
 
 std::string catenary_view_text(catenary_view_flags const &Views)
@@ -765,11 +767,12 @@ void catenary_view_menu()
 	item(STR_C("Pantograph"), CatenaryView.pantograph, STR_C("Over the tracks around the camera the pantograph head as it goes: at the height of the contact wire above it, tilted with the cant. The working range of the head in blue, the whole head (with the horns) grey; where the wire runs out of the working range red"));
 	item(STR_C("Placing: track axis and span counter"), CatenaryView.placing, STR_C("Where a click puts a pole: the axis of the track it goes by and the length of the span from the last pole"));
 	item(STR_C("Earthing sections"), CatenaryView.earthing, STR_C("The sections of the group earthing along their poles, each in its own colour, with the name and the length; red over 3.5 km"));
+	item(STR_C("Section insulators"), CatenaryView.insulators, STR_C("The section insulators in the spans, with the power sources before and after them; LMB on the insulator selects it"));
 	ImGui::Separator();
 	if (ImGui::MenuItem(STR_C("Show all")))
-		CatenaryView = catenary_view_flags{true, true, true, true, true, true, true, true, true, true, true};
+		CatenaryView = catenary_view_flags{true, true, true, true, true, true, true, true, true, true, true, true};
 	if (ImGui::MenuItem(STR_C("Hide all")))
-		CatenaryView = catenary_view_flags{false, false, false, false, false, false, false, false, false, false, false};
+		CatenaryView = catenary_view_flags{false, false, false, false, false, false, false, false, false, false, false, false};
 	ImGui::EndMenu();
 	catenary_view_sync();
 }
@@ -2263,6 +2266,20 @@ void catenary_editor::catenary_apply(catenary_spot const &Spot)
 	auto const *current{catenary_scene_get(index)};
 	if (current == nullptr || Spot.card == 0)
 		return;
+	// dragging a slider changes it many times: all of that is taken back at once
+	auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
+	if (tool.undo.empty() || last.chain || last.index != index || last.removed || false == last.before.has_value())
+		tool.undo.push_back({++tool.group, false, index, *current, std::nullopt, false});
+	catenary_apply_to(index, Spot);
+}
+
+void catenary_editor::catenary_apply_to(std::size_t const Index, catenary_spot const &Spot)
+{
+	auto &tool{m_catenary};
+	auto const index{Index};
+	auto const *current{catenary_scene_get(index)};
+	if (current == nullptr || Spot.card == 0)
+		return;
 	auto data{Spot.data};
 	// what the panel doesn't set stays as it was
 	data.name = current->name;
@@ -2275,10 +2292,6 @@ void catenary_editor::catenary_apply(catenary_spot const &Spot)
 	data.shared_pole = current->shared_pole;
 	std::copy(std::begin(current->spread), std::end(current->spread), data.spread);
 	keep_lifted(*current, data);
-	// dragging a slider changes it many times: all of that is taken back at once
-	auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
-	if (tool.undo.empty() || last.chain || last.index != index || last.removed || false == last.before.has_value())
-		tool.undo.push_back({++tool.group, false, index, *current, std::nullopt, false});
 	catenary_scene_update(index, data);
 	tool.spots[index] = Spot;
 	tool.spots[index].data = data;
@@ -4501,6 +4514,7 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		// same type would count it as its own (the same place) and drag it along
 		tool.dragging = tool.selected >= 0 ? 1 : 0;
 		tool.drag_pole.clear();
+		tool.nested_drag = false;
 		if (auto const *own{tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr}; own != nullptr)
 		{
 			// only what is put together on one pole (an umbrella, spread cantilevers, a cantilever sharing the pole): two poles which
@@ -5209,6 +5223,17 @@ void catenary_editor::render_catenary_earthing_ui()
 							changed = true;
 						}
 					}
+					// the other end of the beam (the user 2026-11-17): the holder 1 m from the far end, an arm turned to the other side
+					ImGui::SameLine();
+					if (ImGui::SmallButton(STR_C("To the other end")))
+					{
+						holder.shift = at < 0.5 * length ? static_cast<double>(high) : static_cast<double>(low);
+						if (feeder || holder.arm)
+							holder.away = false == holder.away;
+						changed = true;
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("The holder goes 1 m from the other end of the beam; an arm (6132, 4950) is turned around with it"));
 				}
 				if (feeder)
 				{
@@ -7535,7 +7560,13 @@ void catenary_editor::render_catenary_cantilever_ui()
 					if (outerdata != nullptr && innerdata != nullptr)
 					{
 						ImGui::TextUnformatted(format(STR_C("Nested cantilevers: %s inside %s"), innerdata->name.c_str(), outerdata->name.c_str()).c_str());
-						auto const problem{nested_problem(*outerdata, *innerdata)};
+						auto const key{catenary::write_suspension(*outerdata) + "\n" + catenary::write_suspension(*innerdata)};
+						if (key != tool.nested_key)
+						{
+							tool.nested_key = key;
+							tool.nested_text = nested_problem(*outerdata, *innerdata);
+						}
+						auto const &problem{tool.nested_text};
 						if (problem.empty())
 							ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1.0f), "%s", STR_C("The inner one fits inside the outer one"));
 						else
@@ -9079,6 +9110,32 @@ void catenary_editor::draw_catenary_overlay() const
 				drawlist->AddText(middle, overlay_color::marked, format("%s  %.1f m", beam.c_str(), glm::length(plan_of(second) - plan_of(first))).c_str());
 		}
 	}
+	// the section insulators (the user 2026-11-17): a mark on each, with the power sources before and after it; the one after the
+	// selected pole in its colour
+	if (CatenaryView.insulators)
+	{
+		auto const *picked{tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr};
+		for (std::size_t chain = 0; chain < catenary_chain_size(); ++chain)
+			for (auto const &mark : catenary_chain_insulators(chain))
+			{
+				glm::dvec3 const point{mark.point[0], mark.point[1], mark.point[2]};
+				auto const distance{glm::distance(point, camera)};
+				if (distance > kCatenaryRange)
+					continue;
+				auto const selected{picked != nullptr && picked->name == mark.after && catenary_chain_file(chain) == catenary_scene_file_of(static_cast<std::size_t>(tool.selected))};
+				auto const colour{selected ? overlay_color::selected : IM_COL32(230, 80, 255, 220)};
+				ImVec2 centre;
+				if (false == projection.project(point, centre))
+					continue;
+				drawlist->AddCircle(centre, selected ? 9.0f : 7.0f, colour, 0, selected ? 3.0f : 2.0f);
+				projection.line(drawlist, point, point - glm::dvec3{0.0, 1.0, 0.0}, colour, 1.5f);
+				if (selected || distance < 250.0)
+				{
+					auto const label{format("%s | %s", mark.power_before.empty() ? "-" : mark.power_before.c_str(), mark.power_after.empty() ? "-" : mark.power_after.c_str())};
+					drawlist->AddText(ImVec2{centre.x + 10.0f, centre.y - 7.0f}, colour, label.c_str());
+				}
+			}
+	}
 	// the poles of the chains: how many contact wires their network has (an execution for another count is a remark)
 	auto const wanted{pole_contacts()};
 	for (std::size_t index = 0; index < catenary_scene_size(); ++index)
@@ -9512,6 +9569,37 @@ void catenary_editor::catenary_drag_update()
 				catenary_apply(moved);
 			else
 				tool.status = format(STR_C("No card for A = %.2f m here: the drop stays where it was"), moved.reach);
+			return;
+		}
+		// nested cantilevers on a drop (the user 2026-11-17): both go along the beam together, the inner one fitted again
+		if (std::size_t outer, inner; drop && shared && nested_pair(static_cast<std::size_t>(tool.selected), outer, inner))
+		{
+			glm::dvec3 from, to;
+			if (false == catenary_drop_beam(outer, from, to))
+				return;
+			auto const cursor{plan_of(e.cursor_level(from.y))};
+			auto const u{plan_of(to) - plan_of(from)};
+			auto const along{glm::dot(cursor - plan_of(from), u) / std::max(glm::dot(u, u), 1e-9)};
+			catenary_spot first, second;
+			if (false == catenary_drop_spot(outer, along, first) || false == catenary_drop_spot(inner, along, second))
+			{
+				tool.status = format(STR_C("No card for A = %.2f m here: the drop stays where it was"), first.card == 0 ? first.reach : second.reach);
+				return;
+			}
+			// one drop: the inner one hangs on the drop of the outer one
+			second.data.pole_type = first.data.pole_type;
+			std::copy(std::begin(first.data.pole), std::end(first.data.pole), second.data.pole);
+			// one step of the undo for the whole drag
+			if (false == tool.nested_drag)
+			{
+				tool.nested_drag = true;
+				++tool.group;
+				tool.undo.push_back({tool.group, false, outer, *catenary_scene_get(outer), std::nullopt, false});
+				tool.undo.push_back({tool.group, false, inner, *catenary_scene_get(inner), std::nullopt, false});
+			}
+			catenary_apply_to(outer, first);
+			catenary_apply_to(inner, second);
+			catenary_nested_fit(inner, true);
 			return;
 		}
 		if (drop || (own != nullptr && own->gantry))
@@ -10187,8 +10275,8 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 bool catenary_editor::catenary_pick_part(void const *Node)
 {
 	auto &tool{m_catenary};
-	std::size_t index{0};
-	auto const owner{catenary_scene_part_owner(Node, index)};
+	std::size_t index{0}, span{0};
+	auto const owner{catenary_scene_part_owner(Node, index, &span)};
 	if (owner == 0)
 		return false;
 	e.choose_work_area(editor_mode::work_area::catenary);
@@ -10213,6 +10301,29 @@ bool catenary_editor::catenary_pick_part(void const *Node)
 		tool.anchor_selected = static_cast<int>(index);
 		tool.anchor_scroll = true;
 		tool.status = STR("A part of the catenary: its anchor is selected in the Catenary tool; a drag of its pole or tensioning device moves it along the track");
+		break;
+	}
+	case 5:
+		// an earthing holder or arm (or a reinforcing feeder): the pole it's on, on the earthing page
+		catenary_choose_page(3);
+		catenary_select(static_cast<int>(index));
+		tool.status = STR("A part of the earthing: its pole is selected on the Earthing page, the holder on it below");
+		break;
+	case 6:
+	{
+		// a section insulator: the pole before it, on the poles page (its insulator, power source after it)
+		auto const marks{catenary_chain_insulators(index)};
+		auto const found{std::find_if(marks.begin(), marks.end(), [&](catenary_insulator_mark const &Mark) { return Mark.span == span; })};
+		catenary_chain_show(static_cast<int>(index));
+		catenary_choose_page(0);
+		if (found != marks.end())
+			for (std::size_t other = 0; other < catenary_scene_size(); ++other)
+				if (auto const *data{catenary_scene_get(other)}; data != nullptr && data->name == found->after && catenary_scene_file_of(other) == catenary_chain_file(index))
+				{
+					catenary_select(static_cast<int>(other));
+					break;
+				}
+		tool.status = STR("A section insulator: the pole before it is selected, the insulator and its power source are in its chain settings");
 		break;
 	}
 	default:

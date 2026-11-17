@@ -12933,3 +12933,21 @@ msgstr "Wysięgnik zagnieżdżony"
 
 msgid "Rare (one known: a drop at Wroclaw Brochow): a second cantilever to this track inside this one, on the same pole or drop, for another chain (a tension overlap, by a turnout); its mounts go between the mounts of this one"
 msgstr "Rzadkie (znane jedno: zwis na Wrocławiu Brochowie): drugi wysięgnik do tego toru wewnątrz tego, na tym samym słupie albo zwisie, dla innego łańcucha (przęsło naprężenia, przy rozjeździe); jego mocowania idą między mocowania tego"
+
+msgid "Section insulators"
+msgstr "Izolatory sekcyjne"
+
+msgid "The section insulators in the spans, with the power sources before and after them; LMB on the insulator selects it"
+msgstr "Izolatory sekcyjne w przęsłach, z zasilaczami przed nimi i za nimi; LPM na izolatorze go zaznacza"
+
+msgid "A part of the earthing: its pole is selected on the Earthing page, the holder on it below"
+msgstr "Część uszynienia: jej słup jest zaznaczony na stronie Uszynienie, uchwyt na nim niżej"
+
+msgid "A section insulator: the pole before it is selected, the insulator and its power source are in its chain settings"
+msgstr "Izolator sekcyjny: zaznaczony jest słup przed nim, izolator i jego zasilacz są w ustawieniach łańcucha"
+
+msgid "To the other end"
+msgstr "Na drugi koniec"
+
+msgid "The holder goes 1 m from the other end of the beam; an arm (6132, 4950) is turned around with it"
+msgstr "Uchwyt idzie 1 m od drugiego końca dźwigara; wysięgnik (6132, 4950) obraca się razem z nim"

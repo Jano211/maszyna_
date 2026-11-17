@@ -2,6 +2,29 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-17 wieczór – uwagi użytkownika po teście (16.11 + zagnieżdżone)
+
+**Uwagi użytkownika 17.11 ok. 22:45 i co zrobione (składnia exe OK, testy te/tsc/tk/tc OK, w exe NIESPRAWDZONE):**
+1. Izolator 0301 przewodu wzmacniającego: odchylenie działa „zajebiście” w obie strony; maks. 75° zamiast 80° (wbijał się
+   w wysięgnik) – `kFeederSwingMax`.
+2. Uchwyty uszynienia / przewodu wzmacniającego na bramkach: metr od skraju jako domyślne – „idealny”.
+   - Zaznaczanie wprost: klik w uchwyt / wysięgnik uszynienia → strona Uszynienie, zaznaczony najbliższy słup sekcji
+     (`catenary_scene_part_owner` rodzaj 5).
+   - Bramki obrócone naprzemiennie (zero raz po prawej, raz po lewej) – lina szła zygzakiem: `earthing_previous` zwraca teraz miejsce
+     liny na poprzednim słupie (na bramce – punkt uchwytu na dźwigarze, liczony po kolei od początku sekcji), nie oś zwisu (oś
+     zwisu leżała w połowie obu skrajów, wybór skraju był przypadkowy).
+   - Przycisk „Na drugi koniec”: uchwyt 1 m od drugiego końca dźwigara, wysięgnik (6132, 4950) obrócony („Obróć”).
+3. Izolatory sekcyjne: „pięknie działa”. Dodane: znacznik w widoku (Widok > Sieć trakcyjna > Izolatory sekcyjne) z zasilaczem przed
+   i za (`catenary_chain_insulators`), klik w izolator zaznacza słup przed nim na stronie słupów (rodzaj 6).
+4. Ogranicznik 0561 przy „V”: „prawie dobrze, brakuje ok. 10 cm” – albo dłuższy, żeby objął całość, albo krótszy, tylko na przewód
+   przechodzący 1 cm nad drutem. NIEZMIENIONE – zapytać użytkownika, który wariant.
+5. Wysięgnik zagnieżdżony: wstawia się, mocowania się mijają. Spadek do 2 FPS przy zaznaczonym – sprawdzenie pary (dwa pełne
+   składania) liczone co klatkę → teraz tylko po zmianie któregoś wpisu (`nested_key`). Zwis nie jechał przy przeciąganiu (para
+   brana jak parasol) → przeciąganie zwisu przesuwa oba (`catenary_apply_to`, jedno cofnięcie na całe przeciąganie), wewnętrzny
+   dostaje zwis zewnętrznego i jest wpasowywany od nowa.
+6. Zasilanie: nie da się wstawić zasilaczy (tractionpowersource) ani łatwo zmienić zasilacza przed / za izolatorem – użytkownik chce
+   osobnej zakładki z faktycznym wstawianiem zasilaczy (lokalizacje z mapy). W ROBOCIE.
+
 ## START TUTAJ – 2026-11-17 13:40 – wysięgniki zagnieżdżone na jednym zwisie
 
 **Prośba użytkownika 17.11 (zdjęcie: zwis bramki, Wrocław Brochów):** dwa wysięgniki na jednym standardowym zwisie, jeden schowany
