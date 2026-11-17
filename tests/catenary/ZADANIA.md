@@ -7,6 +7,8 @@ ROZSZERZANIE) i z pracy nad kotwieniami 23–24.10.
 Modele do zrobienia (od A do Z, stan 16.11): MODELE.md; zasilanie (odłączniki, odgromniki): ZASILANIE.md.
 NOWE 16.11 (do zrobienia): zwisy na skośnym dźwigarze w edytorze; zasilanie (podstacje, odłączniki ze stanem, odgromniki; przełączanie
 odłącznika po wyjściu z kabiny); odciągi prętowe słupów kotwowych; iskiernik J-250 na końcu sekcji uszynienia.
+NOWE 17.11: [x] wysięgniki zagnieżdżone na jednym zwisie (tryb eksperta; niesprawdzone w exe); [ ] odciąg na przewodach idących do kotwy
+oraz odciąg od słupa przez przewody do kotwy dalej do przęsła docelowego (PRZEKAZANIE.md, 17.11).
 
 Jan 2026-10-24 13:24: „do żadnych złożeń na ten moment nie mam uwag” – złożenia wysięgników (rurowe, teowniki) i
 założenia przy nich uznane za przyjęte (odhaczone niżej).

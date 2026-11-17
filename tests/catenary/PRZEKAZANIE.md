@@ -2,6 +2,34 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-17 13:40 – wysięgniki zagnieżdżone na jednym zwisie
+
+**Prośba użytkownika 17.11 (zdjęcie: zwis bramki, Wrocław Brochów):** dwa wysięgniki na jednym standardowym zwisie, jeden schowany
+w drugim, oba z liną nośną i przewodami – dwa łańcuchy TEGO SAMEGO toru (przęsło naprężenia albo coś rozjazdowego). Karty brak –
+składane na oko z istniejących wysięgników. Użytkownik: „nie rób z tego rzeczy oczywistej” – znane jedno takie miejsce.
+
+**Zrobione (składnia editormodecatenary.cpp OK, w exe NIESPRAWDZONE):**
+- Edytor, sekcja „Drugi wysięgnik”, TYLKO w trybie eksperta, gdy na słupie/zwisie jest jeden wysięgnik: „Wysięgnik zagnieżdżony”
+  (`catenary_nested_create`). Nowy wpis `shared_pole` na tym samym słupie/zwisie, karta z ustawień zewnętrznego, przewody
+  `kNestedStagger` 0,20 m bliżej słupa (dalej odsuw z panelu). Bez nowej składni pliku – para = dwa wpisy na jednym słupie, bez
+  `umbrella`/`spread`, jeden z `shared_pole` (`nested_pair`).
+- `catenary_nested_fit`: mocowania wewnętrznego wchodzą między mocowania zewnętrznego przez `stay_shift`/`strut_shift` (±0,5 m,
+  czyli tylko wysięgniki rurowe 7xx/10xx/11xx/12xx), tylko tyle, ile trzeba; odstęp osi śrub `kNestedGap` 0,20 m. Sprawdzenie
+  w panelu (zielone / pomarańczowe z opisem) + przycisk „Wpasuj do środka”. Po zmianie karty zewnętrznego NIE wpasowuje się samo –
+  panel pokazuje problem.
+- ZAŁOŻENIA do potwierdzenia: odstęp mocowań 0,20 m; przewody wewnętrznego 0,20 m bliżej słupa.
+- `lang/editor_pl.po` + 14 wpisów.
+
+**Do sprawdzenia w exe:** wstawienie na zwisie bramki, czy zwis stoi raz, czy mocowania nie wchodzą na siebie, odpięcie do drugiego
+łańcucha, usunięcie zewnętrznego (wewnętrzny przejmuje zwis – istniejący kod usuwania).
+
+**Pytanie użytkownika 17.11 (do rozpatrzenia, NIEZACZĘTE):** odciąg na przewodach idących do kotwy (zdjęcie: ramię odciągowe na
+przewodach schodzących do kotwienia) oraz odciąg od słupa idący PRZEZ przewody idące do kotwy i dalej do przęsła docelowego.
+Stan kodu: odciąg sieci (karty 0311–0326, `pulloff`) jest zwykłym wpisem na liście łańcucha; `pulloff_run` przyjmuje kotwienie jako
+koniec rozpiętości, ale ostatnie przęsło do kotwy rysuje urządzenie naprężające bez wieszaków, a `pulloff_ropes` liczy linę jak
+w przęśle z wieszakami – niesprawdzone, raczej źle. Wariant „przez” pasuje do `pull_from` (odciąg wielotorowy 0315/0316), tylko
+w obrębie dwóch łańcuchów jednego toru. W edytorze nie ma sposobu wstawienia odciągu w przęśle do kotwy.
+
 ## START TUTAJ – 2026-11-16 23:15 – zrzutka na nowy czat
 
 **Jak pracujemy:** bez zmian (wyżej w sekcji 02:00): commit na `siec-gl46` → push → merge do `wszystko-gl46` → push; notatki w tym

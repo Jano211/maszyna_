@@ -3316,6 +3316,166 @@ void catenary_editor::catenary_third_create(std::size_t const Index)
 		tool.status += STR(" - the cantilever didn't assemble, see the log");
 }
 
+// nested cantilevers (user 2026-11-17, a drop at Wroclaw Brochow, two chains of one track - a tension overlap or by a turnout):
+// two cantilevers to the same track on one pole or drop, the inner one inside the outer one - its top mount under the top
+// mount of the outer, its bottom mount above the bottom mount of the outer. RARE: offered in the expert mode only, never by
+// itself. ASSUMPTIONS (to confirm with the user): the bolts of neighbouring mounts at least kNestedGap apart; the wires of the
+// inner one kNestedStagger closer to the pole than those of the outer one when it's made
+double constexpr kNestedGap{0.20};
+double constexpr kNestedStagger{0.20};
+
+namespace
+{
+// a nested pair on the pole of Index: two cantilevers on it, none of an umbrella or spread; Outer stands the pole, Inner shares it
+bool nested_pair(std::size_t const Index, std::size_t &Outer, std::size_t &Inner)
+{
+	auto const sharers{pole_sharers(Index)};
+	if (sharers.size() != 2)
+		return false;
+	auto const *a{catenary_scene_get(sharers[0])};
+	auto const *b{catenary_scene_get(sharers[1])};
+	if (a == nullptr || b == nullptr || false == a->umbrella.empty() || false == b->umbrella.empty() || a->has_spread || b->has_spread || a->shared_pole == b->shared_pole)
+		return false;
+	Outer = a->shared_pole ? sharers[1] : sharers[0];
+	Inner = a->shared_pole ? sharers[0] : sharers[1];
+	return true;
+}
+
+// heights of the bolts of the mounts (above the zero of the pole) from a probe
+bool nested_mounts(catenary::suspension const &Data, double &Stay, double &Strut)
+{
+	catenary::cantilever_result result;
+	if (false == catenary_scene_probe(Data, result))
+		return false;
+	auto const stay{result.values.find("mount.stay")}, strut{result.values.find("mount.strut")};
+	if (stay == result.values.end() || strut == result.values.end())
+		return false;
+	Stay = stay->second;
+	Strut = strut->second;
+	return true;
+}
+
+// the wires of the cantilever from its pole, in the plan
+double nested_reach(catenary::suspension const &Data)
+{
+	return std::hypot(Data.at[0] - Data.pole[0], Data.at[2] - Data.pole[2]);
+}
+
+// what's wrong with the nested pair (empty - nothing)
+std::string nested_problem(catenary::suspension const &Outer, catenary::suspension const &Inner)
+{
+	double outerstay, outerstrut, innerstay, innerstrut;
+	if (false == nested_mounts(Outer, outerstay, outerstrut) || false == nested_mounts(Inner, innerstay, innerstrut))
+		return STR("Nested cantilevers: one of them doesn't assemble or has no stay and strut mounts, see the log");
+	std::string problem;
+	auto const add = [&](std::string const &Text) { problem += (problem.empty() ? std::string{} : std::string{"; "}) + Text; };
+	if (nested_reach(Inner) > nested_reach(Outer) - 0.05)
+		add(STR("the wires of the inner cantilever aren't closer to the pole than those of the outer one"));
+	if (innerstay > outerstay - kNestedGap + 1e-3)
+		add(format(STR_C("the top mount of the inner one is %.2f m too high"), innerstay - (outerstay - kNestedGap)));
+	if (innerstrut < outerstrut + kNestedGap - 1e-3)
+		add(format(STR_C("the bottom mount of the inner one is %.2f m too low"), (outerstrut + kNestedGap) - innerstrut));
+	if (innerstay - innerstrut < kNestedGap - 1e-3)
+		add(STR("the mounts of the inner one meet each other"));
+	return problem;
+}
+} // namespace
+
+void catenary_editor::catenary_nested_create(std::size_t const Index)
+{
+	auto &tool{m_catenary};
+	auto const *current{catenary_scene_get(Index)};
+	auto const *found{catenary_spot_of(Index)};
+	if (current == nullptr || found == nullptr || found->track == nullptr || false == current->has_pole || current->shared_pole || false == current->umbrella.empty() || pole_sharers(Index).size() != 1)
+		return;
+	auto const sourcedata{*current};
+	auto const source{*found};
+	catenary_spot spot;
+	{
+		without_gantry const plain{tool.gantry_selected};
+		if (false == catenary_spot_at(*source.track, source.path, pole_of(sourcedata), pole_of(sourcedata), source.side, spot))
+			return;
+	}
+	spot.curve = source.curve;
+	// the wires of the inner one closer to the pole than those of the outer one; the card, the height of the wires, the
+	// insulators like the outer one has
+	double offset{0.0};
+	stagger_of(Index, offset);
+	offset += kNestedStagger;
+	auto const saved{panel_save()};
+	catenary_take_settings(Index);
+	catenary::suspension planned{sourcedata};
+	planned.shared_pole = true;
+	planned.stay_shift = planned.strut_shift = 0.0;
+	catenary_keep_pole(spot, planned, std::abs(offset), offset >= 0.0);
+	panel_restore(saved);
+	if (spot.card == 0)
+	{
+		tool.status = spot.problem;
+		return;
+	}
+	auto data{spot.data};
+	auto const file{catenary_scene_file_of(Index)};
+	data.name = catenary_scene_new_name(file);
+	data.skin = sourcedata.skin;
+	data.insulators = sourcedata.insulators;
+	data.shared_pole = true;
+	data.stay_shift = data.strut_shift = 0.0;
+	++tool.group;
+	auto const added{catenary_scene_add(file, data)};
+	tool.spots[added] = spot;
+	tool.spots[added].data = data;
+	tool.undo.push_back({tool.group, false, added, std::nullopt, std::nullopt, false});
+	catenary_select(static_cast<int>(added));
+	auto const fitted{catenary_nested_fit(added, true)};
+	auto const *made{catenary_scene_get(added)};
+	tool.status = format(STR_C("Nested cantilever %s inside %s (card %d execution %d): hang it in its own chain; the stagger of the panel moves its wires, \"Fit inside\" puts its mounts between those of the outer one again"),
+	                     data.name.c_str(), sourcedata.name.c_str(), made != nullptr ? made->card : data.card, made != nullptr ? made->execution : data.execution);
+	if (false == fitted)
+		tool.status += " - " + nested_problem(sourcedata, made != nullptr ? *made : data);
+	if (catenary_scene_parts(added) == 0)
+		tool.status += STR(" - the cantilever didn't assemble, see the log");
+}
+
+bool catenary_editor::catenary_nested_fit(std::size_t const Index, bool const Quiet)
+{
+	auto &tool{m_catenary};
+	std::size_t outer, inner;
+	if (false == nested_pair(Index, outer, inner))
+		return false;
+	auto const *outerdata{catenary_scene_get(outer)};
+	auto const *innerdata{catenary_scene_get(inner)};
+	double outerstay, outerstrut, innerstay, innerstrut;
+	if (outerdata == nullptr || innerdata == nullptr || false == nested_mounts(*outerdata, outerstay, outerstrut) || false == nested_mounts(*innerdata, innerstay, innerstrut))
+	{
+		if (outerdata != nullptr && innerdata != nullptr)
+			tool.status = nested_problem(*outerdata, *innerdata);
+		return false;
+	}
+	// moved in only as far as needed: down from under the top mount of the outer one, up from over its bottom mount (the shifts
+	// pick the stay and the strut from their families, so the result is probed again)
+	auto changed{*innerdata};
+	auto const clamp = [](double const Value) { return std::clamp(Value, -0.5, 0.5); };
+	if (innerstay > outerstay - kNestedGap)
+		changed.stay_shift = clamp(changed.stay_shift + (outerstay - kNestedGap) - innerstay);
+	if (innerstrut < outerstrut + kNestedGap)
+		changed.strut_shift = clamp(changed.strut_shift + (outerstrut + kNestedGap) - innerstrut);
+	if (changed.stay_shift != innerdata->stay_shift || changed.strut_shift != innerdata->strut_shift)
+	{
+		tool.undo.push_back({tool.group, false, inner, *innerdata, std::nullopt, false});
+		catenary_scene_update(inner, changed);
+		if (auto spot{tool.spots.find(inner)}; spot != tool.spots.end())
+			spot->second.data = changed;
+		tool.probed = false;
+	}
+	auto const problem{nested_problem(*catenary_scene_get(outer), *catenary_scene_get(inner))};
+	if (false == problem.empty())
+		tool.status = format(STR_C("Nested cantilevers: %s - pick a shorter card for the inner one, move its wires or move the mounts by hand"), problem.c_str());
+	else if (false == Quiet)
+		tool.status = STR("Nested cantilevers: the inner one fits inside the outer one");
+	return problem.empty();
+}
+
 void catenary_editor::catenary_rope_lift_create(std::size_t const Index, std::size_t const Chain)
 {
 	auto &tool{m_catenary};
@@ -7365,6 +7525,41 @@ void catenary_editor::render_catenary_cantilever_ui()
 					}
 					if (ImGui::IsItemHovered())
 						ImGui::SetTooltip("%s", STR_C("Two cantilevers to this track on consoles 4890 (cards 0517/0518), 1.19 m apart along it: this one goes onto the first mount, the second onto the other; each can then hold any chain or only its messenger or its wires"));
+				}
+				// nested cantilevers: rare, so only in the expert mode and only by hand
+				std::size_t outer, inner;
+				if (nested_pair(static_cast<std::size_t>(tool.selected), outer, inner))
+				{
+					auto const *outerdata{catenary_scene_get(outer)};
+					auto const *innerdata{catenary_scene_get(inner)};
+					if (outerdata != nullptr && innerdata != nullptr)
+					{
+						ImGui::TextUnformatted(format(STR_C("Nested cantilevers: %s inside %s"), innerdata->name.c_str(), outerdata->name.c_str()).c_str());
+						auto const problem{nested_problem(*outerdata, *innerdata)};
+						if (problem.empty())
+							ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1.0f), "%s", STR_C("The inner one fits inside the outer one"));
+						else
+							ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s", problem.c_str());
+						if (ImGui::SmallButton(STR_C("Fit inside")))
+						{
+							++tool.group;
+							catenary_nested_fit(static_cast<std::size_t>(tool.selected), false);
+						}
+						if (ImGui::IsItemHovered())
+							ImGui::SetTooltip("%s", STR_C("The top and bottom mounts of the inner cantilever go between those of the outer one (shifts of the mounts, up to 0.5 m)"));
+					}
+				}
+				else if (tool.expert && data->has_pole && false == data->shared_pole && pole_sharers(static_cast<std::size_t>(tool.selected)).size() == 1)
+				{
+					if (ImGui::Button(STR_C("Nested cantilever")))
+					{
+						catenary_nested_create(static_cast<std::size_t>(tool.selected));
+						data = tool.selected >= 0 ? catenary_scene_get(static_cast<std::size_t>(tool.selected)) : nullptr;
+						if (data == nullptr)
+							return;
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("Rare (one known: a drop at Wroclaw Brochow): a second cantilever to this track inside this one, on the same pole or drop, for another chain (a tension overlap, by a turnout); its mounts go between the mounts of this one"));
 				}
 			}
 			else
