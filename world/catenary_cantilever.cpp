@@ -1839,7 +1839,24 @@ private:
             auto const optional { role[ 0 ] == '?' };
             if( optional ) { role.erase( 0, 1 ); }
             auto const from { point( w[ 1 ] ) };
-            auto const to { point( w[ 2 ] ) };
+            auto to { point( w[ 2 ] ) };
+            // linka na opaskę na ukośniku zamiast do uchwytu liny (korekta z terenu, użytkownik 2026-11-18): opaska na osi ukośnika
+            // w podanej odległości od uchwytu głównego w stronę konstrukcji, ucho pod rurą jak uchwytu głównego; linka do ucha
+            if( role == "cord" ) {
+                auto const band { m_input.overrides.find( "#cord_band" ) };
+                auto const at { m_input.overrides.find( "#cord_band_at" ) };
+                auto const strut { m_lines.find( "strut" ) };
+                if( band != m_input.overrides.end() && at != m_input.overrides.end() && strut != m_lines.end() && strut->second.stations.count( "head_clamp" ) ) {
+                    auto const *bandpart { m_catalog.part( band->second ) };
+                    if( bandpart == nullptr ) { m_result.warnings.push_back( "cantilever " + m_label + ": cord band \"" + band->second + "\" isn't in the catalogue" ); }
+                    else {
+                        auto const station { strut->second.stations.at( "head_clamp" ) - std::stod( at->second ) };
+                        auto const axis { strut->second.at( station ) };
+                        put( place( "cord_band", bandpart->name, axis, direction( "strut.down" ), rest_axis( "-z" ) ) );
+                        to = axis - strut->second.normal * bandpart->eye;
+                    }
+                }
+            }
             auto const span { length( to - from ) };
             m_result.values[ role + ".span" ] = span;
             if( optional && false == has_role( role ) ) { return; }

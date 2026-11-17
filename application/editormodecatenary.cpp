@@ -297,6 +297,8 @@ void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data
 	Data.arms_spread = Current.arms_spread;
 	Data.rope_shift = Current.rope_shift;
 	Data.cord_shift = Current.cord_shift;
+	Data.cord_band = Current.cord_band;
+	Data.cord_band_at = Current.cord_band_at;
 	if (false == Current.above_pole)
 		return;
 	Data.above_pole = true;
@@ -8026,7 +8028,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 		return;
 	// the adjustments of the cantilever and the pole: folded, the title says when one of them is set
 	{
-		auto const set{data->stay_shift != 0.0 || data->strut_shift != 0.0 || data->turn_by_hand != 0.0 || data->lean != 0.0 || has_brace(*data) || data->stay_gap != 0.0 || data->arms_spread != 0.0 || data->rope_shift != 0.0 || data->cord_shift != 0.0
+		auto const set{data->stay_shift != 0.0 || data->strut_shift != 0.0 || data->turn_by_hand != 0.0 || data->lean != 0.0 || has_brace(*data) || data->stay_gap != 0.0 || data->arms_spread != 0.0 || data->rope_shift != 0.0 || data->cord_shift != 0.0 || false == data->cord_band.empty()
 		               || std::any_of(data->overrides.begin(), data->overrides.end(), [](auto const &O) { return O.first == "strut" || O.first == "stay" || O.first == "steady"; })};
 		if (ImGui::CollapsingHeader(set ? STR_C("Adjustments (set)###adjustments") : STR_C("Adjustments###adjustments")))
 		{
@@ -8174,31 +8176,33 @@ void catenary_editor::render_catenary_cantilever_ui()
 							continue;
 						auto const own{std::find_if(data->overrides.begin(), data->overrides.end(), [&](auto const &O) { return O.first == role; })};
 						auto const current{own != data->overrides.end() ? own->second : std::string()};
-						auto const shown{current.empty() ? format(STR_C("%s (card)"), card.c_str()) : current};
+						// automatic: the card's one, or the one the mounts moved by hand take; any one of the list is forced, the card's too
+						// (the user 2026-11-18: with the mounts moved the card's tube was replaced and couldn't be picked back)
+						auto const shown{current.empty() ? format(STR_C("automatic (card %s)"), card.c_str()) : current};
 						ImGui::PushItemWidth(160.0f);
 						if (ImGui::BeginCombo(format(STR_C("Tube: %s"), role.c_str()).c_str(), shown.c_str()))
 						{
 							auto pick = [&](std::string const &Part) {
 								auto changed{*data};
 								std::erase_if(changed.overrides, [&](std::pair<std::string, std::string> const &O) { return O.first == role; });
-								if (false == Part.empty() && Part != card)
+								if (false == Part.empty())
 									changed.overrides.emplace_back(role, Part);
 								apply(changed, false);
 							};
-							if (ImGui::Selectable(format(STR_C("%s (card)"), card.c_str()).c_str(), current.empty()))
+							if (ImGui::Selectable(format(STR_C("automatic (card %s)"), card.c_str()).c_str(), current.empty()))
 								pick({});
 							for (auto const &part : list)
-								if (part != card)
-								{
-									auto const *found{catalog->part(part)};
-									if (ImGui::Selectable(format("%s  %.3f m", part.c_str(), found != nullptr ? found->length : 0.0).c_str(), part == current))
-										pick(part);
-								}
+							{
+								auto const *found{catalog->part(part)};
+								auto const label{format("%s  %.3f m%s", part.c_str(), found != nullptr ? found->length : 0.0, part == card ? STR_C("  (card)") : "")};
+								if (ImGui::Selectable(label.c_str(), part == current))
+									pick(part);
+							}
 							ImGui::EndCombo();
 						}
 						ImGui::PopItemWidth();
 						if (ImGui::IsItemHovered())
-							ImGui::SetTooltip("%s", STR_C("Another execution (length) of this tube than the card has, as found on the ground; the solver assembles the cantilever with it and warns if it doesn't reach"));
+							ImGui::SetTooltip("%s", STR_C("The tube of this execution (length) forced, as found on the ground, the card's one too; automatic - the card's one or the one the moved mounts take. The solver warns if it doesn't reach"));
 					}
 				}
 				if (scheme != nullptr && scheme->roles.count("stay_clamp"))
@@ -8216,6 +8220,55 @@ void catenary_editor::render_catenary_cantilever_ui()
 				corrected(STR_C("Messenger along the cantilever"), STR_C("The messenger (and its clamp on the tube) moved across the track along the cantilever, towards the pole (+) or away from it (-)"), data->rope_shift, 0.05, -0.8f, 0.8f, &catenary::suspension::rope_shift);
 				if (scheme != nullptr && std::any_of(scheme->roles.begin(), scheme->roles.end(), [](auto const &R) { return R.second.compare(0, 4, "6011") == 0 || R.second.compare(0, 4, "6111") == 0; }))
 					corrected(STR_C("Cord clamp along the steady arm"), STR_C("The clamp of the cord on the steady arm tube 6011 / 6111 moved along it, towards the pole (+) or away from it (-)"), data->cord_shift, 0.05, -0.8f, 0.8f, &catenary::suspension::cord_shift);
+				// the cord from the steady arm to a band on the strut instead of the messenger clamp (the drop at Brochow)
+				if (scheme != nullptr && scheme->roles.count("cord") && scheme->roles.count("strut"))
+				{
+					ImGui::PushID("cordband");
+					auto on{false == data->cord_band.empty()};
+					if (ImGui::Checkbox(STR_C("Cord to a band on the strut"), &on))
+					{
+						auto changed{*data};
+						if (on)
+						{
+							// the band: the cord clamp of the card to start with, picked from the clamps below
+							changed.cord_band = scheme->roles.count("cord_clamp") ? scheme->roles.at("cord_clamp") : std::string{"4210-02"};
+							changed.cord_band_at = 0.50;
+						}
+						else
+							changed.cord_band.clear();
+						apply(changed, false);
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("The cord from the steady arm goes up to a band on the strut, not to the messenger clamp; the band and its place along the strut from the head clamp are set here"));
+					if (on && false == data->cord_band.empty())
+					{
+						ImGui::SameLine();
+						ImGui::PushItemWidth(110.0f);
+						if (ImGui::BeginCombo("##band", data->cord_band.c_str()))
+						{
+							for (auto const &[name, part] : catalog->parts())
+								if (part.kind == "clamp" && ImGui::Selectable(name.c_str(), name == data->cord_band))
+								{
+									auto changed{*data};
+									changed.cord_band = name;
+									apply(changed, false);
+								}
+							ImGui::EndCombo();
+						}
+						ImGui::PopItemWidth();
+						ImGui::SameLine();
+						auto at{static_cast<float>(data->cord_band_at)};
+						ImGui::PushItemWidth(140.0f);
+						if (ImGui::SliderFloat(STR_C("m from the head clamp"), &at, 0.0f, 2.5f, "%.2f"))
+						{
+							auto changed{*data};
+							changed.cord_band_at = std::round(at * 100.0f) / 100.0;
+							apply(changed, true);
+						}
+						ImGui::PopItemWidth();
+					}
+					ImGui::PopID();
+				}
 			}
 			// the cantilever turned by hand on its hinge (on top of the turn from the temperature)
 			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole)
