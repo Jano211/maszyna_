@@ -1143,6 +1143,39 @@ int main( int, char *argv[] ) {
         check( errors.empty() && catenary_scene_parts( first ) == n1, "wysiegnik rozstawiony sam na konsoli: po usunieciu drugiego dalej na konsoli ze slupem" );
     }
 
+    // 6d. sześć wysięgników na jednym słupie bez nazw par (użytkownik 2026-11-18): po każdej stronie dwa rozstawione na konsoli
+    // i jeden w osi słupa; słup stawia pierwszy, konsolę po każdej stronie pierwszy rozstawiony z tej strony, parasol w osi -
+    // mocowania dwustronne
+    {
+        catenary_scene_clear(); errors.clear(); logs.clear();
+        std::vector<std::size_t> made;
+        for( int side = 0; side < 2; ++side ) {
+            auto const x { side == 0 ? 0.687 : -2.313 - 3.0 };
+            for( int slot = 0; slot < 3; ++slot ) {
+                auto one { entry };
+                one.name = "g" + std::to_string( side ) + std::to_string( slot );
+                one.umbrella.clear();
+                one.pole[ 2 ] = 500.0;
+                one.at[ 0 ] = one.rope[ 0 ] = x;
+                auto const along { slot == 0 ? 0.0 : slot == 1 ? 0.594 : -0.594 };
+                one.at[ 2 ] = one.rope[ 2 ] = 500.0 + along;
+                if( slot > 0 ) {
+                    one.has_spread = true;
+                    one.spread[ 0 ] = -2.313; one.spread[ 1 ] = 0.2; one.spread[ 2 ] = 500.0 + along;
+                }
+                made.push_back( catenary_scene_add( "td_szesc.scm", one ) );
+            }
+        }
+        std::size_t total { 0 }, smallest { 1000 };
+        for( auto const index : made ) { total += catenary_scene_parts( index ); smallest = std::min( smallest, catenary_scene_parts( index ) ); }
+        std::printf( "  szesc na slupie: czesci razem %zu, najmniej %zu, pierwszy %zu\n", total, smallest, catenary_scene_parts( made.front() ) );
+        for( auto const &error : errors ) { std::printf( "    %s\n", error.c_str() ); }
+        check( errors.empty() && smallest > 5 && catenary_scene_parts( made.front() ) > catenary_scene_parts( made[ 3 ] ),
+            "szesc wysiegnikow na jednym slupie (2 rozstawione + 1 w osi na strone) bez nazw par: skladaja sie, slup stawia pierwszy" );
+        catenary_scene_remove( made.front() );
+        check( errors.empty() && catenary_scene_parts( made[ 1 ] ) > 5 && catenary_scene_parts( made[ 3 ] ) > 5, "po usunieciu pierwszego slup stawia nastepny, reszta zostaje" );
+    }
+
     // 6b. lina nośna z innego wysięgnika (rozstawione na konsoli): w punkcie m2 przewody przez m2, lina przez h2 1,2 m dalej
     {
         auto a { entry }, b { entry }, c { entry }, h { entry };

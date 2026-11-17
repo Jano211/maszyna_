@@ -374,12 +374,12 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else { report( entry.name, "\"pull_from\" needs exactly one name: the pull-off on the next track this one goes on from" ); good = false; }
             }
             else if( key == "stay_shift" ) {
-                if( list.size() == 1 && to_number( list[ 0 ], entry.stay_shift ) && std::abs( entry.stay_shift ) <= 0.5 + 1e-9 ) {}
-                else { report( entry.name, "\"stay_shift\" needs one number from -0.5 to 0.5: the top mount moved up (+) or down (-), metres" ); entry.stay_shift = 0.0; good = false; }
+                if( list.size() == 1 && to_number( list[ 0 ], entry.stay_shift ) && std::abs( entry.stay_shift ) <= 1.0 + 1e-9 ) {}
+                else { report( entry.name, "\"stay_shift\" needs one number from -1 to 1: the top mount moved up (+) or down (-), metres" ); entry.stay_shift = 0.0; good = false; }
             }
             else if( key == "strut_shift" ) {
-                if( list.size() == 1 && to_number( list[ 0 ], entry.strut_shift ) && std::abs( entry.strut_shift ) <= 0.5 + 1e-9 ) {}
-                else { report( entry.name, "\"strut_shift\" needs one number from -0.5 to 0.5: the bottom (strut) mount moved up (+) or down (-), metres" ); entry.strut_shift = 0.0; good = false; }
+                if( list.size() == 1 && to_number( list[ 0 ], entry.strut_shift ) && std::abs( entry.strut_shift ) <= 1.0 + 1e-9 ) {}
+                else { report( entry.name, "\"strut_shift\" needs one number from -1 to 1: the bottom (strut) mount moved up (+) or down (-), metres" ); entry.strut_shift = 0.0; good = false; }
             }
             else if( key == "stay_gap" ) {
                 if( list.size() == 1 && to_number( list[ 0 ], entry.stay_gap ) && entry.stay_gap >= 0.0 && entry.stay_gap <= 1.0 + 1e-9 ) {}

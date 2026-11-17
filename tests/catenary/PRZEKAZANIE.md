@@ -2,6 +2,28 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-18 00:45 – dowolnie wiele wysięgników na słupie / zwisie
+
+**Użytkownik 18.11:** parasol, rozstawione, w osi, zagnieżdżone – każde swoim tokiem, niezależnie; wspólne tylko obiekty nadrzędne
+(słup / zwis, konsole, bramka). Do 6 (2 rozstawione + 1 w osi na stronę), z zagnieżdżonymi i 8, teoretycznie więcej – w realu raczej
+niemożliwe (udźwig), ale edytor ma pokazać pełną elastyczność. ZGODNOŚĆ WSTECZ NIEPOTRZEBNA (eksperymentujemy, nikt nic nie
+zawiesił). Konsola 4890 mocuje się tak samo na zwisach 4850 i 4840. Zakres stay_shift / strut_shift zwiększony do ±1 m (brakowało).
+
+**Zrobione (testy t/ts/te/tsc/tk/tt OK, nowy test 6d: 6 wysięgników na słupie; składnia exe OK; w exe NIESPRAWDZONE):**
+- Scena: `pole_group` – wysięgniki z punktami i słupem tego samego typu w tym samym miejscu (0,05 m) jednego pliku; `assemble_group`
+  składa je razem: słup stawia pierwszy (najniższy numer), konsolę na każdej stronie pierwszy rozstawiony z tej strony (strona – od
+  słupa do przewodów, względem pierwszego); mocowania wspólne: rozstawieni po stronie parami na konsoli (`spread_mounts`), w osi po
+  obu stronach pary od najdłuższego (`umbrella_mounts`, 4640-4670); zagnieżdżone nic nie dzielą. `umbrella` i `shared_pole` NIE
+  mają już znaczenia przy składaniu (dalej czytane i zapisywane, edytor nowych nazw nie nadaje); `earthing_pole` = pierwszy z grupy;
+  przechył słupa tylko przy jednym wysięgniku.
+- Edytor: sekcja „Wysięgniki na tym słupie: N” – lista wszystkich (klik zaznacza; rozwiązuje też klikanie w zagnieżdżony), przyciski
+  parasol / rozstawione / w osi / zagnieżdżony bez ograniczeń „tylko gdy jeden”; przeciąganie słupa / zwisu przesuwa całą grupę
+  (zwis: każdy wysięgnik po dźwigarze, rozstawieni z punktem na konsoli, zagnieżdżone wpasowywane). `nested_pair` – w osi po tej
+  samej stronie: zewnętrzny = najdłuższy.
+- NIEZROBIONE: konsola 4890 na zwisach – w traction_supports.txt zwisy 4840 / ESN-544 mają tylko `steady_console 4690-05`; trzeba
+  dopisać `console 4890-xx` – ZAPYTAĆ, które wykonanie (01 ceownik, 02 dwuteownik, 03 161x, 04 „nie wiadomo, może bramki”). Obrót
+  zwisu (`turn 90`, skośny dźwigar) z konsolą niesprawdzony.
+
 ## START TUTAJ – 2026-11-18 00:15 – korekty wysięgnika z terenu
 
 **Prośba użytkownika (zwis na Brochowie: rura o parę wykonań krótsza, uchwyt liny przesunięty po rurze, szerszy rozstaw łapek

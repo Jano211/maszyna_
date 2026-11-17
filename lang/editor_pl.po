@@ -12205,8 +12205,8 @@ msgstr "Zastrzał 6506 nie wchodzi w ten wysięgnik (ukośnik nigdzie nie zbliż
 msgid "The flat bar 6506 from the clamp 4210 on the steady arm up to the clamp 4760 on the strut, as on the cantilevers 102x; it goes where the gap between them fits. It doesn't fit on 70x, 73x, 74x, 77x, 78x, 1110, 1120, 1130, 1140, 1210-1240, 1260, 1280 (the strut doesn't come close enough to the steady arm)"
 msgstr "Płaskownik 6506 od obejmy 4210 na wysięgu pomocniczym do uchwytu 4760 na ukośniku, jak w wysięgnikach 102x; staje tam, gdzie odstęp między nimi pasuje. Nie wchodzi w 70x, 73x, 74x, 77x, 78x, 1110, 1120, 1130, 1140, 1210–1240, 1260, 1280 (ukośnik nie zbliża się dość do wysięgu pomocniczego)"
 
-msgid "The top (stay) mount up or down from the card by up to 0.50 m, e.g. where something is in the way on the pole; the stay tube or rod is taken shorter or longer to fit"
-msgstr "Górne mocowanie (odciągu) wyżej albo niżej niż w karcie, do 0,50 m, np. gdy coś na słupie przeszkadza; rura albo pręt odciągu dobierane krótsze lub dłuższe"
+msgid "The top (stay) mount up or down from the card by up to 1 m, e.g. where something is in the way on the pole; the stay tube or rod is taken shorter or longer to fit"
+msgstr "Górne mocowanie (odciągu) wyżej albo niżej niż w karcie, do 1 m, np. gdy coś na słupie przeszkadza; rura albo pręt odciągu dobierane krótsze lub dłuższe"
 
 msgid "m##stayshift"
 msgstr "m##stayshift"
@@ -12214,8 +12214,8 @@ msgstr "m##stayshift"
 msgid "Bottom mount moved"
 msgstr "Dolne mocowanie przesunięte"
 
-msgid "The bottom (strut) mount up or down from the card by up to 0.50 m, e.g. where something is in the way on the pole; the strut tube is taken shorter or longer to fit"
-msgstr "Dolne mocowanie (ukośnika) w górę lub w dół względem karty, do 0,50 m, np. gdy na słupie coś przeszkadza; rura ukośnika dobierana krótsza albo dłuższa"
+msgid "The bottom (strut) mount up or down from the card by up to 1 m, e.g. where something is in the way on the pole; the strut tube is taken shorter or longer to fit"
+msgstr "Dolne mocowanie (ukośnika) w górę lub w dół względem karty, do 1 m, np. gdy na słupie coś przeszkadza; rura ukośnika dobierana krótsza albo dłuższa"
 
 msgid "m##strutshift"
 msgstr "m##strutshift"
@@ -12977,8 +12977,8 @@ msgstr "Wewnętrzny mieści się w zewnętrznym"
 msgid "Fit inside"
 msgstr "Wpasuj do środka"
 
-msgid "The top and bottom mounts of the inner cantilever go between those of the outer one (shifts of the mounts, up to 0.5 m)"
-msgstr "Górne i dolne mocowanie wewnętrznego wysięgnika idą między mocowania zewnętrznego (przesunięcie mocowań, do 0,5 m)"
+msgid "The top and bottom mounts of the inner cantilever go between those of the outer one (shifts of the mounts, up to 1 m)"
+msgstr "Górne i dolne mocowanie wewnętrznego wysięgnika idą między mocowania zewnętrznego (przesunięcie mocowań, do 1 m)"
 
 msgid "Nested cantilever"
 msgstr "Wysięgnik zagnieżdżony"
@@ -13192,3 +13192,33 @@ msgstr "Obejma linki na wysięgu pomocniczym"
 
 msgid "The clamp of the cord on the steady arm tube 6011 / 6111 moved along it, towards the pole (+) or away from it (-)"
 msgstr "Obejma linki na rurze wysięgu pomocniczego 6011 / 6111 przesunięta po niej, w stronę słupa (+) albo od niego (-)"
+
+msgid "Cantilevers on this pole: %zu###second"
+msgstr "Wysięgniki na tym słupie: %zu###second"
+
+msgid "More cantilevers on this pole###second"
+msgstr "Więcej wysięgników na tym słupie###second"
+
+msgid "%s  %04d-%d  %s, %s, A %.2f m"
+msgstr "%s  %04d-%d  %s, %s, A %.2f m"
+
+msgid "this side"
+msgstr "ta strona"
+
+msgid "other side"
+msgstr "druga strona"
+
+msgid "on the console"
+msgstr "na konsoli"
+
+msgid "in the axis"
+msgstr "w osi słupa"
+
+msgid "A cantilever on this pole or drop to a track on its other side; on adjustable mounts (band round the pole) the cantilevers in the axis on both sides share the double mounts 4640-4670 at one height"
+msgstr "Wysięgnik na tym słupie albo zwisie do toru po jego drugiej stronie; na mocowaniach regulowanych (opaska na słupie) wysięgniki w osi po obu stronach dzielą mocowania dwustronne 4640–4670 na jednej wysokości"
+
+msgid "A cantilever to this track on the same pole, in its axis on the usual mounts (move them apart from the consoles by hand if they meet); the pole stays one"
+msgstr "Wysięgnik do tego toru na tym samym słupie, w jego osi na zwykłych mocowaniach (odsuń je ręcznie od konsoli, jeśli na siebie wchodzą); słup zostaje jeden"
+
+msgid "Umbrella: the cantilever (card %d execution %d, A = %.2f m) on pole %s of %s; hang its wires with the button below or C"
+msgstr "Parasol: wysięgnik (karta %d, wykonanie %d, A = %.2f m) na słupie %s wpisu %s; podwieś jego przewody przyciskiem niżej albo C"
