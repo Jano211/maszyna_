@@ -1115,10 +1115,28 @@ private:
     }
     // zestaw ramion stawiany zerem w punkcie przewodu "wire"; Flip: zestaw od słupa (obrót o 180 stopni wokół pionu).
     // Zestaw ze składnikami (member) stawia składniki zamiast siebie
-    void put_arm_set( std::string const &setrole, cantilever_part const &set, bool const flip ) {
+    // Tilt [stopnie]: cały zestaw pochylony wokół osi przewodu (wzdłuż toru), dodatnio - koniec z zawieszeniem w górę
+    // (korekta z terenu, użytkownik 2026-11-18: łapki na linie w 127x i podobnych pochylone w stronę mocowania)
+    void put_arm_set( std::string const &setrole, cantilever_part const &set, bool const flip, double const tilt = 0.0 ) {
         auto const side { flip ? -1.0 : 1.0 };
+        auto const pitch_angle { side * tilt * 3.14159265358979323846 / 180.0 };
+        auto const pc { std::cos( pitch_angle ) }, ps { std::sin( pitch_angle ) };
         auto const turn = [ & ]( cantilever_placement &Placement ) {
             if( flip ) { for( int column : { 0, 1 } ) { for( int row = 0; row < 3; ++row ) { Placement.rotation[ row * 3 + column ] = -Placement.rotation[ row * 3 + column ]; } } }
+            if( pitch_angle == 0.0 ) { return; }
+            // obrót wokół osi X przez punkt przewodu: położenie i osie części
+            auto const &wire { m_points[ "wire" ] };
+            auto const dy { Placement.position[ 1 ] - wire.y }, dz { Placement.position[ 2 ] - wire.z };
+            Placement.position[ 1 ] = wire.y + dy * pc - dz * ps;
+            Placement.position[ 2 ] = wire.z + dy * ps + dz * pc;
+            double rotated[ 9 ];
+            auto const &r { Placement.rotation };
+            for( int column = 0; column < 3; ++column ) {
+                rotated[ 0 + column ] = r[ 0 + column ];
+                rotated[ 3 + column ] = pc * r[ 3 + column ] - ps * r[ 6 + column ];
+                rotated[ 6 + column ] = ps * r[ 3 + column ] + pc * r[ 6 + column ];
+            }
+            std::copy( std::begin( rotated ), std::end( rotated ), std::begin( Placement.rotation ) );
         };
         if( set.members.empty() ) {
             auto placement { place( setrole, set.name, m_points[ "wire" ], toward_support, toward_support ) };
@@ -1141,19 +1159,7 @@ private:
                 placement.position[ 0 ] = side * x;
                 placement.position[ 1 ] = wire.y + side * member.position[ 1 ];
                 placement.position[ 2 ] = wire.z + member.position[ 2 ];
-                auto yaw { member.yaw };
-                // ramię rozsunięte (użytkownik 2026-11-18): obrócone wokół pionu w osi przewodu tak, żeby dalej celowało w swoje
-                // mocowanie na rurze - punkt "holder" ramienia zostaje tam, gdzie był w danych zestawu
-                if( moved ) {
-                    auto const *memberpart { m_catalog.part( member.part ) };
-                    auto const holder { memberpart != nullptr ? memberpart->points.find( "holder" ) : decltype( memberpart->points.end() )() };
-                    if( memberpart != nullptr && memberpart->kind == "arms" && holder != memberpart->points.end() && holder->second.first > 1e-3 ) {
-                        auto const reach { holder->second.first };
-                        auto const fixed { member.position[ 0 ] - reach * std::sin( member.yaw * 3.14159265358979323846 / 180.0 ) };
-                        yaw = std::asin( std::clamp( ( x - fixed ) / reach, -1.0, 1.0 ) ) * 180.0 / 3.14159265358979323846;
-                    }
-                }
-                auto const angle { yaw * 3.14159265358979323846 / 180.0 };
+                auto const angle { member.yaw * 3.14159265358979323846 / 180.0 };
                 auto const cosine { std::cos( angle ) };
                 auto const sine { std::sin( angle ) };
                 double const rotation[ 9 ] { cosine, -sine, 0.0,  sine, cosine, 0.0,  0.0, 0.0, 1.0 };
@@ -1933,6 +1939,24 @@ private:
             auto const &cord { part( rope ) };
             auto const from2 { point( w[ 1 ] ) };
             double const from[ 3 ] { 0.0, from2.y, from2.z };
+            // zestaw ramion na linie (127x i podobne, użytkownik 2026-11-18): pochylony wokół osi przewodu tak, żeby ramiona celowały
+            // w ucho liny na ukośniku (gdy ucho nie wypada na wysokości zawieszenia - mocowania przesunięte, ograniczenia na rurze)
+            if( false == m_hung_role.empty() && has_role( m_hung_role ) ) {
+                auto const &set { part( m_hung_role ) };
+                auto const found { set.points.find( "holder" ) };
+                if( found != set.points.end() && found->second.first > 1e-3 ) {
+                    auto const side { m_hung_flip ? -1.0 : 1.0 };
+                    auto const &wire { m_points[ "wire" ] };
+                    auto const across { side * ( from2.y - wire.y ) };
+                    if( across > 1e-3 ) {
+                        auto const target { std::atan2( from2.z - wire.z, across ) };
+                        auto const natural { std::atan2( found->second.second, found->second.first ) };
+                        auto const tilt { ( target - natural ) * 180.0 / 3.14159265358979323846 };
+                        m_result.values[ "arms.tilt" ] = tilt;
+                        if( std::abs( tilt ) > 0.01 ) { put_arm_set( m_hung_role, set, m_hung_flip, tilt ); }
+                    }
+                }
+            }
             std::vector<cantilever_placement> arms;
             for( auto const &placed : m_result.parts ) {
                 if( placed.role.rfind( "arms", 0 ) != 0 ) { continue; }
@@ -2070,6 +2094,9 @@ private:
             if( found == set.points.end() ) { fail( "part \"" + set.name + "\" has no \"holder\" point" ); }
             put_arm_set( setrole, set, flip );
             m_points[ setrole + "_holder" ] = m_points[ "wire" ] + vec2 { ( flip ? -1.0 : 1.0 ) * found->second.first, found->second.second };
+            // zestaw na linie: "armropes" pochyla go potem w stronę ucha liny
+            m_hung_role = setrole;
+            m_hung_flip = flip;
             return;
         }
 
@@ -2203,6 +2230,8 @@ private:
     cantilever_result &m_result;
     std::string m_label;
     std::map<std::string, vec2> m_points;
+    std::string m_hung_role;            // zestaw ramion postawiony przez "setarms" (na linie)
+    bool m_hung_flip { false };
     std::map<std::string, line> m_lines;
 
 public:
