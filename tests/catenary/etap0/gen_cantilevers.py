@@ -1026,6 +1026,9 @@ def arms_for(card, wyk):
     group = card // 10
     straight = group in (111, 112, 121, 122)
     curve = group in (113, 114, 123, 124)
+    if group == 128 and card < 1287:
+        # 128x (tom 3 s. 161-167, odczytane z tabel 2026-11-18): wyk. 3, 4 para 2x 6206-1 z 4110-1 na 4260-2 (od slupa)
+        return [('arms', '6206-1111'), ('arms_bracket', '4260-02')]
     if group == 126:
         # 126x (tom 3 s. 145-151, Jan 20:04): wyk. 3, 4 6206-1 na 4260-1, wyk. 2 para 6209-1 + 6209-2 na 4260-2 (czeka na modele 6209)
         return [('arms', '6206-01'), ('arms_bracket', '4260-01')] if int(wyk) in (3, 4) else [('arms', '6209-02'), ('arms_bracket', '4260-02')]
@@ -1182,18 +1185,18 @@ CV = {}
 for n in range(6):   # 1201-1206: ukosnik 6001-(n+3) dla wyk. 1, 3, 6001-(n+2) dla 2, 4; 6002-(n+2); 6011-(n+4)
     for wyk in range(1, 5):
         CV[(1201 + n, wyk)] = ('6001-%02d' % (n + (3 if wyk in (1, 3) else 2)), '6002-%02d' % (n + 2), '6011-%02d' % (n + 4), '120x')
-CV.update({(1280, 3): ('6001-01', '6002-01', '6111-06', '112x'), (1280, 4): ('6001-01', '6002-01', '6111-06', '112x')})
+CV.update({(1280, 3): ('6001-01', '6002-01', '6111-06', '126x'), (1280, 4): ('6001-01', '6002-01', '6111-06', '126x')})
 for n in range(1, 8):   # 1281-1287? tylko 1281-1286 (1287 ma glowice 4500)
     if 1280 + n >= 1287: break
-    CV[(1280 + n, 3)] = ('6001-%02d' % (n + 2), '6002-%02d' % (n + 1), '6011-%02d' % (n + 7), '112x')
-    CV[(1280 + n, 4)] = ('6001-%02d' % (n + 1), '6002-%02d' % (n + 1), '6011-%02d' % (n + 7), '112x')
+    CV[(1280 + n, 3)] = ('6001-%02d' % (n + 2), '6002-%02d' % (n + 1), '6011-%02d' % (n + 7), '126x')
+    CV[(1280 + n, 4)] = ('6001-%02d' % (n + 1), '6002-%02d' % (n + 1), '6011-%02d' % (n + 7), '126x')
 for (card, wyk), (strut, stay, steady, reg) in sorted(CV.items()):
     digit = card % 10
     low = (wyk in (2, 4)) if card < 1210 else wyk == 4
-    line = 'scheme %d %d reach %s %s height %s registration %s' % (card, wyk, f(1.45 + 0.3 * digit), f(1.75 + 0.3 * digit), f(1.30 if low else 1.70), reg + ('' if reg == '120x' else '-%d' % wyk))
+    line = 'scheme %d %d reach %s %s height %s registration %s' % (card, wyk, f(1.45 + 0.3 * digit), f(1.75 + 0.3 * digit), f(1.30 if low else 1.70), reg + ('' if reg in ('120x', '126x') else '-%d' % wyk))
     three = steady.startswith('6111')
     if three:
-        line += ' mount stay %s mount strut %s mount steady %s' % (f(1.3784 if low else 1.7784), f(0.3784 if low else 0.7784), f(0.2297))
+        line += ' mount stay %s mount strut %s mount steady %s' % (f(1.3784 if low else 1.7784), f(0.3784 if low else 0.7784), f(TUBE126 if reg == '126x' else 0.2297))
     else:
         if reg == '120x':
             # 120x z 4120 na wysiegu (rura 0,05 nad drutem): odstep izolatorow z karty (~2,00 / ~1,60), gorny zaczep na hk - ZALOZENIE
