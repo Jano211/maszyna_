@@ -298,6 +298,7 @@ void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data
 	Data.rope_shift = Current.rope_shift;
 	Data.cord_shift = Current.cord_shift;
 	Data.cord_band = Current.cord_band;
+	Data.stay_hole = Current.stay_hole;
 	Data.cord_band_at = Current.cord_band_at;
 	if (false == Current.above_pole)
 		return;
@@ -8028,7 +8029,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 		return;
 	// the adjustments of the cantilever and the pole: folded, the title says when one of them is set
 	{
-		auto const set{data->stay_shift != 0.0 || data->strut_shift != 0.0 || data->turn_by_hand != 0.0 || data->lean != 0.0 || has_brace(*data) || data->stay_gap != 0.0 || data->arms_spread != 0.0 || data->rope_shift != 0.0 || data->cord_shift != 0.0 || false == data->cord_band.empty()
+		auto const set{data->stay_shift != 0.0 || data->strut_shift != 0.0 || data->turn_by_hand != 0.0 || data->lean != 0.0 || has_brace(*data) || data->stay_gap != 0.0 || data->arms_spread != 0.0 || data->rope_shift != 0.0 || data->cord_shift != 0.0 || false == data->cord_band.empty() || data->stay_hole != 0
 		               || std::any_of(data->overrides.begin(), data->overrides.end(), [](auto const &O) { return O.first == "strut" || O.first == "stay" || O.first == "steady"; })};
 		if (ImGui::CollapsingHeader(set ? STR_C("Adjustments (set)###adjustments") : STR_C("Adjustments###adjustments")))
 		{
@@ -8220,6 +8221,34 @@ void catenary_editor::render_catenary_cantilever_ui()
 				corrected(STR_C("Messenger along the cantilever"), STR_C("The messenger (and its clamp on the tube) moved across the track along the cantilever, towards the pole (+) or away from it (-)"), data->rope_shift, 0.05, -2.5f, 2.5f, &catenary::suspension::rope_shift);
 				if (scheme != nullptr && std::any_of(scheme->roles.begin(), scheme->roles.end(), [](auto const &R) { return R.second.compare(0, 4, "6011") == 0 || R.second.compare(0, 4, "6111") == 0; }))
 					corrected(STR_C("Cord clamp along the steady arm"), STR_C("The clamp of the cord on the steady arm tube 6011 / 6111 moved along it, towards the pole (+) or away from it (-)"), data->cord_shift, 0.05, -2.5f, 2.5f, &catenary::suspension::cord_shift);
+				// the hole of the stay end (4400) the pin goes through (the user 2026-11-18): automatic or forced
+				if (scheme != nullptr && scheme->roles.count("stay_end"))
+					if (auto const *end{catalog->part(scheme->roles.at("stay_end"))}; end != nullptr && end->holes.size() > 1)
+					{
+						auto const chosen{tool.probe.values.count("stay_clamp.hole") ? static_cast<int>(tool.probe.values.at("stay_clamp.hole")) + 1 : 0};
+						auto const shown{data->stay_hole > 0 ? format(STR_C("hole %d"), data->stay_hole) : format(STR_C("automatic (hole %d)"), chosen)};
+						ImGui::PushItemWidth(160.0f);
+						if (ImGui::BeginCombo(format(STR_C("Pin of %s"), end->name.c_str()).c_str(), shown.c_str()))
+						{
+							if (ImGui::Selectable(format(STR_C("automatic (hole %d)"), chosen).c_str(), data->stay_hole == 0))
+							{
+								auto changed{*data};
+								changed.stay_hole = 0;
+								apply(changed, false);
+							}
+							for (std::size_t hole = 0; hole < end->holes.size(); ++hole)
+								if (ImGui::Selectable(format(STR_C("hole %d  (%.3f m from the eye)"), static_cast<int>(hole + 1), end->holes[hole]).c_str(), data->stay_hole == static_cast<int>(hole + 1)))
+								{
+									auto changed{*data};
+									changed.stay_hole = static_cast<int>(hole + 1);
+									apply(changed, false);
+								}
+							ImGui::EndCombo();
+						}
+						ImGui::PopItemWidth();
+						if (ImGui::IsItemHovered())
+							ImGui::SetTooltip("%s", STR_C("The hole of the stay end the pin goes through, from the eye: automatic - the one which puts the stay clamp nearest to the cards; a forced one moves the stay clamp along the strut"));
+					}
 				// the cord from the steady arm to a band on the strut instead of the messenger clamp (the drop at Brochow)
 				if (scheme != nullptr && scheme->roles.count("cord") && scheme->roles.count("strut"))
 				{
