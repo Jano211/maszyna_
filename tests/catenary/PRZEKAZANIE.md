@@ -2,6 +2,16 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-18 01:15 – 128x z łapkami
+
+Użytkownik 18.11: 1280–1286 wstawiały się bez łapek. W danych (G: i repo, od generatora 17.10) karty 128x nie miały roli `arms`
+(`arms_for` nie znał grupy 128) i wskazywały puste rejestracje 112x-3/-4. Z tabel kart (tom 3, `z- KATALOG 3 -z.pdf` s. 161–167,
+23-1280…1286): wyk. 3 i 4 – poz. 25 6206-1 ×2, poz. 5 4110-1 ×2, poz. 12 4260-2 (ramiona podwójne, odsuw od słupa). Dopisane:
+`role arms 6206-1111 role arms_bracket 4260-02`, rejestracja `126x` (rura 0,2880 – ucho 4260 w punkcie zawieszenia 6206-1, obejma
+linki −1,35 jak 126x), 1280 `mount steady 0.2880` (jak 1260). Solver: 1280–1286 wyk. 3/4 – 18 części, 5 ramion (para + 4110 +
+wspornik), bez ostrzeżeń. G: `data\traction_cantilevers.txt` md5 1de397061fd393d01b033206f85b904f (CRLF); repo tests/catenary/data
+(LF) i `etap0/gen_cantilevers.py` (arms_for grupy 128, rejestracja 126x) zgodne.
+
 ## START TUTAJ – 2026-11-18 00:45 – dowolnie wiele wysięgników na słupie / zwisie
 
 **Użytkownik 18.11:** parasol, rozstawione, w osi, zagnieżdżone – każde swoim tokiem, niezależnie; wspólne tylko obiekty nadrzędne
