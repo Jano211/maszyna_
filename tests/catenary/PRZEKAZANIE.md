@@ -2,6 +2,14 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-18 01:25 – zakresy ±2,5 m, opaska w 128x
+
+- Zakresy (użytkownik 18.11, „1 m nadal za mało”): stay_shift, strut_shift, rope_shift, cord_shift ±2,5 m; stay_gap i arms_spread
+  0…2,5 m (plik, suwaki, wpasowanie zagnieżdżonego). Dobór rury przy przesuniętym mocowaniu: 12 najbliższych długości z rodziny
+  (było 7).
+- Linka na opaskę w 128x / 120x (linka V do liny, `vee`): przy `cord_band` jedna linka od obejmy na wysięgu do ucha opaski zamiast
+  V (`assembler::cord_band`, wspólne dla `stretch` i `vee`). Nie wiadomo, czy w terenie przy opasce zostaje V – zapytane.
+
 ## START TUTAJ – 2026-11-18 01:15 – 128x z łapkami
 
 Użytkownik 18.11: 1280–1286 wstawiały się bez łapek. W danych (G: i repo, od generatora 17.10) karty 128x nie miały roli `arms`

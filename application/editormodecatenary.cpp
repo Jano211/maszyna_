@@ -3481,7 +3481,7 @@ bool catenary_editor::catenary_nested_fit(std::size_t const Index, bool const Qu
 	// moved in only as far as needed: down from under the top mount of the outer one, up from over its bottom mount (the shifts
 	// pick the stay and the strut from their families, so the result is probed again)
 	auto changed{*innerdata};
-	auto const clamp = [](double const Value) { return std::clamp(Value, -1.0, 1.0); };
+	auto const clamp = [](double const Value) { return std::clamp(Value, -2.5, 2.5); };
 	if (innerstay > outerstay - kNestedGap)
 		changed.stay_shift = clamp(changed.stay_shift + (outerstay - kNestedGap) - innerstay);
 	if (innerstrut < outerstrut + kNestedGap)
@@ -8018,7 +8018,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 						catenary_nested_fit(selected, false);
 					}
 					if (ImGui::IsItemHovered())
-						ImGui::SetTooltip("%s", STR_C("The top and bottom mounts of the inner cantilever go between those of the outer one (shifts of the mounts, up to 1 m)"));
+						ImGui::SetTooltip("%s", STR_C("The top and bottom mounts of the inner cantilever go between those of the outer one (shifts of the mounts, up to 2.5 m)"));
 				}
 			}
 		}
@@ -8050,13 +8050,13 @@ void catenary_editor::render_catenary_cantilever_ui()
 					}
 				}
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("The top (stay) mount up or down from the card by up to 1 m, e.g. where something is in the way on the pole; the stay tube or rod is taken shorter or longer to fit"));
+					ImGui::SetTooltip("%s", STR_C("The top (stay) mount up or down from the card by up to 2.5 m, e.g. where something is in the way on the pole; the stay tube or rod is taken shorter or longer to fit"));
 				if (enabled)
 				{
 					ImGui::SameLine();
 					auto shift{static_cast<float>(data->stay_shift)};
 					ImGui::PushItemWidth(160.0f);
-					if (ImGui::SliderFloat(STR_C("m##stayshift"), &shift, -1.0f, 1.0f, "%+.2f"))
+					if (ImGui::SliderFloat(STR_C("m##stayshift"), &shift, -2.5f, 2.5f, "%+.2f"))
 					{
 						shift = std::round(shift * 100.0f) / 100.0f;
 						auto changed{*data};
@@ -8091,13 +8091,13 @@ void catenary_editor::render_catenary_cantilever_ui()
 					}
 				}
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("The bottom (strut) mount up or down from the card by up to 1 m, e.g. where something is in the way on the pole; the strut tube is taken shorter or longer to fit"));
+					ImGui::SetTooltip("%s", STR_C("The bottom (strut) mount up or down from the card by up to 2.5 m, e.g. where something is in the way on the pole; the strut tube is taken shorter or longer to fit"));
 				if (enabled)
 				{
 					ImGui::SameLine();
 					auto shift{static_cast<float>(data->strut_shift)};
 					ImGui::PushItemWidth(160.0f);
-					if (ImGui::SliderFloat(STR_C("m##strutshift"), &shift, -1.0f, 1.0f, "%+.2f"))
+					if (ImGui::SliderFloat(STR_C("m##strutshift"), &shift, -2.5f, 2.5f, "%+.2f"))
 					{
 						shift = std::round(shift * 100.0f) / 100.0f;
 						auto changed{*data};
@@ -8206,7 +8206,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 					}
 				}
 				if (scheme != nullptr && scheme->roles.count("stay_clamp"))
-					corrected(STR_C("Stay clamp 4070 along the strut"), STR_C("The stay clamp from the head clamp along the strut, set by hand instead of the 0.10-0.30 m of the cards"), data->stay_gap, 0.15, 0.02f, 1.0f, &catenary::suspension::stay_gap);
+					corrected(STR_C("Stay clamp 4070 along the strut"), STR_C("The stay clamp from the head clamp along the strut, set by hand instead of the 0.10-0.30 m of the cards"), data->stay_gap, 0.15, 0.02f, 2.5f, &catenary::suspension::stay_gap);
 				// the arms of a set made of members (127x and alike): half their spacing along the track
 				if (scheme != nullptr && scheme->roles.count("arms"))
 					if (auto const *set{catalog->part(scheme->roles.at("arms"))}; set != nullptr && false == set->members.empty())
@@ -8215,11 +8215,11 @@ void catenary_editor::render_catenary_cantilever_ui()
 						for (auto const &member : set->members)
 							start = std::max(start, std::abs(member.position[0]));
 						if (start > 0.0)
-							corrected(STR_C("Spacing of the arms (half)"), STR_C("The arms of the set further apart or closer along the track: half of their spacing (from the middle to each of them)"), data->arms_spread, start, 0.02f, 0.8f, &catenary::suspension::arms_spread);
+							corrected(STR_C("Spacing of the arms (half)"), STR_C("The arms of the set further apart or closer along the track: half of their spacing (from the middle to each of them)"), data->arms_spread, start, 0.02f, 2.5f, &catenary::suspension::arms_spread);
 					}
-				corrected(STR_C("Messenger along the cantilever"), STR_C("The messenger (and its clamp on the tube) moved across the track along the cantilever, towards the pole (+) or away from it (-)"), data->rope_shift, 0.05, -0.8f, 0.8f, &catenary::suspension::rope_shift);
+				corrected(STR_C("Messenger along the cantilever"), STR_C("The messenger (and its clamp on the tube) moved across the track along the cantilever, towards the pole (+) or away from it (-)"), data->rope_shift, 0.05, -2.5f, 2.5f, &catenary::suspension::rope_shift);
 				if (scheme != nullptr && std::any_of(scheme->roles.begin(), scheme->roles.end(), [](auto const &R) { return R.second.compare(0, 4, "6011") == 0 || R.second.compare(0, 4, "6111") == 0; }))
-					corrected(STR_C("Cord clamp along the steady arm"), STR_C("The clamp of the cord on the steady arm tube 6011 / 6111 moved along it, towards the pole (+) or away from it (-)"), data->cord_shift, 0.05, -0.8f, 0.8f, &catenary::suspension::cord_shift);
+					corrected(STR_C("Cord clamp along the steady arm"), STR_C("The clamp of the cord on the steady arm tube 6011 / 6111 moved along it, towards the pole (+) or away from it (-)"), data->cord_shift, 0.05, -2.5f, 2.5f, &catenary::suspension::cord_shift);
 				// the cord from the steady arm to a band on the strut instead of the messenger clamp (the drop at Brochow)
 				if (scheme != nullptr && scheme->roles.count("cord") && scheme->roles.count("strut"))
 				{

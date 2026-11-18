@@ -374,32 +374,32 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else { report( entry.name, "\"pull_from\" needs exactly one name: the pull-off on the next track this one goes on from" ); good = false; }
             }
             else if( key == "stay_shift" ) {
-                if( list.size() == 1 && to_number( list[ 0 ], entry.stay_shift ) && std::abs( entry.stay_shift ) <= 1.0 + 1e-9 ) {}
-                else { report( entry.name, "\"stay_shift\" needs one number from -1 to 1: the top mount moved up (+) or down (-), metres" ); entry.stay_shift = 0.0; good = false; }
+                if( list.size() == 1 && to_number( list[ 0 ], entry.stay_shift ) && std::abs( entry.stay_shift ) <= 2.5 + 1e-9 ) {}
+                else { report( entry.name, "\"stay_shift\" needs one number from -2.5 to 2.5: the top mount moved up (+) or down (-), metres" ); entry.stay_shift = 0.0; good = false; }
             }
             else if( key == "strut_shift" ) {
-                if( list.size() == 1 && to_number( list[ 0 ], entry.strut_shift ) && std::abs( entry.strut_shift ) <= 1.0 + 1e-9 ) {}
-                else { report( entry.name, "\"strut_shift\" needs one number from -1 to 1: the bottom (strut) mount moved up (+) or down (-), metres" ); entry.strut_shift = 0.0; good = false; }
+                if( list.size() == 1 && to_number( list[ 0 ], entry.strut_shift ) && std::abs( entry.strut_shift ) <= 2.5 + 1e-9 ) {}
+                else { report( entry.name, "\"strut_shift\" needs one number from -2.5 to 2.5: the bottom (strut) mount moved up (+) or down (-), metres" ); entry.strut_shift = 0.0; good = false; }
             }
             else if( key == "stay_gap" ) {
-                if( list.size() == 1 && to_number( list[ 0 ], entry.stay_gap ) && entry.stay_gap >= 0.0 && entry.stay_gap <= 1.0 + 1e-9 ) {}
-                else { report( entry.name, "\"stay_gap\" needs one number from 0 to 1: the stay clamp from the head clamp along the strut, metres" ); entry.stay_gap = 0.0; good = false; }
+                if( list.size() == 1 && to_number( list[ 0 ], entry.stay_gap ) && entry.stay_gap >= 0.0 && entry.stay_gap <= 2.5 + 1e-9 ) {}
+                else { report( entry.name, "\"stay_gap\" needs one number from 0 to 2.5: the stay clamp from the head clamp along the strut, metres" ); entry.stay_gap = 0.0; good = false; }
             }
             else if( key == "arms_spread" ) {
-                if( list.size() == 1 && to_number( list[ 0 ], entry.arms_spread ) && entry.arms_spread >= 0.0 && entry.arms_spread <= 1.0 + 1e-9 ) {}
-                else { report( entry.name, "\"arms_spread\" needs one number from 0 to 1: half the spacing of the arms of the set along the track, metres" ); entry.arms_spread = 0.0; good = false; }
+                if( list.size() == 1 && to_number( list[ 0 ], entry.arms_spread ) && entry.arms_spread >= 0.0 && entry.arms_spread <= 2.5 + 1e-9 ) {}
+                else { report( entry.name, "\"arms_spread\" needs one number from 0 to 2.5: half the spacing of the arms of the set along the track, metres" ); entry.arms_spread = 0.0; good = false; }
             }
             else if( key == "cord_band" ) {
                 if( list.size() == 2 && to_number( list[ 1 ], entry.cord_band_at ) && std::abs( entry.cord_band_at ) <= 3.0 + 1e-9 ) { entry.cord_band = list[ 0 ]; }
                 else { report( entry.name, "\"cord_band\" needs a part and a number from -3 to 3: the band on the strut the cord goes to and its distance from the head clamp (+ towards the pole), metres" ); entry.cord_band.clear(); good = false; }
             }
             else if( key == "cord_shift" ) {
-                if( list.size() == 1 && to_number( list[ 0 ], entry.cord_shift ) && std::abs( entry.cord_shift ) <= 1.0 + 1e-9 ) {}
-                else { report( entry.name, "\"cord_shift\" needs one number from -1 to 1: the cord clamp moved along the steady arm tube, towards the pole (+), metres" ); entry.cord_shift = 0.0; good = false; }
+                if( list.size() == 1 && to_number( list[ 0 ], entry.cord_shift ) && std::abs( entry.cord_shift ) <= 2.5 + 1e-9 ) {}
+                else { report( entry.name, "\"cord_shift\" needs one number from -2.5 to 2.5: the cord clamp moved along the steady arm tube, towards the pole (+), metres" ); entry.cord_shift = 0.0; good = false; }
             }
             else if( key == "rope_shift" ) {
-                if( list.size() == 1 && to_number( list[ 0 ], entry.rope_shift ) && std::abs( entry.rope_shift ) <= 1.0 + 1e-9 ) {}
-                else { report( entry.name, "\"rope_shift\" needs one number from -1 to 1: the messenger moved along the cantilever, towards the pole (+), metres" ); entry.rope_shift = 0.0; good = false; }
+                if( list.size() == 1 && to_number( list[ 0 ], entry.rope_shift ) && std::abs( entry.rope_shift ) <= 2.5 + 1e-9 ) {}
+                else { report( entry.name, "\"rope_shift\" needs one number from -2.5 to 2.5: the messenger moved along the cantilever, towards the pole (+), metres" ); entry.rope_shift = 0.0; good = false; }
             }
             else if( key == "turn_by_hand" ) {
                 if( list.size() == 1 && to_number( list[ 0 ], entry.turn_by_hand ) && std::abs( entry.turn_by_hand ) <= 30.0 + 1e-9 ) {}
