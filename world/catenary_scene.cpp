@@ -608,7 +608,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             fits.emplace_back( tube, candidates );
         }
     }
-    // górne mocowanie przesunięte (stay_shift, ±1 m - Jan 2026-10-26, zakres od 2026-11-18): odciąg (rura albo pręt) dobierany z tej samej rodziny części,
+    // górne mocowanie przesunięte (stay_shift, ±2,5 m - Jan 2026-10-26, zakres od 2026-11-18): odciąg (rura albo pręt) dobierany z tej samej rodziny części,
     // najbliższe długości najpierw (przy równej liczbie uwag zostaje karta); bez podmiany, gdy odciąg podano w scenerii
     if( data.stay_shift != 0.0 && scheme->roles.count( "stay" ) && std::none_of( data.overrides.begin(), data.overrides.end(), []( std::pair<std::string, std::string> const &O ) { return O.first == "stay"; } )
      && std::none_of( fits.begin(), fits.end(), []( auto const &Fit ) { return Fit.first == "stay"; } ) ) {
@@ -623,11 +623,11 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             }
             std::sort( sorted.begin(), sorted.end() );
             std::vector<std::string> candidates;
-            for( std::size_t index = 0; index < sorted.size() && index < 7; ++index ) { candidates.push_back( sorted[ index ].second ); }
+            for( std::size_t index = 0; index < sorted.size() && index < 12; ++index ) { candidates.push_back( sorted[ index ].second ); }   // do 12 najbliższych (przesuw do ±2,5 m)
             if( candidates.size() > 1 ) { fits.emplace_back( "stay", candidates ); }
         }
     }
-    // dolne mocowanie przesunięte (strut_shift, ±1 m - Jan 2026-11-04): ukośnik dobierany z tej samej rodziny części jak odciąg przy
+    // dolne mocowanie przesunięte (strut_shift, ±2,5 m - Jan 2026-11-04): ukośnik dobierany z tej samej rodziny części jak odciąg przy
     // stay_shift; bez podmiany, gdy ukośnik podano w scenerii albo dobiera go już zestaw izolatorów
     if( data.strut_shift != 0.0 && scheme->roles.count( "strut" ) && std::none_of( data.overrides.begin(), data.overrides.end(), []( std::pair<std::string, std::string> const &O ) { return O.first == "strut"; } )
      && std::none_of( fits.begin(), fits.end(), []( auto const &Fit ) { return Fit.first == "strut"; } ) ) {
@@ -642,7 +642,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             }
             std::sort( sorted.begin(), sorted.end() );
             std::vector<std::string> candidates;
-            for( std::size_t index = 0; index < sorted.size() && index < 7; ++index ) { candidates.push_back( sorted[ index ].second ); }
+            for( std::size_t index = 0; index < sorted.size() && index < 12; ++index ) { candidates.push_back( sorted[ index ].second ); }   // do 12 najbliższych (przesuw do ±2,5 m)
             if( candidates.size() > 1 ) { fits.emplace_back( "strut", candidates ); }
         }
     }

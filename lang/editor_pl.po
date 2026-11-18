@@ -12205,8 +12205,8 @@ msgstr "Zastrzał 6506 nie wchodzi w ten wysięgnik (ukośnik nigdzie nie zbliż
 msgid "The flat bar 6506 from the clamp 4210 on the steady arm up to the clamp 4760 on the strut, as on the cantilevers 102x; it goes where the gap between them fits. It doesn't fit on 70x, 73x, 74x, 77x, 78x, 1110, 1120, 1130, 1140, 1210-1240, 1260, 1280 (the strut doesn't come close enough to the steady arm)"
 msgstr "Płaskownik 6506 od obejmy 4210 na wysięgu pomocniczym do uchwytu 4760 na ukośniku, jak w wysięgnikach 102x; staje tam, gdzie odstęp między nimi pasuje. Nie wchodzi w 70x, 73x, 74x, 77x, 78x, 1110, 1120, 1130, 1140, 1210–1240, 1260, 1280 (ukośnik nie zbliża się dość do wysięgu pomocniczego)"
 
-msgid "The top (stay) mount up or down from the card by up to 1 m, e.g. where something is in the way on the pole; the stay tube or rod is taken shorter or longer to fit"
-msgstr "Górne mocowanie (odciągu) wyżej albo niżej niż w karcie, do 1 m, np. gdy coś na słupie przeszkadza; rura albo pręt odciągu dobierane krótsze lub dłuższe"
+msgid "The top (stay) mount up or down from the card by up to 2.5 m, e.g. where something is in the way on the pole; the stay tube or rod is taken shorter or longer to fit"
+msgstr "Górne mocowanie (odciągu) wyżej albo niżej niż w karcie, do 2,5 m, np. gdy coś na słupie przeszkadza; rura albo pręt odciągu dobierane krótsze lub dłuższe"
 
 msgid "m##stayshift"
 msgstr "m##stayshift"
@@ -12214,8 +12214,8 @@ msgstr "m##stayshift"
 msgid "Bottom mount moved"
 msgstr "Dolne mocowanie przesunięte"
 
-msgid "The bottom (strut) mount up or down from the card by up to 1 m, e.g. where something is in the way on the pole; the strut tube is taken shorter or longer to fit"
-msgstr "Dolne mocowanie (ukośnika) w górę lub w dół względem karty, do 1 m, np. gdy na słupie coś przeszkadza; rura ukośnika dobierana krótsza albo dłuższa"
+msgid "The bottom (strut) mount up or down from the card by up to 2.5 m, e.g. where something is in the way on the pole; the strut tube is taken shorter or longer to fit"
+msgstr "Dolne mocowanie (ukośnika) w górę lub w dół względem karty, do 2,5 m, np. gdy na słupie coś przeszkadza; rura ukośnika dobierana krótsza albo dłuższa"
 
 msgid "m##strutshift"
 msgstr "m##strutshift"
@@ -12925,8 +12925,8 @@ msgstr "Wewnętrzny mieści się w zewnętrznym"
 msgid "Fit inside"
 msgstr "Wpasuj do środka"
 
-msgid "The top and bottom mounts of the inner cantilever go between those of the outer one (shifts of the mounts, up to 1 m)"
-msgstr "Górne i dolne mocowanie wewnętrznego wysięgnika idą między mocowania zewnętrznego (przesunięcie mocowań, do 1 m)"
+msgid "The top and bottom mounts of the inner cantilever go between those of the outer one (shifts of the mounts, up to 2.5 m)"
+msgstr "Górne i dolne mocowanie wewnętrznego wysięgnika idą między mocowania zewnętrznego (przesunięcie mocowań, do 2,5 m)"
 
 msgid "Nested cantilever"
 msgstr "Wysięgnik zagnieżdżony"
