@@ -9,6 +9,9 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   (było 7).
 - Linka na opaskę w 128x / 120x (linka V do liny, `vee`): przy `cord_band` jedna linka od obejmy na wysięgu do ucha opaski zamiast
   V (`assembler::cord_band`, wspólne dla `stretch` i `vee`). Nie wiadomo, czy w terenie przy opasce zostaje V – zapytane.
+- Łapki zestawów z członów (127x, 6203-1111, 6206-1111 i podobne) przy `arms_spread`: każde ramię obracane wokół pionu w osi
+  przewodu tak, żeby jego punkt „holder” (mocowanie na rurze / linie) został tam, gdzie w danych zestawu (1270: ±0,053 m; przy
+  rozstawie 0,25 kąt 12,9°, przy 0,05 −0,2°).
 
 ## START TUTAJ – 2026-11-18 01:15 – 128x z łapkami
 

@@ -1136,10 +1136,24 @@ private:
                 cantilever_placement placement;
                 placement.role = setrole + "." + std::to_string( index + 1 );
                 placement.part = member.part;
-                placement.position[ 0 ] = side * ( spread > 0.0 && std::abs( member.position[ 0 ] ) > 1e-6 ? std::copysign( spread, member.position[ 0 ] ) : member.position[ 0 ] );
+                auto const moved { spread > 0.0 && std::abs( member.position[ 0 ] ) > 1e-6 };
+                auto const x { moved ? std::copysign( spread, member.position[ 0 ] ) : member.position[ 0 ] };
+                placement.position[ 0 ] = side * x;
                 placement.position[ 1 ] = wire.y + side * member.position[ 1 ];
                 placement.position[ 2 ] = wire.z + member.position[ 2 ];
-                auto const angle { member.yaw * 3.14159265358979323846 / 180.0 };
+                auto yaw { member.yaw };
+                // ramię rozsunięte (użytkownik 2026-11-18): obrócone wokół pionu w osi przewodu tak, żeby dalej celowało w swoje
+                // mocowanie na rurze - punkt "holder" ramienia zostaje tam, gdzie był w danych zestawu
+                if( moved ) {
+                    auto const *memberpart { m_catalog.part( member.part ) };
+                    auto const holder { memberpart != nullptr ? memberpart->points.find( "holder" ) : decltype( memberpart->points.end() )() };
+                    if( memberpart != nullptr && memberpart->kind == "arms" && holder != memberpart->points.end() && holder->second.first > 1e-3 ) {
+                        auto const reach { holder->second.first };
+                        auto const fixed { member.position[ 0 ] - reach * std::sin( member.yaw * 3.14159265358979323846 / 180.0 ) };
+                        yaw = std::asin( std::clamp( ( x - fixed ) / reach, -1.0, 1.0 ) ) * 180.0 / 3.14159265358979323846;
+                    }
+                }
+                auto const angle { yaw * 3.14159265358979323846 / 180.0 };
                 auto const cosine { std::cos( angle ) };
                 auto const sine { std::sin( angle ) };
                 double const rotation[ 9 ] { cosine, -sine, 0.0,  sine, cosine, 0.0,  0.0, 0.0, 1.0 };
