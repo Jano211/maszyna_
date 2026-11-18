@@ -74,6 +74,8 @@ struct suspension {
     // cord_band - linka od obejmy na wysięgu pomocniczym idzie nie do uchwytu liny nośnej, tylko do opaski na ukośniku (zwis na
     // Brochowie, użytkownik 2026-11-18): część opaski i jej odległość od uchwytu głównego wzdłuż ukośnika (+ w stronę konstrukcji,
     // - za uchwyt), metry; pusta = jak w karcie. Wpis "cord_band <część> <m>"
+    // stay_hole - otwór końcówki odciągu (4400), w który wchodzi sworzeń, liczony od ucha od 1; 0 = dobór solvera. Wpis "stay_hole <n>"
+    int stay_hole { 0 };
     std::string cord_band;
     double cord_band_at { 0.0 };
     bool   has_spread { false };

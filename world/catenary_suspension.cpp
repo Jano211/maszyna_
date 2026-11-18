@@ -34,7 +34,7 @@ std::string normalize_path( std::string Path ) {
 
 // słowa kluczowe wewnątrz wpisu podwieszenia
 bool is_keyword( std::string const &Token ) {
-    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "strut_shift", "turn_by_hand", "lean", "pull_from", "stay_gap", "arms_spread", "rope_shift", "cord_shift", "cord_band", "endsuspension" };
+    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "strut_shift", "turn_by_hand", "lean", "pull_from", "stay_gap", "arms_spread", "rope_shift", "cord_shift", "cord_band", "stay_hole", "endsuspension" };
     return keywords.find( Token ) != keywords.end();
 }
 
@@ -389,6 +389,11 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 if( list.size() == 1 && to_number( list[ 0 ], entry.arms_spread ) && entry.arms_spread >= 0.0 && entry.arms_spread <= 2.5 + 1e-9 ) {}
                 else { report( entry.name, "\"arms_spread\" needs one number from 0 to 2.5: half the spacing of the arms of the set along the track, metres" ); entry.arms_spread = 0.0; good = false; }
             }
+            else if( key == "stay_hole" ) {
+                double hole { 0.0 };
+                if( list.size() == 1 && to_number( list[ 0 ], hole ) && hole >= 0.0 && hole <= 50.0 ) { entry.stay_hole = static_cast<int>( hole ); }
+                else { report( entry.name, "\"stay_hole\" needs one number: the hole of the stay end the pin goes through, from the eye, from 1" ); entry.stay_hole = 0; good = false; }
+            }
             else if( key == "cord_band" ) {
                 if( list.size() == 2 && to_number( list[ 1 ], entry.cord_band_at ) && std::abs( entry.cord_band_at ) <= 3.0 + 1e-9 ) { entry.cord_band = list[ 0 ]; }
                 else { report( entry.name, "\"cord_band\" needs a part and a number from -3 to 3: the band on the strut the cord goes to and its distance from the head clamp (+ towards the pole), metres" ); entry.cord_band.clear(); good = false; }
@@ -495,6 +500,7 @@ std::string write_suspension( suspension const &Entry ) {
     if( Entry.arms_spread != 0.0 ) { text += " arms_spread " + number( Entry.arms_spread, 3 ); }
     if( Entry.rope_shift != 0.0 ) { text += " rope_shift " + number( Entry.rope_shift, 3 ); }
     if( Entry.cord_shift != 0.0 ) { text += " cord_shift " + number( Entry.cord_shift, 3 ); }
+    if( Entry.stay_hole != 0 ) { text += " stay_hole " + std::to_string( Entry.stay_hole ); }
     if( false == Entry.cord_band.empty() ) { text += " cord_band " + Entry.cord_band + " " + number( Entry.cord_band_at, 3 ); }
     if( false == Entry.pull_from.empty() ) { text += " pull_from " + Entry.pull_from; }
     return text + " endsuspension";

@@ -13,6 +13,11 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   w stronę ucha liny: kąt tak, żeby punkt holder zestawu leżał na prostej od przewodu do ucha liny (`arms.tilt` w wynikach; 1270
   przy mocowaniu +0,3 m: 8,6°). Rozstaw lewo–prawo (`arms_spread`) bez zmiany kąta wokół pionu – użytkownik: „lewo prawo działało”
   (krótko było obracanie wokół pionu – cofnięte).
+- `stay_hole <n>` – otwór końcówki odciągu (4400), w który wchodzi sworzeń, od ucha od 1 (klucz `#stay_end_hole`, `chain` w assemblerze
+  bierze tylko ten otwór i nie ostrzega o odstępie); w edytorze lista „Sworzeń w 4400-xx”, automatycznie pokazuje otwór z
+  `stay_clamp.hole`. 1112-1: auto otwór 5 (0,267 m), wymuszone 1…4: 0,586 / 0,501 / 0,420 / 0,342 m.
+- Uchwyt liny 4140 przy linie na opaskę (`cord_band`): wisi swobodnie – linia hak–koniec pionowo (było: w linii z linką, której już
+  tam nie ma).
 
 ## START TUTAJ – 2026-11-18 01:15 – 128x z łapkami
 

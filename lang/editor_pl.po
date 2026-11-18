@@ -13240,3 +13240,18 @@ msgstr "Linka z wysięgu pomocniczego idzie do opaski na ukośniku, a nie do uch
 
 msgid "m from the head clamp"
 msgstr "m od uchwytu głównego"
+
+msgid "hole %d"
+msgstr "otwór %d"
+
+msgid "automatic (hole %d)"
+msgstr "automatycznie (otwór %d)"
+
+msgid "Pin of %s"
+msgstr "Sworzeń w %s"
+
+msgid "hole %d  (%.3f m from the eye)"
+msgstr "otwór %d  (%.3f m od ucha)"
+
+msgid "The hole of the stay end the pin goes through, from the eye: automatic - the one which puts the stay clamp nearest to the cards; a forced one moves the stay clamp along the strut"
+msgstr "Otwór końcówki odciągu, w który wchodzi sworzeń, licząc od ucha: automatycznie – ten, który stawia uchwyt odciągu najbliżej kart; wymuszony przesuwa uchwyt odciągu po ukośniku"

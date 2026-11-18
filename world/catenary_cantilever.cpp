@@ -1284,7 +1284,10 @@ private:
             if( length( hook - end ) < 1e-4 ) { fail( "part \"" + hung.name + "\" has no \"hook\" and \"end\" points" ); }
             auto const axis { unit( hook - end ) };
             auto const origin { point( w[ 1 ] ) };
-            auto const pull { unit( origin - point( w[ 2 ] ) ) };
+            // linka poszła na opaskę na ukośniku (korekta z terenu): uchwyt liny bez linki wisi swobodnie, pionowo pod hakiem
+            // (użytkownik 2026-11-18: ma wisieć tam, gdzie ciągnie go siła - ciężar liny)
+            auto const loose { role == "messenger_clamp" && m_input.overrides.count( "#cord_band" ) > 0 };
+            auto const pull { loose ? vec2 { 0.0, 1.0 } : unit( origin - point( w[ 2 ] ) ) };
             auto const turn { std::atan2( pull.z, pull.y ) - std::atan2( axis.z, axis.y ) };
             m_points[ role + ".hook" ] = origin + rotate( hook, turn );
             m_points[ role + ".end" ] = origin + rotate( end, turn );
@@ -1501,7 +1504,14 @@ private:
             auto bestdistance { 0.0 };
             auto bestpenalty { 0.0 };
             auto bestfits { false };
+            // otwór wymuszony we wpisie (korekta z terenu, użytkownik 2026-11-18: w który otwór 4400 wchodzi sworzeń); 0 - dobór
+            auto forced { -1 };
+            if( auto const hole { m_input.overrides.find( "#" + w[ 5 ] + "_hole" ) }; hole != m_input.overrides.end() ) {
+                forced = std::stoi( hole->second ) - 1;
+                if( forced < 0 || forced >= static_cast<int>( holes.holes.size() ) ) { forced = -1; }
+            }
             for( std::size_t hole = 0; hole < holes.holes.size(); ++hole ) {
+                if( forced >= 0 && static_cast<int>( hole ) != forced ) { continue; }
                 auto const reach { base + holes.holes[ hole ] };
                 auto const discriminant { along * along - dot( pinbase, pinbase ) + reach * reach };
                 if( discriminant < 0.0 ) { continue; }
@@ -1526,7 +1536,7 @@ private:
             }
             else {
                 chosen = bestdistance;
-                if( false == bestfits ) {
+                if( false == bestfits && forced < 0 ) {
                     warn( "no hole of \"" + holes.name + "\" puts the " + newstation + " " + to_text( gapmin, 2 ) + "-" + to_text( gapmax, 2 ) + " m from the " + w[ 6 ] + ", the nearest gives " + to_text( reference - chosen ) + " m" );
                 }
             }
