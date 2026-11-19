@@ -13,6 +13,11 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   md5 10a9926ac198b49bc81081e20e6a649e (na G: są też wpisy geoportali, których nie ma na siec-gl46 – dopisywać, nie nadpisywać).
 - ZADANIA.md: nowa sekcja „nietypowe z terenu” (zwisy bez niczego / z samymi mocowaniami / z wiszącymi izolatorami, to samo na
   słupach, konsolety bez wysięgników, zwisy luzem pod mostami i w halach) – część ręcznego składania wysięgników.
+- Izolator sekcyjny żywiczny w sieciach z dwiema linami (32, 35): 7150 + 2×5120 także w dolnej linie (`catenary_span_point(..., Rope)`
+  – 1 = dolna lina z przęsła). Linki „V” zostają przy górnej. W exe NIESPRAWDZONE (atrapa testów nie liczy przęseł).
+- Przegląd MODELE_DO_ZROBIENIA (19.11): poprawki z sekcji L już zrobione w modelach; 0455 – modele uchwytów są, brak tylko słupów
+  (wyk. 1–3, 8); karty 0331/0333 przeczytane (części w MODELE.md G); 9811-1 to linka. Kopia na G: md5 4eaa4c1f79d1491ee8b112b5f81068cf.
+  Pytania do użytkownika: izolowane przęsło naprężenia – jakie izolatory (karta 0060 rysuje tylko „izolację” przy K1).
 - Składnia exe w nowym kontenerze: `/tmp/syn.sh` (opis w sekcji 16.11 02:00 i niżej 25.10) – trzeba odtworzyć.
 
 ## START TUTAJ – 2026-11-18 01:25 – zakresy ±2,5 m, opaska w 128x

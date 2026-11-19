@@ -657,23 +657,25 @@ catenary_span_gaps( TTraction &Traction, double const *Contact, double const *Me
 
 // punkt liny nośnej albo osi przewodów jezdnych w odległości Along w planie od pierwszego końca (średnia z przewodów, które tam są)
 bool
-catenary_span_point( TTraction &Traction, double const Along, bool const Messenger, glm::dvec3 &Point ) {
+catenary_span_point( TTraction &Traction, double const Along, bool const Messenger, glm::dvec3 &Point, int const Rope ) {
     if( definition( Traction ) == nullptr ) { return false; }
     catenary::span_geometry geometry;
     if( false == build( Traction, geometry, false ) ) { return false; }
     auto const kind { Messenger ? catenary::element_kind::messenger : catenary::element_kind::contact };
     double sum[ 3 ] { 0.0, 0.0, 0.0 };
     int count { 0 };
+    int skip { Messenger ? Rope : 0 };  // liny nośne w kolejności z przęsła: górna, potem dolna
     for( auto const &element : geometry.elements ) {
         if( element.kind != kind ) { continue; }
         auto const a { plan_along( Traction, element.from ) }, b { plan_along( Traction, element.to ) };
         if( std::abs( b - a ) < 1e-9 || Along < std::min( a, b ) || Along > std::max( a, b ) ) { continue; }
+        if( skip > 0 ) { --skip; continue; }
         auto const t { ( Along - a ) / ( b - a ) };
         sum[ 0 ] += element.from.x + ( element.to.x - element.from.x ) * t;
         sum[ 1 ] += element.from.y + ( element.to.y - element.from.y ) * t;
         sum[ 2 ] += element.from.z + ( element.to.z - element.from.z ) * t;
         ++count;
-        // lina nośna: pierwsza (górna) wystarczy - druga lina biegnie obok niej
+        // lina nośna: tylko ta, o którą pytano
         if( Messenger ) { break; }
     }
     if( count == 0 ) { return false; }

@@ -1,4 +1,4 @@
-# Modele do zrobienia – sieć trakcyjna (stan 2026-11-16 wieczór)
+# Modele do zrobienia – sieć trakcyjna (stan 2026-11-19 wieczór)
 
 Lista od A do Z: wszystko, czego kod albo dane wołają, a modelu nie ma (bryły zastępcze, pominięte części), plus to, co dojdzie
 z zasilaniem. Sprawdzone z `G:\Maszyna2510\models\siec_trakcyjna\components` i `slupy` (16.11). Kopia na G: w
@@ -42,7 +42,10 @@ Są: 1491–1493 (pale), 161x (1611/1613/1614/1617), 1665–1667, 1701, maszty b
       i w środek obejmy (od strony −X, obrócony jak w modelu). Kod: ten punkt i obrót modelu obracane wokół osi Z 5060, 4 pręty co 90°,
       przesunięte o 45° od ucha 5060 (-X) – na karcie 0454 widać w rzucie 2 pręty, nie 3; w osiach przedni wchodziłby w ucho.
       Zdjęcia z terenu brak (szukane w GOP) – zmienić, jeśli się znajdzie.
-- [ ] Mocowania do słupa wg 33-0455 – przypisanie reszty wykonań do słupów (modele 5100 są).
+- [~] Mocowania do słupa wg 33-0455 – przypisanie reszty wykonań do słupów: modele uchwytów są WSZYSTKIE (4510, 4520, 4530, 4560,
+      4570, 5100); w danych są już wyk. 3 (1701), 4/5 (nogi bramek), 6 (1901), 7 (166x), 11/12 (161x). Brak tylko słupów: wyk. 1–3 to
+      indywidualne słupy stalowe C140 / C160–180 / C200 (stare 150x/160x), wyk. 8 – dwuteowniki I220–240 (jeśli będą). Same dane, bez
+      modeli uchwytów (2026-11-19).
 - [ ] Kotwienie środkowe: zaciski 5560 / 5570 na linie nośnej, złączka 6410 na przewodzie, uchwyt 4590 (0416, do dźwigara bramki);
       obejma liny kotwienia na teowniku bez siodła (dziś drugi 4160-01).
 - [ ] Uchwyty kotwień 4580 (wspólne z D).
@@ -61,18 +64,26 @@ Są: 1491–1493 (pale), 161x (1611/1613/1614/1617), 1665–1667, 1701, maszty b
 ## F. Odciągi sieci (0311–0326)
 - [ ] 6303-7 końcówka liny odciągowej na linie nośnej; 5640-1 zacisk (odciągi pośrednie); 5270-3 zaciski (razem z kauszą, po 2–3,
       jak na gruncie); 6301-3 kausza; w 0326 dodatkowo 6301-1, 6303-1, 6311-1 ×2.
-- [ ] Lina odciągowa Cu 35 (9811-3) – dziś 4490-00 pogrubiony; do decyzji osobny model / kolor miedzi. 9811-1 (0326) – co to jest.
+- [ ] Lina odciągowa Cu 35 (9811-3) – dziś 4490-00 pogrubiony; do decyzji osobny model / kolor miedzi. 9811-1 (0326) – to linka (rodzina 9811 to linki; w 1081 jedna 9811-1 2,40 m), rysuje ją kod jak 9811-3 – model
+      niepotrzebny (2026-11-19).
 
 ## G. Przęsła: skrzyżowania, łączniki, izolowane przęsła naprężenia
 - [ ] ★ 5380-1 zacisk ogranicznika 0561 (skrzyżowania nad rozjazdami, dziś prostopadłościany) – odcinek przewodu robi kod.
 - [ ] Łącznik międzysekcyjny 33-0640: zaciski 6605 (liny nośne) i 6601 (przewód jezdny) – te same pójdą do połączeń przez odłącznik (K).
 - [ ] Izolowane przęsło naprężenia (0060/0062/0078): izolatory w przewodzie jezdnym i w linie nośnej schodzących do kotwienia (bryły).
-- [ ] 0331 / 0333 ograniczniki uniesienia na mostach i dziwnych konstrukcjach (karty nieczytane).
+- [ ] 0331 / 0333 ograniczniki uniesienia (tom 1 s. 79–80, przeczytane 2026-11-19):
+      - 33-0331 „ograniczenie uniesienia sieci”: cięgno min 3,40 m – 4420-1, 4720-1 ×3, 7020-1 ×2 (izolatory na obu końcach), linka
+        9811-3 3,50 m z kauszami 6301-3 ×2 i zaciskami 5270-3 ×4, pośrodku 6313-3 (osłona?). Brakuje modeli: 6313-3 (+ 6301-3, 5270-3
+        jak w F). Reszta jest.
+      - 33-0333 „ogranicznik uniesienia sieci”: zderzak 4970-1 (rura 1200 mm nad przewodem, poziomo) skręcony na sztywno z izolatorem
+        7010-1, ~380 mm od mocowania; u góry płaskownik z dwiema fasolkami do konstrukcji (mostu). Brakuje modelu 4970-1 (z płytą
+        mocującą?) – 7010-01 jest. Kod: wstawianie pod konstrukcją nad przęsłem (jak zwisy luzem z ZADANIA.md).
 
 ## H. Izolatory sekcyjne
 Są: 7500-01, 7500-02, 7230-01, 7210-01, 7150-01, 5120-01 (użytkownik 16.11: „tyle wystarczy + linki”).
 - [ ] 7510 (karta 0440) – pominięty, brak modelu.
-- [ ] Izolator żywiczny w sieciach z dwiema linami nośnymi (32, 35) – dziś tylko w górnej linie (kod, nie model).
+- [x] Izolator żywiczny w sieciach z dwiema linami nośnymi (32, 35) – 2026-11-19: 7150 z zaciskami 5120 w obu liniach (kod; linki
+      podwieszające przy górnej). W exe niesprawdzone.
 
 ## I. Uszynienie
 Są: 6120-01/02/04/07/08, 6130-00…05, 6131-01…05, 6132-01, 6840-01, 5180-07.
@@ -105,11 +116,11 @@ Później:
 - [ ] Połączenie odłącznika z uszynieniem 5880 (linka L50 – kod).
 
 ## L. Poprawki w istniejących modelach
-- [ ] 4330-05: drugi pusty `eye` w miejscu `hole_1`; 4340-01: dwa `slide_horizontal_min` (4340 i tak nieużywany).
-- [ ] 6208-03: zdublowany submodel bez `_LOD`.
+- [x] 4330-05: drugi pusty `eye` w miejscu `hole_1`; 4340-01: dwa `slide_horizontal_min` – poprawione (sprawdzone 2026-11-19).
+- [x] 6208-03: zdublowany submodel bez `_LOD` – poprawione (2026-11-19).
 - [ ] 4490-01: oś liny przesunięta o 1,4 mm w Y (model nieużywany – lina proceduralna).
-- [ ] 4550-05: tekstura na sztywno (`Map siec_trakcyjna\siec`) → `Map: -1`.
-- [?] 6506: plik nazywał się 6505-01.t3d – na dysku jest 6506-01.t3d, sprawdzić, czy stary można usunąć.
+- [x] 4550-05: tekstura na sztywno → `Map: -1` – poprawione (2026-11-19).
+- [x] 6506: na dysku tylko 6506-01.t3d, starego 6505-01 już nie ma (2026-11-19).
 - [?] 4270-01/02: zero w osi liny odciągowej, lina wzdłuż Y modelu (tak przyjęte w kodzie).
 
 ## M. Odłożone
