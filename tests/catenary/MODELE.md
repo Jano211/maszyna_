@@ -33,7 +33,7 @@ Są: 1491–1493 (pale), 161x (1611/1613/1614/1617), 1665–1667, 1701, maszty b
 - [ ] Zaciski linek ramion 106x/108x na linie nośnej: 6301 / 6311 / 5440 (dziś linki kończą się w osi liny).
 - [ ] 4580 konsoleta regulowana – dwa modele: rama przy słupie skalowana wzdłuż wystawania (1 m, zero na licu) + przód stały.
 - [ ] 4570 do nowych półbramek 190x (czeka na opisy).
-- [ ] 4690-04 dla masztów bramek 30xx/31xx (czekało na decyzję).
+- [x] 4690-04 dla masztów bramek 30xx/31xx – 2026-11-19: `steady_console 4690-04` w masztach (model był).
 - [ ] Mocowania wysięgników na słupach ETG (strunobeton).
 
 ## E. Kotwienia
@@ -70,7 +70,8 @@ Są: 1491–1493 (pale), 161x (1611/1613/1614/1617), 1665–1667, 1701, maszty b
 ## G. Przęsła: skrzyżowania, łączniki, izolowane przęsła naprężenia
 - [ ] ★ 5380-1 zacisk ogranicznika 0561 (skrzyżowania nad rozjazdami, dziś prostopadłościany) – odcinek przewodu robi kod.
 - [ ] Łącznik międzysekcyjny 33-0640: zaciski 6605 (liny nośne) i 6601 (przewód jezdny) – te same pójdą do połączeń przez odłącznik (K).
-- [ ] Izolowane przęsło naprężenia (0060/0062/0078): izolatory w przewodzie jezdnym i w linie nośnej schodzących do kotwienia (bryły).
+- [x] Izolowane przęsło naprężenia (0060/0062/0078): 2026-11-19 – 7150-01 z 2× 5120-01 w każdym przewodzie i każdej linie, 2 m od
+      słupa krzyżowego, z przerwą w przęśle (użytkownik: „chyba będzie spoko”). Modele są.
 - [ ] 0331 / 0333 ograniczniki uniesienia (tom 1 s. 79–80, przeczytane 2026-11-19):
       - 33-0331 „ograniczenie uniesienia sieci”: cięgno min 3,40 m – 4420-1, 4720-1 ×3, 7020-1 ×2 (izolatory na obu końcach), linka
         9811-3 3,50 m z kauszami 6301-3 ×2 i zaciskami 5270-3 ×4, pośrodku 6313-3 (osłona?). Brakuje modeli: 6313-3 (+ 6301-3, 5270-3

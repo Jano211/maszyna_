@@ -3849,6 +3849,8 @@ section_layout_of( scene_chain const &Chain, std::size_t const Span, catenary::c
 }
 
 // dopisek przęsła "gap": przewody jezdne i lina nośna nie rysowane w miejscu izolatora sekcyjnego (w planie od pierwszego końca)
+bool overlap_insulator_at( scene_chain const &Chain, std::size_t Span, double const *WireA, double const *WireB, double &Along );
+
 std::string
 section_gap_text( scene_chain const &Chain, std::size_t const Span, double const *WireA, double const *WireB ) {
     std::string text;
@@ -3862,13 +3864,71 @@ section_gap_text( scene_chain const &Chain, std::size_t const Span, double const
         text += " gap messenger " + text_number( center - layout.rope_half * scale, 3 ) + " " + text_number( center + layout.rope_half * scale, 3 );
         break;  // jedna przerwa na przęsło (dopisek ma jedną parę na przewód)
     }
+    // izolowane przęsło naprężenia: przerwa na izolatory 7150 z zaciskami w przewodach i linach (gdy nie ma tu izolatora sekcyjnego)
+    double along { 0.0 };
+    if( text.empty() && overlap_insulator_at( Chain, Span, WireA, WireB, along ) ) {
+        auto const plan { std::hypot( WireB[ 0 ] - WireA[ 0 ], WireB[ 2 ] - WireA[ 2 ] ) };
+        auto const length { std::max( std::hypot( plan, WireB[ 1 ] - WireA[ 1 ] ), 1e-3 ) };
+        auto const half { ( 0.5 * kSection7150 + kSection5120 ) * plan / length };
+        text += " gap contact " + text_number( along - half, 3 ) + " " + text_number( along + half, 3 );
+        text += " gap messenger " + text_number( along - half, 3 ) + " " + text_number( along + half, 3 );
+    }
     return text;
+}
+
+// część przęsła (izolator sekcyjny, izolatory przęsła naprężenia): zero w From, osią -X wzdłuż Direction - także ze spadkiem (użytkownik
+// 2026-11-16: izolator w linie nośnej ma iść w kącie opadu liny, nie poziomo); Y modelu zostaje poziomo, prostopadle; w Out położenia
+// punktów Points modelu w scenerii. Stawiana razem z przęsłem (span_parts)
+void
+span_part( scene_chain &Chain, std::size_t const Span, std::string const &Part, glm::dvec3 const &From, glm::dvec3 Direction, double const ( *Points )[ 3 ], int const Count, glm::dvec3 *Out ) {
+    auto const &data { Chain.data };
+    auto const *catalog { cantilevers() };
+    if( glm::length( Direction ) < 1e-6 ) { return; }
+    Direction = glm::normalize( Direction );
+    // spadek: +X modelu idzie w -Direction, w układzie części (X - poziomo w -Direction, Z w górę) to ( poziomo, 0, -Direction.y )
+    auto const rise { -Direction.y };
+    auto const level { std::sqrt( std::max( 0.0, 1.0 - rise * rise ) ) };
+    Direction.y = 0.0;
+    if( glm::length( Direction ) < 1e-6 ) { return; }
+    Direction = glm::normalize( Direction );
+    // obrót części (kolumny - osie modelu): X ( level, 0, rise ), Y ( 0, 1, 0 ), Z = X x Y = ( -rise, 0, level )
+    double const pitch[ 9 ] { level, 0.0, -rise, 0.0, 1.0, 0.0, rise, 0.0, level };
+    // kierunek "do konstrukcji" (Y modelu) prostopadły; z dwóch możliwych ten, przy którym +X modelu wypada w -Direction
+    auto heading { std::atan2( -Direction.z, Direction.x ) };
+    catenary::cantilever_placement probe;
+    probe.position[ 0 ] = 1.0;
+    for( int pass = 0; pass < 2; ++pass ) {
+        auto const moved { catenary::cantilever_to_scene( probe, heading ) };
+        if( moved.offset[ 0 ] * Direction.x + moved.offset[ 2 ] * Direction.z < 0.0 ) { break; }
+        heading += M_PI;
+    }
+    catenary::cantilever_placement placement;
+    std::copy( std::begin( pitch ), std::end( pitch ), placement.rotation );
+    for( int k = 0; k < Count; ++k ) {
+        catenary::cantilever_placement point;
+        for( int row = 0; row < 3; ++row ) {
+            point.position[ row ] = pitch[ row * 3 + 0 ] * Points[ k ][ 0 ] + pitch[ row * 3 + 1 ] * Points[ k ][ 1 ] + pitch[ row * 3 + 2 ] * Points[ k ][ 2 ];
+        }
+        auto const moved { catenary::cantilever_to_scene( point, heading ) };
+        Out[ k ] = From + glm::dvec3 { moved.offset[ 0 ], moved.offset[ 1 ], moved.offset[ 2 ] };
+    }
+    if( catalog == nullptr ) { return; }
+    auto const scened { catenary::cantilever_to_scene( placement, heading ) };
+    auto const entry {
+        "node " + text_number( data.range_max > 0.0 ? data.range_max : 1000.0, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 "
+        + catalog->models() + Part + ".t3d " + kFittingSkin
+        + " angles " + text_number( scened.angles[ 0 ] ) + " " + text_number( scened.angles[ 1 ] ) + " " + text_number( scened.angles[ 2 ] ) + " endmodel" };
+    glm::dvec3 const at { From.x + scened.offset[ 0 ], From.y + scened.offset[ 1 ], From.z + scened.offset[ 2 ] };
+    if( auto *model { simulation::State.create_model( entry, "none", at ) }; model != nullptr ) {
+        catenary_part_detach( model );
+        part_rail_near( model, Chain.file, at );
+        Chain.span_parts[ Span ].push_back( model );
+    }
 }
 
 void
 section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
     auto const &data { Chain.data };
-    auto const *catalog { cantilevers() };
     for( auto const &insulator : data.insulators ) {
         double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ];
         bool anchoreda, anchoredb;
@@ -3901,48 +3961,8 @@ section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<caten
         ropealong = glm::length( ropealong ) > 1e-6 ? glm::normalize( ropealong ) : along;
         // część z zerem w From, osią -X wzdłuż Direction - także ze spadkiem (użytkownik 2026-11-16: izolator w linie nośnej ma iść
         // w kącie opadu liny, nie poziomo); Y modelu zostaje poziomo, prostopadle; zwraca położenie punktu Point modelu w scenerii
-        auto const spawn = [ & ]( std::string const &Part, glm::dvec3 const &From, glm::dvec3 Direction, double const ( *Points )[ 3 ], int const Count, glm::dvec3 *Out ) {
-            if( glm::length( Direction ) < 1e-6 ) { return; }
-            Direction = glm::normalize( Direction );
-            // spadek: +X modelu idzie w -Direction, w układzie części (X - poziomo w -Direction, Z w górę) to ( poziomo, 0, -Direction.y )
-            auto const rise { -Direction.y };
-            auto const level { std::sqrt( std::max( 0.0, 1.0 - rise * rise ) ) };
-            Direction.y = 0.0;
-            if( glm::length( Direction ) < 1e-6 ) { return; }
-            Direction = glm::normalize( Direction );
-            // obrót części (kolumny - osie modelu): X ( level, 0, rise ), Y ( 0, 1, 0 ), Z = X x Y = ( -rise, 0, level )
-            double const pitch[ 9 ] { level, 0.0, -rise, 0.0, 1.0, 0.0, rise, 0.0, level };
-            // kierunek "do konstrukcji" (Y modelu) prostopadły; z dwóch możliwych ten, przy którym +X modelu wypada w -Direction
-            auto heading { std::atan2( -Direction.z, Direction.x ) };
-            catenary::cantilever_placement probe;
-            probe.position[ 0 ] = 1.0;
-            for( int pass = 0; pass < 2; ++pass ) {
-                auto const moved { catenary::cantilever_to_scene( probe, heading ) };
-                if( moved.offset[ 0 ] * Direction.x + moved.offset[ 2 ] * Direction.z < 0.0 ) { break; }
-                heading += M_PI;
-            }
-            catenary::cantilever_placement placement;
-            std::copy( std::begin( pitch ), std::end( pitch ), placement.rotation );
-            for( int k = 0; k < Count; ++k ) {
-                catenary::cantilever_placement point;
-                for( int row = 0; row < 3; ++row ) {
-                    point.position[ row ] = pitch[ row * 3 + 0 ] * Points[ k ][ 0 ] + pitch[ row * 3 + 1 ] * Points[ k ][ 1 ] + pitch[ row * 3 + 2 ] * Points[ k ][ 2 ];
-                }
-                auto const moved { catenary::cantilever_to_scene( point, heading ) };
-                Out[ k ] = From + glm::dvec3 { moved.offset[ 0 ], moved.offset[ 1 ], moved.offset[ 2 ] };
-            }
-            if( catalog == nullptr ) { return; }
-            auto const scened { catenary::cantilever_to_scene( placement, heading ) };
-            auto const entry {
-                "node " + text_number( data.range_max > 0.0 ? data.range_max : 1000.0, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 "
-                + catalog->models() + Part + ".t3d " + kFittingSkin
-                + " angles " + text_number( scened.angles[ 0 ] ) + " " + text_number( scened.angles[ 1 ] ) + " " + text_number( scened.angles[ 2 ] ) + " endmodel" };
-            glm::dvec3 const at { From.x + scened.offset[ 0 ], From.y + scened.offset[ 1 ], From.z + scened.offset[ 2 ] };
-            if( auto *model { simulation::State.create_model( entry, "none", at ) }; model != nullptr ) {
-                catenary_part_detach( model );
-                part_rail_near( model, Chain.file, at );
-                Chain.span_parts[ Span ].push_back( model );
-            }
+        auto const spawn = [ & ]( std::string const &Part, glm::dvec3 const &From, glm::dvec3 const &Direction, double const ( *Points )[ 3 ], int const Count, glm::dvec3 *Out ) {
+            span_part( Chain, Span, Part, From, Direction, Points, Count, Out );
         };
         // element na przewodzie: zero na końcu od strony "a", drugi koniec w stronę "b" (7230: +X modelu w stronę "b", więc -X w stronę "a")
         glm::dvec3 eyes[ 4 ];
@@ -3987,29 +4007,74 @@ section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<caten
     }
 }
 
-// izolowane przęsło naprężenia (wpis "isolated start|end"): w przęśle do kotwienia na tym końcu łańcucha izolatory w przewodzie i w linie
-// nośnej, 2 m od słupa krzyżowego (bryły zastępcze do czasu modeli; ZAŁOŻENIE odległości)
-void
-overlap_insulators( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
+// izolowane przęsło naprężenia (wpis "isolated start|end"): w przęśle do kotwienia na tym końcu łańcucha izolatory w linie nośnej (każdej)
+// i w każdym przewodzie jezdnym, kOverlapInsulatorFromPole od słupa krzyżowego (ZAŁOŻENIE odległości; karta 0060 rysuje tylko „izolację”
+// przy K1). Izolator jak w izolatorze sekcyjnym żywicznym: 7150-01 z zaciskami 5120-01 na obu końcach (użytkownik 2026-11-19: „chyba
+// będzie spoko”); przęsło nie rysuje przewodów i lin w jego miejscu (dopisek "gap", section_gap_text)
+double constexpr kOverlapInsulatorFromPole { 2.0 };
+
+// czy przęsło Span jest przęsłem do kotwienia izolowanego końca łańcucha; Along - środek izolatorów w planie od pierwszego końca przęsła
+bool
+overlap_insulator_at( scene_chain const &Chain, std::size_t const Span, double const *WireA, double const *WireB, double &Along ) {
     auto const &data { Chain.data };
     auto const points { chain_points( Chain ) };
     for( auto const end : { 0, 1 } ) {
         if( false == data.isolated[ end ] ) { continue; }
         auto const &anchor { end == 0 ? data.anchor_start : data.anchor_end };
         if( anchor.empty() || points < 2 || Span != ( end == 0 ? 0 : points - 2 ) ) { continue; }
-        double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ];
-        bool anchoreda, anchoredb;
-        if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) ) { continue; }
-        // od słupa krzyżowego (koniec przęsła przy podwieszeniu) w stronę kotwienia
-        glm::dvec3 const wfrom { end == 0 ? wb[ 0 ] : wa[ 0 ], end == 0 ? wb[ 1 ] : wa[ 1 ], end == 0 ? wb[ 2 ] : wa[ 2 ] };
-        glm::dvec3 const wto { end == 0 ? wa[ 0 ] : wb[ 0 ], end == 0 ? wa[ 1 ] : wb[ 1 ], end == 0 ? wa[ 2 ] : wb[ 2 ] };
-        glm::dvec3 const rfrom { end == 0 ? rb[ 0 ] : ra[ 0 ], end == 0 ? rb[ 1 ] : ra[ 1 ], end == 0 ? rb[ 2 ] : ra[ 2 ] };
-        glm::dvec3 const rto { end == 0 ? ra[ 0 ] : rb[ 0 ], end == 0 ? ra[ 1 ] : rb[ 1 ], end == 0 ? ra[ 2 ] : rb[ 2 ] };
-        auto const length { std::max( glm::length( wto - wfrom ), 1e-3 ) };
-        auto const t { std::min( 2.0 / length, 0.5 ) };
-        add_box( Solid, wfrom + ( wto - wfrom ) * t, wto - wfrom, 0.6, 0.07 );
-        add_box( Solid, rfrom + ( rto - rfrom ) * t, rto - rfrom, 0.6, 0.07 );
+        auto const plan { std::hypot( WireB[ 0 ] - WireA[ 0 ], WireB[ 2 ] - WireA[ 2 ] ) };
+        auto const length { std::max( std::hypot( plan, WireB[ 1 ] - WireA[ 1 ] ), 1e-3 ) };
+        // od słupa krzyżowego (koniec przęsła przy podwieszeniu: przy początku łańcucha drugi koniec przęsła, przy końcu - pierwszy)
+        auto const t { std::min( kOverlapInsulatorFromPole / length, 0.5 ) };
+        Along = ( end == 0 ? 1.0 - t : t ) * plan;
+        return true;
     }
+    return false;
+}
+
+void
+overlap_insulators( scene_chain &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
+    double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ];
+    bool anchoreda, anchoredb;
+    if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) ) { return; }
+    double along { 0.0 };
+    if( false == overlap_insulator_at( Chain, Span, wa, wb, along ) ) { return; }
+    auto const plan { std::max( std::hypot( wb[ 0 ] - wa[ 0 ], wb[ 2 ] - wa[ 2 ] ), 1e-3 ) };
+    auto const t { along / plan };
+    auto *span { Span < Chain.spans.size() ? Chain.spans[ Span ] : nullptr };
+    auto const *type { Chain.data.type.empty() ? nullptr : catenary::types().find( Chain.data.type ) };
+    auto const step { std::min( 0.5, 0.25 * plan ) / plan };
+    // jeden izolator: 7150 wycentrowany w punkcie przewodu / liny, w jego kierunku (ze spadkiem), zaciski 5120 na obu końcach
+    auto const insulator = [ & ]( glm::dvec3 const &At, glm::dvec3 Along ) {
+        if( glm::length( Along ) < 1e-6 ) { return; }
+        Along = glm::normalize( Along );
+        auto const from { At - Along * ( 0.5 * kSection7150 ) };
+        span_part( Chain, Span, "7150-01", from, Along, nullptr, 0, nullptr );
+        span_part( Chain, Span, "5120-01", from, -Along, nullptr, 0, nullptr );
+        span_part( Chain, Span, "5120-01", from + Along * kSection7150, Along, nullptr, 0, nullptr );
+    };
+    // z przęsła policzonego wg typu sieci: każda lina nośna i każdy przewód jezdny osobno
+    auto placed { 0 };
+    if( span != nullptr && type != nullptr ) {
+        for( auto const messenger : { true, false } ) {
+            auto const count { messenger ? type->type.messenger_count : type->type.contact_count };
+            for( int k = 0; k < count; ++k ) {
+                glm::dvec3 at, before, after;
+                if( catenary_span_point( *span, t * plan, messenger, at, k )
+                    && catenary_span_point( *span, std::max( 0.0, t - step ) * plan, messenger, before, k )
+                    && catenary_span_point( *span, std::min( 1.0, t + step ) * plan, messenger, after, k ) ) {
+                    insulator( at, after - before );
+                    ++placed;
+                }
+            }
+        }
+    }
+    if( placed > 0 ) { return; }
+    // przęsło bez typu sieci: w linii prostej między końcami, po jednym na linę i na przewody (jak dawne bryły)
+    glm::dvec3 const a { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, b { wb[ 0 ], wb[ 1 ], wb[ 2 ] };
+    glm::dvec3 const ropea { ra[ 0 ], ra[ 1 ], ra[ 2 ] }, ropeb { rb[ 0 ], rb[ 1 ], rb[ 2 ] };
+    insulator( a + ( b - a ) * t, b - a );
+    insulator( ropea + ( ropeb - ropea ) * t, ropeb - ropea );
 }
 
 // robi od nowa przęsło k łańcucha (przy podwieszeniu przesuniętym w edytorze tylko dwa przęsła przy nim)

@@ -552,8 +552,16 @@ int main( int, char *argv[] ) {
         {
             auto isolated { *catenary_chain_get( 1 ) };
             isolated.isolated[ 0 ] = true;
+            auto const from { simulation::State.created.size() };
             catenary_chain_update( 1, isolated );
             good = good && catenary_chain_connectors( 1 ) == 0 && false == catenary_chain_overlaps( 1 ).front().connected;
+            int insulators { 0 }, clamps { 0 };
+            for( auto i { from }; i < simulation::State.created.size(); ++i ) {
+                if( simulation::State.created[ i ].entry.find( "components/7150-01.t3d" ) != std::string::npos ) { ++insulators; }
+                if( simulation::State.created[ i ].entry.find( "components/5120-01.t3d" ) != std::string::npos ) { ++clamps; }
+            }
+            std::printf( "  izolowane przeslo naprezenia (kotwienie startu: %s): 7150 %d, 5120 %d\n", isolated.anchor_start.c_str(), insulators, clamps );
+            good = good && ( isolated.anchor_start.empty() || ( insulators >= 2 && clamps == 2 * insulators ) );
             isolated.isolated[ 0 ] = false;
             catenary_chain_update( 1, isolated );
         }
@@ -1341,6 +1349,39 @@ int main( int, char *argv[] ) {
         // urządzenie od czoła słupa w stronę s0002: rolka 1,75 m, dźwignia, łańcuchy ~1,4 m, więc koniec ok. 3,5-4,5 m od słupa
         good = good && end[ 2 ] < 184.0 - 3.0 && end[ 2 ] > 184.0 - 5.5 && end[ 1 ] > 0.2 + 6.0 && end[ 1 ] < 0.2 + 6.8;
         check( good, "kotwienie: ostatnie przeslo bez wieszakow konczy sie na uchwytach krancowych urzadzenia" );
+        // izolowane przęsło naprężenia na końcu z kotwieniem: 7150 + 2x 5120 (przęsło atrapy nie jest liczone wg typu - jeden na
+        // przewody, jeden na linę), przerwa "gap" 2 m od słupa krzyżowego tylko w przęśle do kotwienia
+        {
+            auto isolated { *catenary_chain_get( 0 ) };
+            // ile 7150 / 5120 robi samo przebudowanie łańcucha (urządzenie kotwienia), potem różnica z izolowanym
+            auto const counted = [ & ]( catenary::chain const &Data, int &Insulators, int &Clamps ) {
+                auto const from { simulation::State.created.size() };
+                catenary_chain_update( 0, Data );
+                Insulators = Clamps = 0;
+                for( auto i { from }; i < simulation::State.created.size(); ++i ) {
+                    if( simulation::State.created[ i ].entry.find( "components/7150-01.t3d" ) != std::string::npos ) { ++Insulators; }
+                    if( simulation::State.created[ i ].entry.find( "components/5120-01.t3d" ) != std::string::npos ) { ++Clamps; }
+                }
+            };
+            int baseinsulators { 0 }, baseclamps { 0 }, insulators { 0 }, clamps { 0 };
+            counted( isolated, baseinsulators, baseclamps );
+            isolated.isolated[ 1 ] = true;
+            mock_span_bodies.clear();
+            counted( isolated, insulators, clamps );
+            insulators -= baseinsulators;
+            clamps -= baseclamps;
+            double g0 { 0.0 }, g1 { 0.0 };
+            auto gapped { 0 };
+            for( auto const &body : mock_span_bodies ) {
+                if( auto const at { body.find( " gap contact " ) }; at != std::string::npos ) { ++gapped; std::istringstream gap { body.substr( at + 13 ) }; gap >> g0 >> g1; }
+            }
+            std::printf( "  izolowane przeslo naprezenia: 7150 %d, 5120 %d, przerwa %.3f-%.3f (przesel z przerwa %d)\n", insulators, clamps, g0, g1, gapped );
+            check( insulators == 2 && clamps == 4 && gapped == 1 && g0 > 1.0 && g1 < 3.2 && g1 - g0 > 0.9,
+                "izolowane przeslo naprezenia: izolatory 7150 z zaciskami 5120 przy slupie krzyzowym, przewody i lina z przerwa" );
+            isolated.isolated[ 1 ] = false;
+            catenary_chain_update( 0, isolated );
+            mock_span_bodies.clear();
+        }
         auto const warm { result->b };
         mock_span_bodies.clear();
         Global.AirTemperature = -20.f;

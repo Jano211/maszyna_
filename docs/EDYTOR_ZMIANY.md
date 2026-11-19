@@ -18,6 +18,14 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Sieć trakcyjna: izolowane przęsło naprężenia z prawdziwymi izolatorami, belka 4690 na słupach bramek — commit o tym tytule
+- Co widać: przęsło naprężenia oznaczone jako izolowane ma przy słupie krzyżowym (2 m od niego, w przęśle do kotwienia) izolatory
+  7150 z zaciskami 5120 w każdej linie nośnej i w każdym przewodzie jezdnym, zamiast szarych prostopadłościanów; przewody i liny
+  mają w tym miejscu przerwę. Na słupach bramek (30xx/31xx) da się postawić rozstawione wysięgi pomocnicze 0167 na belce 4690-04.
+- Zmienia: `world/catenary_scene.cpp`, `world/catenary_span.h/.cpp` (`catenary_span_point` z numerem przewodu / liny),
+  `world/catenary_cantilever.h/.cpp` (maszt bramki czyta `console` / `steady_console`), dane `traction_supports.txt`.
+- Wymaga: nic (modele 7150-01, 5120-01, 4690-04 są).
+
 ### Sieć trakcyjna: stara prowadnica ciężarów 0454 (pierścienie i pręty) do wyboru w kotwieniu — commit o tym tytule
 - Co widać: w panelu kotwienia ciężarowego lista „Prowadnica ciężarów”: rurowa 5070 (jak dotąd) albo stara 0454 – dwa
   nieruchome pierścienie 5060 na wspornikach 4550, w każdym cztery pręty 5050, stos przechodzi przez pierścienie. Działa na

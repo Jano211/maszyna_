@@ -285,6 +285,9 @@ struct gantry_mast {
     std::string strut;
     std::string stay;
     std::string steady;
+    // konsole pod kilka wysięgników po jednej stronie (jak "console" / "steady_console" słupa): belka 4690-04 rozstawionych wysięgów
+    // pomocniczych (karta 33-0519 wyk. 4 - słupy kratowe 600, czyli słupy bramek)
+    std::string console, steady_console;
     double below_beam { 0.15 };
     // półbramka (1901): słup z dźwigarem w jednym modelu ("semi <długość dźwigara od ściany słupa>", ściana = "offset" od osi); bramka typu T: dźwigary na dwie strony
     // ("sides 2"). Prześwit (mount) to wysokość konstrukcyjna Hk, na której wiszą zwisy rodziny "drop". Dźwigar w modelu wzdłuż +X

@@ -17,7 +17,13 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   – 1 = dolna lina z przęsła). Linki „V” zostają przy górnej. W exe NIESPRAWDZONE (atrapa testów nie liczy przęseł).
 - Przegląd MODELE_DO_ZROBIENIA (19.11): poprawki z sekcji L już zrobione w modelach; 0455 – modele uchwytów są, brak tylko słupów
   (wyk. 1–3, 8); karty 0331/0333 przeczytane (części w MODELE.md G); 9811-1 to linka. Kopia na G: md5 4eaa4c1f79d1491ee8b112b5f81068cf.
-  Pytania do użytkownika: izolowane przęsło naprężenia – jakie izolatory (karta 0060 rysuje tylko „izolację” przy K1).
+- Izolowane przęsło naprężenia (`isolated start|end`): zamiast brył 7150-01 + 2×5120-01 na każdej linie i każdym przewodzie (z przęsła wg
+  typu, `catenary_span_point(..., Index)`; bez typu – po jednym na linę i przewody w linii prostej), 2 m od słupa krzyżowego, z przerwą
+  `gap` w przęśle (gdy nie ma tam izolatora sekcyjnego). `span_part` – wspólne stawianie części przęsła (wyjęte z section_insulator).
+  Test te. Użytkownik 20.11: „chyba będzie spoko”.
+- Maszty bramek 30xx/31xx: `steady_console 4690-04` (belka wysięgów 0167, karta 0519 wyk. 4 „kratowy 600” = słup bramki); maszty czytają
+  `console` / `steady_console` jak słupy. Test tc. G: `traction_supports.txt` md5 ea76bb4bbf68243a8641c4b2e9f4ba3c.
+- Lina 9811-3 (Cu 35): użytkownik pyta o rysowanie proceduralne jak inne linki – do ustalenia (dziś model 4490-00 pogrubiony).
 - Składnia exe w nowym kontenerze: `/tmp/syn.sh` (opis w sekcji 16.11 02:00 i niżej 25.10) – trzeba odtworzyć.
 
 ## START TUTAJ – 2026-11-18 01:25 – zakresy ±2,5 m, opaska w 128x
