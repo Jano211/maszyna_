@@ -239,7 +239,7 @@ Te rzeczy są w danych jako ZAŁOŻENIE albo czekają na obejrzenie w grze. Odha
 - [ ] Uchwyty kotwień **4580** – brakuje; nowe półbramki 190x czekają na opisy (wtedy też 4570)
 - [x] Modele 4550-01…07 są (Jan 2026-11-01) + tyły: **4550-08 do 03, 4550-09 do 04** (przelotowe M16×240). 4550-05 jeszcze
   z teksturą na sztywno (Map siec_trakcyjna\siec) – Jan przeklika na -1. Do wpięcia razem z 0454 (po środzie).
-- [ ] Po środzie (Jan 2026-11-01): stare zamocowanie **0454** (tom 1 s. 111) jako opcja kotwienia ciężarowego – wsporniki 5060-1 ×2
+- [x] (2026-11-19: `guide old` w kotwieniu, wsporniki wyk. 4–6; wyk. 1–3 czekają na słupy 150x/160x) Po środzie (Jan 2026-11-01): stare zamocowanie **0454** (tom 1 s. 111) jako opcja kotwienia ciężarowego – wsporniki 5060-1 ×2
   na uchwytach 4550, prowadnica z prętów 5050-1 ×8, góra 4510-1/4510-2/4520-3 (wyk. 1–3, słup zamknięty; 4550-1 + 4550-2),
   4520-4/-5 (wyk. 4–5, kratowy; 4550-5/-6 ×2), 4570-1 (wyk. 6, przestrzenny; 4550-7 ×2). Modele: 4550-1/-2/-5/-6/-7, 5050-1.
   4550 (tom 5 s. 34): kątownik 75 mm, fasolki 17 mm co 100; wyk. 1/2/7 zaczepy M16×60, 3/4 przelotowe M16×240, 5/6 hakowe M16×130.
@@ -251,6 +251,20 @@ Te rzeczy są w danych jako ZAŁOŻENIE albo czekają na obejrzenie w grze. Odha
 - [ ] 4330-05: drugi pusty `eye` w miejscu `hole_1`; 4340-01: dwa `slide_horizontal_min`
 - [ ] 6208-03: zdublowany submodel bez `_LOD`; plik 6506 nazywa się `6505-01.t3d`
 - [ ] 4490-01: oś liny przesunięta o 1,4 mm w Y
+
+## Do zrobienia – nietypowe z terenu (2026-11-19, „witam w GOP-ie”)
+
+Konstrukcje niekompletne / porzucone / w przebudowie – mają się dać postawić w edytorze (tryb ekspert), bez karty wysięgnika:
+
+- [ ] Zwisy bramek bez niczego (goły zwis na dźwigarze)
+- [ ] Zwisy z samymi mocowaniami wysięgników (bez wysięgników)
+- [ ] Zwisy z mocowaniami i wiszącym izolatorem / izolatorami (bez reszty wysięgnika)
+- [ ] To samo dla słupów: same mocowania wysięgników; mocowania z wiszącym izolatorem / izolatorami
+- [ ] Konsolety na słupach bez wysięgników – też z możliwością dołożenia mocowań i wiszących izolatorów
+- [ ] Zwisy luzem (bez bramki): wstawiane w dowolnym miejscu i zachowujące się jak zwis bramki – pod mostami, wiaduktami,
+      w halach peronowych, gdzie są przyspawane / przykręcone do obcej konstrukcji (model mostu / hali to zwykły node model)
+- Ustalone (2026-11-19): izolator bez wysięgnika wisi swobodnie w pionie z ucha mocowania; do wyboru WSZYSTKIE izolatory;
+  podpiąć pod ręczne składanie wysięgników (ten sam tok, nie osobna funkcja).
 
 ## Odłożone i na później
 

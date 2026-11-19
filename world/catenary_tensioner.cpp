@@ -321,6 +321,57 @@ void tensioner_catalog::parse( std::vector<std::string> const &Lines, std::strin
                 device->brackets.push_back( set );
                 continue;
             }
+            // stara prowadnica 0454: "old_guide <pierścień> <mount> rings <z>... rod <pręt> <x> <y> <z> [count <n>] [turn <stopnie>]"
+            if( keyword == "old_guide" && words.size() >= 3 ) {
+                device->old_ring = words[ 1 ];
+                if( false == number_of( words[ 2 ], device->old_ring_mount ) ) { report( "old_guide: bad ring mount \"" + words[ 2 ] + "\"" ); }
+                device->old_rings.clear();
+                for( std::size_t k = 3; k < words.size(); ) {
+                    auto const &key { words[ k ] };
+                    if( key == "rings" ) {
+                        ++k;
+                        double z { 0.0 };
+                        while( k < words.size() && number_of( words[ k ], z ) ) { device->old_rings.push_back( z ); ++k; }
+                    }
+                    else if( key == "rod" && k + 4 < words.size() ) {
+                        device->old_rod = words[ k + 1 ];
+                        for( int axis = 0; axis < 3; ++axis ) {
+                            if( false == number_of( words[ k + 2 + axis ], device->old_rod_at[ axis ] ) ) { report( "old_guide: bad rod position" ); }
+                        }
+                        k += 5;
+                    }
+                    else if( key == "count" && k + 1 < words.size() ) {
+                        double count { 4.0 };
+                        number_of( words[ k + 1 ], count );
+                        device->old_rods = std::max( 0, static_cast<int>( count + 0.5 ) );
+                        k += 2;
+                    }
+                    else if( key == "turn" && k + 1 < words.size() ) { number_of( words[ k + 1 ], device->old_rod_turn ); k += 2; }
+                    else { report( "unknown old_guide keyword \"" + key + "\"" ); break; }
+                }
+                if( device->old_rings.empty() ) { report( "old_guide: no ring heights (\"rings <z>...\")" ); }
+                continue;
+            }
+            // wsporniki pierścieni starej prowadnicy: "ring_brackets <słupy...> [hole <przed czołem> <pod zerem>] low <przód> <tył> high <przód> <tył>"
+            if( keyword == "ring_brackets" && words.size() >= 2 ) {
+                tensioner_device::ring_bracket_set set;
+                std::size_t k { 1 };
+                for( ; k < words.size() && words[ k ] != "low" && words[ k ] != "high" && words[ k ] != "hole"; ++k ) {
+                    set.poles.push_back( words[ k ] );
+                }
+                for( ; k < words.size(); ) {
+                    auto const &key { words[ k ] };
+                    if( ( key == "low" || key == "high" ) && k + 2 < words.size() ) {
+                        ( key == "low" ? set.low_front : set.high_front ) = words[ k + 1 ] == "-" ? std::string{} : words[ k + 1 ];
+                        ( key == "low" ? set.low_back : set.high_back ) = words[ k + 2 ] == "-" ? std::string{} : words[ k + 2 ];
+                        k += 3;
+                    }
+                    else if( key == "hole" && k + 2 < words.size() ) { number_of( words[ k + 1 ], set.hole_out ); number_of( words[ k + 2 ], set.hole_drop ); k += 3; }
+                    else { report( "unknown ring_brackets keyword \"" + key + "\"" ); break; }
+                }
+                device->ring_brackets.push_back( set );
+                continue;
+            }
             if( keyword == "pivot" && words.size() >= 3 ) {
                 number_of( words[ 1 ], device->pivot_top );
                 number_of( words[ 2 ], device->pivot_bottom );
@@ -551,6 +602,17 @@ tensioner_device::bracket_set const *tensioner_device::brackets_for( std::string
     bracket_set const *best { nullptr };
     std::size_t length { 0 };
     for( auto const &set : brackets ) {
+        for( auto const &pole : set.poles ) {
+            if( Pole.rfind( pole, 0 ) == 0 && ( best == nullptr || pole.size() > length ) ) { best = &set; length = pole.size(); }
+        }
+    }
+    return best;
+}
+
+tensioner_device::ring_bracket_set const *tensioner_device::ring_brackets_for( std::string const &Pole ) const {
+    ring_bracket_set const *best { nullptr };
+    std::size_t length { 0 };
+    for( auto const &set : ring_brackets ) {
         for( auto const &pole : set.poles ) {
             if( Pole.rfind( pole, 0 ) == 0 && ( best == nullptr || pole.size() > length ) ) { best = &set; length = pole.size(); }
         }
@@ -1259,8 +1321,18 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     // uchwytu, Jan 2026-10-24) - lina schodzi z rolki lekko ukośnie
     auto const turn { Device.ring_turn * kPi / 180.0 };
     vec toward { -std::cos( turn ), std::sin( turn ), 0.0 };   // od osi stosu do prowadnicy
-    auto const onbrackets { brackets != nullptr && false == Device.guide.empty() && false == Device.ring.empty() };
+    // stara prowadnica 0454 (pierścienie 5060 na wspornikach 4550, pręty 5050): na życzenie, gdy urządzenie ma jej dane, a słup wsporniki
+    auto const *ringbrackets { Input.old_guide && false == Device.old_ring.empty() && false == Device.old_rings.empty() && false == Input.pole.empty()
+        ? Device.ring_brackets_for( Input.pole ) : nullptr };
+    if( Input.old_guide && ringbrackets == nullptr ) {
+        Result.warnings.push_back( Device.old_ring.empty() ? "the device has no old guide (0454); the tube guide is used"
+            : "the structure has no brackets for the old guide (0454); the tube guide is used" );
+    }
+    auto const oldguide { ringbrackets != nullptr && Device.frame.empty() };
+    auto const onbrackets { false == oldguide && brackets != nullptr && false == Device.guide.empty() && false == Device.ring.empty() };
     auto const onframe { onbrackets && false == Device.frame.empty() };
+    // stos liczony w układzie konstrukcji (fix na końcu): przy prowadnicy rurowej i przy starej
+    auto const instructure { onbrackets || oldguide };
     // na ramie 5090: prowadnica w otworze ramy, stos pod liną (Y 0) o ramię pierścienia od prowadnicy, przy konstrukcji albo dalej;
     // pierścień obrócony w stronę prowadnicy (Jan 2026-10-24)
     if( onframe ) {
@@ -1271,11 +1343,12 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     }
     vec const guideaxis { onframe ? vec { brackets->hole_out + Device.frame_length, Device.frame_y, 0.0 } : onbrackets ? vec { brackets->hole_out, 0.0, 0.0 } - toward * Device.guide_mount : vec {} };
     // z prowadnicą stos liczony w układzie konstrukcji (fix na końcu), bez niej - pod rolką, w układzie urządzenia
-    auto const columnx { onbrackets ? guideaxis.x - toward.x * Device.ring_arm : fixedaxle.x - radius };
-    auto const columny { onbrackets ? guideaxis.y - toward.y * Device.ring_arm : yb };
+    // stara prowadnica: oś stosu w osi pierścieni, których mocowania siedzą w otworach wsporników (hole_out przed czołem)
+    auto const columnx { oldguide ? ringbrackets->hole_out - toward.x * Device.old_ring_mount : onbrackets ? guideaxis.x - toward.x * Device.ring_arm : fixedaxle.x - radius };
+    auto const columny { oldguide ? -toward.y * Device.old_ring_mount : onbrackets ? guideaxis.y - toward.y * Device.ring_arm : yb };
     vec const ropeend { columnx, columny, s + rodlength + hangerlength };
     if( ropeend.z > height - 0.05 ) { Result.warnings.push_back( "the weights would hang above the pulley: rod or hangers too long for the table" ); }
-    point( onbrackets ? onstructure( ropeend ) : ropeend );
+    point( instructure ? onstructure( ropeend ) : ropeend );
     auto const stackfrom { Result.parts.size() };
     place_chain( Device.hanger, "hanger", ropeend, down, Result );
     {
@@ -1357,7 +1430,40 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
             point[ 0 ] = p.x; point[ 1 ] = p.y; point[ 2 ] = p.z;
         }
     }
-    if( onbrackets ) { fix( stackfrom ); }
+    if( oldguide ) {
+        // pierścienie nieruchome na zadanych wysokościach, stos przez nie przechodzi; pręty wokół osi stosu w układzie pierścienia
+        // (x' = -toward, jak turned()), wspornik pierścienia otworem w punkcie mount
+        vec const lx { toward * -1.0 }, ly { vec { -toward.y, toward.x, 0.0 } * -1.0 };
+        auto const lowest { *std::min_element( Device.old_rings.begin(), Device.old_rings.end() ) };
+        int ringindex { 0 };
+        for( auto const zr : Device.old_rings ) {
+            ++ringindex;
+            auto const tag { std::to_string( ringindex ) };
+            vec const centre { columnx, columny, zr };
+            Result.parts.push_back( turned( "old_ring." + tag, Device.old_ring, centre ) );
+            if( false == Device.old_rod.empty() ) {
+                for( int k = 0; k < Device.old_rods; ++k ) {
+                    auto const angle { ( Device.old_rod_turn + 360.0 * k / std::max( 1, Device.old_rods ) ) * kPi / 180.0 };
+                    auto const c { std::cos( angle ) }, si { std::sin( angle ) };
+                    vec const ax { lx * c + ly * si }, ay { lx * -si + ly * c };
+                    auto const at { centre + ax * Device.old_rod_at[ 0 ] + ay * Device.old_rod_at[ 1 ] + vec { 0.0, 0.0, Device.old_rod_at[ 2 ] } };
+                    auto placement { placed( "old_rod." + tag + "." + std::to_string( k + 1 ), Device.old_rod, at ) };
+                    set_rotation( placement, ax, ay, vec { 0.0, 0.0, 1.0 } );
+                    Result.parts.push_back( placement );
+                }
+            }
+            // wspornik: najniższy pierścień na dolnym (poz. 3), pozostałe na górnym (poz. 2); otwór pod zerem wspornika
+            auto const islow { zr == lowest && Device.old_rings.size() > 1 };
+            vec const at { 0.0, columny + toward.y * Device.old_ring_mount, zr + ringbrackets->hole_drop };
+            front( "old_ring_bracket." + tag, islow ? ringbrackets->low_front : ringbrackets->high_front, at, false );
+            back( "old_ring_bracket." + tag + ".back", islow ? ringbrackets->low_back : ringbrackets->high_back, at, false );
+        }
+        // stos Ø400 nie przejdzie przez pierścień Ø350 (karta 23-5060)
+        for( auto const *weight : stack ) {
+            if( weight->name.rfind( "6322", 0 ) == 0 ) { Result.warnings.push_back( "the Ø400 weights don't fit through the old guide rings" ); break; }
+        }
+    }
+    if( instructure ) { fix( stackfrom ); }
     return true;
 }
 

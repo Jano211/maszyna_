@@ -1450,6 +1450,7 @@ assemble_anchor( scene_anchor &Anchor ) {
         input.old_messenger = ( data.insulators == "old" || data.insulators == "messenger" );
         input.old_contact = ( data.insulators == "old" || data.insulators == "contact" );
     }
+    input.old_guide = data.old_guide;
     // kierunek drutów w planie; zero urządzenia na czole słupa
     glm::dvec3 const axis { polepoint[ 0 ], polepoint[ 1 ], polepoint[ 2 ] };
     auto dx { data.toward[ 0 ] - axis.x }, dz { data.toward[ 2 ] - axis.z };

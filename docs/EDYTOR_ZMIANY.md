@@ -14,6 +14,20 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
   pliku rozwiązuje się, biorąc obie strony. Nowe wpisy idą przy pokrewnych tekstach, więc konfliktów będzie mniej.
 - Zmiana pól w `application/editormode.h` oznacza przebudowę prawie całego edytora (ok. 30 min).
 
+## 2026-11-19
+
+Commity na `siec-gl46`.
+
+### Sieć trakcyjna: stara prowadnica ciężarów 0454 (pierścienie i pręty) do wyboru w kotwieniu — commit o tym tytule
+- Co widać: w panelu kotwienia ciężarowego lista „Prowadnica ciężarów”: rurowa 5070 (jak dotąd) albo stara 0454 – dwa
+  nieruchome pierścienie 5060 na wspornikach 4550, w każdym cztery pręty 5050, stos przechodzi przez pierścienie. Działa na
+  nogach bramek i słupach przestrzennych (wsporniki z karty 0454); na innych konstrukcjach zostaje rura (komunikat w logu
+  urządzenia). Wpis kotwienia: `guide old`.
+- Zmienia: `world/catenary_tensioner.h/.cpp` (wpisy `old_guide`, `ring_brackets`), `world/catenary_suspension.h/.cpp`
+  (`guide new|old` w kotwieniu), `world/catenary_scene.cpp`, `application/editormodecatenary.cpp`, dane
+  `traction_tensioners.txt` (urządzenia 0461, 0461-2x2, 0480), `lang/editor_pl.po`.
+- Wymaga: modeli 5050-01, 5060-01, 4550-05/06/07. Wysokości pierścieni (2,30 i 3,80 m) to założenie – w danych.
+
 ## 2026-11-14
 
 Commity na `siec-gl46`.

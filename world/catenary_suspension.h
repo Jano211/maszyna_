@@ -149,7 +149,7 @@ std::string const &messenger_holder( chain const &Chain, std::string const &List
 
 // kotwienie ciężarowe (urządzenie naprężające z pliku traction_tensioners.txt) na słupie kotwowym, wpis
 // "node <max> <min> <nazwa> anchor device <karta> network <symbol typu> pole <słup> x y z [on <podwieszenie>] toward x y z distance <m>
-//  [color <kolor>] [top_color <kolor>] [elongation <m>] [missing <n>] [ground <m>] [height <m>] [rope_height <m>] [insulators <rodzaj>] [skin <tekstura>]
+//  [color <kolor>] [top_color <kolor>] [elongation <m>] [missing <n>] [ground <m>] [height <m>] [rope_height <m>] [insulators <rodzaj>] [guide new|old] [skin <tekstura>]
 //  endanchor".
 // pole: oś słupa na wysokości główki szyny; toward: punkt, z którego przychodzą druty (urządzenie leży w tym kierunku od
 // słupa); distance: odległość od kotwienia środkowego albo stałego. Łańcuch przypina się do niego "anchor_start/anchor_end",
@@ -177,6 +177,8 @@ struct anchor {
     // izolatory w łańcuchach do drutów: puste = auto (rolkowe ESN-2025 na obu przy drutach zaśniedziałych, inaczej żywiczne 7150),
     // "new" żywiczne, "old" rolkowe na obu, "messenger" rolkowy tylko na linie nośnej, "contact" rolkowe tylko na przewodach
     std::string insulators;
+    // prowadnica ciężarów: false = rurowa 5070 z pierścieniem na stosie, true ("guide old") = stara 0454 (pierścienie 5060, pręty 5050)
+    bool        old_guide { false };
     std::string skin;
 };
 
