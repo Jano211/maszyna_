@@ -42,9 +42,9 @@ void catenary_span_assign( TTraction &Traction, std::string const &Symbol, doubl
 // wzdłuż kierunku przęsła; Contact / Messenger nullptr = bez przerwy
 void catenary_span_gaps( TTraction &Traction, double const *Contact, double const *Messenger );
 // punkt liny nośnej (Messenger) albo osi przewodów jezdnych w odległości Along w planie od pierwszego końca przęsła, z przęsła
-// policzonego wg typu sieci (bez przerw na izolator); false, gdy przęsło nie jest liczone wg typu. Rope: która lina nośna
-// (0 - górna, 1 - dolna w sieciach z dwiema liniami nośnymi; false, gdy jej nie ma)
-bool catenary_span_point( TTraction &Traction, double Along, bool Messenger, glm::dvec3 &Point, int Rope = 0 );
+// policzonego wg typu sieci (bez przerw na izolator); false, gdy przęsło nie jest liczone wg typu. Index: który przewód / która lina
+// w kolejności z przęsła (lina: 0 - górna, 1 - dolna w sieciach z dwiema liniami; false, gdy go nie ma); -1 = górna lina albo oś przewodów
+bool catenary_span_point( TTraction &Traction, double Along, bool Messenger, glm::dvec3 &Point, int Index = -1 );
 // symbol typu sieci przypisany przęsłu; pusty gdy brak
 std::string catenary_span_symbol( TTraction const &Traction );
 // odcinki przęsła policzone wg typu sieci, dopisywane do Vertices; false gdy przęsło ma być narysowane po staremu

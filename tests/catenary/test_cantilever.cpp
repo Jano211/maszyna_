@@ -308,6 +308,25 @@ int main( int argc, char *argv[] ) {
         std::printf( "rozstawione wysiegi pomocnicze 0167 na belce 4690: %s\n", good ? "OK" : "BLAD" );
         failed = failed || !good;
     }
+    {
+        // to samo na słupie bramki 3111 (kratowy 600): belka 4690-04 z wpisu "steady_console" masztu (2026-11-19)
+        auto const *pole { catalog.pole( "3111" ) };
+        auto const *scheme { catalog.scheme( 167, 2 ) };
+        auto good { pole != nullptr && scheme != nullptr && pole->steady_console == "4690-04" };
+        if( good ) {
+            catenary::cantilever_umbrella side;
+            side.spread = true;
+            side.console_x = -0.785;
+            auto const input { catenary::cantilever_nominal_input( *scheme, 2.0 ) };
+            catenary::cantilever_result result;
+            good = catenary::solve_cantilever_on_pole( catalog, *scheme, *pole, 2.0 + 0.5 * pole->depth( 6.0 ), -5.6, input.messenger, {}, side, result );
+            auto const count = [ & ]( std::string const &Part ) { return std::count_if( result.parts.begin(), result.parts.end(), [ & ]( auto const &P ) { return P.part == Part; } ); };
+            good = good && count( "4690-04" ) == 1;
+            for( auto const &w : result.warnings ) { std::printf( "  %s\n", w.c_str() ); }
+        }
+        std::printf( "rozstawione wysiegi pomocnicze 0167 na belce 4690-04 slupa bramki 3111: %s\n", good ? "OK" : "BLAD" );
+        failed = failed || !good;
+    }
 
     {
         // zwis 4850 na dźwigarze skośnym do toru (Jan 2026-10-26): słup z mocowaniami obrócony wokół swojej osi o turn, reszta

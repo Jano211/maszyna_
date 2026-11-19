@@ -504,6 +504,8 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 else if( ismast && key == "strut" ) { text( mast.strut ); }
                 else if( ismast && key == "stay" ) { text( mast.stay ); }
                 else if( ismast && key == "steady" ) { text( mast.steady ); }
+                else if( ismast && key == "console" ) { text( mast.console ); }
+                else if( ismast && key == "steady_console" ) { text( mast.steady_console ); }
                 else if( ismast && key == "below_beam" ) { number( mast.below_beam, good ); }
                 else if( ismast && key == "semi" ) { number( mast.semi, good ); }
                 else if( ismast && key == "sides" ) { double sides { 1.0 }; number( sides, good ); mast.sides = ( sides > 1.5 ? 2 : 1 ); }
@@ -550,6 +552,8 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     pole.strut = mast.strut;
                     pole.stay = mast.stay;
                     pole.steady = mast.steady;
+                    pole.console = mast.console;
+                    pole.steady_console = mast.steady_console;
                     if( false == m_poles.emplace( name, pole ).second ) { report( entry, "has the name of a pole, it can't carry cantilevers" ); }
                 }
             }

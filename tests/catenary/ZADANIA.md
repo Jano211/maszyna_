@@ -186,7 +186,7 @@ Najpierw prowadnica i mocowania do słupów, bo od nich zależy reszta. Kolejne 
 - [ ] 1617 (fundament wylewany) – pominięty
 - [x] Kilka podwieszeń na jednym słupie po tej samej stronie: wysięgniki rozstawione (0517–0519, konsola 4890), wysięgi pomocnicze 0167 na 4690, trzeci w osi słupa, `messenger_from`, uchwyt liny wyżej (`above_pole`) – 25/26.10
 - [ ] 101x jako uchwyt liny wyżej – Jan sprawdza 27.10 (po poprawce keep_lifted)
-- [ ] 4690-04 dla masztów bramek 30xx/31xx (czeka na Jana)
+- [x] 4690-04 dla masztów bramek 30xx/31xx (2026-11-19, `steady_console` w masztach)
 - [x] Odsuw ±0,5 m (rozjazdy) – 26.10
 - [ ] Skórka słupa (161x „white old” wymaga modelu z teksturą wymienną)
 - [ ] Panel „Konstrukcje wsporcze”: lista słupów i mocowań, podgląd, „sprawdź” (solver na wszystkich kartach), zapis do `traction_supports.txt`
