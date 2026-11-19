@@ -3815,7 +3815,7 @@ double const kSection7210Eyes[ 2 ][ 3 ] { { 0.15304, 0.0, -0.07808 }, { 0.94825,
 double constexpr kSectionHangerRadius { 0.0025 };   // linka Cu 10 mm2
 
 // lina nośna nad 7500 (karta 43-0439, użytkownik 2026-11-16): izolator 7150-1 z zaciskami 5120-6/-7 po obu stronach (model 5120-01;
-// zero w otworze, lina wchodzi 0,058 dalej). Dwie liny nośne (sieci 32, 35) - na razie tylko górna. 7510 (karta 0440) - modelu brak
+// zero w otworze, lina wchodzi 0,058 dalej). Dwie liny nośne (sieci 32, 35) - w obu (2026-11-19). 7510 (karta 0440) - modelu brak
 double constexpr kSection7150 { 0.8324 };
 double constexpr kSection5120 { 0.058 };
 
@@ -3966,6 +3966,21 @@ section_insulator( scene_chain &Chain, std::size_t const Span, std::vector<caten
                 auto const middle { ( eyes[ 2 * pair ] + eyes[ 2 * pair + 1 ] ) * 0.5 };
                 auto const top { ropeat( std::clamp( t + glm::dot( middle - wire, along ) / length, 0.0, 1.0 ) ) };
                 for( int side = 0; side < 2; ++side ) { add_tube( Solid, { eyes[ 2 * pair + side ], top }, kSectionHangerRadius ); }
+            }
+            // druga (dolna) lina nośna w sieciach 32, 35 - przerwa jest w obu linach, więc i ona dostaje 7150 z zaciskami 5120,
+            // w swoim spadku; linki podwieszające zostają przy górnej (ZAŁOŻENIE: karta 0439 rysuje jedną linę)
+            auto const *type { data.type.empty() ? nullptr : catenary::types().find( data.type ) };
+            if( span != nullptr && type != nullptr && type->type.messenger_count > 1 ) {
+                auto const lowerat = [ & ]( double const T, glm::dvec3 &Point ) { return catenary_span_point( *span, T * plan, true, Point, 1 ); };
+                glm::dvec3 lower, before, after;
+                if( lowerat( t, lower ) && lowerat( std::max( 0.0, t - step ), before ) && lowerat( std::min( 1.0, t + step ), after ) ) {
+                    auto lowerdir { after - before };
+                    lowerdir = glm::length( lowerdir ) > 1e-6 ? glm::normalize( lowerdir ) : ropealong;
+                    auto const from { lower - lowerdir * ( 0.5 * kSection7150 ) };
+                    spawn( "7150-01", from, lowerdir, nullptr, 0, nullptr );
+                    spawn( "5120-01", from, -lowerdir, nullptr, 0, nullptr );
+                    spawn( "5120-01", from + lowerdir * kSection7150, lowerdir, nullptr, 0, nullptr );
+                }
             }
         }
         return;
