@@ -23,7 +23,15 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   Test te. Użytkownik 20.11: „chyba będzie spoko”.
 - Maszty bramek 30xx/31xx: `steady_console 4690-04` (belka wysięgów 0167, karta 0519 wyk. 4 „kratowy 600” = słup bramki); maszty czytają
   `console` / `steady_console` jak słupy. Test tc. G: `traction_supports.txt` md5 ea76bb4bbf68243a8641c4b2e9f4ba3c.
-- Lina 9811-3 (Cu 35): użytkownik pyta o rysowanie proceduralne jak inne linki – do ustalenia (dziś model 4490-00 pogrubiony).
+- Linki Cu 9811 proceduralnie (użytkownik 20.11: „spoko, na 21:9 34 cale nie widzę, żeby linki znikały”): część z `solid <promień>`
+  w traction_cantilevers.txt → w złożeniu podwieszenia z łańcucha zamiast modelu rura (`Suspension.copper`), dołączana do przęsła
+  (`attach_span_solids`: podwieszenie na początku przęsła, ostatnie – w przęśle przed nim; `Chain.span_rope` trzyma resztę brył) i
+  rysowana kolorem przewodów (`catenary_solid::copper`, scenewalk). Poza łańcuchem – dalej model linki. Po resolve wszystkie przęsła
+  dostają linki od nowa (podwieszenia składają się po przęsłach). Role: 9811-03 (L35 ~7,5 mm) – odciągi 0311–0326, lina ramion
+  105x/125x/127x (`rope_arms`), linka V 1267–1269 / 1287–1289; 9811-01 (L16 ~5,1 mm – ZAŁOŻENIE) – linka 108x. Generator
+  (gen_cantilevers.py) zmieniony, plik wygenerowany od nowa (CRLF z generatora → LF w repo). Test te (odciąg w łańcuchu bez modelu
+  linki). G: md5 ee0a68a6468aad213ecbe9dcd7b87f39. `catenary_span.h` zmieniony (struct catenary_solid) – dłuższa przebudowa.
+- Plan ręcznego składania wysięgników: SKLADANIE_RECZNE.md (3 pytania do użytkownika na końcu).
 - Składnia exe w nowym kontenerze: `/tmp/syn.sh` (opis w sekcji 16.11 02:00 i niżej 25.10) – trzeba odtworzyć.
 
 ## START TUTAJ – 2026-11-18 01:25 – zakresy ±2,5 m, opaska w 128x

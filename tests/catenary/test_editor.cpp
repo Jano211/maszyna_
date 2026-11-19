@@ -1526,7 +1526,18 @@ int main( int, char *argv[] ) {
         line.name = "o1"; line.power = "pwr01"; line.type = "YwsC120-2C";
         line.suspensions = { "s0001", "s0002", "s0003" };
         mock_span_bodies.clear();
+        auto const createdfrom { simulation::State.created.size() };
         catenary_chain_add( "td_odciag_test.scm", line );
+        // lina odciągowa 9811-3 (Cu 35) w łańcuchu: bryła proceduralna przęsła, nie model linki 4490-00
+        {
+            int cords { 0 }, holders { 0 };
+            for( auto i { createdfrom }; i < simulation::State.created.size(); ++i ) {
+                if( simulation::State.created[ i ].entry.find( "4490-00.t3d" ) != std::string::npos ) { ++cords; }
+                if( simulation::State.created[ i ].entry.find( "components/4270-" ) != std::string::npos ) { ++holders; }
+            }
+            std::printf( "  odciag w lancuchu: modeli linki 4490-00 %d, uchwytow 4270 %d\n", cords, holders );
+            check( cords == 0 && holders > 0, "odciag w lancuchu: lina 9811-3 proceduralna (bez modelu linki), reszta czesci modelami" );
+        }
         auto const *pull { catenary_scene_get( ib ) }, *real { catenary_scene_get( ia ) };
         auto const sag { real->rope[ 1 ] - pull->rope[ 1 ] };
         auto pulls { 0 };

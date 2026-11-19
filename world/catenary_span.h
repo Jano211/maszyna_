@@ -55,6 +55,7 @@ struct catenary_solid {
     gfx::geometry_handle wires;
     gfx::geometry_handle fittings;
     gfx::geometry_handle rope;      // bryła dołączona z zewnątrz (lina urządzenia naprężającego na końcu przęsła), stal
+    gfx::geometry_handle copper;    // bryła dołączona z zewnątrz w kolorze przewodów (linki 9811 wysięgników), jak przewody
 };
 // bryły tworzone są, gdy kamera jest blisko przęsła, i zwalniane, gdy się oddali
 catenary_solid catenary_span_solid( TTraction &Traction, glm::dvec3 const &Camera );
@@ -64,7 +65,7 @@ void catenary_span_refresh( TTraction &Traction );
 void catenary_span_release( TTraction &Traction );
 // dołącza do brył przęsła bryłę spoza przęsła (lina kotwienia przy jego końcu; trójkąty w układzie scenerii), rysowaną
 // razem z nim z bliska, ze stali. Pusta lista odłącza. false, gdy przęsło nie jest rysowane wg typu sieci
-bool catenary_span_attach( TTraction &Traction, std::vector<catenary::solid_vertex> const &Triangles );
+bool catenary_span_attach( TTraction &Traction, std::vector<catenary::solid_vertex> const &Triangles, std::vector<catenary::solid_vertex> const &Copper = {} );
 
 // skrzyżowania przewodów nad rozjazdami (karta 33-0561): przęsła, które w planie mogą krzyżować się z danym. Podaje je scena
 // (łańcuchy sieci), bo przęsło nie zna innych przęseł; nullptr = bez ogranicznika. Ogranicznik rysuje przęsło dolne, w bryłach

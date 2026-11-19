@@ -66,6 +66,9 @@ struct scene_suspension {
     std::vector<TTraction *> contact;   // przęsła, których przewód jezdny trzyma
     std::string file;                   // plik sieci, z którego pochodzi wpis (albo do którego trafi)
     std::vector<TAnimModel *> parts;    // części wysięgnika wstawione do scenerii
+    // linki proceduralne (części z "solid", np. Cu 9811) w kolorze przewodów, współrzędne scenerii; rysuje je przęsło łańcucha
+    // przy tym podwieszeniu (rebuild_span_only)
+    std::vector<catenary::solid_vertex> copper;
     bool removed { false };             // usunięty w edytorze
     // siodło liny nośnej (4160) ostatniego złożenia: obejma liny kotwienia środkowego staje obok niego na teowniku
     bool has_saddle { false };
@@ -119,10 +122,12 @@ struct scene_chain {
     std::vector<TAnimModel *> middle_parts;
     std::vector<catenary::solid_vertex> middle_solid[ 2 ];
     std::vector<std::vector<TAnimModel *>> span_parts;   // przęsło k: części w przęśle (izolator sekcyjny i jego osprzęt)
+    std::vector<std::vector<catenary::solid_vertex>> span_rope; // przęsło k: bryły dołączone poza linkami wysięgników (do odświeżenia linek)
     std::size_t middle_span { static_cast<std::size_t>( -1 ) };   // przęsło przed podwieszeniem środkowym (za nim: +1)
     double swing_temperature { 10.0 };  // temperatura, przy której ostatnio obracano wysięgniki łańcucha (kotwienie środkowe)
 };
 std::vector<scene_chain> Chains;
+void add_tube( std::vector<catenary::solid_vertex> &Triangles, std::vector<glm::dvec3> const &Points, double Radius );
 
 // bramka z pliku: słupy i dźwigar wstawione jako modele
 struct scene_gantry {
@@ -834,7 +839,26 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     // zwis bramki: punkt wpisu jest w spodzie dźwigara, nie na wysokości główki szyny
     auto const hanging { data.has_pole && Catalog.pole( data.pole_type ) != nullptr && false == Catalog.pole( data.pole_type )->drop.empty() };
     Suspension.has_saddle = false;
+    Suspension.copper.clear();
+    // linki z bryłą proceduralną (Cu 9811) rysuje przęsło łańcucha - tylko gdy podwieszenie jest w łańcuchu, inaczej model linki
+    auto const inchain { false == data.name.empty() && std::any_of( Chains.begin(), Chains.end(), [ & ]( scene_chain const &Chain ) {
+        return false == Chain.removed && Chain.file == Suspension.file
+            && std::find( Chain.data.suspensions.begin(), Chain.data.suspensions.end(), data.name ) != Chain.data.suspensions.end(); } ) };
     for( auto const &placement : result.parts ) {
+        auto const *catalogued { inchain ? Catalog.part( placement.part ) : nullptr };
+        if( catalogued != nullptr && catalogued->solid > 0.0 ) {
+            // oś rozciągnięcia: skala różna od dwóch pozostałych (Y albo Z części), długość modelu z katalogu
+            auto const &scale { placement.scale };
+            auto const axis { ( std::abs( scale[ 1 ] - scale[ 0 ] ) > 1e-9 && std::abs( scale[ 2 ] - scale[ 0 ] ) < 1e-9 ) ? 1 : 2 };
+            auto const length { scale[ axis ] * ( catalogued->length > 1e-6 ? catalogued->length : 1.0 ) };
+            catenary::cantilever_placement end;
+            for( int row = 0; row < 3; ++row ) { end.position[ row ] = placement.position[ row ] + placement.rotation[ row * 3 + axis ] * length; }
+            auto const a { catenary::cantilever_to_scene( placement, heading ) }, b { catenary::cantilever_to_scene( end, heading ) };
+            add_tube( Suspension.copper,
+                { glm::dvec3 { Wire.x + a.offset[ 0 ], Wire.y + a.offset[ 1 ], Wire.z + a.offset[ 2 ] },
+                  glm::dvec3 { Wire.x + b.offset[ 0 ], Wire.y + b.offset[ 1 ], Wire.z + b.offset[ 2 ] } }, catalogued->solid );
+            continue;
+        }
         if( false == Suspension.has_saddle && placement.role == "messenger_clamp" ) {
             Suspension.has_saddle = true;
             Suspension.saddle = placement;
@@ -1052,6 +1076,7 @@ void
 drop_parts( scene_suspension &Suspension ) {
     for( auto *part : Suspension.parts ) { catenary_part_delete( part ); }
     Suspension.parts.clear();
+    Suspension.copper.clear();
 }
 
 } // namespace
@@ -4099,6 +4124,30 @@ rebuild_span( scene_chain &Chain, std::size_t const Span ) {
     }
 }
 
+// bryły dołączone do przęsła: zapamiętane (liny kotwień, łączniki, uszynienie...) i linki proceduralne wysięgników (Cu 9811) w kolorze
+// przewodów - podwieszenia na początku przęsła, a ostatniego w łańcuchu w przęśle przed nim. Linki zmieniają się ze złożeniem podwieszeń
+// (przy wczytaniu podwieszenia składają się po przęsłach), więc dołączane osobno, bez przebudowy przęsła
+void
+attach_span_solids( scene_chain &Chain, std::size_t const Span ) {
+    if( Span >= Chain.spans.size() || Chain.spans[ Span ] == nullptr ) { return; }
+    std::vector<catenary::solid_vertex> copper;
+    auto const ends { chain_points( Chain ) };
+    auto const offset { Chain.data.anchor_start.empty() ? 0u : 1u };
+    for( auto const point : { Span, Span + 1 } ) {
+        if( point == Span + 1 && point + 1 != ends ) { continue; }
+        if( point < offset || point - offset >= Chain.data.suspensions.size() ) { continue; }
+        auto const index { suspension_named( Chain.file, Chain.data.suspensions[ point - offset ] ) };
+        if( index < Suspensions.size() && false == Suspensions[ index ].removed ) {
+            auto const &own { Suspensions[ index ].copper };
+            copper.insert( copper.end(), own.begin(), own.end() );
+        }
+    }
+    static std::vector<catenary::solid_vertex> const none;
+    auto const &rope { Span < Chain.span_rope.size() ? Chain.span_rope[ Span ] : none };
+    // także pusto: linki mogły zniknąć (podwieszenie złożone od nowa bez nich)
+    catenary_span_attach( *Chain.spans[ Span ], rope, copper );
+}
+
 void
 rebuild_span_only( scene_chain &Chain, std::size_t const Span ) {
     if( Span >= Chain.spans.size() ) { return; }
@@ -4142,7 +4191,9 @@ rebuild_span_only( scene_chain &Chain, std::size_t const Span ) {
         overlap_insulators( Chain, Span, rope );
         // lina uszynienia grupowego między słupami przęsła
         earthing_rope( Chain, Span, rope );
-        if( false == rope.empty() ) { catenary_span_attach( *span, rope ); }
+        if( Chain.span_rope.size() < Chain.spans.size() ) { Chain.span_rope.resize( Chain.spans.size() ); }
+        Chain.span_rope[ Span ] = rope;
+        attach_span_solids( Chain, Span );
     }
 }
 
@@ -4157,6 +4208,7 @@ rebuild_chain( scene_chain &Chain ) {
     for( auto *span : Chain.spans ) { if( span != nullptr ) { catenary_span_delete( span ); } }
     for( auto &parts : Chain.span_parts ) { for( auto *part : parts ) { catenary_part_delete( part ); } }
     Chain.span_parts.clear();
+    Chain.span_rope.clear();
     Chain.spans.assign( Chain.removed || Chain.data.suspensions.size() < 2 ? 0 : chain_points( Chain ) - 1, nullptr );
     // odciągi sieci: lina nośna w ich miejscu z całej rozpiętości, odciągi złożone od nowa
     // (przed powiązaniem scenerii tylko lina - odciągi złoży catenary_scene_resolve, inaczej części stałyby dwa razy)
@@ -4623,6 +4675,11 @@ catenary_scene_resolve() {
                 }
             }
         }
+    }
+    // linki proceduralne wysięgników: podwieszenia złożone dopiero tutaj, przęsła powstały przy wczytaniu
+    for( auto &chain : Chains ) {
+        if( chain.removed ) { continue; }
+        for( std::size_t span = 0; span < chain.spans.size(); ++span ) { attach_span_solids( chain, span ); }
     }
     WriteLog( ( "Catenary: " + std::to_string( complete ) + " of " + std::to_string( Suspensions.size() - first ) + " suspension(s) linked to supports and traction pieces" ).c_str() );
     if( assembled > 0 ) {

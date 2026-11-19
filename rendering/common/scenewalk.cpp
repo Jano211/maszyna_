@@ -2766,6 +2766,12 @@ void scene_walk::Render_Alpha(TTraction *Traction)
 			walk_draw(solid.fittings);
 			++m_renderpass.draw_stats.drawcalls;
 		}
+		// the cords 9811 of the cantilevers (copper), in the colour of the wires
+		if (solid.copper != null_handle)
+		{
+			walk_draw(solid.copper);
+			++m_renderpass.draw_stats.drawcalls;
+		}
 		// the rope of the tensioning device at the end of the span (steel)
 		if (solid.rope != null_handle)
 		{

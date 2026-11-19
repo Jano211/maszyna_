@@ -145,6 +145,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 else if( key == "radius" ) { number( part.radius, good ); }
                 else if( key == "model" ) { if( index < count ) { part.model = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "girth" ) { number( part.girth, good ); }
+                else if( key == "solid" ) { number( part.solid, good ); }
                 else if( key == "eye" ) { number( part.eye, good ); }
                 else if( key == "hook" ) { number( part.hook[ 0 ], good ); number( part.hook[ 1 ], good ); }
                 else if( key == "end" ) { number( part.end[ 0 ], good ); number( part.end[ 1 ], good ); }
