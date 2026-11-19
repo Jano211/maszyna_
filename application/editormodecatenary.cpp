@@ -6486,6 +6486,17 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("Old assemblies have the roller insulator ESN-2025 straight in the lever hole, then the turnbuckle and the clamp; by default the roller ones come with tarnished wires, as the 5110 clamps do"));
+			// the weight guide: the tube 5070 with a ring on the stack, or the old one of card 0454 (two fixed rings 5060 with rods 5050)
+			std::string const guidenames[] = {STR("tube 5070"), STR("old 0454 (rings and rods)")};
+			char const *const guides[] = {guidenames[0].c_str(), guidenames[1].c_str()};
+			int guide{data.old_guide ? 1 : 0};
+			if (ImGui::Combo(STR_C("Weight guide"), &guide, guides, 2))
+			{
+				data.old_guide = (guide == 1);
+				edited = true;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Old assemblies (card 0454): the stack goes through two fixed rings on brackets, each with four flat rods; only on structures with the brackets (gantry legs, space masts), otherwise the tube stays. The Ø400 weights don't fit through"));
 		}
 		{
 			if (false == fixed)

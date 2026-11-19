@@ -286,6 +286,12 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                         report( line.name, "\"insulators\" takes new, old, messenger or contact" ); good = false;
                     }
                 }
+                else if( key == "guide" ) {
+                    auto const value { one() };
+                    if( value == "old" ) { line.old_guide = true; }
+                    else if( value == "new" ) { line.old_guide = false; }
+                    else { report( line.name, "\"guide\" takes new or old" ); good = false; }
+                }
                 else if( key == "skin" ) { line.skin = one(); }
                 else { report( line.name, "unexpected token \"" + key + "\" in an anchor" ); good = false; }
             }
@@ -632,6 +638,7 @@ std::string write_anchor( anchor const &Entry ) {
     if( Entry.height > 0.0 ) { text += " height " + number( Entry.height, 3 ); }
     if( Entry.rope_height > 0.0 ) { text += " rope_height " + number( Entry.rope_height, 3 ); }
     if( false == Entry.insulators.empty() ) { text += " insulators " + Entry.insulators; }
+    if( Entry.old_guide ) { text += " guide old"; }
     if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
     return text + " endanchor";
 }

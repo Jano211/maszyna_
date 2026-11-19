@@ -37,7 +37,11 @@ Są: 1491–1493 (pale), 161x (1611/1613/1614/1617), 1665–1667, 1701, maszty b
 - [ ] Mocowania wysięgników na słupach ETG (strunobeton).
 
 ## E. Kotwienia
-- [ ] 5050-1 pręt prowadnicy ciężarów ×8 (stare zamocowanie 0454, tom 1 s. 111) – 5060-01 i 4550-01…09 są.
+- [x] 5050-1 pręt prowadnicy ciężarów ×8 (jest 2026-11-19, wpięty) (stare zamocowanie 0454, tom 1 s. 111) – 5060-01 i 4550-01…09 są.
+      Model (2026-11-19, użytkownik): zero na pręcie; względem zera 5060-01 pręt stoi w (−0,1775; 0; +0,03) – trafia w pierścień
+      i w środek obejmy (od strony −X, obrócony jak w modelu). Kod: ten punkt i obrót modelu obracane wokół osi Z 5060, 4 pręty co 90°,
+      przesunięte o 45° od ucha 5060 (-X) – na karcie 0454 widać w rzucie 2 pręty, nie 3; w osiach przedni wchodziłby w ucho.
+      Zdjęcia z terenu brak (szukane w GOP) – zmienić, jeśli się znajdzie.
 - [ ] Mocowania do słupa wg 33-0455 – przypisanie reszty wykonań do słupów (modele 5100 są).
 - [ ] Kotwienie środkowe: zaciski 5560 / 5570 na linie nośnej, złączka 6410 na przewodzie, uchwyt 4590 (0416, do dźwigara bramki);
       obejma liny kotwienia na teowniku bez siodła (dziś drugi 4160-01).

@@ -35,6 +35,8 @@ http://mozilla.org/MPL/2.0/.
 //   ciężar 63xx         zero w środku spodu, w +Z; kolejne obracane o "turn" wokół Z; kolor numerem wykonania modelu
 //   prowadnica 5070     zero w osi przesuwu pierścienia na dole, w +Z; mocowania do wsporników w -X (w stronę konstrukcji)
 //   pierścień 5080      zero w osi stosu, poziomo, punkt przesuwu po prowadnicy w -X (w stronę konstrukcji); ring_at nad spodem stosu
+//   pierścień 5060      (stara prowadnica 0454) zero w osi stosu, poziomo, "mount" w -X (w stronę konstrukcji), nieruchomy
+//   pręt 5050           zero w środku płaskownika, w +Z; w modelu ustawiony jak w pierścieniu od strony -X, obracany wokół osi stosu
 //   lina                linka rozciągana (część typu cord, zero w zaczepie, w +Z, skalowana wzdłuż Z)
 #pragma once
 #include <functional>
@@ -191,6 +193,26 @@ struct tensioner_device {
         std::string top_front, top_back, bottom_front, bottom_back;
     };
     std::vector<bracket_set> brackets;
+    // stara prowadnica ciężarów (karta 23-0454, wybierana w kotwieniu "guide old"): zamiast rury 5070 z pierścieniem 5080
+    // na stosie dwa nieruchome pierścienie 5060 na wspornikach 4550, w każdym pręty 5050 (płaskowniki 1,2 m z rozchylonymi
+    // końcami); stos przechodzi przez pierścienie. Pierścień: zero w osi stosu, poziomo, punkt "mount" o old_ring_mount w -X
+    // (w stronę konstrukcji), w otworze wspornika. Pręt: zero w środku, położenie old_rod_at w układzie pierścienia, kopie
+    // obracane wokół osi stosu co 360/old_rods stopni od old_rod_turn. Wysokości środków pierścieni nad główką: old_rings
+    std::string old_ring, old_rod;
+    double old_ring_mount { 0.20322 };
+    std::vector<double> old_rings;
+    double old_rod_at[ 3 ] { -0.1775, 0.0, 0.03 };
+    double old_rod_turn { 45.0 };
+    int old_rods { 4 };
+    // wsporniki pierścieni (karta 23-0454 poz. 2 i 3): przód na czole jak uchwyty 0455 (-X modelu przed czoło), hole_1 o hole_out
+    // przed czołem i hole_drop pod zerem; dolny i górny pierścień, tył opcjonalny ("-" = bez)
+    struct ring_bracket_set {
+        std::vector<std::string> poles;
+        double hole_out { 0.04 }, hole_drop { 0.029 };
+        std::string low_front, low_back, high_front, high_back;
+    };
+    std::vector<ring_bracket_set> ring_brackets;
+    ring_bracket_set const *ring_brackets_for( std::string const &Pole ) const;
     double pivot_top { 0.0 }, pivot_bottom { 0.0 };
     // otwór na końcu uchwytu (oś stałej rolki) nad jego zerem: uchwyt schodzi o tyle, żeby rolka została na swojej wysokości
     // (5040: hole_1 0,03 nad mount_bottom; wpis "pivot <góra> <dół> [rise <m>]")
@@ -244,6 +266,7 @@ struct tensioner_input {
     std::string top_color;              // kolor najwyższego ciężaru; pusty = jak reszta
     bool old_fittings { false };            // uchwyty krańcowe przewodów 5110 (druty zaśniedziałe)
     bool old_messenger { false }, old_contact { false }; // izolatory rolkowe (łańcuchy messenger_old / contact_old) na linie / przewodach
+    bool old_guide { false };               // stara prowadnica z pierścieni 5060 i prętów 5050 (karta 23-0454) zamiast rury 5070
     // punkty, w które celują łańcuchy do liny nośnej i do przewodów jezdnych (ostatnie podwieszenie, układ urządzenia);
     // bez nich łańcuchy poziomo wzdłuż +X
     bool aimed { false };

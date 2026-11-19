@@ -272,6 +272,56 @@ int main( int argc, char **argv ) {
         check( none && false == result.has_guide && result.warnings.empty(), "bez uchwytow (slup spoza danych): bez prowadnicy i pierscienia, bez uwag" );
     }
 
+    // stara prowadnica 0454 na nodze bramki 3111: dwa pierścienie 5060 w osi stosu (0,04 + 0,20322 od czoła), 4 pręty 5050 każdy,
+    // wsporniki 4550-05 otworem w mount pierścienia; bez niej (guide new) - rura; na słupie bez wsporników 0454 - rura i uwaga
+    {
+        catenary::tensioner_input in;
+        in.pole = "3111";
+        in.old_guide = true;
+        catenary::tensioner_result r;
+        catenary::solve_tensioner( catalog, *device, in, r );
+        std::map<std::string, catenary::tensioner_placement const *> at;
+        int rods { 0 }, rings { 0 }, tubes { 0 };
+        for( auto const &part : r.parts ) {
+            at[ part.role ] = &part;
+            if( part.part == "5050-01" ) { ++rods; }
+            if( part.part == "5060-01" ) { ++rings; }
+            if( part.role == "guide" || part.role == "ring" ) { ++tubes; }
+        }
+        auto ok { rods == 8 && rings == 2 && tubes == 0 && at.count( "old_ring.1" ) && at.count( "old_ring_bracket.1" ) && at.count( "old_ring_bracket.2" ) && at.count( "rod" ) };
+        auto const x0 { 0.04 + 0.20322 };
+        if( ok ) {
+            auto const *ring { at[ "old_ring.1" ] };
+            // mount pierścienia (-0,20322 w X modelu) w otworze wspornika (-0,04, 0, -0,029 modelu)
+            auto const mountx { ring->position[ 0 ] + ring->rotation[ 0 ] * -0.20322 };
+            auto const *br { at[ "old_ring_bracket.1" ] };
+            auto const holex { br->position[ 0 ] + br->rotation[ 0 ] * -0.04 + br->rotation[ 2 ] * -0.029 };
+            auto const holez { br->position[ 2 ] + br->rotation[ 6 ] * -0.04 + br->rotation[ 8 ] * -0.029 };
+            // pręt: 0,1775 od osi, pod 45 stopni do kierunku na konstrukcję, 3 cm nad pierścieniem
+            auto const *rod { at[ "old_rod.1.1" ] };
+            auto const dx { rod->position[ 0 ] - ring->position[ 0 ] }, dy { rod->position[ 1 ] - ring->position[ 1 ] };
+            ok = std::abs( ring->position[ 0 ] - x0 ) < 1e-9 && std::abs( at[ "rod" ]->position[ 0 ] - x0 ) < 1e-9
+                && std::abs( mountx - 0.04 ) < 1e-9 && std::abs( holex - 0.04 ) < 1e-9 && std::abs( holez - ring->position[ 2 ] ) < 1e-9
+                && br->part == "4550-05" && std::abs( std::hypot( dx, dy ) - 0.1775 ) < 1e-9 && std::abs( std::abs( dx ) - std::abs( dy ) ) < 1e-9
+                && std::abs( rod->position[ 2 ] - ring->position[ 2 ] - 0.03 ) < 1e-9 && r.has_guide == false;
+        }
+        for( auto const &w : r.warnings ) { std::printf( "      %s\n", w.c_str() ); }
+        check( ok, "stara prowadnica 0454 na nodze bramki: 2 pierscienie 5060 w osi stosu, 8 pretow 5050 pod 45 st., wsporniki 4550-05 w mount" );
+        in.old_guide = false;
+        catenary::solve_tensioner( catalog, *device, in, r );
+        auto tube { false };
+        for( auto const &part : r.parts ) { if( part.role == "guide" ) { tube = true; } if( part.part == "5050-01" ) { tube = false; break; } }
+        check( tube, "guide new: rura 5070 jak dotad" );
+        in.old_guide = true;
+        in.pole = "1611-11";
+        in.depth = []( double ) { return 0.12; };
+        catenary::solve_tensioner( catalog, *device, in, r );
+        tube = false;
+        for( auto const &part : r.parts ) { if( part.role == "guide" ) { tube = true; } }
+        check( tube && std::find( r.warnings.begin(), r.warnings.end(), std::string( "the structure has no brackets for the old guide (0454); the tube guide is used" ) ) != r.warnings.end(),
+            "guide old na 161x (bez wspornikow 0454): rura i uwaga" );
+    }
+
     // uchwyty 5100 na słupie 1611: górny trzyma 4450 za mount_top, dolny (odwrócony) za mount_bottom; tyły po drugiej stronie słupa
     {
         // uchwyty jeszcze zakomentowane w danych: ustawione tutaj

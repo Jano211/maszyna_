@@ -2,6 +2,19 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-19 wieczór – stara prowadnica 0454, lista „nietypowe z terenu”
+
+- Stara prowadnica ciężarów 0454 (testy tt/ts/te/tsc/tk/tc/t OK, składnia exe OK, w exe NIESPRAWDZONE): kotwienie `guide old`
+  (edytor: „Prowadnica ciężarów”). W urządzeniu `old_guide 5060-01 0.20322 rings 2.30 3.80 rod 5050-01 -0.1775 0.0 0.03 count 4
+  turn 45` i `ring_brackets` (nogi bramek 4550-05 / -06, 1901 4550-07; otwór 0,04 / 0,029 z modeli). Oś stosu = oś pierścieni
+  (0,04 + 0,20322 od czoła). Bez wsporników na słupie – rura 5070 i uwaga. Ciężary 6322 (Ø400) – uwaga, że nie przejdą.
+  Pręty: 4 co 90°, od 45° od ucha – wniosek z rzutu na karcie 0454 (2 pręty widoczne), zdjęć brak. Wysokości pierścieni ZAŁOŻENIE.
+  Szczegóły w KOTWIENIA.md §7. G: `data\traction_tensioners.txt` md5 37de73c3aeb5d75868fd1263c7f423e9, `lang\editor_pl.po`
+  md5 10a9926ac198b49bc81081e20e6a649e (na G: są też wpisy geoportali, których nie ma na siec-gl46 – dopisywać, nie nadpisywać).
+- ZADANIA.md: nowa sekcja „nietypowe z terenu” (zwisy bez niczego / z samymi mocowaniami / z wiszącymi izolatorami, to samo na
+  słupach, konsolety bez wysięgników, zwisy luzem pod mostami i w halach) – część ręcznego składania wysięgników.
+- Składnia exe w nowym kontenerze: `/tmp/syn.sh` (opis w sekcji 16.11 02:00 i niżej 25.10) – trzeba odtworzyć.
+
 ## START TUTAJ – 2026-11-18 01:25 – zakresy ±2,5 m, opaska w 128x
 
 - Zakresy (użytkownik 18.11, „1 m nadal za mało”): stay_shift, strut_shift, rope_shift, cord_shift ±2,5 m; stay_gap i arms_spread

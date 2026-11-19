@@ -13255,3 +13255,15 @@ msgstr "otwór %d  (%.3f m od ucha)"
 
 msgid "The hole of the stay end the pin goes through, from the eye: automatic - the one which puts the stay clamp nearest to the cards; a forced one moves the stay clamp along the strut"
 msgstr "Otwór końcówki odciągu, w który wchodzi sworzeń, licząc od ucha: automatycznie – ten, który stawia uchwyt odciągu najbliżej kart; wymuszony przesuwa uchwyt odciągu po ukośniku"
+
+msgid "tube 5070"
+msgstr "rurowa 5070"
+
+msgid "old 0454 (rings and rods)"
+msgstr "stara 0454 (pierścienie i pręty)"
+
+msgid "Weight guide"
+msgstr "Prowadnica ciężarów"
+
+msgid "Old assemblies (card 0454): the stack goes through two fixed rings on brackets, each with four flat rods; only on structures with the brackets (gantry legs, space masts), otherwise the tube stays. The Ø400 weights don't fit through"
+msgstr "Stare złożenia (karta 0454): stos przechodzi przez dwa nieruchome pierścienie na wspornikach, w każdym cztery pręty z płaskownika; tylko na konstrukcjach z wspornikami (nogi bramek, słupy przestrzenne), na innych zostaje rura. Ciężary Ø400 się nie mieszczą"

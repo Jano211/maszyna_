@@ -262,7 +262,12 @@ katalog kolprojekt1?).
 - Do dźwigara bramki (0416): 2 × 4730-1, 2 × 4720-1, 2 × 7150, lina 14 m, zaciski 5560/5570 ×8; zamocowanie 43-0466: 4590-1…4 + 4720
 - Zamocowania na słupie 43-0456: para uchwytów 5100-1/-2 **[jest]** (dopiski: wyk. 11 M16×220 C140–160, wyk. 12 M16×260 C180–200)
 
-### 7. Stare kotwienie wspólne 23-0454 (prowadnica z lin?)
+### 7. Stare kotwienie wspólne 23-0454 (prowadnica z pierścieni i prętów)
+- ZROBIONE 2026-11-19: `old_guide` / `ring_brackets` w urządzeniach 0461, 0461-2x2, 0480; kotwienie `guide old`. Pierścień 5060
+  (Ø350, karta 23-5060) nieruchomy, stos przez niego przechodzi; pręty 5050 (płaskownik 1200, karta 23-5050) przykręcone
+  blaszką 2×M12. Wykonania wg objaśnień 0400–0499 (tom 1 s. 85): 1–3 indywidualne słupy stalowe C140 / C160–180 / C200 (stare
+  150x/160x – brak słupów), 4 nogi bramek C160–200, 5 C240, 6 przestrzenne, 7/8 dwuteowniki, 11/12 ceowniki na palach (161x) –
+  na 161x i dwuteownikach karta 0454 nie przewiduje starej prowadnicy. ZAŁOŻENIE: pierścienie 2,30 i 3,80 m (brak zdjęć).
 - 4550-1/-2/-5/-6/-7 uchwyty **[brak]**, **5050-1 ×8** **[brak]**, **5060-1 ×2** **[jest]** – to stąd 5060-01. 4480-01: w tomie 5 karty
   4480 **nie ma** (po 4470 jest 4490) – do czego Jan go zrobił?
 
