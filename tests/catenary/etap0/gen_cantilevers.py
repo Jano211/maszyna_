@@ -70,6 +70,7 @@ w('part 7020-25 kind insulator length 0.6360 clearance 0.0350 endpart   // calos
 w('part 7100-25 kind insulator length 0.6360 clearance 0.0350 endpart   // clearance: zapas osi uchwytu ponad clamp_margin = (calosc - end) + 31 mm (pol 4050) - 30 mm + 4 mm luzu; calosc 666 mm (Jan 2026-10-21, 1112-1 na 1665)')
 w('part 4700-01 kind shackle length 0.0480 endpart   // karta 23-4700: 48 mm od luku do sworznia; punkt "eye" modelu')
 w('part 4490-00 kind cord length 1.0000 endpart   // linka uniwersalna (nie z katalogu): model 1 m od zera do punktu "end", skalowana wzdluz Z')
+w('part 9811-01 kind cord length 1.0000 model 4490-00 girth 1.3000 solid 0.00255 endpart   // linka Cu 16 (L16, ~5,1 mm - ZALOZENIE; 108x): bryla proceduralna jak 9811-03')
 w()
 
 # ---- zlozenia 11xx ---------------------------------------------------------------------------------------------
@@ -254,7 +255,7 @@ def _second_wire(new, dy):
              '  place ?second_clamp second_wire steady -y\n  export second_wire\n') % dy
     return '\n// jak swing_vee, z uchwytem 4120 drugiego przewodu na wysiegu (%s m w Y od przewodu ramion)\nassembly %s\n%s%sendassembly\n' % (dy, new, body, extra)
 ASSEMBLIES += _second_wire('swing_vee_wire_out', '-0.08') + _second_wire('swing_vee_wire_in', '0.08')
-# 105x, 125x (tom 3 s. 27-31, 139-144): bez wysiegu z rury - ramiona wisza uchem na linie 9811-3 (tu 4490-00) napietej poziomo od
+# 105x, 125x (tom 3 s. 27-31, 139-144): bez wysiegu z rury - ramiona wisza uchem na linie 9811-3 (bryla proceduralna) napietej poziomo od
 # uchwytu 4050 na ukosniku do ucha ramion (zaciski 5270/6301 pomijane - Jan); uchwyt liny 4140 wisi pionowo, w 105x linki z luku
 # ramion 6207 do liny nosnej (armcords). Przechylne: odciag linowy jak swing.
 ROPE_ARMS = """
@@ -1351,7 +1352,7 @@ for n in range(6):
         line = 'scheme %d %d reach %s %s height 1.2000 registration 108x mount stay 1.4000 mount strut -0.2000 assembly inner_push' % (card, wyk, f(1.45 + 0.3 * (n + 1)), f(1.75 + 0.3 * (n + 1)))
         roles = [('stay_insulator', '7100-01'), ('stay', stay), ('stay_end', '4400-01'), ('stay_clamp', '4070-01'),
                  ('strut_insulator', '7100-01'), ('strut', strut), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01'),
-                 ('steady_clamp', '4070-01'), ('steady_end', '4400-01'), ('steady', steady), ('steady_head', '4500-01'), ('cord', '4490-00')]
+                 ('steady_clamp', '4070-01'), ('steady_end', '4400-01'), ('steady', steady), ('steady_head', '4500-01'), ('cord', '9811-01')]
         roles += [('arms', '6205-02'), ('arms_bracket', '4290-06'), ('arms_head', '4290-22')] if wyk == 2 else [('arms', '6203-01'), ('arms_bracket', '4290-06'), ('arms_head', '4290-21')]
         for role, part in roles: line += ' role %s %s' % (role, part)
         w(line + ' endscheme')
@@ -1439,7 +1440,7 @@ for card, pipes, stay in ((1287, ((9, 10), (8, 9)), 8), (1288, ((10, 11), (9, 10
         for role, part in [('stay_insulator', '7100-01'), ('stay', '6002-%02d' % stay), ('stay_end', '4400-01'), ('stay_clamp', '4070-01'),
                            ('strut_insulator', '7100-01'), ('strut', '6001-%02d' % strut), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01'),
                            ('steady_clamp', '4070-01'), ('steady_end', '4400-01'), ('steady', '6001-%02d' % steady), ('steady_head', '4500-01'),
-                           ('cord', '4490-00'), ('arms', '6206-1111'), ('arms_bracket', '4280-04')]:
+                           ('cord', '9811-03'), ('arms', '6206-1111'), ('arms_bracket', '4280-04')]:
             line += ' role %s %s' % (role, part)
         w(line + ' endscheme')
 # 1267-1269 wyk. 3, 4: 6206-1 od slupa na 4280-3, wysieg 6001 od ukosnika (4070 + 4400), 4500-1, linka V; wyk. 2 (para 6209) - czeka na modele.
@@ -1456,7 +1457,7 @@ for card, pipes, stay in ((1267, ((9, 10), (8, 9)), 8), (1268, ((10, 11), (9, 10
         for role, part in [('stay_insulator', '7100-01'), ('stay', '6002-%02d' % stay), ('stay_end', '4400-01'), ('stay_clamp', '4070-01'),
                            ('strut_insulator', '7100-01'), ('strut', '6001-%02d' % strut), ('head_clamp', '4050-01'), ('messenger_clamp', '4140-01'),
                            ('steady_clamp', '4070-01'), ('steady_end', '4400-01'), ('steady', '6001-%02d' % steady), ('steady_head', '4500-01'),
-                           ('cord', '4490-00')] + arms:
+                           ('cord', '9811-03')] + arms:
             line += ' role %s %s' % (role, part)
         w(line + ' endscheme')
 # 1099 wyk. 3 (hk 1,70, ukosnik i wysieg 6001-14) i 4 (hk 1,30, 6001-11), odciag 6002-9; 4500-1 na koncu (karta: 4500-2 z odreczna
@@ -1523,7 +1524,7 @@ for card in list(range(1052, 1057)) + [1250, 1251, 1252, 1253, 1254, 1257] + [12
             card, wyk, f(1.45 + 0.3 * n), f(1.75 + 0.3 * n), f(hk), f(stay_mount), f(strut_mount), own, 'rope_arms_mount' if own else 'rope_arms')
         for role, part in [('stay_shackle', '4700-01'), ('stay_insulator', '7020-01'), ('stay', '6007-%02d' % (n + 1)), ('stay_end', '4400-02'),
                            ('stay_clamp', '4070-01'), ('strut_insulator', '7100-01'), ('strut', strut), ('head_clamp', '4050-01'),
-                           ('messenger_clamp', '4140-01'), ('rope', '4490-00'), ('arms', arms)] + extra + \
+                           ('messenger_clamp', '4140-01'), ('rope', '9811-03'), ('arms', arms)] + extra + \
                           ([('rope_insulator', '7020-01')] if own else [('rope_clamp', '4050-01')]):
             line += ' role %s %s' % (role, part)
         w(line + ' endscheme')
@@ -2116,7 +2117,7 @@ EXTRA = [
     # odciagi sieci: czesci 9811-03, 4270 i schematy 0311-0326
     ('after', 'scheme 169 4 reach 2.6500 3.1000 height 1.3000 registration ropex mount steady 0.1000 assembly aux_rope role rope_insulator 7120-01 role rope 9814-03 role arms 6207-03 role arms_cord 4490-00 role arms_cord_clamp 4210-02 endscheme', [
         '// odciagi sieci: lina 9811-3 (Cu 35, ok. 7,5 mm) modelem linki jak 9814-3; uchwyt ramion na linie 4270 (-1 jedno ramie, -2 para)',
-        'part 9811-03 kind cord length 1.0000 model 4490-00 girth 1.9000 endpart   // ZALOZENIE: model i grubosc jak 9814-3',
+        'part 9811-03 kind cord length 1.0000 model 4490-00 girth 1.9000 solid 0.00375 endpart   // lina Cu 35 (L35, ~7,5 mm): bryla proceduralna w kolorze przewodow (2026-11-19); model linki tylko poza lancuchem',
         'part 4270-01 kind clamp endpart   // ZALOZENIE: zero w osi liny odciagowej, lina wzdluz Y modelu (do sprawdzenia w modelu)',
         'part 4270-02 kind clamp endpart',
         'scheme 311 1 reach 1.0000 55.0000 height 0.3100 registration ropex pulloff mount steady 0.0000 assembly pulloff role rope 9811-03 role rope_end 9811-03 role arms 6204-02 role rope_holder 4270-02 endscheme',

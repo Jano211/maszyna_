@@ -64,7 +64,7 @@ Są: 1491–1493 (pale), 161x (1611/1613/1614/1617), 1665–1667, 1701, maszty b
 ## F. Odciągi sieci (0311–0326)
 - [ ] 6303-7 końcówka liny odciągowej na linie nośnej; 5640-1 zacisk (odciągi pośrednie); 5270-3 zaciski (razem z kauszą, po 2–3,
       jak na gruncie); 6301-3 kausza; w 0326 dodatkowo 6301-1, 6303-1, 6311-1 ×2.
-- [ ] Lina odciągowa Cu 35 (9811-3) – dziś 4490-00 pogrubiony; do decyzji osobny model / kolor miedzi. 9811-1 (0326) – to linka (rodzina 9811 to linki; w 1081 jedna 9811-1 2,40 m), rysuje ją kod jak 9811-3 – model
+- [x] Lina odciągowa Cu 35 (9811-3) – 2026-11-20: bryła proceduralna w kolorze przewodów (użytkownik), model zbędny. 9811-1 (0326) – to linka (rodzina 9811 to linki; w 1081 jedna 9811-1 2,40 m), rysuje ją kod jak 9811-3 – model
       niepotrzebny (2026-11-19).
 
 ## G. Przęsła: skrzyżowania, łączniki, izolowane przęsła naprężenia

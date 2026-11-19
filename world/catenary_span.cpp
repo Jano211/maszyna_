@@ -35,6 +35,7 @@ struct catenary_span {
     catenary_solid solid;                                       // bryły do oglądania z bliska
     bool solidloaded { false };
     std::vector<catenary::solid_vertex> attached;               // bryła dołączona (lina kotwienia), układ scenerii
+    std::vector<catenary::solid_vertex> attached_copper;        // bryła dołączona w kolorze przewodów (linki wysięgników), układ scenerii
     std::shared_ptr<catenary::network_definition> own;          // kopia typu z naciągiem z dopisku "tension"
     bool rope2set[ 2 ] { false, false };                        // końce drugiej liny nośnej z dopisku "rope2"
     catenary::vec3 rope2[ 2 ];
@@ -297,6 +298,7 @@ give_back_solid( catenary_span &Span, bool const Keep ) {
         release( Span.solid.wires );
         release( Span.solid.fittings );
         release( Span.solid.rope );
+        release( Span.solid.copper );
     }
     Span.solid = {};
     Span.solidloaded = false;
@@ -476,6 +478,7 @@ catenary_span_solid( TTraction &Traction, glm::dvec3 const &Camera ) {
             release( span.solid.wires );
             release( span.solid.fittings );
             release( span.solid.rope );
+            release( span.solid.copper );
             span.solid = {};
             span.solidloaded = false;
             return {};
@@ -593,6 +596,10 @@ catenary_span_solid( TTraction &Traction, glm::dvec3 const &Camera ) {
         auto data { vertices( Traction, span.attached ) };
         span.solid.rope = GfxRenderer->Insert( data, userdata, span.solidbank, GL_TRIANGLES );
     }
+    if( false == span.attached_copper.empty() ) {
+        auto data { vertices( Traction, span.attached_copper ) };
+        span.solid.copper = GfxRenderer->Insert( data, userdata, span.solidbank, GL_TRIANGLES );
+    }
     span.solidloaded = ( span.solid.wires != null_handle );
     return ( span.solidloaded ? span.solid : catenary_solid() );
 }
@@ -608,6 +615,7 @@ drop_solid( TTraction &Traction ) {
     release( span.solid.wires );
     release( span.solid.fittings );
     release( span.solid.rope );
+    release( span.solid.copper );
     span.solid = {};
     span.solidloaded = false;
 }
@@ -636,10 +644,11 @@ catenary_span_release( TTraction &Traction ) {
 
 // bryła spoza przęsła rysowana razem z nim (lina kotwienia); zrobi się przy następnym podejściu kamery
 bool
-catenary_span_attach( TTraction &Traction, std::vector<catenary::solid_vertex> const &Triangles ) {
+catenary_span_attach( TTraction &Traction, std::vector<catenary::solid_vertex> const &Triangles, std::vector<catenary::solid_vertex> const &Copper ) {
     if( false == static_cast<bool>( Traction.m_catenaryspan ) ) { return false; }
     drop_solid( Traction );
     Traction.m_catenaryspan->attached = Triangles;
+    Traction.m_catenaryspan->attached_copper = Copper;
     return ( Traction.m_catenaryspan->definition != nullptr );
 }
 

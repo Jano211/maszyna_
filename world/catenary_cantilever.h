@@ -58,6 +58,7 @@ struct cantilever_part {
     std::map<std::string, double> points_x; // składowa X (wzdłuż toru) nazwanych punktów, gdy model ją ma (ramiona 6207/6208: obejma 4210, ucho)
     std::string model;              // inny plik modelu niż numer katalogowy (lina 9832-2 = model linki 4490-00), pusty - jak name
     double girth { 1.0 };           // część rozciągana (linka): skala w poprzek osi (grubsza lina z modelu cieńszej linki)
+    double solid { 0.0 };           // część rozciągana: promień bryły proceduralnej w kolorze przewodów zamiast modelu (linki Cu 9811); 0 = model
 };
 
 // część o stałym położeniu względem przewodów jezdnych

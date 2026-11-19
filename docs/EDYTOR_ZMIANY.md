@@ -18,6 +18,14 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
 
 Commity na `siec-gl46`.
 
+### Sieć trakcyjna: miedziane linki 9811 wysięgników i odciągów rysowane proceduralnie — commit o tym tytule
+- Co widać: linki i liny miedziane (9811-3 w odciągach sieci, lina ramion 105x/125x/127x, linka V 1267–1289, 9811-1 w 108x) są
+  rurą w kolorze przewodów jezdnych (starzeją się razem z siecią: nowa, zaśniedziała, czarna) zamiast pogrubionego modelu stalowej
+  linki. Rysują się z bliska razem z przewodami w prawdziwej grubości.
+- Zmienia: `world/catenary_span.h/.cpp` (nowa grupa brył `copper`), `rendering/common/scenewalk.cpp`, `world/catenary_scene.cpp`,
+  `world/catenary_cantilever.h/.cpp` (klucz części `solid`), dane `traction_cantilevers.txt` i generator.
+- Wymaga: nic. Uwaga: zmiana `catenary_span.h` – przebudowa plików, które go wciągają.
+
 ### Sieć trakcyjna: izolowane przęsło naprężenia z prawdziwymi izolatorami, belka 4690 na słupach bramek — commit o tym tytule
 - Co widać: przęsło naprężenia oznaczone jako izolowane ma przy słupie krzyżowym (2 m od niego, w przęśle do kotwienia) izolatory
   7150 z zaciskami 5120 w każdej linie nośnej i w każdym przewodzie jezdnym, zamiast szarych prostopadłościanów; przewody i liny
