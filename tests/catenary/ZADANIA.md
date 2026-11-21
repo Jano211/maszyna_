@@ -266,6 +266,22 @@ Konstrukcje niekompletne / porzucone / w przebudowie – mają się dać postawi
 - Ustalone (2026-11-19): izolator bez wysięgnika wisi swobodnie w pionie z ucha mocowania; do wyboru WSZYSTKIE izolatory;
   podpiąć pod ręczne składanie wysięgników (ten sam tok, nie osobna funkcja).
 
+## Do zrobienia – zasilanie (plan w ZASILANIE.md)
+
+- [x] A. Solver obwodu prądu stałego (`world/catenary_power`, test `tp`) – 2026-11-21
+- [x] B. Nowa sieć w obwodzie (`world/catenary_power_scene`), stara po staremu – 2026-11-21, w exe niesprawdzone
+- [x] H. Odgromnik 7310 na słupach (161x, 1701) – 2026-11-21, w exe niesprawdzone; punkt linki i plate na oko
+- [ ] H. Odgromnik 7310-04 na dźwigarach bramek (pionowo od góry), 1711 i inne słupy, uchwyt równoległy na linie (model)
+- [ ] C. Podstacje: kilka odpływów na jednym prostowniku (wspólny opór wewnętrzny), odłącznik zasilaczowy, uzależnienie
+      współpracujących wyłączników (Głowacki s. 211), próba linii przed ponownym załączeniem; edytor (strona Zasilanie)
+- [ ] D. Kabiny sekcyjne z wyłącznikami na odpływach (nastawy −20 %)
+- [ ] E. Odłączniki (otwarty / zamknięty / uszyniony), połączenia 0641/0643/0651, przełączanie eventem
+- [ ] F. Przewody wzmacniające i rozdzielcze jako gałęzie (dziś przewód wzmacniający nie zmienia oporu sieci)
+- [ ] G. Awarie: zwarcie przez uszynienie, pantograf mostkujący przerwę (prąd wyrównawczy), zerwanie przewodu
+- [ ] I. Podgląd w edytorze: sekcje wg zasilacza / napięcia
+- [ ] Pantograf w miejscu na przęśle (dziś pobór w środku przęsła - przy 50 m bez znaczenia)
+- [ ] Styk starej i nowej sieci w jednej scenerii: dziś granica obwodu (stara część po staremu) - zapytać, czy tak zostaje
+
 ## Do zrobienia – tereny górnicze: osiadanie i nadstawki (2026-11-21, „GOP”)
 
 Mechanizm z terenu: teren osiada niecką razem z torem i konstrukcjami (osiada nierówno, obiekty stałe prawie wcale), tor jest

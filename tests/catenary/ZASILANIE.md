@@ -8,7 +8,9 @@ odłączników z napędem silnikowym).
 ## PLAN „od A do Z” – fizyka prądu nowej sieci (2026-11-21, zastępuje plan z 16.11)
 
 Użytkownik 21.11: „zróbmy to porządnie od A do Z – jak wysięgniki i słupy rozpierdalają system, to niech fizyka prądu też”.
-Stan: PLAN, nic niezaczęte. Kolejność etapów jak niżej; każdy etap z testem na atrapie (jak `te`/`tsc`), w exe sprawdza użytkownik.
+Stan (2026-11-21 wieczór): **A i B zrobione** (solver + budowa obwodu, testy `tp`), **H zrobione** (odgromnik 7310 na słupach,
+bez bramek) – w exe NIESPRAWDZONE, szczegóły w PRZEKAZANIE.md. Dalej: C (podstacje z odpływami, wspólny prostownik, uzależnienie
+zasilaczy), D (kabiny z wyłącznikami), E (odłączniki). Każdy etap z testem na atrapie, w exe sprawdza użytkownik.
 
 ### Ustalenia z użytkownikiem (21.11)
 1. **Stara sieć (`node traction`) zostaje po staremu** – bez zmian w TTraction::VoltageGet / ResistanceCalc / TTractionPowerSource

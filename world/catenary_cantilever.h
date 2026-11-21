@@ -143,6 +143,7 @@ struct cantilever_pole {
     std::string earthing;
     std::string earthing_back;
     std::string earthing_arm;           // wysięgnik przewodu uszyniającego (wpis "earthing_arm", karta 0806), który pasuje do słupa; pusty - żaden
+    std::string arrester;               // odgromnik rożkowy 7310 (wpis "arrester", karty 0681/0683/0684), który pasuje do słupa; pusty - żaden
     // słup nosi wysięgniki przewodu wzmacniającego (49xx, stara norma ESN-2141/2510/2635A; słowo "feeder"); mocowanie dobierane jak
     // przy 6130 - wg głębokości słupa (długości śrub) albo wg profilu ceownika (width) dla wysięgników starej normy
     bool feeder { false };
@@ -327,6 +328,8 @@ public:
     cantilever_pole const *pole( std::string const &Name ) const;
     cantilever_mount const *mount( std::string const &Name ) const;
     catenary::earthing_arm const *earthing_arm( std::string const &Name ) const;
+    // odgromnik (wpis "arrester" - te same pola co "earthing_arm": mocowanie wg głębokości słupa, tył, punkt linki "wire", płyta)
+    catenary::earthing_arm const *arrester( std::string const &Name ) const;
     // przewód uszyniający: podany z nazwy albo pierwszy zdefiniowany (pusta nazwa); nullptr - żaden
     catenary::earthing_line const *earthing_line( std::string const &Name = {} ) const;
     std::vector<catenary::earthing_line> const &earthing_lines() const { return m_earthing_lines; }
@@ -360,6 +363,7 @@ private:
     std::map<std::string, cantilever_pole> m_poles;
     std::map<std::string, cantilever_mount> m_mounts;
     std::map<std::string, catenary::earthing_arm> m_earthing_arms;
+    std::map<std::string, catenary::earthing_arm> m_arresters;
     std::vector<catenary::earthing_line> m_earthing_lines;
     std::map<std::string, cantilever_assembly> m_assemblies;
     std::map<std::string, gantry_mast> m_masts;

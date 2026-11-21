@@ -844,6 +844,79 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     auto const inchain { false == data.name.empty() && std::any_of( Chains.begin(), Chains.end(), [ & ]( scene_chain const &Chain ) {
         return false == Chain.removed && Chain.file == Suspension.file
             && std::find( Chain.data.suspensions.begin(), Chain.data.suspensions.end(), data.name ) != Chain.data.suspensions.end(); } ) };
+    // odgromnik rożkowy 7310 (karty 0681/0683/0684, użytkownik 2026-11-21): przy szczycie słupa od strony toru, mocowanie wg głębokości
+    // słupa (tył regulowany po drugiej stronie, jak 6130-00), linka 9812-6 (4 m) łukiem do liny nośnej. Układ jak w mocowaniach: zero na
+    // płaszczyźnie przylegania, słup w +Y; słup przechylony - odgromnik z nim (obrót części słupa)
+    if( data.arrester && data.has_pole ) {
+        auto const *pole { Catalog.pole( data.pole_type ) };
+        auto const *arm { pole != nullptr && false == pole->arrester.empty() ? Catalog.arrester( pole->arrester ) : nullptr };
+        catenary::cantilever_placement const *standing { nullptr };
+        for( auto const &placement : result.parts ) { if( placement.role == "pole" ) { standing = &placement; break; } }
+        std::string problem;
+        if( pole == nullptr || arm == nullptr ) { problem = "pole " + data.pole_type + " takes no lightning arrester (\"arrester\" in traction_supports.txt)"; }
+        else if( false == pole->drop.empty() || pole->gantry ) { problem = "lightning arresters on gantries (7310-04) aren't done yet"; }
+        else if( standing == nullptr ) { problem = "the pole of suspension \"" + data.name + "\" is put by another entry - the arrester goes on that one"; }
+        if( false == problem.empty() ) {
+            if( Notes.insert( problem ).second ) { WriteLog( ( "Catenary: " + problem ).c_str() ); }
+        }
+        else {
+            auto const height { ( pole->top > 0.0 ? pole->top - arm->plate : pole->mount_max + 0.3 ) - data.arrester_drop };
+            auto const depth { pole->depth( height ) };
+            auto const mount { arm->mount_for( depth, pole->width ) };
+            if( mount.empty() ) {
+                if( Notes.insert( "arrester " + arm->name + " doesn't fit pole " + data.pole_type ).second ) { WriteLog( ( "Catenary: the bolts of arrester " + arm->name + " are too short for pole " + data.pole_type ).c_str() ); }
+            }
+            else {
+                // punkt w układzie słupa (zero w osi na wysokości główki szyny, -Y do toru) do układu wysięgnika
+                auto const local = [ & ]( double const X, double const Y, double const Z ) {
+                    catenary::cantilever_placement result_;
+                    double const in[ 3 ] { X, Y, Z };
+                    for( int row = 0; row < 3; ++row ) {
+                        result_.position[ row ] = standing->position[ row ];
+                        for( int column = 0; column < 3; ++column ) { result_.position[ row ] += standing->rotation[ row * 3 + column ] * in[ column ]; }
+                    }
+                    std::copy( std::begin( standing->rotation ), std::end( standing->rotation ), result_.rotation );
+                    return result_;
+                };
+                auto const face { -0.5 * depth };
+                auto front { local( 0.0, face, height ) };
+                front.role = "arrester";
+                front.part = mount;
+                result.parts.push_back( front );
+                if( false == arm->back.empty() ) {
+                    auto back { local( 0.0, face + depth, height ) };
+                    back.role = "arrester";
+                    back.part = arm->back;
+                    result.parts.push_back( back );
+                }
+                // linka 9812-6: od punktu "wire" odgromnika łukiem (długość 4,00 m z karty 0681) do uchwytu równoległego na linie nośnej,
+                // 1 m wzdłuż toru od uchwytu liny (uchwyt równoległy 5560/5500/5570/5550 - na razie bez modelu)
+                if( inchain ) {
+                    auto const from { local( arm->wire[ 0 ], face + arm->wire[ 1 ], height + arm->wire[ 2 ] ) };
+                    auto const *clamp { result.find( "messenger_clamp" ) };
+                    catenary::cantilever_placement to;
+                    to.position[ 0 ] = ( clamp != nullptr ? clamp->position[ 0 ] : 0.0 ) + 1.0;
+                    to.position[ 1 ] = clamp != nullptr ? clamp->position[ 1 ] : input.messenger.y;
+                    to.position[ 2 ] = clamp != nullptr ? clamp->position[ 2 ] : input.messenger.z;
+                    double gap { 0.0 };
+                    for( int axis = 0; axis < 3; ++axis ) { gap += ( to.position[ axis ] - from.position[ axis ] ) * ( to.position[ axis ] - from.position[ axis ] ); }
+                    gap = std::sqrt( gap );
+                    // zwis paraboli o długości łuku ok. 4 m: L ≈ D + 8s²/(3D)
+                    auto const sag { gap < 4.0 ? std::min( 1.2, std::sqrt( 3.0 * gap * ( 4.0 - gap ) / 8.0 ) ) : 0.05 };
+                    std::vector<glm::dvec3> points;
+                    for( int step = 0; step <= 12; ++step ) {
+                        auto const t { step / 12.0 };
+                        catenary::cantilever_placement at;
+                        for( int axis = 0; axis < 3; ++axis ) { at.position[ axis ] = from.position[ axis ] + ( to.position[ axis ] - from.position[ axis ] ) * t; }
+                        at.position[ 2 ] -= sag * 4.0 * t * ( 1.0 - t );
+                        auto const scene { catenary::cantilever_to_scene( at, heading ) };
+                        points.push_back( glm::dvec3 { Wire.x + scene.offset[ 0 ], Wire.y + scene.offset[ 1 ], Wire.z + scene.offset[ 2 ] } );
+                    }
+                    add_tube( Suspension.copper, points, 0.0045 );
+                }
+            }
+        }
+    }
     for( auto const &placement : result.parts ) {
         auto const *catalogued { inchain ? Catalog.part( placement.part ) : nullptr };
         if( catalogued != nullptr && catalogued->solid > 0.0 ) {
@@ -870,7 +943,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         auto entry {
             "node " + text_number( data.range_max, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 "
             + ( placement.model.empty() ? Catalog.models() + placement.part : placement.model ) + ".t3d "
-            + ( placement.role == "pole" ? poleskin( placement.part ) : placement.role == "foundation" ? std::string( "none" ) : fittingskin )
+            + ( placement.role == "pole" ? poleskin( placement.part ) : placement.role == "foundation" || placement.role == "arrester" ? std::string( "none" ) : fittingskin )
             + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) };
         if( part.scale[ 0 ] != 1.0 || part.scale[ 1 ] != 1.0 || part.scale[ 2 ] != 1.0 ) {
             entry += " scale " + text_number( part.scale[ 0 ], 5 ) + " " + text_number( part.scale[ 1 ], 5 ) + " " + text_number( part.scale[ 2 ], 5 );
