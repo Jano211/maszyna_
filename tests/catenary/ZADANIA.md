@@ -266,6 +266,28 @@ Konstrukcje niekompletne / porzucone / w przebudowie – mają się dać postawi
 - Ustalone (2026-11-19): izolator bez wysięgnika wisi swobodnie w pionie z ucha mocowania; do wyboru WSZYSTKIE izolatory;
   podpiąć pod ręczne składanie wysięgników (ten sam tok, nie osobna funkcja).
 
+## Do zrobienia – tereny górnicze: osiadanie i nadstawki (2026-11-21, „GOP”)
+
+Mechanizm z terenu: teren osiada niecką razem z torem i konstrukcjami (osiada nierówno, obiekty stałe prawie wcale), tor jest
+potem podbijany z powrotem do niwelety, a słupy i bramki zostają osiadnięte – sieć trzeba podnosić konsoletami / nadstawkami,
+dokładanymi kolejno przy każdym podbiciu. Skutek widoczny z kabiny: niskie bramki, lina nośna tuż pod dźwigarem (bliżej niż długość
+izolatora), przechylone słupy, wystające fundamenty. Przykład: podjazd na Muchowiec (Katowice).
+
+ZACZYNAMY DOPIERO, GDY UŻYTKOWNIK DOSTARCZY MODELE (nadstawki, ew. słupy górnicze). Wstępna koncepcja – do ustalenia przy robocie:
+
+- [ ] Osiadanie konstrukcji: przesunięcie słupa / bramki / masztu w pionie względem toru (dziś zero = główka szyny, bez wyjątków);
+      fundament schodzi razem z konstrukcją, edytor pokazuje wartość, wysięgnik i mocowania liczą się od faktycznej wysokości
+- [ ] Nadstawka jako model doklejany na wierzch słupa (osobny typ w traction_supports.txt): podnosi `top` i `mount_max`;
+      możliwość kilku nadstawek jedna na drugiej; osobna tekstura (wymaga modeli)
+- [ ] Walidacja odległości liny / przewodów od konstrukcji uziemionej (dźwigar, zwis, słup) – TYLKO ostrzeżenie, nigdy blokada
+      (w terenie lina potrafi iść kilkanaście cm pod dźwigarem; minimum izolacyjne 3 kV ok. 0,07 m – GLOWACKI.md)
+- [ ] Powiązać z przechyłem słupów w poprzek toru (już na liście) – na terenach górniczych przechyły są większe
+- [ ] Z katalogu ESN (KATALOG_ESN_SPIS.md), na podkopy górnicze: słupy kratowe 577 / 578, odciąg prętowy 539, fundamenty pod
+      odciąg 2613A; kotwienia 23-0477 / 23-0478 (uchwyty 4530 – brak modeli, KOTWIENIA.md); segment odciągu 23-1590 (MODELE.md)
+- [ ] Konsoleta regulowana 4580 (już na liście, czeka na model) – główne narzędzie podnoszenia sieci na osiadłych słupach
+- Do sprawdzenia: czy na terenach górniczych są jeszcze inne sposoby podnoszenia (przedłużki zwisów, przekładanie mocowań wyżej
+  na tej samej konstrukcji) – zbierać ze zdjęć z terenu.
+
 ## Odłożone i na później
 
 **Odłożone decyzją Jana**
