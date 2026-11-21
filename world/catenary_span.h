@@ -65,7 +65,9 @@ void catenary_span_refresh( TTraction &Traction );
 void catenary_span_release( TTraction &Traction );
 // dołącza do brył przęsła bryłę spoza przęsła (lina kotwienia przy jego końcu; trójkąty w układzie scenerii), rysowaną
 // razem z nim z bliska, ze stali. Pusta lista odłącza. false, gdy przęsło nie jest rysowane wg typu sieci
-bool catenary_span_attach( TTraction &Traction, std::vector<catenary::solid_vertex> const &Triangles, std::vector<catenary::solid_vertex> const &Copper = {} );
+// Copper - bryły w kolorze przewodów (linki 9811). Bez argumentu domyślnego: pusty wektor niepełnego typu jako argument domyślny
+// MSVC sprawdza już przy deklaracji i nie kompiluje (C2036) w plikach bez world/catenary_network.h
+bool catenary_span_attach( TTraction &Traction, std::vector<catenary::solid_vertex> const &Triangles, std::vector<catenary::solid_vertex> const &Copper );
 
 // skrzyżowania przewodów nad rozjazdami (karta 33-0561): przęsła, które w planie mogą krzyżować się z danym. Podaje je scena
 // (łańcuchy sieci), bo przęsło nie zna innych przęseł; nullptr = bez ogranicznika. Ogranicznik rysuje przęsło dolne, w bryłach
