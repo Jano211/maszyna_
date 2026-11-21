@@ -19,10 +19,31 @@ Stan: PLAN, nic niezaczęte. Kolejność etapów jak niżej; każdy etap z teste
    bez nich spadki napięcia wychodzą zaniżone. Koszt: przy rozwiązywaniu wysp (niżej) pomijalny. Etap 1 – opór szyn dopisany
    szeregowo do gałęzi przęsła (zero dodatkowych węzłów); pełna sieć szynowa z łącznikami poprzecznymi i dławikami – później,
    tylko jeśli wyjdzie różnica widoczna z kabiny.
-3. **Liczby: Głowacki (rozdz. 9 zasilanie s. 205–218, rozdz. 10 sieć powrotna s. 219–242), ewentualnie instrukcje PKP PLK.**
-   Dostępu do PDF Głowackiego z tej sesji nie było – rozdziały 9 i 10 do przeczytania (użytkownik może podesłać strony).
+3. **Liczby: Głowacki, ewentualnie instrukcje PKP PLK.** Głowacki przeczytany 21.11 (sekcja niżej) – zasady tak, liczb
+   elektrycznych podstacji brak.
 
-### Liczby wstępne (do sprawdzenia z Głowackim)
+### Z Głowackiego (przeczytane 21.11: rozdz. 2.1 s. 18–19, rozdz. 9.2 s. 203–212, 10.1 s. 219)
+- **Liczb elektrycznych podstacji (napięcie biegu jałowego, opór wewnętrzny, nastawy) Głowacki NIE podaje** – zostają artykuły IK
+  (niżej). Podstacje z transformacją jednostopniową (110 kV) mają niższą rezystancję zastępczą – „sztywniejsze” napięcie 3 kV
+  (s. 18) → parametr podstacji, nie stała.
+- Podstacja: zespół(y) prostownikowe, rozdzielnia 3 kV, odpływy = zasilacze z wyłącznikami szybkimi; zasilacze osobno na każdy tor
+  i w każdą stronę (dwutorowa 4, jednotorowa 2); zasilacz przyłączony do sieci przez odłącznik zasilaczowy („OKZ”), numery 10/30
+  (tor nieparzysty przed / za granicą zasilania), 20/40 (parzysty), powtórzenia 110, 210…; zasilacze stacyjne: 60 lokomotywownia,
+  70 grupa nieparzysta, 80 parzysta, 90 inna grupa (160, 270…); rozdzielnia zasilaczowa na bramce: odłącznik główny + 70-A, 70-B…
+  (s. 203–212). Sieć powrotna łączona z podstacją WYŁĄCZNIE kablami, krótkimi, na wprost podstacji (s. 18) → kabel powrotny.
+- Granica zasilania (z reguły przęsło naprężenia) ma odłącznik **normalnie otwarty**; zamyka się go awaryjnie (wyłączony
+  zasilacz / podstacja) – odłączniki 101 (tor nieparzysty) / 102 (parzysty) między zasilaczami 10/30 i 20/40 (s. 204).
+- Kabina sekcyjna: przy jednym pociągu w połowie odcinka spadek napięcia **mniejszy o 50 %**, przy kilku mniej; zwarcie wyłącza
+  sieć jednego toru tylko od podstacji do kabiny (s. 209). Nastawy wyłączników kabiny **o 20 % niższe** niż podstacyjnych (s. 211).
+- **Uzależnienie (współpraca) zasilaczy**: zwarcie blisko podstacji A – A wyłącza, B (daleko, prąd zwarcia mniejszy od nastawy)
+  NIE; dlatego zadziałanie wyłącznika jednego zasilacza automatycznie wyłącza współpracujący (łącze telekomunikacyjne), także
+  podstacja–kabina (s. 211) → w solverze: pary/grupy współpracujących wyłączników.
+- Na liniach jednotorowych, zwłaszcza w układach awaryjnych, minimalny prąd zwarcia bywa **mniejszy od krótkotrwałego prądu
+  rozruchu** – zwarcia nie da się wykryć nawet przy uzależnieniu; długotrwały prąd zwarcia przegrzewa / niszczy sieć i podnosi
+  potencjał słupa (porażenie) (s. 211–212) → solver ma to odtworzyć (zwarcie odległe, którego wyłącznik nie widzi).
+- Odrębny zasilacz dla torów lokomotywowni (dużo wyłączeń przy pracach na taborze) (s. 212).
+
+### Liczby wstępne (Głowacki ich nie podaje – artykuły IK / instrukcje PKP PLK)
 - Napięcie znamionowe na szynach podstacji **3,3 kV** (artykuł Szeląg, Maciołek 2013); bieg jałowy wyżej – DO USTALENIA.
 - Opór wewnętrzny podstacji: stary kod przyjmuje 0,2 Ω (prezentacja Kruczek, IK) – na start to samo, DO SPRAWDZENIA.
 - Wyłączniki szybkie: w podstacjach np. BWS 3150 A (Dzienis 2017), DCN 1600/2500/3150 A; nastawy (prąd, di/dt) – DO USTALENIA
