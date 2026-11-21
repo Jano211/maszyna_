@@ -7,7 +7,9 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 - ZASILANIE.md: nowy plan „od A do Z” (solver obwodu prądu stałego tylko dla NOWEJ sieci, stara `node traction` po staremu;
   szyny jako powrót – na start szeregowo w gałęzi przęsła; podstacje z odpływami i wyłącznikami szybkimi, kabiny sekcyjne z szyną
   zbiorczą, odłączniki ze stykiem uszyniającym, awarie). Etapy A–J, zaczynamy od A (solver + testy na atrapie). Liczby wstępne
-  z artykułów (3,3 kV, BWS 3150 A, ~13 km), reszta z Głowackiego rozdz. 9–10 – PDF z tej sesji niedostępny.
+  z artykułów (3,3 kV, BWS 3150 A, ~13 km). Głowacki przeczytany (OCR rozdz. 2.1, 9.2, 10.1): zasady (uzależnienie zasilaczy,
+  kabiny −20 % nastaw, −50 % spadku, odłączniki granic normalnie otwarte, numeracja OKZ), liczb podstacji nie podaje.
+- Model odgromnika 7310 użytkownik ma już na dysku: 7310-00 to mocowanie ze śrubami „do 03” (DO WYJAŚNIENIA, co znaczy „do 03”).
 - Stan starego kodu (do pamięci): `section` w tractionpowersource to tylko etykieta sekcji (nie źródło), `psNode` nieużywane, przy
   wyłączeniu jednego z dwóch zasilaczy przęsło dostaje 0 V (Traction.cpp „if either power source is out, so are we”) – w starej
   sieci zostaje, nowa sieć to naprawia.
