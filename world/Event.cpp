@@ -25,6 +25,7 @@ http://mozilla.org/MPL/2.0/.
 #include "world/Track.h"
 #include "world/Traction.h"
 #include "world/TractionPower.h"
+#include "world/catenary_scene.h"
 #include "audio/sound.h"
 #include "model/AnimModel.h"
 #include "vehicle/DynObj.h"
@@ -1997,6 +1998,53 @@ track_event::export_as_text_( std::ostream &Output ) const {
 
 // prepares event for use
 void
+disconnector_event::init() {
+    // odłączniki to nie węzły scenerii: szukane po nazwie przy wykonaniu
+}
+
+// event type string
+std::string
+disconnector_event::type() const {
+
+    return "disconnector";
+}
+
+// deserialize() subclass details
+void
+disconnector_event::deserialize_( cParser &Input, scene::scratch_data &Scratchpad ) {
+    Input.getTokens();
+    std::string state;
+    Input >> state;
+    m_state = ( state == "open" ? 1 : state == "earthed" ? 2 : 0 );
+    if( state != "open" && state != "earthed" && state != "closed" ) {
+        ErrorLog( "Bad event: \"" + m_name + "\" (type: disconnector) has state \"" + state + "\", should be closed, open or earthed" );
+    }
+    // preload next token
+    Input.getTokens();
+}
+
+// run() subclass details
+void
+disconnector_event::run_() {
+    WriteLog( std::string( "Type: Disconnector [" ) + catenary::disconnector_state_name( m_state ) + "]" );
+    for( auto const &target : m_targets ) {
+        if( false == catenary_disconnector_switch( std::get<std::string>( target ), m_state ) ) {
+            ErrorLog( "Bad event: \"" + m_name + "\" (type: disconnector) can't find disconnector \"" + std::get<std::string>( target ) + "\"" );
+        }
+    }
+}
+
+// export_as_text() subclass details
+void
+disconnector_event::export_as_text_( std::ostream &Output ) const {
+
+    Output << catenary::disconnector_state_name( m_state ) << ' ';
+}
+
+
+
+// prepares event for use
+void
 voltage_event::init() {
     // zmiana napięcia w zasilaczu (TractionPowerSource)
     init_targets( simulation::Powergrid, "power source" );
@@ -2256,6 +2304,7 @@ make_event( cParser &Input, scene::scratch_data &Scratchpad ) {
     else if( type == "animation" )    { event = new animation_event(); }
     else if( type == "lights" )       { event = new lights_event(); }
     else if( type == "voltage" )      { event = new voltage_event(); }
+    else if( type == "disconnector" ) { event = new disconnector_event(); }
     else if( type == "visible" )      { event = new visible_event(); }
     else if( type == "friction" )     { event = new friction_event(); }
     else if( type == "message" )      { event = new message_event(); }

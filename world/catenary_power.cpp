@@ -30,6 +30,8 @@ std::mutex SettingsMutex;
 
 // najmniejszy opór gałęzi: łączniki „bez oporu” nie mogą dawać nieskończonej przewodności (macierz traci uwarunkowanie)
 double const kMinResistance { 1.0e-4 };
+// odłącznik zamknięty (styki, linki połączeń) i zwarcie uszyniającego
+double const kSwitchResistance { 5.0e-4 };
 
 } // namespace
 
@@ -460,7 +462,7 @@ double distance( double const *A, double const *B ) {
 
 } // namespace
 
-void build( std::vector<span_input> const &Spans, std::vector<source_input> const &Sources, mapping &Result, std::vector<source> const &Previous ) {
+void build( std::vector<span_input> const &Spans, std::vector<source_input> const &Sources, mapping &Result, std::vector<source> const &Previous, std::vector<link_input> const &Links ) {
     auto const &config { current_settings() };
     auto &network { Result.network };
     network.clear();
@@ -527,6 +529,14 @@ void build( std::vector<span_input> const &Spans, std::vector<source_input> cons
     for( std::size_t item = 0; item < count; ++item ) {
         if( false == gapped( Spans[ item ] ) ) { whole[ find_root( whole, item * 2 ) ] = find_root( whole, item * 2 + 1 ); }
     }
+    auto const linked = [ & ]( link_input const &Link ) {
+        return Link.a >= 0 && Link.b >= 0 && Link.a < static_cast<int>( count ) && Link.b < static_cast<int>( count );
+    };
+    // odłączniki: łączą części w jedną całość dla zasilaczy (w każdym stanie)
+    for( auto const &link : Links ) {
+        if( false == linked( link ) ) { continue; }
+        whole[ find_root( whole, static_cast<std::size_t>( link.a ) * 2 + link.a_end ) ] = find_root( whole, static_cast<std::size_t>( link.b ) * 2 + link.b_end );
+    }
     std::map<std::pair<std::size_t, std::size_t>, std::pair<double, std::size_t>> nearest; // (zasilacz, część) -> (odległość, koniec)
     for( std::size_t item = 0; item < count; ++item ) {
         auto const found { named.find( Spans[ item ].power ) };
@@ -561,6 +571,23 @@ void build( std::vector<span_input> const &Spans, std::vector<source_input> cons
             }
         }
         network.add_branch( bus->second, node_of( place.second ), input.section ? config.cabin : config.feeder );
+    }
+    // odłączniki: zamknięty - gałąź, uszyniony - strona B zwarta z szynami (źródło 0 V przyjmujące prąd w obie strony, bez wyłącznika)
+    for( auto const &link : Links ) {
+        if( false == linked( link ) ) { continue; }
+        auto const a { node_of( static_cast<std::size_t>( link.a ) * 2 + link.a_end ) }, b { node_of( static_cast<std::size_t>( link.b ) * 2 + link.b_end ) };
+        if( link.state == 0 ) { network.add_branch( a, b, kSwitchResistance ); }
+        else if( link.state == 2 ) {
+            source earth;
+            earth.name = "earth:" + link.name;
+            earth.node = b;
+            earth.voltage = 0.0;
+            earth.internal = kSwitchResistance;
+            earth.recuperation = true;
+            earth.earth = true;
+            network.add_source( earth );
+            Result.sources.push_back( earth.name );
+        }
     }
     // w obwodzie tylko przęsła części z zasilaczem; reszta (np. nazwa zasilacza bez wpisu w scenerii) po staremu
     network.prepare();

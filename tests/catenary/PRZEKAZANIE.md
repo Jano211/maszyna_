@@ -2,6 +2,28 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-21 noc – odłączniki bez modeli (etap E, część obwodowa)
+
+**W exe NIESPRAWDZONE** (testy tp / te OK, składnia exe OK).
+- Wpis w pliku sieci: `node <max> <min> <nazwa> disconnector number <nr> state closed|open|earthed from <łańcuch> <podwieszenie>
+  to <łańcuch> <podwieszenie> enddisconnector` (catenary_suspension: `disconnector`, `write_disconnector`; też jako wpis w pliku
+  scenerii - simulationstateserializer, zapis edytora `catenaryblocks.kinds`). Punkt łańcucha = podwieszenie z jego listy → koniec
+  przęsła (przęsło zaczynające się w nim, za ostatnim punktem - kończące się).
+- Scena: `Disconnectors`, API `catenary_disconnector_*` (size/get/file/add/update/remove, `switch` po nazwie bez wielkości liter,
+  `generation` - licznik zmian, `ends`, `point`, nowa nazwa `<plik>_odN`). Przełączenie eventem nie oznacza pliku do zapisu.
+- Obwód: `link_input` w `catenary_power::build`: zamknięty - gałąź 0,5 mΩ, otwarty - nic, uszyniony - strona "to" zwarta z szynami
+  (źródło 0 V, `earth`, bez wyłącznika; zasilacz tej sekcji wybija). Części połączone odłącznikiem (w każdym stanie) to dla zasilaczy
+  jedna całość: zasilacz przyłącza się tylko w najbliższym miejscu, dalej prąd idzie przez odłączniki - otwarty odłącznik odcina
+  sekcję także z tym samym zasilaczem. Izolator BEZ odłącznika z tym samym zasilaczem po obu stronach - zasilany z obu stron jak dotąd.
+  Obwód przebudowuje się po zmianie `catenary_disconnector_generation()`.
+- Event `disconnector`: `event <nazwa> disconnector <opóźnienie> <odłącznik> closed|open|earthed endevent` (world/Event.cpp).
+- Edytor, strona Zasilanie: przy każdym izolatorze sekcyjnym przycisk „Odłącznik” (od podwieszenia przed izolatorem do następnego),
+  sekcja „Odłączniki”: lista, numer, stan, usuwanie; znaczniki w widoku (Widok > Sieć trakcyjna > Odłączniki: zielony zamknięty,
+  szary otwarty, czerwony uszyniony), klik w znacznik zaznacza go na stronie Zasilanie. Bez cofania (Ctrl+Z) zmian odłączników.
+  Odłączniki między dwoma łańcuchami (granica zasilania, 101/102) - na razie tylko wpisem w pliku.
+- Do zrobienia przy E: modele 0661-0677 z zamocowaniami 0541-0549 na słupie (wpis dostanie słup), połączenia 0641/0643/0651,
+  dodawanie między łańcuchami w edytorze, ostrzeżenie o sekcji bez zasilania, cofanie.
+
 ## START TUTAJ – 2026-11-21 wieczór – obwód prądu nowej sieci (etapy A, B) i odgromniki (H)
 
 **Wszystko w exe NIESPRAWDZONE** (testy tp / te / tsc / tk / tc / tt OK, składnia exe OK z nagłówkami - submoduły ref/glm, glad, glfw,

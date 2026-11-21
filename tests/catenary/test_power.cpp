@@ -285,6 +285,67 @@ int main() {
         near( located ? feeder_current( both, "B" ) : -1.0, 500.0, 0.01, "izolator w przesle: za przerwa zasila B" );
         near( feeder_current( both, "A" ), 0.0, 0.01, "izolator w przesle: A nie zasila za przerwa" );
     }
+    // 11b. odłącznik przy izolatorze w stacji (użytkownik 2026-11-21): ten sam zasilacz po obu stronach, sekcja za izolatorem
+    // zasilana tylko przez odłącznik - zamknięty: jest napięcie, otwarty: 0 V, uszyniony: zwarcie, wyłącznik zasilacza wybija
+    for( int state = 0; state < 3; ++state ) {
+        std::vector<span_input> spans;
+        track( spans, 40, 0.0, 0.0, []( int ) { return std::string( "A" ); } );
+        spans[ 19 ].gap[ 0 ] = 0.45;
+        spans[ 19 ].gap[ 1 ] = 0.55;
+        link_input link;
+        link.name = "od19";
+        link.a = 19; link.a_end = 0;
+        link.b = 19; link.b_end = 1;
+        link.state = state;
+        auto supply { feeder( "A", 0.0, 10.0 ) };
+        supply.parameters.trip_current = 3000.0;
+        mapping map;
+        build( spans, { supply }, map, {}, { link } );
+        int branch { -1 };
+        double position { 0.0 };
+        auto const located { map.locate( 30, 0.5, branch, position ) };
+        if( located ) { map.network.add_load( branch, 400.0, position ); }
+        map.network.solve( 0.02 );
+        auto const voltage { located ? map.network.branch_voltage_at( branch, position, 400.0 ) : 0.0 };
+        if( state == 0 ) {
+            check( voltage > 3000.0, "odlacznik zamkniety: sekcja za izolatorem zasilana przez niego", voltage, 3200.0 );
+            near( map.network.branch_current( branch ) * 0.0 + feeder_current( map, "A" ), 400.0, 0.05, "odlacznik zamkniety: prad z zasilacza A" );
+        }
+        else if( state == 1 ) {
+            check( voltage == 0.0, "odlacznik otwarty: sekcja za izolatorem bez napiecia, choc ten sam zasilacz", voltage, 0.0 );
+        }
+        else {
+            check( voltage < 1.0, "odlacznik uszyniony: sekcja za izolatorem zwarta", voltage, 0.0 );
+            auto tripped { false };
+            for( std::size_t index = 0; index < map.sources.size(); ++index ) {
+                if( map.sources[ index ] == "A" ) { tripped = map.network.sources()[ index ].tripped; }
+            }
+            check( false == tripped, "odlacznik uszyniony: sekcja przed nim nietknieta (strona B zwarta, odlacznik otwarty)" );
+        }
+    }
+    // uszyniony od strony zasilania (zwarcie na sekcji pod napięciem): wyłącznik zasilacza wybija
+    {
+        std::vector<span_input> spans;
+        track( spans, 40, 0.0, 0.0, []( int ) { return std::string( "A" ); } );
+        spans[ 19 ].gap[ 0 ] = 0.45;
+        spans[ 19 ].gap[ 1 ] = 0.55;
+        link_input link;
+        link.name = "od19";
+        link.a = 19; link.a_end = 1;    // odwrotnie: strona zwierana to sekcja z zasilaczem
+        link.b = 19; link.b_end = 0;
+        link.state = 2;
+        auto supply { feeder( "A", 0.0, 10.0 ) };
+        supply.parameters.trip_current = 3000.0;
+        mapping map;
+        build( spans, { supply }, map, {}, { link } );
+        map.network.solve( 0.02 );
+        auto tripped { false };
+        double current { 0.0 };
+        for( std::size_t index = 0; index < map.sources.size(); ++index ) {
+            if( map.sources[ index ] == "A" ) { tripped = map.network.sources()[ index ].tripped; current = map.network.sources()[ index ].current; }
+        }
+        check( tripped, "uszynienie sekcji pod napieciem: wylacznik zasilacza wybija", current, 3000.0 );
+    }
     // 12. przęsło naprężenia zwarte (ten sam zasilacz, bieżnia wspólna): łańcuch 2 równolegle obok łańcucha 1 na końcówce,
     // połączony tylko przez bieżnię; izolowane (inny zasilacz) - bez połączenia
     for( auto const isolated : { false, true } ) {

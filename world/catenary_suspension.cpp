@@ -190,6 +190,36 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
             if( good ) { Output.gantries.push_back( line ); }
             continue;
         }
+        if( type == "disconnector" ) {
+            disconnector line;
+            line.name = ( entry.name == "none" ? std::string() : entry.name );
+            line.range_max = entry.range_max;
+            line.range_min = entry.range_min;
+            auto closed { false };
+            while( index < count ) {
+                auto const key { Tokens[ index++ ] };
+                if( key == "enddisconnector" ) { closed = true; break; }
+                if( key == "node" ) { --index; break; }
+                if( key == "number" && index < count ) { line.number = Tokens[ index++ ]; }
+                else if( key == "state" && index < count ) {
+                    auto const &value { Tokens[ index++ ] };
+                    if( value == "closed" ) { line.state = 0; }
+                    else if( value == "open" ) { line.state = 1; }
+                    else if( value == "earthed" ) { line.state = 2; }
+                    else { report( line.name, "unknown state \"" + value + "\" of a disconnector (closed, open or earthed)" ); good = false; }
+                }
+                else if( ( key == "from" || key == "to" ) && index + 1 < count ) {
+                    ( key == "from" ? line.from_chain : line.to_chain ) = Tokens[ index++ ];
+                    ( key == "from" ? line.from_point : line.to_point ) = Tokens[ index++ ];
+                }
+                else { report( line.name, "unexpected token \"" + key + "\" in a disconnector" ); good = false; }
+            }
+            if( false == closed ) { report( line.name, "missing \"enddisconnector\"" ); good = false; }
+            if( line.name.empty() ) { report( line.name, "a disconnector needs a name (events switch it by the name)" ); good = false; }
+            if( line.from_chain.empty() || line.to_chain.empty() ) { report( line.name, "a disconnector needs \"from <chain> <suspension>\" and \"to <chain> <suspension>\"" ); good = false; }
+            if( good ) { Output.disconnectors.push_back( line ); }
+            continue;
+        }
         if( type == "earthing" ) {
             earthing line;
             line.name = ( entry.name == "none" ? std::string() : entry.name );
@@ -558,6 +588,24 @@ std::string write_chain( chain const &Entry ) {
     text += " suspensions";
     for( auto const &name : Entry.suspensions ) { text += " " + name; }
     return text + " endchain";
+}
+
+char const *disconnector_state_name( int const State ) {
+    return State == 1 ? "open" : State == 2 ? "earthed" : "closed";
+}
+
+std::string write_disconnector( disconnector const &Entry ) {
+    auto const number = []( double const Value ) {
+        std::ostringstream stream;
+        stream.imbue( std::locale::classic() );
+        stream << Value;
+        return stream.str();
+    };
+    std::string text { "node " + number( Entry.range_max ) + " " + number( Entry.range_min ) + " " + ( Entry.name.empty() ? std::string( "none" ) : Entry.name ) + " disconnector" };
+    if( false == Entry.number.empty() ) { text += " number " + Entry.number; }
+    text += std::string( " state " ) + disconnector_state_name( Entry.state );
+    text += " from " + Entry.from_chain + " " + Entry.from_point + " to " + Entry.to_chain + " " + Entry.to_point;
+    return text + " enddisconnector";
 }
 
 std::string write_earthing( earthing const &Entry ) {

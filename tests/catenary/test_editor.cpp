@@ -1133,6 +1133,32 @@ int main( int, char *argv[] ) {
             std::printf( "  znacznik izolatora: %.3f m w planie od i2, %.3f m nad przewodem przy i2\n", distance, height );
             check( std::abs( distance - 12.5 ) < 0.05 && std::abs( height ) < 0.3, "izolator sekcyjny: znacznik w srodku izolatora na przewodzie" );
         }
+        // odłącznik przez izolator (2026-11-21): końce przęseł po obu stronach przerwy, zapis i odczyt wpisu, przełączenie po nazwie
+        {
+            auto const *chain { catenary_chain_get( 0 ) };
+            catenary::disconnector item;
+            item.name = "Od19";
+            item.number = "19";
+            item.from_chain = chain->name;
+            item.from_point = "i2";
+            auto const listed { std::find( chain->suspensions.begin(), chain->suspensions.end(), std::string( "i2" ) ) };
+            item.to_chain = chain->name;
+            item.to_point = ( listed != chain->suspensions.end() && listed + 1 != chain->suspensions.end() ) ? *( listed + 1 ) : std::string();
+            auto const index { catenary_disconnector_add( catenary_chain_file( 0 ), item ) };
+            TTraction *from { nullptr }, *to { nullptr };
+            int fromend { -1 }, toend { -1 };
+            auto const ends { catenary_disconnector_ends( index, from, fromend, to, toend ) };
+            auto const written { catenary::write_disconnector( item ) };
+            std::vector<std::string> tokens; std::istringstream words { written }; for( std::string w; words >> w; ) { tokens.push_back( w ); }
+            catenary::suspension_file parsed; std::vector<std::string> problems;
+            catenary::parse_suspensions( tokens, "odlacznik", parsed, problems );
+            auto const generation { catenary_disconnector_generation() };
+            auto const switched { catenary_disconnector_switch( "od19", 2 ) && catenary_disconnector_get( index )->state == 2 && catenary_disconnector_generation() > generation };
+            std::printf( "  odlacznik: %s\n", written.c_str() );
+            check( ends && from != nullptr && to != nullptr && from != to && fromend == 0 && toend == 0 && problems.empty() && parsed.disconnectors.size() == 1
+                && catenary::write_disconnector( parsed.disconnectors.front() ) == written && switched, "odlacznik przez izolator: konce przesel, zapis, przelaczenie eventem" );
+            catenary_disconnector_remove( index );
+        }
         std::remove( "tests/catenary/td_izolator_test.scm" );
         check( good, "izolator sekcyjny: zapis i odczyt, przesla za nim zasila jego zasilacz" );
     }

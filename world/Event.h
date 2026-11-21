@@ -523,6 +523,30 @@ private:
 
 
 
+// odłącznik nowej sieci trakcyjnej (wpis "disconnector" w pliku sieci): "event <nazwa> disconnector <opóźnienie> <odłącznik> closed|open|earthed endevent"
+class disconnector_event : public basic_event {
+
+public:
+// methods
+    // prepares event for use
+    void init() override;
+
+private:
+// methods
+    // event type string
+    std::string type() const override;
+    // deserialize() subclass details
+    void deserialize_( cParser &Input, scene::scratch_data &Scratchpad ) override;
+    // run() subclass details
+    void run_() override;
+    // export_as_text() subclass details
+    void export_as_text_( std::ostream &Output ) const override;
+// members
+    int m_state { 0 };      // 0 zamknięty, 1 otwarty, 2 uszyniony
+};
+
+
+
 class voltage_event : public basic_event {
 
 public:
