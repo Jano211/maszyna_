@@ -24,11 +24,18 @@ json pobrane do sprawdzania; OpenAL - atrapy w /tmp).
   TTractionPowerSource dostał tylko gettery parametrów (`nominal_voltage()` itd.).
 - Plik `data/traction_power.txt` (opcjonalny): rail, feeder, cabin, leakage, regen_limit, opory właściwe przewodów.
 - **Odgromnik 7310**: wpis `arrester` w traction_supports.txt (pola jak earthing_arm: mount wg głębokości, back, wire, plate), klucz
-  słupa `arrester` (161x → 7310-01, 1701 → 7310-03 + tył 7310-00; 1711 i 166x nie mają jeszcze wpisów słupów / nie wiadomo), wpis
+  słupa `arrester` (1701 → 7310-03 + tył 7310-00; 1711 to samo co 1701 - dopisać, gdy 1711 dostanie wpis słupa; 161x → 7310-01
+  ZAŁOŻENIE - użytkownik nie wie, jakie wykonania mają 161x i dwuteowniki 166x, w katalogu ich nie ma; 166x bez odgromnika), wpis
   podwieszenia `arrester <m niżej>`, edytor: strona słupów „Odgromnik 7310” + „Odgromnik niżej o (m)”. Przy szczycie słupa (plate pod
   wierzchem), od strony toru, z przechyłem słupa; tekstura z modelu (skin none); linka 9812-6 jako bryła miedziana łukiem ~4 m do
   liny nośnej 1 m wzdłuż toru od uchwytu liny (tylko w łańcuchu). ZAŁOŻENIA: punkt `wire` (0, −0,30, 0,15) i plate 0,10 na oko - do
   poprawki wg modeli; uchwyt równoległy na linie (5560/5500/5570/5550) bez modelu; na bramkach (7310-04) jeszcze nie.
+- MSVC (21.11 20:23, użytkownik): C2036 „catenary::solid_vertex *: nieznany rozmiar” - argument domyślny `= {}` typu
+  std::vector<niepełny typ> w catenary_span.h (od commita z linkami 9811, 20.11) MSVC sprawdza przy deklaracji w każdym pliku
+  bez catenary_network.h; gcc tego nie łapie. Argument domyślny usunięty. NIE dawać argumentów domyślnych z kontenerami typów
+  tylko zadeklarowanych.
+- G: (21.11 16:40): traction_supports.txt md5 1317539a8d2fb8d07a375e68c4c7129c, traction_power.txt 9032d0c307ef9d16da95d63cb3b06657,
+  lang/editor_pl.po c995d1170e2b54e36952e92b4a6034aa (wersja z G: + 5 wpisów odgromnika); kopie *_przed_odgromnikami_20261121.
 - Do sprawdzenia przez użytkownika: (1) jazda po nowej sieci - napięcie spada z odległością od podstacji, w panelu debug prąd
   zasilacza; (2) izolator sekcyjny z wyłączonym zasilaczem (podstacja wyłączona → 0 V za izolatorem); (3) przeciążenie → wyłącznik
   szybki i ponowne załączenia; (4) odgromnik na 161x i 1701, punkt linki.
