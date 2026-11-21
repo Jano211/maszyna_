@@ -13282,3 +13282,6 @@ msgstr "Odgromnik rożkowy przy szczycie słupa, od strony toru, linka łukiem d
 
 msgid "Arrester lower by (m)"
 msgstr "Odgromnik niżej o (m)"
+
+msgid "Click: select the pole before this section insulator"
+msgstr "Klik: zaznacz słup przed tym izolatorem sekcyjnym"

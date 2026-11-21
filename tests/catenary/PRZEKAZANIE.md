@@ -30,6 +30,11 @@ json pobrane do sprawdzania; OpenAL - atrapy w /tmp).
   wierzchem), od strony toru, z przechyłem słupa; tekstura z modelu (skin none); linka 9812-6 jako bryła miedziana łukiem ~4 m do
   liny nośnej 1 m wzdłuż toru od uchwytu liny (tylko w łańcuchu). ZAŁOŻENIA: punkt `wire` (0, −0,30, 0,15) i plate 0,10 na oko - do
   poprawki wg modeli; uchwyt równoległy na linie (5560/5500/5570/5550) bez modelu; na bramkach (7310-04) jeszcze nie.
+- Izolatory sekcyjne w edytorze (21.11 20:35, użytkownik: „wizualizacja jest, ale nie da się kliknąć i nie trafia idealnie w izolator”):
+  znacznik liczony teraz w środku izolatora na przewodzie jezdnym (section_layout_of, jak przerwa w przęśle; wcześniej średnia zer
+  modeli części - zera są na końcach, część wisi na linie), a sam znacznik da się kliknąć (`intent_detail::insulator`,
+  `catenary_insulator_hit`): zaznacza słup przed izolatorem, jak klik w model izolatora. Czemu klik w model nie działał - nie wiem
+  (w trybie narzędzia sieci kliknięcia idą przez intencje narzędzia, nie przez wybór węzła); do sprawdzenia, czy znacznik wystarcza.
 - MSVC (21.11 20:23, użytkownik): C2036 „catenary::solid_vertex *: nieznany rozmiar” - argument domyślny `= {}` typu
   std::vector<niepełny typ> w catenary_span.h (od commita z linkami 9811, 20.11) MSVC sprawdza przy deklaracji w każdym pliku
   bez catenary_network.h; gcc tego nie łapie. Argument domyślny usunięty. NIE dawać argumentów domyślnych z kontenerami typów
