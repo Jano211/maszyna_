@@ -19,6 +19,7 @@ http://mozilla.org/MPL/2.0/.
 #include "world/TractionPower.h"
 #include "world/catenary_network.h"
 #include "world/catenary_power.h"
+#include "world/catenary_scene.h"
 #include "world/catenary_span.h"
 
 #include <algorithm>
@@ -35,6 +36,7 @@ struct power_state {
     std::vector<double> pending;                               // pobór zgłoszony od ostatniego kroku, wg gałęzi
     std::vector<double> pending_b;                             // jego część przypadająca na koniec b gałęzi
     bool dirty { true };
+    std::size_t disconnectors { 0 };                           // licznik zmian odłączników (catenary_disconnector_generation)
     std::size_t spancount { 0 };
     std::size_t sourcecount { 0 };
 };
@@ -124,8 +126,31 @@ void rebuild() {
             sources.push_back( item );
         }
     }
+    // odłączniki: punkty łańcuchów jako końce przęseł
+    std::vector<catenary_power::link_input> links;
+    State.disconnectors = catenary_disconnector_generation();
+    for( std::size_t item = 0; item < catenary_disconnector_size(); ++item ) {
+        auto const *data { catenary_disconnector_get( item ) };
+        TTraction *from { nullptr }, *to { nullptr };
+        int fromend { 0 }, toend { 0 };
+        if( data == nullptr ) { continue; }
+        if( false == catenary_disconnector_ends( item, from, fromend, to, toend ) ) {
+            ErrorLog( "Bad catenary: disconnector \"" + data->name + "\" points at a chain or a suspension which isn't there" );
+            continue;
+        }
+        auto const a { index.find( from ) }, b { index.find( to ) };
+        if( a == index.end() || b == index.end() ) { continue; }
+        catenary_power::link_input link;
+        link.name = data->name;
+        link.a = a->second;
+        link.a_end = fromend;
+        link.b = b->second;
+        link.b_end = toend;
+        link.state = data->state;
+        links.push_back( link );
+    }
     auto const previous { State.map.network.sources() };
-    catenary_power::build( inputs, sources, State.map, previous );
+    catenary_power::build( inputs, sources, State.map, previous, links );
     std::size_t kept { 0 };
     for( std::size_t item = 0; item < spans.size(); ++item ) {
         if( State.map.branch[ item ] < 0 && State.map.branch_after[ item ] < 0 ) { continue; }
@@ -144,6 +169,7 @@ void rebuild() {
 // zmiana parametrów zasilacza (edytor): przebudowa, bo zmienia się rozkład obwodu
 bool sources_changed() {
     for( auto const &item : State.map.network.sources() ) {
+        if( item.earth ) { continue; }
         auto const *source { simulation::Powergrid.find( item.name ) };
         if( source == nullptr
          || source->nominal_voltage() != item.voltage
@@ -167,6 +193,7 @@ void catenary_power_changed() {
 void catenary_power_update( double const Dt ) {
     if( Dt <= 0.0 ) { return; }
     if( State.dirty
+     || State.disconnectors != catenary_disconnector_generation()
      || State.sourcecount != simulation::Powergrid.sequence().size()
      || sources_changed() ) {
         rebuild();

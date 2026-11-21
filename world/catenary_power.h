@@ -52,6 +52,7 @@ struct source {
     int repetition { 3 };               // tyle ponownych załączeń, potem długa przerwa
     double slow_timeout { 60.0 };       // s, długa przerwa
     bool recuperation { false };        // przyjmuje rekuperację (prąd wsteczny)
+    bool earth { false };               // zwarcie z szynami (odłącznik uszyniony), nie zasilacz
     // stan
     bool tripped { false };             // wyłącznik szybki otwarty
     bool locked { false };              // długa przerwa po wyczerpaniu ponownych załączeń
@@ -157,6 +158,17 @@ struct source_input {
     double location[ 3 ] {};
     bool section { false };             // kabina sekcyjna (wpis "section"): szyna zbiorcza bez źródła
 };
+// odłącznik: łączy koniec przęsła A z końcem przęsła B (numery na liście przęseł). Stan: 0 zamknięty (gałąź prawie bez oporu),
+// 1 otwarty (nic), 2 uszyniony (otwarty, a strona B zwarta z szynami - źródło 0 V bez oporu; zasilacz na tej sekcji wybije).
+// Części sieci połączone odłącznikiem (w każdym stanie) to dla zasilaczy jedna całość: zasilacz przyłącza się tylko w najbliższym
+// miejscu, a dalej prąd idzie przez odłączniki - otwarty odłącznik odcina sekcję także wtedy, gdy ma ona ten sam zasilacz
+struct link_input {
+    std::string name;
+    int a { -1 }, a_end { 0 };
+    int b { -1 }, b_end { 0 };
+    int state { 0 };
+};
+
 struct mapping {
     circuit network;
     std::vector<int> branch;            // przęsło -> gałąź obwodu; -1 = przęsło w części bez zasilacza (liczone po staremu)
@@ -177,6 +189,6 @@ struct mapping {
 // - opór przęsła: przewody + tor (szyny) na długości przęsła.
 // Previous: stan wyłączników ze starego obwodu (po nazwie), żeby przebudowa w czasie jazdy go nie kasowała
 void build( std::vector<span_input> const &Spans, std::vector<source_input> const &Sources, mapping &Result,
-    std::vector<source> const &Previous = {} );
+    std::vector<source> const &Previous = {}, std::vector<link_input> const &Links = {} );
 
 } // namespace catenary_power

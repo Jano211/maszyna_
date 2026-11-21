@@ -13285,3 +13285,48 @@ msgstr "Odgromnik niżej o (m)"
 
 msgid "Click: select the pole before this section insulator"
 msgstr "Klik: zaznacz słup przed tym izolatorem sekcyjnym"
+
+msgid "Disconnectors"
+msgstr "Odłączniki"
+
+msgid "Disconnector"
+msgstr "Odłącznik"
+
+msgid "The disconnectors with their numbers: green closed, grey open, red earthed. They're set on the Power page"
+msgstr "Odłączniki z numerami: zielony zamknięty, szary otwarty, czerwony uszyniony. Ustawia się je na stronie Zasilanie"
+
+msgid "Click: select the disconnector (Power page)"
+msgstr "Klik: zaznacz odłącznik (strona Zasilanie)"
+
+msgid "Disconnector %s selected: its state and number are on the Power page"
+msgstr "Zaznaczony odłącznik %s: stan i numer na stronie Zasilanie"
+
+msgid "closed"
+msgstr "zamknięty"
+
+msgid "open"
+msgstr "otwarty"
+
+msgid "earthed"
+msgstr "uszyniony"
+
+msgid "No."
+msgstr "Nr"
+
+msgid "The number from the sectioning plan (Glowacki: 10/20/30/40 feeder, 101/102 at the supply limits, 6, 16... with an earthing contact). Enter takes it"
+msgstr "Numer z planu sekcjonowania (Głowacki: 10/20/30/40 zasilaczowe, 101/102 na granicach zasilania, 6, 16... ze stykiem uszyniającym). Enter zatwierdza"
+
+msgid "Closed: both sides connected. Open: a break. Earthed: a break and the side \"to\" shorted to the rails - on a live section the breakers of its power source trip"
+msgstr "Zamknięty: obie strony połączone. Otwarty: przerwa. Uszyniony: przerwa, a strona \"to\" zwarta z szynami - na sekcji pod napięciem wybija wyłącznik jej zasilacza"
+
+msgid "Disconnector %s %s: the circuit is made anew"
+msgstr "Odłącznik %s %s: obwód liczony od nowa"
+
+msgid "No disconnectors yet: \"Disconnector\" at a section insulator above adds one across it. Between two chains (a supply limit) - in the catenary file for now"
+msgstr "Nie ma jeszcze odłączników: \"Odłącznik\" przy izolatorze sekcyjnym wyżej dodaje go przez izolator. Między dwoma łańcuchami (granica zasilania) - na razie w pliku sieci"
+
+msgid "Disconnector %s across the insulator after %s, closed: the section after it now takes power only through it"
+msgstr "Odłącznik %s przez izolator za %s, zamknięty: sekcja za izolatorem bierze teraz prąd tylko przez niego"
+
+msgid "A disconnector across this insulator (no model yet): closed - both sides connected, open - the section after it without power even with the same power source"
+msgstr "Odłącznik przez ten izolator (jeszcze bez modelu): zamknięty - obie strony połączone, otwarty - sekcja za izolatorem bez prądu, nawet z tym samym zasilaczem"

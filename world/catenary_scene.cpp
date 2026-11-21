@@ -178,6 +178,16 @@ struct scene_earthing {
 };
 std::vector<scene_earthing> Earthings;
 
+// odłączniki z pliku (sam stan w obwodzie prądu, bez modelu): zmiana stanu podbija licznik, po którym obwód (catenary_power_scene)
+// wie, że ma się przebudować
+struct scene_disconnector {
+    catenary::disconnector data;
+    std::string file;
+    bool removed { false };
+};
+std::vector<scene_disconnector> Disconnectors;
+std::size_t DisconnectorGeneration { 0 };
+
 // pył shaderów (catenary_dust.h) leży według wysokości nad główką szyny słupa, na którym część siedzi (zero słupa; fundament
 // poniżej zera). Słup najbliższy w planie punktowi Position, w promieniu 3 m: podwieszenia ze słupem, samodzielne kotwienia,
 // słupy bramek z tego samego pliku sieci. false, gdy żadnego nie ma (część dostaje wtedy stałą wysokość z traction_dust.txt)
@@ -4389,6 +4399,14 @@ add_content( catenary::suspension_file const &File, std::string const &Filename 
         assemble_anchor( Anchors.back() );
         follow_anchor( Anchors.back() );
     }
+    for( auto const &line : File.disconnectors ) {
+        if( twice( "disconnector", line.name, std::any_of( Disconnectors.begin(), Disconnectors.end(), [ & ]( scene_disconnector const &D ) { return false == D.removed && D.file == Filename && D.data.name == line.name; } ) ) ) { continue; }
+        scene_disconnector item;
+        item.data = line;
+        item.file = Filename;
+        Disconnectors.emplace_back( item );
+        ++DisconnectorGeneration;
+    }
     // uszynienie przed łańcuchami: linę między słupami rysują przęsła
     for( auto const &line : File.earthings ) {
         if( twice( "earthing", line.name, std::any_of( Earthings.begin(), Earthings.end(), [ & ]( scene_earthing const &E ) { return false == E.removed && E.file == Filename && E.data.name == line.name; } ) ) ) { continue; }
@@ -4479,6 +4497,7 @@ catenary_scene_node( cParser &Input, std::string const &Type, double const Range
     target.anchors.insert( target.anchors.end(), file.anchors.begin(), file.anchors.end() );
     // uszynienia też (wpisy earthing z pliku scenerii ginęły przy wczytaniu przed FirstInit)
     target.earthings.insert( target.earthings.end(), file.earthings.begin(), file.earthings.end() );
+    target.disconnectors.insert( target.disconnectors.end(), file.disconnectors.begin(), file.disconnectors.end() );
 }
 
 void
@@ -4778,6 +4797,8 @@ catenary_scene_clear() {
     Anchors.clear();
     for( auto &earthing : Earthings ) { for( auto *part : earthing.parts ) { catenary_part_delete( part ); } }
     Earthings.clear();
+    Disconnectors.clear();
+    ++DisconnectorGeneration;
     Files.clear();
     FileLayers.clear();
     InlineFiles.clear();
@@ -5106,6 +5127,9 @@ catenary_scene_entries( std::string const &File ) {
     }
     for( auto const &earthing : Earthings ) {
         if( false == earthing.removed && earthing.file == File ) { lines.emplace_back( catenary::write_earthing( earthing.data ) ); }
+    }
+    for( auto const &item : Disconnectors ) {
+        if( false == item.removed && item.file == File ) { lines.emplace_back( catenary::write_disconnector( item.data ) ); }
     }
     for( auto const &chain : Chains ) {
         if( false == chain.removed && chain.file == File ) { lines.emplace_back( catenary::write_chain( chain.data ) ); }
@@ -5452,6 +5476,10 @@ catenary_scene_save( std::string &Message ) {
         for( auto const &earthing : Earthings ) {
             if( earthing.removed || earthing.file != file.name ) { continue; }
             text += catenary::write_earthing( earthing.data ) + "\r\n";
+        }
+        for( auto const &item : Disconnectors ) {
+            if( item.removed || item.file != file.name ) { continue; }
+            text += catenary::write_disconnector( item.data ) + "\r\n";
         }
         auto const path { Global.asCurrentSceneryPath + file.name };
         std::ofstream output { path, std::ios::binary | std::ios::trunc };
@@ -5901,6 +5929,123 @@ catenary_scene_new_earthing_name( std::string const &File ) {
     for( int number = 1; ; ++number ) {
         auto const name { stem + "_u" + std::to_string( number ) };
         if( std::none_of( Earthings.begin(), Earthings.end(), [ & ]( scene_earthing const &E ) { return E.file == File && E.data.name == name; } ) ) { return name; }
+    }
+}
+
+// ---- odłączniki ---------------------------------------------------------------------------------------------------------
+
+std::size_t catenary_disconnector_size() { return Disconnectors.size(); }
+
+catenary::disconnector const *
+catenary_disconnector_get( std::size_t const Index ) {
+    return ( Index < Disconnectors.size() && false == Disconnectors[ Index ].removed ) ? &Disconnectors[ Index ].data : nullptr;
+}
+
+std::string catenary_disconnector_file( std::size_t const Index ) { return ( Index < Disconnectors.size() ? Disconnectors[ Index ].file : std::string() ); }
+
+std::size_t
+catenary_disconnector_add( std::string const &File, catenary::disconnector const &Data ) {
+    scene_disconnector item;
+    item.data = Data;
+    item.file = File;
+    Disconnectors.emplace_back( item );
+    mark_changed( File );
+    ++DisconnectorGeneration;
+    return Disconnectors.size() - 1;
+}
+
+bool
+catenary_disconnector_update( std::size_t const Index, catenary::disconnector const &Data ) {
+    if( Index >= Disconnectors.size() ) { return false; }
+    Disconnectors[ Index ].data = Data;
+    Disconnectors[ Index ].removed = false;
+    mark_changed( Disconnectors[ Index ].file );
+    ++DisconnectorGeneration;
+    return true;
+}
+
+void
+catenary_disconnector_remove( std::size_t const Index ) {
+    if( Index >= Disconnectors.size() || Disconnectors[ Index ].removed ) { return; }
+    Disconnectors[ Index ].removed = true;
+    mark_changed( Disconnectors[ Index ].file );
+    ++DisconnectorGeneration;
+}
+
+bool
+catenary_disconnector_switch( std::string const &Name, int const State ) {
+    auto found { false };
+    // nazwy z eventów przychodzą zwykle małymi literami (parser scenerii) - porównanie bez wielkości liter
+    auto const same = []( std::string const &A, std::string const &B ) {
+        return A.size() == B.size() && std::equal( A.begin(), A.end(), B.begin(), []( unsigned char const L, unsigned char const R ) { return std::tolower( L ) == std::tolower( R ); } );
+    };
+    for( auto &item : Disconnectors ) {
+        if( item.removed || false == same( item.data.name, Name ) ) { continue; }
+        // przełączenie w czasie jazdy to stan, nie zmiana scenerii - plik nie jest oznaczany do zapisu
+        item.data.state = std::clamp( State, 0, 2 );
+        found = true;
+    }
+    if( found ) { ++DisconnectorGeneration; }
+    return found;
+}
+
+std::size_t catenary_disconnector_generation() { return DisconnectorGeneration; }
+
+namespace {
+
+// punkt łańcucha (podwieszenie z jego listy): numer punktu i łańcuch; false, gdy nie ma
+bool
+disconnector_place( std::string const &File, std::string const &Chain, std::string const &Point, std::size_t &Index, std::size_t &Number ) {
+    for( std::size_t chain = 0; chain < Chains.size(); ++chain ) {
+        auto const &item { Chains[ chain ] };
+        if( item.removed || item.file != File || item.data.name != Chain ) { continue; }
+        auto const listed { std::find( item.data.suspensions.begin(), item.data.suspensions.end(), Point ) };
+        if( listed == item.data.suspensions.end() ) { return false; }
+        Index = chain;
+        Number = static_cast<std::size_t>( listed - item.data.suspensions.begin() ) + ( item.data.anchor_start.empty() ? 0u : 1u );
+        return true;
+    }
+    return false;
+}
+
+// przęsło i jego koniec w punkcie łańcucha: przęsło zaczynające się w nim, a za ostatnim punktem - kończące się w nim
+bool
+disconnector_end( std::string const &File, std::string const &Chain, std::string const &Point, TTraction *&Span, int &End ) {
+    std::size_t chain, number;
+    if( false == disconnector_place( File, Chain, Point, chain, number ) ) { return false; }
+    auto const &spans { Chains[ chain ].spans };
+    if( number < spans.size() && spans[ number ] != nullptr ) { Span = spans[ number ]; End = 0; return true; }
+    if( number > 0 && number - 1 < spans.size() && spans[ number - 1 ] != nullptr ) { Span = spans[ number - 1 ]; End = 1; return true; }
+    return false;
+}
+
+} // namespace
+
+bool
+catenary_disconnector_ends( std::size_t const Index, TTraction *&From, int &FromEnd, TTraction *&To, int &ToEnd ) {
+    if( Index >= Disconnectors.size() || Disconnectors[ Index ].removed ) { return false; }
+    auto const &item { Disconnectors[ Index ] };
+    return disconnector_end( item.file, item.data.from_chain, item.data.from_point, From, FromEnd )
+        && disconnector_end( item.file, item.data.to_chain, item.data.to_point, To, ToEnd );
+}
+
+bool
+catenary_disconnector_point( std::size_t const Index, double *Point ) {
+    if( Index >= Disconnectors.size() || Disconnectors[ Index ].removed ) { return false; }
+    auto const &item { Disconnectors[ Index ] };
+    std::size_t chain, number;
+    if( false == disconnector_place( item.file, item.data.from_chain, item.data.from_point, chain, number ) ) { return false; }
+    double rope[ 3 ];
+    bool anchored;
+    return chain_point( Chains[ chain ], number, Point, rope, anchored );
+}
+
+std::string
+catenary_scene_new_disconnector_name( std::string const &File ) {
+    auto stem { std::filesystem::path( File ).stem().string() };
+    for( int number = 1; ; ++number ) {
+        auto const name { stem + "_od" + std::to_string( number ) };
+        if( std::none_of( Disconnectors.begin(), Disconnectors.end(), [ & ]( scene_disconnector const &D ) { return D.file == File && D.data.name == name; } ) ) { return name; }
     }
 }
 

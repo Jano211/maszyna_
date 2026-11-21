@@ -3064,7 +3064,7 @@ bool editor_mode::save()
     };
     // the catenary straight in the scenery files: the node entries of the changed ones go into the files of their layers anew
     scene::node_blocks catenaryblocks;
-    catenaryblocks.kinds = {"suspension", "chain", "gantry", "anchor", "earthing"};
+    catenaryblocks.kinds = {"suspension", "chain", "gantry", "anchor", "earthing", "disconnector"};
     std::vector<std::string> catenaryinline;
     for (auto const &file : catenary_scene_files())
     {

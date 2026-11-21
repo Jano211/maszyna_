@@ -201,6 +201,24 @@ std::string catenary_earthing_holder_text( std::size_t Index, std::string const 
 bool catenary_earthing_beam( std::size_t Index, std::string const &Pole, double &Length, double &At );
 std::string catenary_scene_new_earthing_name( std::string const &File );
 
+class TTraction;
+// ---- odłączniki (wpisy "disconnector" w pliku sieci; na razie bez modelu - stan dla obwodu prądu) ---------------------------------
+std::size_t catenary_disconnector_size();
+catenary::disconnector const *catenary_disconnector_get( std::size_t Index );
+std::string catenary_disconnector_file( std::size_t Index );
+std::size_t catenary_disconnector_add( std::string const &File, catenary::disconnector const &Data );
+bool catenary_disconnector_update( std::size_t Index, catenary::disconnector const &Data );
+void catenary_disconnector_remove( std::size_t Index );
+// przełączenie po nazwie (event "disconnector"), we wszystkich plikach; false, gdy takiego nie ma. State: 0 zamknięty, 1 otwarty, 2 uszyniony
+bool catenary_disconnector_switch( std::string const &Name, int State );
+// rośnie przy każdej zmianie odłączników (obwód prądu się wtedy przebudowuje)
+std::size_t catenary_disconnector_generation();
+// przęsła i ich końce w punktach "from" i "to"; false, gdy punktu nie ma (łańcuch, podwieszenie spoza niego, brak przęsła)
+bool catenary_disconnector_ends( std::size_t Index, TTraction *&From, int &FromEnd, TTraction *&To, int &ToEnd );
+// punkt przewodu jezdnego w punkcie "from" (znacznik w edytorze)
+bool catenary_disconnector_point( std::size_t Index, double *Point );
+std::string catenary_scene_new_disconnector_name( std::string const &File );
+
 // ---- kotwienia (wpisy "anchor" w pliku sieci): słup kotwowy z urządzeniem naprężającym ---------------------------------
 std::size_t catenary_anchor_size();
 catenary::anchor const *catenary_anchor_get( std::size_t Index );

@@ -678,6 +678,7 @@ struct catenary_view_flags
 	bool placing{true}; // what a click puts: the track axis, the span counter
 	bool earthing{true}; // the sections of the group earthing, each in its own colour, with the name and length
 	bool insulators{true}; // the section insulators: a mark with the power sources before and after (the user 2026-11-17)
+	bool disconnectors{true}; // the disconnectors: a mark with the number and the state (the user 2026-11-21, without models yet)
 };
 catenary_view_flags CatenaryView;
 
@@ -698,6 +699,7 @@ std::pair<char const *, bool catenary_view_flags::*> const kViewNames[] = {
 	{"placing", &catenary_view_flags::placing},
 	{"earthing", &catenary_view_flags::earthing},
 	{"insulators", &catenary_view_flags::insulators},
+	{"disconnectors", &catenary_view_flags::disconnectors},
 };
 
 std::string catenary_view_text(catenary_view_flags const &Views)
@@ -780,11 +782,12 @@ void catenary_view_menu()
 	item(STR_C("Placing: track axis and span counter"), CatenaryView.placing, STR_C("Where a click puts a pole: the axis of the track it goes by and the length of the span from the last pole"));
 	item(STR_C("Earthing sections"), CatenaryView.earthing, STR_C("The sections of the group earthing along their poles, each in its own colour, with the name and the length; red over 3.5 km"));
 	item(STR_C("Section insulators"), CatenaryView.insulators, STR_C("The section insulators in the spans, with the power sources before and after them; LMB on the insulator selects it"));
+	item(STR_C("Disconnectors"), CatenaryView.disconnectors, STR_C("The disconnectors with their numbers: green closed, grey open, red earthed. They're set on the Power page"));
 	ImGui::Separator();
 	if (ImGui::MenuItem(STR_C("Show all")))
-		CatenaryView = catenary_view_flags{true, true, true, true, true, true, true, true, true, true, true, true};
+		CatenaryView = catenary_view_flags{true, true, true, true, true, true, true, true, true, true, true, true, true};
 	if (ImGui::MenuItem(STR_C("Hide all")))
-		CatenaryView = catenary_view_flags{false, false, false, false, false, false, false, false, false, false, false, false};
+		CatenaryView = catenary_view_flags{false, false, false, false, false, false, false, false, false, false, false, false, false};
 	ImGui::EndMenu();
 	catenary_view_sync();
 }
@@ -2181,6 +2184,32 @@ int catenary_editor::catenary_insulator_hit(int &Span) const
 				Span = static_cast<int>(mark.span);
 			}
 		}
+	return result;
+}
+
+int catenary_editor::catenary_disconnector_hit() const
+{
+	if (false == CatenaryView.disconnectors)
+		return -1;
+	screen_projection const projection;
+	auto best{kPolePick * kPolePick};
+	int result{-1};
+	glm::dvec3 const camera{Global.pCamera.Pos};
+	for (std::size_t index = 0; index < catenary_disconnector_size(); ++index)
+	{
+		double spot[3];
+		if (nullptr == catenary_disconnector_get(index) || false == catenary_disconnector_point(index, spot))
+			continue;
+		glm::dvec3 const point{spot[0], spot[1] + 0.6, spot[2]};
+		if (glm::distance(point, camera) > kCatenaryRange)
+			continue;
+		auto const distance{mouse_to_segment(projection, point - glm::dvec3{0.0, 0.1, 0.0}, point + glm::dvec3{0.0, 0.1, 0.0})};
+		if (distance < best)
+		{
+			best = distance;
+			result = static_cast<int>(index);
+		}
+	}
 	return result;
 }
 
@@ -4457,6 +4486,14 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		catenary_power_place(Intent.position);
 		return;
 	}
+	if (is_intent(Intent, intent_detail::disconnector))
+	{
+		tool.disconnector_selected = Intent.index;
+		catenary_choose_page(6);
+		if (auto const *data{catenary_disconnector_get(static_cast<std::size_t>(Intent.index))}; data != nullptr)
+			tool.status = format(STR_C("Disconnector %s selected: its state and number are on the Power page"), data->name.c_str());
+		return;
+	}
 	if (is_intent(Intent, intent_detail::insulator))
 	{
 		// as a click on the insulator model: the pole before it, on the poles page (its insulator and the power source after it)
@@ -5888,6 +5925,32 @@ void catenary_editor::render_catenary_power_ui()
 							break;
 						}
 				}
+				// a disconnector across this insulator: from the pole before it to the next one of the chain
+				{
+					auto const listed{std::find(data->suspensions.begin(), data->suspensions.end(), mark.after)};
+					auto const file{catenary_chain_file(chain)};
+					auto exists{false};
+					for (std::size_t other = 0; other < catenary_disconnector_size(); ++other)
+						if (auto const *item{catenary_disconnector_get(other)}; item != nullptr && catenary_disconnector_file(other) == file && item->from_chain == data->name && item->from_point == mark.after)
+							exists = true;
+					if (false == exists && listed != data->suspensions.end() && listed + 1 != data->suspensions.end())
+					{
+						ImGui::SameLine();
+						if (ImGui::SmallButton(STR_C("Disconnector")))
+						{
+							catenary::disconnector item;
+							item.name = catenary_scene_new_disconnector_name(file);
+							item.from_chain = data->name;
+							item.from_point = mark.after;
+							item.to_chain = data->name;
+							item.to_point = *(listed + 1);
+							tool.disconnector_selected = static_cast<int>(catenary_disconnector_add(file, item));
+							tool.status = format(STR_C("Disconnector %s across the insulator after %s, closed: the section after it now takes power only through it"), item.name.c_str(), mark.after.c_str());
+						}
+						if (ImGui::IsItemHovered())
+							ImGui::SetTooltip("%s", STR_C("A disconnector across this insulator (no model yet): closed - both sides connected, open - the section after it without power even with the same power source"));
+					}
+				}
 				ImGui::PushItemWidth(120.0f);
 				char before[64]{}, after[64]{};
 				std::snprintf(before, sizeof(before), "%s", mark.power_before.c_str());
@@ -5922,6 +5985,59 @@ void catenary_editor::render_catenary_power_ui()
 		}
 		if (false == any)
 			ImGui::TextDisabled("%s", STR_C("No section insulators yet (set on the poles page, in the chain of the pole before it)"));
+	}
+	// the disconnectors (the user 2026-11-21): their state in the current circuit, no models yet. An insulator with a disconnector
+	// is a break the disconnector bridges; without one, with the same power source on both sides, it stays connected as before
+	if (ImGui::CollapsingHeader(STR_C("Disconnectors"), ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		auto any{false};
+		char const *const states[]{STR_C("closed"), STR_C("open"), STR_C("earthed")};
+		for (std::size_t index = 0; index < catenary_disconnector_size(); ++index)
+		{
+			auto const *data{catenary_disconnector_get(index)};
+			if (data == nullptr)
+				continue;
+			any = true;
+			ImGui::PushID(static_cast<int>(index) + 500000);
+			auto const chosen{tool.disconnector_selected == static_cast<int>(index)};
+			if (ImGui::Selectable(format("%s  %s.%s - %s.%s", data->name.c_str(), data->from_chain.c_str(), data->from_point.c_str(), data->to_chain.c_str(), data->to_point.c_str()).c_str(), chosen))
+				tool.disconnector_selected = static_cast<int>(index);
+			ImGui::PushItemWidth(70.0f);
+			char number[32]{};
+			std::snprintf(number, sizeof(number), "%s", data->number.c_str());
+			if (ImGui::InputText(STR_C("No."), number, sizeof(number), ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				auto changed{*data};
+				changed.number = number;
+				catenary_disconnector_update(index, changed);
+			}
+			ImGui::PopItemWidth();
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("The number from the sectioning plan (Glowacki: 10/20/30/40 feeder, 101/102 at the supply limits, 6, 16... with an earthing contact). Enter takes it"));
+			ImGui::SameLine();
+			ImGui::PushItemWidth(110.0f);
+			auto state{data->state};
+			if (ImGui::Combo(STR_C("State"), &state, states, 3))
+			{
+				auto changed{*data};
+				changed.state = state;
+				catenary_disconnector_update(index, changed);
+				tool.status = format(STR_C("Disconnector %s %s: the circuit is made anew"), data->name.c_str(), states[state]);
+			}
+			ImGui::PopItemWidth();
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Closed: both sides connected. Open: a break. Earthed: a break and the side \"to\" shorted to the rails - on a live section the breakers of its power source trip"));
+			ImGui::SameLine();
+			if (ImGui::SmallButton(STR_C("Remove")))
+			{
+				catenary_disconnector_remove(index);
+				if (chosen)
+					tool.disconnector_selected = -1;
+			}
+			ImGui::PopID();
+		}
+		if (false == any)
+			ImGui::TextDisabled("%s", STR_C("No disconnectors yet: \"Disconnector\" at a section insulator above adds one across it. Between two chains (a supply limit) - in the catenary file for now"));
 	}
 }
 
@@ -9837,6 +9953,31 @@ void catenary_editor::draw_catenary_overlay() const
 				}
 			}
 	}
+	// the disconnectors (the user 2026-11-21, no models yet): a square at the point "from", with the number and the state
+	if (CatenaryView.disconnectors)
+		for (std::size_t index = 0; index < catenary_disconnector_size(); ++index)
+		{
+			auto const *data{catenary_disconnector_get(index)};
+			double spot[3];
+			if (data == nullptr || false == catenary_disconnector_point(index, spot))
+				continue;
+			glm::dvec3 const point{spot[0], spot[1] + 0.6, spot[2]};
+			auto const distance{glm::distance(point, camera)};
+			if (distance > kCatenaryRange)
+				continue;
+			ImVec2 centre;
+			if (false == projection.project(point, centre))
+				continue;
+			auto const colour{data->state == 0 ? IM_COL32(80, 220, 90, 230) : data->state == 1 ? IM_COL32(170, 170, 170, 230) : IM_COL32(240, 60, 50, 230)};
+			auto const chosen{static_cast<int>(index) == tool.disconnector_selected};
+			auto const half{chosen ? 8.0f : 6.0f};
+			drawlist->AddRect(ImVec2{centre.x - half, centre.y - half}, ImVec2{centre.x + half, centre.y + half}, chosen ? overlay_color::selected : colour, 0.0f, 0, chosen ? 3.0f : 2.0f);
+			if (chosen || distance < 300.0)
+			{
+				auto const label{format("%s %s", data->number.empty() ? data->name.c_str() : data->number.c_str(), catenary::disconnector_state_name(data->state))};
+				drawlist->AddText(ImVec2{centre.x + 10.0f, centre.y - 7.0f}, colour, label.c_str());
+			}
+		}
 	// the poles of the chains: how many contact wires their network has (an execution for another count is a remark)
 	auto const wanted{pole_contacts()};
 	for (std::size_t index = 0; index < catenary_scene_size(); ++index)
@@ -10702,6 +10843,16 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 		Intent.detail = static_cast<int>(intent_detail::place);
 		return true;
 	}
+	// the mark of a disconnector: it's picked on the Power page
+	if (m_catenary.anchor_pick < 0 && m_catenary.connect_from < 0 && m_catenary.anchor_move < 0)
+		if (auto const hit{catenary_disconnector_hit()}; hit >= 0)
+		{
+			Intent.index = hit;
+			Intent.action = STR("Click: select the disconnector (Power page)");
+			Intent.what = kind::catenary;
+			Intent.detail = static_cast<int>(intent_detail::disconnector);
+			return true;
+		}
 	// the mark of a section insulator (the user 2026-11-21: the insulator itself is too thin to hit): the pole before it
 	if (m_catenary.anchor_pick < 0 && m_catenary.connect_from < 0 && m_catenary.anchor_move < 0)
 	{

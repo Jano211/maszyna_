@@ -9,8 +9,8 @@ odłączników z napędem silnikowym).
 
 Użytkownik 21.11: „zróbmy to porządnie od A do Z – jak wysięgniki i słupy rozpierdalają system, to niech fizyka prądu też”.
 Stan (2026-11-21 wieczór): **A i B zrobione** (solver + budowa obwodu, testy `tp`), **H zrobione** (odgromnik 7310 na słupach,
-bez bramek) – w exe NIESPRAWDZONE, szczegóły w PRZEKAZANIE.md. Dalej: C (podstacje z odpływami, wspólny prostownik, uzależnienie
-zasilaczy), D (kabiny z wyłącznikami), E (odłączniki). Każdy etap z testem na atrapie, w exe sprawdza użytkownik.
+bez bramek), **E w obwodzie** (odłączniki bez modeli) – w exe NIESPRAWDZONE, szczegóły w PRZEKAZANIE.md. Dalej: C (podstacje
+z odpływami, wspólny prostownik, uzależnienie zasilaczy), D (kabiny z wyłącznikami), modele odłączników. Każdy etap z testem na atrapie, w exe sprawdza użytkownik.
 
 ### Ustalenia z użytkownikiem (21.11)
 1. **Stara sieć (`node traction`) zostaje po staremu** – bez zmian w TTraction::VoltageGet / ResistanceCalc / TTractionPowerSource

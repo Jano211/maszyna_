@@ -259,6 +259,22 @@ struct earthing {
 };
 
 // zawartość pliku podwieszeń
+// odłącznik sieci (plan zasilania, etap E; na razie bez modelu - sam stan w obwodzie prądu): łączy dwa punkty łańcuchów
+// (punkt łańcucha = podwieszenie z jego listy), np. obie strony izolatora sekcyjnego (podwieszenie przed nim i następne) albo
+// dwie sieci granicy zasilania (przęsło naprężenia). Stan: closed - połączone, open - przerwa, earthed - przerwa, a strona "to"
+// zwarta z szynami (odłącznik ze stykiem uszyniającym). Wpis
+// "node <max> <min> <nazwa> disconnector number <nr> state closed|open|earthed from <łańcuch> <podwieszenie> to <łańcuch> <podwieszenie> enddisconnector"
+struct disconnector {
+    std::string name;
+    double range_max { -1.0 };
+    double range_min { 0.0 };
+    std::string number;                     // numer z planu sekcjonowania (np. 19, 101, 10 - zasilaczowy); pusty - bez numeru
+    int state { 0 };                        // 0 - zamknięty, 1 - otwarty, 2 - uszyniony
+    std::string from_chain, from_point;
+    std::string to_chain, to_point;
+};
+char const *disconnector_state_name( int State );
+
 struct suspension_file {
     std::string skin;                       // domyślna wymienna tekstura dla wpisów bez własnej
     std::vector<suspension> entries;
@@ -266,6 +282,7 @@ struct suspension_file {
     std::vector<gantry> gantries;
     std::vector<anchor> anchors;
     std::vector<earthing> earthings;
+    std::vector<disconnector> disconnectors;
 };
 
 // rozbiera plik podwieszeń podany jako kolejne słowa (już bez komentarzy). Source: nazwa pliku do komunikatów.
@@ -291,6 +308,8 @@ std::string write_gantry( gantry const &Entry );
 std::string write_anchor( anchor const &Entry );
 // wpis uszynienia w postaci tekstu do pliku (jedna linia)
 std::string write_earthing( earthing const &Entry );
+// wpis odłącznika w postaci tekstu do pliku (jedna linia)
+std::string write_disconnector( disconnector const &Entry );
 
 // dane konstrukcji wsporczej z rejestru
 struct support_data {

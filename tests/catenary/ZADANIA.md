@@ -275,7 +275,10 @@ Konstrukcje niekompletne / porzucone / w przebudowie – mają się dać postawi
 - [ ] C. Podstacje: kilka odpływów na jednym prostowniku (wspólny opór wewnętrzny), odłącznik zasilaczowy, uzależnienie
       współpracujących wyłączników (Głowacki s. 211), próba linii przed ponownym załączeniem; edytor (strona Zasilanie)
 - [ ] D. Kabiny sekcyjne z wyłącznikami na odpływach (nastawy −20 %)
-- [ ] E. Odłączniki (otwarty / zamknięty / uszyniony), połączenia 0641/0643/0651, przełączanie eventem
+- [x] E. Odłączniki w obwodzie bez modeli (zamknięty / otwarty / uszyniony), wpis w pliku sieci, event `disconnector`, edytor przy
+      izolatorach - 2026-11-21, w exe niesprawdzone
+- [ ] E. Modele odłączników 0661-0677 z zamocowaniami 0541-0549, połączenia 0641/0643/0651, odłączniki między łańcuchami w edytorze,
+      ostrzeżenie o sekcji bez zasilania, cofanie zmian
 - [ ] F. Przewody wzmacniające i rozdzielcze jako gałęzie (dziś przewód wzmacniający nie zmienia oporu sieci)
 - [ ] G. Awarie: zwarcie przez uszynienie, pantograf mostkujący przerwę (prąd wyrównawczy), zerwanie przewodu
 - [ ] I. Podgląd w edytorze: sekcje wg zasilacza / napięcia
