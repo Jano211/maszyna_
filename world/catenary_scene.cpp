@@ -133,6 +133,8 @@ struct scene_chain {
 std::vector<scene_chain> Chains;
 void add_tube( std::vector<catenary::solid_vertex> &Triangles, std::vector<glm::dvec3> const &Points, double Radius );
 std::string arrester_skin( std::string const &Fitting, std::string const &Skin, std::string const &Default );
+// sztywna linka (Cu 9812-6): krzywa Béziera od A w kierunku TowardA do B, wchodząca w B w kierunku IntoB, z lekkim zwisem
+std::vector<glm::dvec3> stiff_cable( glm::dvec3 const &A, glm::dvec3 const &TowardA, glm::dvec3 const &B, glm::dvec3 const &IntoB );
 
 // bramka z pliku: słupy i dźwigar wstawione jako modele
 struct scene_gantry {
@@ -941,24 +943,18 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
                     to.position[ 0 ] = ( clamp != nullptr ? clamp->position[ 0 ] : 0.0 ) + 1.0;
                     to.position[ 1 ] = clamp != nullptr ? clamp->position[ 1 ] : input.messenger.y;
                     to.position[ 2 ] = clamp != nullptr ? clamp->position[ 2 ] : input.messenger.z;
-                    double gap { 0.0 };
-                    for( int axis = 0; axis < 3; ++axis ) { gap += ( to.position[ axis ] - from.position[ axis ] ) * ( to.position[ axis ] - from.position[ axis ] ); }
-                    gap = std::sqrt( gap );
-                    // zwis paraboli o długości łuku ok. 4 m: L ≈ D + 8s²/(3D)
-                    auto const sag { gap < 4.0 ? std::min( 1.2, std::sqrt( 3.0 * gap * ( 4.0 - gap ) / 8.0 ) ) : 0.05 };
-                    std::vector<glm::dvec3> points;
-                    for( int step = 12; step >= 0; --step ) {
-                        auto const t { step / 12.0 };
-                        catenary::cantilever_placement at;
-                        for( int axis = 0; axis < 3; ++axis ) { at.position[ axis ] = from.position[ axis ] + ( to.position[ axis ] - from.position[ axis ] ) * t; }
-                        at.position[ 2 ] -= sag * 4.0 * t * ( 1.0 - t );
-                        auto const scene { catenary::cantilever_to_scene( at, heading ) };
-                        points.push_back( glm::dvec3 { Wire.x + scene.offset[ 0 ], Wire.y + scene.offset[ 1 ], Wire.z + scene.offset[ 2 ] } );
-                    }
-                    if( arm->has_wire_end ) {
-                        auto const scene { catenary::cantilever_to_scene( modelpoint( arm->wire_end ), heading ) };
-                        points.push_back( glm::dvec3 { Wire.x + scene.offset[ 0 ], Wire.y + scene.offset[ 1 ], Wire.z + scene.offset[ 2 ] } );
-                    }
+                    auto const inscene = [ & ]( catenary::cantilever_placement const &At ) {
+                        auto const scene { catenary::cantilever_to_scene( At, heading ) };
+                        return glm::dvec3 { Wire.x + scene.offset[ 0 ], Wire.y + scene.offset[ 1 ], Wire.z + scene.offset[ 2 ] };
+                    };
+                    // linka sztywna (użytkownik 2026-11-21: ma się wyginać łukami, nie zwisać): z uchwytu równoległego wychodzi wzdłuż liny
+                    // w stronę słupa, w przyłącze wchodzi w kierunku wire_2 -> wire_2_end
+                    auto towardpole { to };
+                    towardpole.position[ 0 ] -= 1.0;
+                    auto const rope { inscene( to ) }, lug { inscene( from ) };
+                    auto const end { arm->has_wire_end ? inscene( modelpoint( arm->wire_end ) ) : lug + glm::dvec3 { 0.0, -0.1, 0.0 } };
+                    auto points { stiff_cable( rope, inscene( towardpole ) - rope, lug, end - lug ) };
+                    if( arm->has_wire_end ) { points.push_back( end ); }
                     add_tube( Suspension.copper, points, 0.0045 );
                 }
                 // przyłącze do uszynienia: punkty w scenerii, linkę do liny uszynienia dorysuje przęsło z tą liną
@@ -1034,6 +1030,24 @@ arrester_skin( std::string const &Fitting, std::string const &Skin, std::string 
     auto const folder { slash == std::string::npos ? std::string() : Fitting.substr( 0, slash + 1 ) };
     auto const file { slash == std::string::npos ? Fitting : Fitting.substr( slash + 1 ) };
     return ( file == "siec" && false == Default.empty() ) ? folder + Default : folder + Skin + ( file.compare( 0, 4, "siec" ) == 0 ? file.substr( 4 ) : std::string() );
+}
+
+std::vector<glm::dvec3>
+stiff_cable( glm::dvec3 const &A, glm::dvec3 const &TowardA, glm::dvec3 const &B, glm::dvec3 const &IntoB ) {
+    auto const span { glm::length( B - A ) };
+    auto const direction = []( glm::dvec3 const &V, glm::dvec3 const &Fallback ) { return glm::length( V ) > 1e-6 ? glm::normalize( V ) : Fallback; };
+    auto const chord { direction( B - A, glm::dvec3 { 0.0, -1.0, 0.0 } ) };
+    // ramiona krzywej ok. 40% cięciwy: linka łagodnie odchodzi od kierunków na końcach
+    auto const reach { 0.4 * span };
+    glm::dvec3 const control[ 4 ] { A, A + direction( TowardA, chord ) * reach, B - direction( IntoB, chord ) * reach, B };
+    auto const sag { std::min( 0.15, 0.04 * span ) };   // linka sztywna - zwis mały
+    std::vector<glm::dvec3> points;
+    for( int step = 0; step <= 20; ++step ) {
+        auto const t { step / 20.0 }, u { 1.0 - t };
+        points.push_back( control[ 0 ] * ( u * u * u ) + control[ 1 ] * ( 3.0 * u * u * t ) + control[ 2 ] * ( 3.0 * u * t * t ) + control[ 3 ] * ( t * t * t )
+            - glm::dvec3 { 0.0, sag * 4.0 * t * u, 0.0 } );
+    }
+    return points;
 }
 
 // punkty wpisu z punktami podanymi wprost; Attach to oś słupa (wpis ze słupem) albo pion przez zaczepy
@@ -3942,12 +3956,8 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
             auto const clamp { glm::length( way ) > 0.1 ? Rope + glm::normalize( way ) * 0.3 : Rope };
             // od liny uszynienia łukiem do przyłącza wire_1, dalej prosto do wire_1_end
             auto const &lug { Suspensions[ Pole ].arrester_earth };
-            std::vector<glm::dvec3> points;
-            auto const sag { std::min( 0.4, 0.15 * glm::length( clamp - lug[ 0 ] ) ) };
-            for( int step = 0; step <= 10; ++step ) {
-                auto const t { step / 10.0 };
-                points.push_back( clamp + ( lug[ 0 ] - clamp ) * t - glm::dvec3 { 0.0, sag * 4.0 * t * ( 1.0 - t ), 0.0 } );
-            }
+            // linka sztywna: z uchwytu wzdłuż liny w stronę słupa, w przyłącze w kierunku wire_1 -> wire_1_end
+            auto points { stiff_cable( clamp, Rope - clamp, lug[ 0 ], lug[ 1 ] - lug[ 0 ] ) };
             points.push_back( lug[ 1 ] );
             add_tube( Solid, points, 0.0045 );
         };
