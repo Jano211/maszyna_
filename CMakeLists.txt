@@ -133,6 +133,8 @@ set(SOURCES
 "world/catenary_overlap.cpp"
 "world/catenary_catalog.cpp"
 "world/catenary_scene_objects.cpp"
+"world/catenary_power.cpp"
+"world/catenary_power_scene.cpp"
 "world/TractionPower.cpp"
 "vehicle/Train.cpp"
 "world/TrkFoll.cpp"

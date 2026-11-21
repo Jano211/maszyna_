@@ -19,6 +19,7 @@ http://mozilla.org/MPL/2.0/.
 #include "simulation/simulation.h"
 #include "utilities/Globals.h"
 #include "world/TractionPower.h"
+#include "world/catenary_power_scene.h"
 #include "utilities/Logs.h"
 #include "rendering/renderer.h"
 #include "utilities/utilities.h"
@@ -530,6 +531,11 @@ void TTraction::PowerSet(TTractionPowerSource *ps)
 
 double TTraction::VoltageGet(double u, double i)
 { // pobranie napięcia na przęśle po podłączeniu do niego rezystancji (res) - na razie jest to prąd
+    // przęsło nowej sieci (łańcuch) w obwodzie prądu stałego: napięcie z obwodu, pobór liczony w następnym kroku
+    if( m_catenary ) {
+        double voltage;
+        if( catenary_power_voltage( *this, i, voltage ) ) { return voltage; }
+    }
     if (!psSection && !psPowered)
         return NominalVoltage; // jak nie ma zasilacza, to napięcie podane w przęśle
     // na początek można założyć, że wszystkie podstacje mają to samo napięcie i nie płynie prąd

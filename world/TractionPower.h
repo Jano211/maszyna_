@@ -30,6 +30,14 @@ public:
     void PowerSet(TTractionPowerSource *ps);
     bool Fuse() const {
         return FastFuse || SlowFuse; }
+    // parametry dla obwodu nowej sieci (world/catenary_power_scene.cpp) - stara sieć liczy się dalej tutaj
+    double nominal_voltage() const { return NominalVoltage; }
+    double internal_resistance() const { return InternalRes; }
+    double max_output_current() const { return MaxOutputCurrent; }
+    double fast_fuse_timeout() const { return FastFuseTimeOut; }
+    int fast_fuse_repetition() const { return FastFuseRepetition; }
+    double slow_fuse_timeout() const { return SlowFuseTimeOut; }
+    bool recuperation() const { return Recuperation; }
 // members
     TTractionPowerSource *psNode[ 2 ] = { nullptr, nullptr }; // zasilanie na końcach dla sekcji
     bool bSection = false; // czy jest sekcją
