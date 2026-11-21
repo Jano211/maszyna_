@@ -37,7 +37,7 @@ struct catenary_editor
 	using track_intent = editor_mode::track_intent;
 	using key_hint = editor_mode::key_hint;
 	// what a catenary intent (track_intent::kind::catenary) is about, in its detail
-	enum class intent_detail { place, select, chain, gantry, mast, anchor, power };
+	enum class intent_detail { place, select, chain, gantry, mast, anchor, power, insulator };
 	static bool is_intent(track_intent const &Intent, intent_detail const Detail)
 	{
 		return Intent.what == track_intent::kind::catenary && Intent.detail == static_cast<int>(Detail);
@@ -493,6 +493,8 @@ struct catenary_editor
 	void catenary_anchor_delete(std::size_t Chain, bool Start, bool Contact = false);
 	// the anchor whose tensioning device is under the cursor; -1 if none
 	int catenary_anchor_hit() const;
+	// the mark of a section insulator under the cursor (Widok > Sieć trakcyjna > Izolatory sekcyjne): its chain, the span in Span
+	int catenary_insulator_hit(int &Span) const;
 	// shows the chain in the panel as a click on its span does
 	void catenary_chain_show(int Chain);
 	// removes span k of the chain (the wires between its poles k and k + 1), the poles stay: the chain splits in two

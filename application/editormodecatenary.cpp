@@ -2158,6 +2158,32 @@ int catenary_editor::catenary_anchor_hit() const
 	return result;
 }
 
+int catenary_editor::catenary_insulator_hit(int &Span) const
+{
+	if (false == CatenaryView.insulators)
+		return -1;
+	screen_projection const projection;
+	auto best{kPolePick * kPolePick};
+	int result{-1};
+	glm::dvec3 const camera{Global.pCamera.Pos};
+	for (std::size_t chain = 0; chain < catenary_chain_size(); ++chain)
+		for (auto const &mark : catenary_chain_insulators(chain))
+		{
+			glm::dvec3 const point{mark.point[0], mark.point[1], mark.point[2]};
+			if (glm::distance(point, camera) > kCatenaryRange)
+				continue;
+			// the circle and the short line under it, as drawn
+			auto const distance{mouse_to_segment(projection, point + glm::dvec3{0.0, 0.15, 0.0}, point - glm::dvec3{0.0, 1.0, 0.0})};
+			if (distance < best)
+			{
+				best = distance;
+				result = static_cast<int>(chain);
+				Span = static_cast<int>(mark.span);
+			}
+		}
+	return result;
+}
+
 void catenary_editor::catenary_select(int const Index)
 {
 	auto &tool{m_catenary};
@@ -4429,6 +4455,24 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 	if (is_intent(Intent, intent_detail::power))
 	{
 		catenary_power_place(Intent.position);
+		return;
+	}
+	if (is_intent(Intent, intent_detail::insulator))
+	{
+		// as a click on the insulator model: the pole before it, on the poles page (its insulator and the power source after it)
+		auto const chain{static_cast<std::size_t>(Intent.index)};
+		auto const marks{catenary_chain_insulators(chain)};
+		auto const found{std::find_if(marks.begin(), marks.end(), [&](catenary_insulator_mark const &Mark) { return static_cast<int>(Mark.span) == Intent.path; })};
+		catenary_chain_show(Intent.index);
+		catenary_choose_page(0);
+		if (found != marks.end())
+			for (std::size_t other = 0; other < catenary_scene_size(); ++other)
+				if (auto const *data{catenary_scene_get(other)}; data != nullptr && data->name == found->after && catenary_scene_file_of(other) == catenary_chain_file(chain))
+				{
+					catenary_select(static_cast<int>(other));
+					break;
+				}
+		tool.status = STR("A section insulator: the pole before it is selected, the insulator and its power source are in its chain settings");
 		return;
 	}
 	if (is_intent(Intent, intent_detail::select) && tool.page == 3 && tool.earthing_building)
@@ -10657,6 +10701,20 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 		Intent.what = kind::catenary;
 		Intent.detail = static_cast<int>(intent_detail::place);
 		return true;
+	}
+	// the mark of a section insulator (the user 2026-11-21: the insulator itself is too thin to hit): the pole before it
+	if (m_catenary.anchor_pick < 0 && m_catenary.connect_from < 0 && m_catenary.anchor_move < 0)
+	{
+		int span{0};
+		if (auto const hit{catenary_insulator_hit(span)}; hit >= 0)
+		{
+			Intent.index = hit;
+			Intent.path = span;
+			Intent.action = STR("Click: select the pole before this section insulator");
+			Intent.what = kind::catenary;
+			Intent.detail = static_cast<int>(intent_detail::insulator);
+			return true;
+		}
 	}
 	// the tensioning device of an anchor (not while a pole is being picked for an anchor or a span)
 	if (m_catenary.anchor_pick < 0 && m_catenary.connect_from < 0 && m_catenary.anchor_move < 0)

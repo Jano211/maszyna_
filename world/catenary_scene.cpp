@@ -5134,10 +5134,32 @@ catenary_chain_insulators( std::size_t const Index ) {
         mark.after = insulator.after;
         mark.kind = insulator.kind;
         if( mark.span >= chain.span_parts.size() || chain.span_parts[ mark.span ].empty() ) { continue; }
-        auto const count { static_cast<double>( chain.span_parts[ mark.span ].size() ) };
-        for( auto const *part : chain.span_parts[ mark.span ] ) {
-            auto const where { part->location() };
-            mark.point[ 0 ] += where.x / count; mark.point[ 1 ] += where.y / count; mark.point[ 2 ] += where.z / count;
+        // znacznik w środku izolatora na przewodzie jezdnym (użytkownik 2026-11-21: średnia z położeń części - zera modeli są na ich
+        // końcach, a część wisi na linie nośnej - nie trafiała w izolator): to samo miejsce, co przerwa w przewodach przęsła
+        auto placed { false };
+        {
+            double wirea[ 3 ], wireb[ 3 ], ropea[ 3 ], ropeb[ 3 ];
+            bool anchoreda, anchoredb;
+            section_layout layout;
+            if( chain_point( chain, mark.span, wirea, ropea, anchoreda ) && chain_point( chain, mark.span + 1, wireb, ropeb, anchoredb )
+             && section_layout_of( chain, mark.span, insulator, wirea, wireb, layout ) ) {
+                auto const plan { std::hypot( wireb[ 0 ] - wirea[ 0 ], wireb[ 2 ] - wirea[ 2 ] ) };
+                glm::dvec3 point;
+                if( mark.span < chain.spans.size() && chain.spans[ mark.span ] != nullptr && catenary_span_point( *chain.spans[ mark.span ], layout.t * plan, false, point ) ) {
+                    mark.point[ 0 ] = point.x; mark.point[ 1 ] = point.y; mark.point[ 2 ] = point.z;
+                }
+                else {
+                    for( int axis = 0; axis < 3; ++axis ) { mark.point[ axis ] = wirea[ axis ] + ( wireb[ axis ] - wirea[ axis ] ) * layout.t; }
+                }
+                placed = true;
+            }
+        }
+        if( false == placed ) {
+            auto const count { static_cast<double>( chain.span_parts[ mark.span ].size() ) };
+            for( auto const *part : chain.span_parts[ mark.span ] ) {
+                auto const where { part->location() };
+                mark.point[ 0 ] += where.x / count; mark.point[ 1 ] += where.y / count; mark.point[ 2 ] += where.z / count;
+            }
         }
         marks.push_back( mark );
     }

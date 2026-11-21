@@ -1120,6 +1120,19 @@ int main( int, char *argv[] ) {
             std::printf( "  izolator sekcyjny resin: 7500-02 %d, 7150 %d, 5120 %d\n", resin[ "7500-02" ], resin[ "7150-01" ], resin[ "5120-01" ] );
             good = good && resin[ "7500-02" ] == 1 && resin[ "7150-01" ] == 1 && resin[ "5120-01" ] == 2 && resin[ "7230-01" ] == 0;
         }
+        // znacznik izolatora (widok i klik w edytorze, 2026-11-21): w środku izolatora na przewodzie, 12,5 m w planie od i2
+        {
+            auto const marks { catenary_chain_insulators( 0 ) };
+            double distance { -1.0 }, height { 0.0 };
+            for( std::size_t index = 0; index < catenary_scene_size(); ++index ) {
+                auto const *data { catenary_scene_get( index ) };
+                if( data == nullptr || data->name != "i2" || marks.empty() ) { continue; }
+                distance = std::hypot( marks.front().point[ 0 ] - data->at[ 0 ], marks.front().point[ 2 ] - data->at[ 2 ] );
+                height = marks.front().point[ 1 ] - data->at[ 1 ];
+            }
+            std::printf( "  znacznik izolatora: %.3f m w planie od i2, %.3f m nad przewodem przy i2\n", distance, height );
+            check( std::abs( distance - 12.5 ) < 0.05 && std::abs( height ) < 0.3, "izolator sekcyjny: znacznik w srodku izolatora na przewodzie" );
+        }
         std::remove( "tests/catenary/td_izolator_test.scm" );
         check( good, "izolator sekcyjny: zapis i odczyt, przesla za nim zasila jego zasilacz" );
     }
