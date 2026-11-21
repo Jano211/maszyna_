@@ -128,6 +128,7 @@ struct scene_chain {
 };
 std::vector<scene_chain> Chains;
 void add_tube( std::vector<catenary::solid_vertex> &Triangles, std::vector<glm::dvec3> const &Points, double Radius );
+std::string arrester_skin( std::string const &Fitting, std::string const &Skin, std::string const &Default );
 
 // bramka z pliku: słupy i dźwigar wstawione jako modele
 struct scene_gantry {
@@ -857,6 +858,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     // odgromnik rożkowy 7310 (karty 0681/0683/0684, użytkownik 2026-11-21): przy szczycie słupa od strony toru, mocowanie wg głębokości
     // słupa (tył regulowany po drugiej stronie, jak 6130-00), linka 9812-6 (4 m) łukiem do liny nośnej. Układ jak w mocowaniach: zero na
     // płaszczyźnie przylegania, słup w +Y; słup przechylony - odgromnik z nim (obrót części słupa)
+    std::string arresterskin, arresterskin_default;   // tekstura odgromnika z wpisu ("skin"), jak przy wysięgnikach 6130; pusta - tekstura osprzętu
     if( data.arrester && data.has_pole ) {
         auto const *pole { Catalog.pole( data.pole_type ) };
         auto const *arm { pole != nullptr && false == pole->arrester.empty() ? Catalog.arrester( pole->arrester ) : nullptr };
@@ -889,16 +891,35 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
                     return result_;
                 };
                 auto const face { -0.5 * depth };
+                // obrót modelu wokół pionu z wpisu ("turn"): model ułożony inaczej niż mocowania (użytkownik 2026-11-21: obrócony o 90°)
+                auto const turned = [ & ]( catenary::cantilever_placement &Placement ) {
+                    if( arm->turn == 0.0 ) { return; }
+                    auto const angle { arm->turn * 3.14159265358979323846 / 180.0 };
+                    auto const c { std::cos( angle ) }, sn { std::sin( angle ) };
+                    double const spin[ 9 ] { c, -sn, 0.0, sn, c, 0.0, 0.0, 0.0, 1.0 };
+                    double rotated[ 9 ];
+                    for( int row = 0; row < 3; ++row ) {
+                        for( int column = 0; column < 3; ++column ) {
+                            rotated[ row * 3 + column ] = 0.0;
+                            for( int k = 0; k < 3; ++k ) { rotated[ row * 3 + column ] += Placement.rotation[ row * 3 + k ] * spin[ k * 3 + column ]; }
+                        }
+                    }
+                    std::copy( std::begin( rotated ), std::end( rotated ), Placement.rotation );
+                };
                 auto front { local( 0.0, face, height ) };
                 front.role = "arrester";
                 front.part = mount;
+                turned( front );
                 result.parts.push_back( front );
                 if( false == arm->back.empty() ) {
                     auto back { local( 0.0, face + depth, height ) };
                     back.role = "arrester";
                     back.part = arm->back;
+                    turned( back );
                     result.parts.push_back( back );
                 }
+                arresterskin = arm->skin;
+                arresterskin_default = arm->skin_default;
                 // linka 9812-6: od punktu "wire" odgromnika łukiem (długość 4,00 m z karty 0681) do uchwytu równoległego na linie nośnej,
                 // 1 m wzdłuż toru od uchwytu liny (uchwyt równoległy 5560/5500/5570/5550 - na razie bez modelu)
                 if( inchain ) {
@@ -953,7 +974,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         auto entry {
             "node " + text_number( data.range_max, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 "
             + ( placement.model.empty() ? Catalog.models() + placement.part : placement.model ) + ".t3d "
-            + ( placement.role == "pole" ? poleskin( placement.part ) : placement.role == "foundation" || placement.role == "arrester" ? std::string( "none" ) : fittingskin )
+            + ( placement.role == "pole" ? poleskin( placement.part ) : placement.role == "foundation" ? std::string( "none" ) : placement.role == "arrester" ? arrester_skin( fittingskin, arresterskin, arresterskin_default ) : fittingskin )
             + " angles " + text_number( part.angles[ 0 ] ) + " " + text_number( part.angles[ 1 ] ) + " " + text_number( part.angles[ 2 ] ) };
         if( part.scale[ 0 ] != 1.0 || part.scale[ 1 ] != 1.0 || part.scale[ 2 ] != 1.0 ) {
             entry += " scale " + text_number( part.scale[ 0 ], 5 ) + " " + text_number( part.scale[ 1 ], 5 ) + " " + text_number( part.scale[ 2 ], 5 );
@@ -974,6 +995,18 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     return count;
 }
 
+
+// tekstura części na własnym atlasie (wysięgnik 6130, odgromnik 7310): nazwa pliku tekstury osprzętu z "siec" na początku zamienionym
+// na nazwę z wpisu, dopisek zużycia zostaje (siec_trakcyjna/siec_used -> siec_trakcyjna/uszynienia_used); przy samej "siec" - wariant
+// domyślny; bez nazwy we wpisie - tekstura osprzętu
+std::string
+arrester_skin( std::string const &Fitting, std::string const &Skin, std::string const &Default ) {
+    if( Skin.empty() ) { return Fitting; }
+    auto const slash { Fitting.find_last_of( "/\\" ) };
+    auto const folder { slash == std::string::npos ? std::string() : Fitting.substr( 0, slash + 1 ) };
+    auto const file { slash == std::string::npos ? Fitting : Fitting.substr( slash + 1 ) };
+    return ( file == "siec" && false == Default.empty() ) ? folder + Default : folder + Skin + ( file.compare( 0, 4, "siec" ) == 0 ? file.substr( 4 ) : std::string() );
+}
 
 // punkty wpisu z punktami podanymi wprost; Attach to oś słupa (wpis ze słupem) albo pion przez zaczepy
 // wysięgniki jednego słupa (użytkownik 2026-11-18: parasol, rozstawione, zagnieżdżone itd. każde swoim tokiem, wspólne tylko słup /

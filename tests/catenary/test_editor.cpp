@@ -98,16 +98,28 @@ int main( int, char *argv[] ) {
         catenary::parse_suspensions( tokens, "zapis", parsed, problems );
         check( written.find( " arrester 0.25" ) != std::string::npos && problems.empty() && parsed.entries.size() == 1 && parsed.entries.front().arrester
             && std::abs( parsed.entries.front().arrester_drop - 0.25 ) < 1e-9, "odgromnik: zapis i odczyt wpisu" );
+        // 161x: 7310-01 nie pasuje (użytkownik 2026-11-21) - bez odgromnika, wysięgnik składa się normalnie
         auto const from { simulation::State.created.size() };
+        auto none { true };
         check( catenary_scene_update( index, with ), "odgromnik: podwieszenie z odgromnikiem sie sklada" );
-        glm::dvec3 spot {};
-        auto found { false };
         for( auto item { from }; item < simulation::State.created.size(); ++item ) {
-            if( simulation::State.created[ item ].entry.find( "7310-01.t3d" ) != std::string::npos ) { spot = simulation::State.created[ item ].position; found = true; }
+            if( simulation::State.created[ item ].entry.find( "7310-" ) != std::string::npos ) { none = false; }
         }
-        // słup 1611-11: wierzch 8,20 m nad główką szyny (punkt słupa y 0,2), płyta 0,10, niżej o 0,25; od strony toru (x > oś słupa)
-        std::printf( "  odgromnik 7310-01: x %.3f y %.3f z %.3f\n", spot.x, spot.y, spot.z );
-        check( found && std::abs( spot.y - ( 0.2 + 8.2 - 0.10 - 0.25 ) ) < 0.01 && spot.x > -2.313 && std::abs( spot.z - 100.247 ) < 0.01, "odgromnik: przy szczycie slupa, od strony toru" );
+        check( none, "odgromnik: na 161x nie wstawiany (brak wykonania)" );
+        // beton 1701: 7310-03 z tyłem 7310-00, przy szczycie (wierzch 7,46, płyta 0,10, niżej o 0,25), od strony toru
+        auto concrete { with };
+        concrete.pole_type = "1701";
+        auto const from2 { simulation::State.created.size() };
+        auto const placed { catenary_scene_update( index, concrete ) };
+        glm::dvec3 spot {};
+        auto found { false }, back { false };
+        for( auto item { from2 }; item < simulation::State.created.size(); ++item ) {
+            if( simulation::State.created[ item ].entry.find( "7310-03.t3d" ) != std::string::npos ) { spot = simulation::State.created[ item ].position; found = true; }
+            if( simulation::State.created[ item ].entry.find( "7310-00.t3d" ) != std::string::npos ) { back = true; }
+        }
+        std::printf( "  odgromnik 7310-03 na 1701: x %.3f y %.3f z %.3f, tyl %d\n", spot.x, spot.y, spot.z, back ? 1 : 0 );
+        check( placed && found && back && std::abs( spot.y - ( 0.2 + 7.46 - 0.10 - 0.25 ) ) < 0.01 && spot.x > -2.313 && std::abs( spot.z - 100.247 ) < 0.01,
+            "odgromnik: na betonie przy szczycie slupa, od strony toru, z tylem" );
         catenary_scene_update( index, entry );
     }
     auto moved { entry };
