@@ -385,6 +385,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 else if( key == "wire" ) { for( auto &value : arm.wire ) { number( value, good ); } }
                 else if( key == "plate" ) { number( arm.plate, good ); }
                 else if( key == "turn" ) { number( arm.turn, good ); }
+                else if( key == "back_turn" ) { number( arm.back_turn, good ); }
                 else if( key == "wire_end" ) { for( auto &value : arm.wire_end ) { number( value, good ); } arm.has_wire_end = true; }
                 else if( key == "earth" ) { for( auto &value : arm.earth ) { number( value, good ); } arm.has_earth = true; std::copy( std::begin( arm.earth ), std::end( arm.earth ), arm.earth_end ); }
                 else if( key == "earth_end" ) { for( auto &value : arm.earth_end ) { number( value, good ); } }
