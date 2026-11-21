@@ -5,14 +5,84 @@ w nawiasach), tom 1 `z- KATALOG 1 -z.pdf` (dział 0500: zamocowania odłącznik�
 tabele czytane okiem / OCR, numery do potwierdzenia przy modelowaniu. Uzupełnienie nr 1: karty 13-0547, 13-0549 (zamocowania
 odłączników z napędem silnikowym).
 
-## Plan (zaakceptowany przez użytkownika 16.11)
-- Podstacja = zasilacz (jak dziś, `Powergrid`) + model w scenerii; stawiana i edytowana w edytorze sieci.
-- Odłącznik sekcyjny = model na słupie (zespół 0661…0677 + zamocowanie 0541…0549) ze stanem otwarty/zamknięty; zamknięty zwiera
-  dwie sekcje (przęsła po obu stronach dostają jeden zasilacz), otwarty rozdziela.
-- Odgromnik = sam model (0681…0684), bez wpływu na prąd.
-- „Opus magnum” użytkownika: wyjść z kabiny, podejść do słupa i przełączyć odłącznik (korba / drążek w skrzynce napędu) – też pod
-  przyszły multiplayer. Do zaprojektowania: interakcja z obiektem scenerii poza kabiną (co MaSzyna dziś umie w trybie pieszym).
-- Użytkownik 17.11 sprawdzi, czy zasilacze za izolatorami sekcyjnymi faktycznie działają (pantograf bierze napięcie z zasilacza przęsła).
+## PLAN „od A do Z” – fizyka prądu nowej sieci (2026-11-21, zastępuje plan z 16.11)
+
+Użytkownik 21.11: „zróbmy to porządnie od A do Z – jak wysięgniki i słupy rozpierdalają system, to niech fizyka prądu też”.
+Stan: PLAN, nic niezaczęte. Kolejność etapów jak niżej; każdy etap z testem na atrapie (jak `te`/`tsc`), w exe sprawdza użytkownik.
+
+### Ustalenia z użytkownikiem (21.11)
+1. **Stara sieć (`node traction`) zostaje po staremu** – bez zmian w TTraction::VoltageGet / ResistanceCalc / TTractionPowerSource
+   dla starych scenerii (nikt nie będzie przeklikiwał starych scenerii w poszukiwaniu regresji). Nowy solver działa WYŁĄCZNIE na
+   przęsłach nowej sieci (łańcuchy z plików `catenary`). Przęsło nowej sieci = dalej obiekt TTraction (pantograf, iskrzenie,
+   DynObj bez zmian), tylko jego VoltageGet idzie do nowego solvera (flaga / wskaźnik na węzeł obwodu).
+2. **Szyny jako przewód powrotny – tak, jeśli to coś daje i nie zjada FPS.** Daje: szyny to ok. 1/4 oporu pętli (niżej), więc
+   bez nich spadki napięcia wychodzą zaniżone. Koszt: przy rozwiązywaniu wysp (niżej) pomijalny. Etap 1 – opór szyn dopisany
+   szeregowo do gałęzi przęsła (zero dodatkowych węzłów); pełna sieć szynowa z łącznikami poprzecznymi i dławikami – później,
+   tylko jeśli wyjdzie różnica widoczna z kabiny.
+3. **Liczby: Głowacki (rozdz. 9 zasilanie s. 205–218, rozdz. 10 sieć powrotna s. 219–242), ewentualnie instrukcje PKP PLK.**
+   Dostępu do PDF Głowackiego z tej sesji nie było – rozdziały 9 i 10 do przeczytania (użytkownik może podesłać strony).
+
+### Liczby wstępne (do sprawdzenia z Głowackim)
+- Napięcie znamionowe na szynach podstacji **3,3 kV** (artykuł Szeląg, Maciołek 2013); bieg jałowy wyżej – DO USTALENIA.
+- Opór wewnętrzny podstacji: stary kod przyjmuje 0,2 Ω (prezentacja Kruczek, IK) – na start to samo, DO SPRAWDZENIA.
+- Wyłączniki szybkie: w podstacjach np. BWS 3150 A (Dzienis 2017), DCN 1600/2500/3150 A; nastawy (prąd, di/dt) – DO USTALENIA
+  (Rojek: koordynacja zabezpieczeń pojazd – podstacja, IK).
+- Odległość podstacji: dawniej 20–25 km, po modernizacji maks. ok. 13 km (Białoń i in. 2010) – do kontroli w edytorze (ostrzeżenie).
+- Przewody: Djp100 0,182 Ω/km (Głowacki, GLOWACKI.md); liny Cu – z przekroju (ok. 0,0179 Ω·mm²/m → L120 ≈ 0,15 Ω/km), DO SPRAWDZENIA.
+  Dopisać kolumnę oporu do `wire` w traction_tables.txt (bez niej – z przekroju i materiału).
+- Szyny: WŁASNE WYLICZENIE z przekroju (60E1 76,7 cm², stal szynowa ok. 0,2–0,22 μΩ·m) → ok. 0,03 Ω/km na szynę, tor (dwie
+  szyny) ok. 0,015 Ω/km + złącza; dla porównania YC120-2C ≈ 0,058 Ω/km → szyny to ok. 20–25 % pętli. DO SPRAWDZENIA (Głowacki rozdz. 10).
+
+### Model (co jest liczone)
+- Obwód prądu stałego: węzły = końce przęseł nowej sieci (+ punkty pośrednie tylko tam, gdzie coś się wpina: pantograf, połączenie,
+  izolator sekcyjny); gałęzie = przęsła (opór z typu sieci: wszystkie liny nośne i przewody jezdne równolegle, + szyny szeregowo).
+- Pojazd = odbiornik o prądzie z poprzedniego kroku (jak dziś `VoltageGet(u, i)`), rekuperacja = źródło prądu; napięcie na
+  pantografie z rozwiązania (interpolacja wzdłuż przęsła).
+- Rozwiązanie: obwód dzielony na **wyspy** (części połączone galwanicznie, po otwarciu wyłączników / odłączników / izolatorów);
+  każda wyspa – układ rzadki (macierz przewodności), rozwiązywany iteracyjnie z ciepłym startem z poprzedniego kroku. Topologia
+  przebudowywana tylko przy zmianie stanu (łącznik, wyłącznik, pantograf mostkujący przerwę). Częstotliwość: co krok fizyki, jeśli
+  pomiar pokaże koszt – co n kroków (spadki napięcia i tak zmieniają się wolno).
+- Podstacja = prostownik: źródło napięcia z oporem wewnętrznym, **dioda** (bez prądu wstecznego, chyba że `recuperation` –
+  falownik/odbiór rekuperacji); jeden zespół prostownikowy, szyna zbiorcza 3 kV i **odpływy (zasilacze)**, każdy z własnym
+  wyłącznikiem szybkim (osobno na tor i kierunek – Głowacki s. 205).
+- Kabina sekcyjna = szyna zbiorcza bez źródła + odpływy z wyłącznikami (4 na linii dwutorowej, Głowacki s. 210–211) – łączy
+  sieci obu torów, zmniejsza spadki, przy zwarciu wyłącza połowę odcinka.
+- Wyłącznik szybki: wyzwolenie od prądu (nastawa) i od stromości (di/dt), ponowne załączenie z **próbą linii** (sprawdzenie
+  izolacji przed załączeniem – zwarcie trwa → nie załącza), blokada po n próbach; stan widoczny w panelu i w edytorze.
+- Odłącznik: zamknięty = gałąź o ~0 Ω między dwiema sekcjami / zasilaczem a siecią; ze **stykiem uszyniającym** – w położeniu
+  uszynienia sieć zwarta do szyn (zamknięcie na sieć pod napięciem = zwarcie → wyłączniki).
+- Izolator sekcyjny / izolowane przęsło naprężenia: przerwa w obwodzie; pantograf na przerwie mostkuje oba brzegi (prąd
+  wyrównawczy przy różnych podstacjach → iskrzenie z catenary_arcing już jest; teraz z prawdziwym prądem).
+- Przęsło naprężenia zwarte / łącznik 0640: gałąź ~0 Ω między łańcuchami.
+- Przewód wzmacniający: gałąź równoległa do sieci, połączona w punktach połączeń (karty 0650–0653); przewody rozdzielcze 3 kV
+  i kable zasilaczy (0655, 0656) – gałęzie z oporem z przekroju.
+- Awarie: zwarcie przez uszynienie, zerwany przewód (przerwa + zwarcie do ziemi, jeśli leży), przepalenie (później, z prądem
+  i czasem – „rozpierdala system”).
+
+### Etapy
+A. **Solver** (`world/catenary_power.h/.cpp`): graf, wyspy, rozwiązanie, źródła z diodą, odbiorniki; test na atrapie (znane obwody
+   policzone ręcznie: jedna podstacja, dwie, kabina, rekuperacja bez odbioru).
+B. **Mapowanie nowej sieci na obwód**: łańcuchy, przęsła naprężenia zwarte/izolowane, izolatory sekcyjne, łączniki; podpięcie
+   TTraction nowych przęseł do solvera (stara sieć bez zmian).
+C. **Podstacje i odpływy** w danych i w edytorze (rozbudowa strony „Zasilanie”: podstacja + jej odpływy przypisane do łańcuchów),
+   wyłączniki szybkie z próbą linii.
+D. **Kabiny sekcyjne** (szyna zbiorcza + odpływy z wyłącznikami), edytor.
+E. **Odłączniki** (modele 0661–0677 + zamocowania 0541–0549, połączenia 0641/0643/0651), stan otwarty/zamknięty/uszyniony,
+   edytor (stawianie na słupie, stan początkowy), przełączanie eventem.
+F. **Przewody wzmacniające / rozdzielcze / kable** jako gałęzie.
+G. **Awarie**: zwarcie przez uszynienie, pantograf na przerwie, zerwanie.
+H. **Odgromniki** – sam model (bez wpływu na prąd), stawiane w edytorze.
+I. **Podgląd**: edytor – sekcje kolorami wg zasilacza / napięcia, stan łączników; panel maszynisty / debug – podstacje, odpływy,
+   wyłączniki, prądy.
+J. **„Opus magnum”**: wyjść z kabiny, podejść do słupa, przełączyć odłącznik (korba / drążek w skrzynce napędu) – też pod
+   przyszły multiplayer. Do zaprojektowania: interakcja z obiektem scenerii poza kabiną.
+
+### Otwarte (zapytać użytkownika przy etapie, którego dotyczy)
+- Styk starej i nowej sieci w jednej scenerii (przęsło starej sieci połączone z nową): na razie – granica obwodu, stara część
+  po staremu; czy tak zostaje? (etap B)
+- Gdzie zapisywać podstacje / kabiny / odłączniki: wpisy w plikach `catenary` (nasz format) czy dalej `tractionpowersource`
+  z rozszerzeniem (etap C)
+- Nastawy wyłączników i napięcie biegu jałowego – z Głowackiego (etap C)
 
 ## Odłączniki – zespoły (tom 2, dział 0661–0679)
 Ostatnia cyfra karty: nieparzysta – odłącznik prostopadle do osi toru, parzysta – równolegle. 0661–0669 napęd ręczny, 0671–0679
