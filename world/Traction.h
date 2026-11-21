@@ -82,7 +82,8 @@ class TTraction : public scene::basic_node
     bool WhereIs();
     void ResistanceCalc(int d = -1, double r = 0, TTractionPowerSource *ps = nullptr);
     void PowerSet(TTractionPowerSource *ps);
-    double VoltageGet(double u, double i);
+    // Along: miejsce pantografu na przęśle (0 - pPoint1, 1 - pPoint2), dla nowej sieci (izolator sekcyjny w środku przęsła); <0 - nieznane
+    double VoltageGet(double u, double i, double Along = -1.0);
 
 private:
 // methods

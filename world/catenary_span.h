@@ -41,6 +41,8 @@ void catenary_span_assign( TTraction &Traction, std::string const &Symbol, doubl
 // w których miejscu stoi izolator - nie rysowane, razem z wieszakami w nich. Odległości w planie od pierwszego końca przęsła (pPoint1),
 // wzdłuż kierunku przęsła; Contact / Messenger nullptr = bez przerwy
 void catenary_span_gaps( TTraction &Traction, double const *Contact, double const *Messenger );
+// przerwa w przewodach jezdnych (izolator sekcyjny), w planie od pPoint1; false - bez przerwy
+bool catenary_span_contact_gap( TTraction const &Traction, double &From, double &To );
 // punkt liny nośnej (Messenger) albo osi przewodów jezdnych w odległości Along w planie od pierwszego końca przęsła, z przęsła
 // policzonego wg typu sieci (bez przerw na izolator); false, gdy przęsło nie jest liczone wg typu. Index: który przewód / która lina
 // w kolejności z przęsła (lina: 0 - górna, 1 - dolna w sieciach z dwiema liniami; false, gdy go nie ma); -1 = górna lina albo oś przewodów

@@ -30,6 +30,11 @@ json pobrane do sprawdzania; OpenAL - atrapy w /tmp).
   wierzchem), od strony toru, z przechyłem słupa; tekstura z modelu (skin none); linka 9812-6 jako bryła miedziana łukiem ~4 m do
   liny nośnej 1 m wzdłuż toru od uchwytu liny (tylko w łańcuchu). ZAŁOŻENIA: punkt `wire` (0, −0,30, 0,15) i plate 0,10 na oko - do
   poprawki wg modeli; uchwyt równoległy na linie (5560/5500/5570/5550) bez modelu; na bramkach (7310-04) jeszcze nie.
+- Granica zasilania w środku przęsła z izolatorem (21.11 20:52, użytkownik: „za izolatorem napięcie zniknęło, ale dopiero od
+  następnego przęsła”): przęsło z przerwą (`gap contact`) to w obwodzie dwie gałęzie - od końca 0 do przerwy (zasilacz przęsła)
+  i od przerwy do końca 1 (sekcja za izolatorem); z sąsiadami łączy się bez względu na nazwy. Pantograf podaje miejsce na przęśle:
+  `TTraction::VoltageGet( u, i, Along )` (DynObj liczy Along jak pantograph_arcing), pobór w tym miejscu gałęzi (spadek I·R·f·(1−f)).
+  Ślizg w samej przerwie - po bliższej stronie (mostkowanie przerwy - etap G). Część przęsła bez zasilacza daje 0 V.
 - Izolatory sekcyjne w edytorze (21.11 20:35, użytkownik: „wizualizacja jest, ale nie da się kliknąć i nie trafia idealnie w izolator”):
   znacznik liczony teraz w środku izolatora na przewodzie jezdnym (section_layout_of, jak przerwa w przęśle; wcześniej średnia zer
   modeli części - zera są na końcach, część wisi na linie), a sam znacznik da się kliknąć (`intent_detail::insulator`,

@@ -664,6 +664,14 @@ catenary_span_gaps( TTraction &Traction, double const *Contact, double const *Me
     }
 }
 
+bool
+catenary_span_contact_gap( TTraction const &Traction, double &From, double &To ) {
+    if( false == static_cast<bool>( Traction.m_catenaryspan ) || false == Traction.m_catenaryspan->gapped[ 0 ] ) { return false; }
+    From = Traction.m_catenaryspan->gap[ 0 ][ 0 ];
+    To = Traction.m_catenaryspan->gap[ 0 ][ 1 ];
+    return true;
+}
+
 // punkt liny nośnej albo osi przewodów jezdnych w odległości Along w planie od pierwszego końca (średnia z przewodów, które tam są)
 bool
 catenary_span_point( TTraction &Traction, double const Along, bool const Messenger, glm::dvec3 &Point, int const Index ) {
