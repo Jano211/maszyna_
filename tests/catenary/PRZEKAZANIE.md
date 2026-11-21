@@ -8,6 +8,12 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   Zrobione: tekstura - zamiast "none" tekstura osprzętu (siec*), a z kluczem `skin` / `skin_default` wpisu `arrester` jak przy 6130
   (DO USTALENIA, na jakiej teksturze są modele 7310); klucz `turn <stopnie>` wpisu `arrester` - obrót modelu wokół pionu (punkt
   wire bez obrotu) - DO USTALENIA kierunek (+90 / −90), na razie 0; 161x bez odgromnika (klucz słupa usunięty), zostaje 1701.
+- 21:46: obrót OK (turn 0), tekstura `siec` (osprzęt) - OK. Linka nie trafiała: modele 7310-01/03/04 mają punkty wire_1, wire_1_end,
+  wire_2, wire_2_end (współrzędne t3d = układ części, jak 6130 `wire`). Użytkownik: wire_2 → lina nośna, wire_1 → lina uszynienia,
+  gdy słup jest w sekcji uszynienia (bez uszynienia schodzi do ziemi przy słupie - na razie nic). Dane: `wire` / `wire_end` (wire_2)
+  i `earth` / `earth_end` (wire_1); linka wychodzi z przyłącza prosto do punktu _end, dalej łukiem. Linkę do uszynienia rysuje
+  przęsło z liną uszynienia (earthing_rope, `Suspension.arrester_earth`), 0,3 m od uchwytu liny w stronę następnego słupa; nie do
+  przewodu wzmacniającego. 7310-04: wire_2 (0,64574; 0,02157; 0,4054), wire_1 (0,24166; 0,02157; 0,4054) - do bramek.
 
 ## START TUTAJ – 2026-11-21 noc – odłączniki bez modeli (etap E, część obwodowa)
 

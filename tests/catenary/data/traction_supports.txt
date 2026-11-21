@@ -127,10 +127,11 @@ earthing_arm 6131 back 6130-00 wire 0.0 -1.3151 0.7496 plate 0.09 skin uszynieni
 //   -01 slupy stalowe ceownikowe (sruby hakowe, bez tylu; na 161x NIE pasuje - uzytkownik 2026-11-21, 161x bez odgromnika do
 //   wyjasnienia), -03 betony 1701/1711 z regulowanym tylem -00, -04 dzwigary bramek
 //   (pionowo od gory na dzwigar - jeszcze niezrobione). Sruby w modelach - uzytkownik poprawi modele po pierwszym wstawieniu.
-//   ZALOZENIE: punkt linki "wire" i plate na oko (modeli nie widzialem) - do poprawki wg modeli. "turn <stopnie>" - obrot modelu
-//   wokol pionu, gdy model lezy inaczej niz mocowania (punkt wire bez obrotu); "skin <nazwa>" / "skin_default" - tekstura jak przy 6130.
-arrester 7310-01 wire 0.0 -0.30 0.15 plate 0.10 mount 7310-01 1.0 endarrester
-arrester 7310-03 back 7310-00 wire 0.0 -0.30 0.15 plate 0.10 mount 7310-03 1.0 endarrester
+//   wire / wire_end = punkty wire_2 / wire_2_end z modeli (linka do liny nosnej, uzytkownik 2026-11-21); earth / earth_end = wire_1 / wire_1_end - linka do liny uszynienia,
+//   gdy slup jest w sekcji uszynienia (bez uszynienia schodzi do ziemi przy slupie - na razie nic);
+//   plate na oko. "turn <stopnie>" - obrot modelu wokol pionu, gdy model lezy inaczej niz mocowania (punkty linki z nim); "skin <nazwa>" / "skin_default" - tekstura jak przy 6130.
+arrester 7310-01 wire 0.64574 -0.01136 0.36542 wire_end 0.55579 -0.01136 0.36542 earth 0.24166 -0.01136 0.36542 earth_end 0.33162 -0.01136 0.36542 plate 0.10 mount 7310-01 1.0 endarrester
+arrester 7310-03 back 7310-00 wire 0.64574 -0.01136 0.36542 wire_end 0.55579 -0.01136 0.36542 earth 0.24166 -0.01136 0.36542 earth_end 0.33162 -0.01136 0.36542 plate 0.10 mount 7310-03 1.0 endarrester
 
 
 // ---- przewod wzmacniajacy (2026-11-16; uzytkownik: "analogicznie do uszynienia", NA OKO z papierow) -----------------
