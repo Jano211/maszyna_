@@ -2,6 +2,17 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-21 popołudnie – plan fizyki prądu (tylko notatki)
+
+- ZASILANIE.md: nowy plan „od A do Z” (solver obwodu prądu stałego tylko dla NOWEJ sieci, stara `node traction` po staremu;
+  szyny jako powrót – na start szeregowo w gałęzi przęsła; podstacje z odpływami i wyłącznikami szybkimi, kabiny sekcyjne z szyną
+  zbiorczą, odłączniki ze stykiem uszyniającym, awarie). Etapy A–J, zaczynamy od A (solver + testy na atrapie). Liczby wstępne
+  z artykułów (3,3 kV, BWS 3150 A, ~13 km), reszta z Głowackiego rozdz. 9–10 – PDF z tej sesji niedostępny.
+- Stan starego kodu (do pamięci): `section` w tractionpowersource to tylko etykieta sekcji (nie źródło), `psNode` nieużywane, przy
+  wyłączeniu jednego z dwóch zasilaczy przęsło dostaje 0 V (Traction.cpp „if either power source is out, so are we”) – w starej
+  sieci zostaje, nowa sieć to naprawia.
+- Odgromnik 7310: w modelu od lica słupa w −Y (jak 4610 / 6130), zero na płaszczyźnie przylegania, punkt wpięcia linki 9812-6.
+
 ## START TUTAJ – 2026-11-21 – tereny górnicze (tylko notatki)
 
 - ZADANIA.md: nowa sekcja „tereny górnicze: osiadanie i nadstawki” (osiadanie konstrukcji względem toru, nadstawki na słupy,
