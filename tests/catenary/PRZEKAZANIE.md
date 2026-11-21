@@ -2,6 +2,19 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-22 – NA POCZĄTKU PRZYPOMNIEĆ JANOWI (prosił 22.11 00:05)
+
+1. **Uszynienie na 1701 (i 1711):** wpis `pole 1701` w traction_supports.txt nie ma `earthing` (uchwyt 6120) ani `earthing_arm` (6130),
+   więc lina uszynienia nie ma się czego złapać ("pole 1701 carries no earthing holder (6120)") i rwie się na betonach – to
+   prawdopodobnie ta "droga przez bramki", której nie widzi. Na 161x działa (końce, mocowania, linki do słupów). Zapytać Jana:
+   które wykonanie 6120 na beton (osobne w karcie 0805? tył regulowany jak 7310-00?), na jakim mocowaniu 6130 na 1701 (płaskownik ze
+   śrubami jak 7310-03/-00?) – nazwy modeli. Dopisać do 1701, dodać wpis 1711 (= 1701), wgrać na G:.
+2. Jeśli dalej "no way along the chains" przez bramki – poprosić o linie `Catenary: earthing` z logu, nazwy zwisów i plik sieci z G:.
+3. Linki odgromnika teraz sztywne (stiff_cable, Bézier: z uchwytu wzdłuż liny w stronę słupa, w przyłącze w kierunku wire->wire_end,
+   zwis ≤0,15 m) – commit 56a60cf, wszystko-gl46 83cb75d – czeka na test w exe. Jan wcześniej uruchomił STARE exe (nie znało
+   `back_turn` -> 7310-03 odrzucony -> brak odgromnika); po przebudowie OK.
+4. Uwaga: te (test_editor) segfaultuje z `./` także przed zmianą 56a60cf; tsc ma 7× BLAD też przed – nie ruszone, sprawdzić.
+
 ## START TUTAJ – 2026-11-21 noc – poprawki odgromnika po pierwszym teście
 
 - Użytkownik 21:38: odgromnik bez tekstury i „obrócony o 90°”, linka w dobrym miejscu; 7310-01 na 161x w ogóle nie leży.
