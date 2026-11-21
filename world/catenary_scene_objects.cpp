@@ -22,6 +22,7 @@ http://mozilla.org/MPL/2.0/.
 #include "world/Traction.h"
 #include "world/TractionPower.h"
 #include "world/catenary_span.h"
+#include "world/catenary_power_scene.h"
 
 // część należy do pliku sieci, nie do pliku scenerii, w którym akurat jest dyrektywa: bez warstwy zapis scenerii
 // w edytorze jej nie przepisuje (inaczej każda część wysięgnika trafiłaby do scenerii jako zwykły model)
@@ -93,6 +94,7 @@ catenary_span_create( std::string const &Name, double const RangeMax, double con
     auto *span { new TTraction( nodedata ) };
     span->Load( &parser, glm::dvec3() );
     span->m_catenary = true;
+    catenary_power_changed();
     if( false == simulation::Traction.insert( span ) ) {
         ErrorLog( "Bad scenario: duplicate traction piece name \"" + span->name() + "\" made by a catenary chain" );
     }
@@ -145,6 +147,7 @@ catenary_span_reload( TTraction *Span, std::string const &Name, std::string cons
     auto *const section { &simulation::Region->section( location ) };
     auto const parallel { Span->asParallel };
     auto const supply { Span->asPowerSupplyName };
+    catenary_power_changed();
     // końce przed zmianą wyrejestrowane (katalog przęseł w komórkach jest po końcach)
     simulation::Region->erase_and_unregister( Span );
     Span->asParallel.clear();
@@ -171,6 +174,7 @@ void
 catenary_span_delete( TTraction *Span ) {
 
     if( Span == nullptr ) { return; }
+    catenary_power_changed();
     // sąsiednie przęsła tracą połączenie z tym, a z nim np. wspólną linkę Y: ich linie i bryły od nowa
     std::vector<TTraction *> neighbours;
     for( int end = 0; end < 2; ++end ) {

@@ -25,4 +25,6 @@ g++ $F -I$T/mock -I. $T/conv_pick.cpp $T/mock_objects.cpp world/catenary_scene.c
 g++ $F -I. $T/test_tensioner.cpp world/catenary_tensioner.cpp -o $T/tt
 # 10. iskrzenie pantografu: oblodzenie z pogody, łuki, iskry
 g++ $F -I$T/mock_arcing -I. -Iref/glm $T/test_arcing.cpp world/catenary_arcing.cpp -o $T/ta
-echo "zbudowane: t ts sim tsc tc te tk conv_pick tt ta"
+# 11. obwod pradu stalego nowej sieci: solver i budowa obwodu z przesel (tests/catenary/test_power.cpp)
+g++ $F -I. $T/test_power.cpp world/catenary_power.cpp -o $T/tp
+echo "zbudowane: t ts sim tsc tc te tk conv_pick tt ta tp"

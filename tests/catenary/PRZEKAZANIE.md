@@ -2,6 +2,37 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-21 wieczór – obwód prądu nowej sieci (etapy A, B) i odgromniki (H)
+
+**Wszystko w exe NIESPRAWDZONE** (testy tp / te / tsc / tk / tc / tt OK, składnia exe OK z nagłówkami - submoduły ref/glm, glad, glfw,
+json pobrane do sprawdzania; OpenAL - atrapy w /tmp).
+- **Solver** `world/catenary_power.h/.cpp` (bez zależności od symulatora): węzły = końce przęseł, gałęzie = przęsła (przewody jezdne
+  + liny nośne równolegle z przekrojów typu sieci, + tor 0,015 Ω/km szeregowo), zasilacze = źródło z oporem wewnętrznym, dioda
+  prostownika (bez prądu wstecznego, chyba że `recuperation`), wyłącznik szybki jak w starym kodzie (nastawa = MaxOutputCurrent,
+  FastFuseTimeOut, FastFuseRepetition, SlowFuseTimeOut). Wyspy; rozkład LDLᵀ w obwiedni po odwrotnym Cuthillu–McKee, liczony od nowa
+  tylko przy zmianie układu / stanu zasilaczy, co krok podstawienie (test: 20 000 przęseł 0,35 ms). Rekuperacja bez odbiorcy -
+  przyjmowana tylko tyle, żeby napięcie nie przekroczyło `regen_limit` 3900 V. Wyspa bez zasilacza - 0 V.
+- **Budowa obwodu** `catenary_power::build` (też bez symulatora, testowana): połączone przęsła z tym samym zasilaczem albo z nazwą
+  kabiny (section) - jeden węzeł; różne zasilacze - przerwa (izolator sekcyjny, izolowane przęsło naprężenia); bieżnia wspólna z tym
+  samym zasilaczem - łącznik między końcami bliżej niż 3 m; zasilacz kablem (0,005 Ω) do najbliższego końca swojej nazwy w każdej
+  części; kabina (section) = szyna bez źródła, przyłączona tak samo (łączy tory). Części bez zasilacza (nazwa bez wpisu) - po staremu.
+- **Symulator** `world/catenary_power_scene.cpp/.h`: przebudowa obwodu po `catenary_power_changed()` (wołane przy tworzeniu /
+  wczytaniu od nowa / usuwaniu przęsła w catenary_scene_objects.cpp), przy zmianie liczby przęseł / zasilaczy albo parametrów
+  zasilacza (edytor); krok `catenary_power_update( totaltime )` w simulation.cpp zaraz po Powergrid.update; `TTraction::VoltageGet`
+  dla przęsła z m_catenary pyta najpierw obwód (pobór pojazdu - w następnym kroku, w środku przęsła). Stara sieć bez zmian.
+  W logu: „Catenary power: N of M spans in the circuit, … feeders”. Panel debug (zasilanie): zasilacze nowej sieci ze stanem z obwodu.
+  TTractionPowerSource dostał tylko gettery parametrów (`nominal_voltage()` itd.).
+- Plik `data/traction_power.txt` (opcjonalny): rail, feeder, cabin, leakage, regen_limit, opory właściwe przewodów.
+- **Odgromnik 7310**: wpis `arrester` w traction_supports.txt (pola jak earthing_arm: mount wg głębokości, back, wire, plate), klucz
+  słupa `arrester` (161x → 7310-01, 1701 → 7310-03 + tył 7310-00; 1711 i 166x nie mają jeszcze wpisów słupów / nie wiadomo), wpis
+  podwieszenia `arrester <m niżej>`, edytor: strona słupów „Odgromnik 7310” + „Odgromnik niżej o (m)”. Przy szczycie słupa (plate pod
+  wierzchem), od strony toru, z przechyłem słupa; tekstura z modelu (skin none); linka 9812-6 jako bryła miedziana łukiem ~4 m do
+  liny nośnej 1 m wzdłuż toru od uchwytu liny (tylko w łańcuchu). ZAŁOŻENIA: punkt `wire` (0, −0,30, 0,15) i plate 0,10 na oko - do
+  poprawki wg modeli; uchwyt równoległy na linie (5560/5500/5570/5550) bez modelu; na bramkach (7310-04) jeszcze nie.
+- Do sprawdzenia przez użytkownika: (1) jazda po nowej sieci - napięcie spada z odległością od podstacji, w panelu debug prąd
+  zasilacza; (2) izolator sekcyjny z wyłączonym zasilaczem (podstacja wyłączona → 0 V za izolatorem); (3) przeciążenie → wyłącznik
+  szybki i ponowne załączenia; (4) odgromnik na 161x i 1701, punkt linki.
+
 ## START TUTAJ – 2026-11-21 popołudnie – plan fizyki prądu (tylko notatki)
 
 - ZASILANIE.md: nowy plan „od A do Z” (solver obwodu prądu stałego tylko dla NOWEJ sieci, stara `node traction` po staremu;
@@ -9,7 +40,11 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   zbiorczą, odłączniki ze stykiem uszyniającym, awarie). Etapy A–J, zaczynamy od A (solver + testy na atrapie). Liczby wstępne
   z artykułów (3,3 kV, BWS 3150 A, ~13 km). Głowacki przeczytany (OCR rozdz. 2.1, 9.2, 10.1): zasady (uzależnienie zasilaczy,
   kabiny −20 % nastaw, −50 % spadku, odłączniki granic normalnie otwarte, numeracja OKZ), liczb podstacji nie podaje.
-- Model odgromnika 7310 użytkownik ma już na dysku: 7310-00 to mocowanie ze śrubami „do 03” (DO WYJAŚNIENIA, co znaczy „do 03”).
+- Model odgromnika 7310 użytkownik ma już na dysku, podział jak przy innych mocowaniach na śruby z płaskownikiem: **7310-03** =
+  odgromnik razem z przednią częścią mocowania, **7310-00** = regulowany tył (śruby + płaskownik) do 03 – jak tył 6130-00 przy 6130.
+  Wykonania: **-01** słupy stalowe ceownikowe, **-03** słupy betonowe 1701/1711, **-04** dźwigary bramek (mocowane pionowo
+  od góry na dźwigar). -01 i -04 bez tyłu – śruby hakowe w modelu. Śruby i nakrętki NIE jako osobne submodele (bez skalowania
+  po szerokości) – użytkownik po pierwszym wstawieniu poprawi modele na oko, żeby leżały.
 - Stan starego kodu (do pamięci): `section` w tractionpowersource to tylko etykieta sekcji (nie źródło), `psNode` nieużywane, przy
   wyłączeniu jednego z dwóch zasilaczy przęsło dostaje 0 V (Traction.cpp „if either power source is out, so are we”) – w starej
   sieci zostaje, nowa sieć to naprawia.

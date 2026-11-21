@@ -34,6 +34,7 @@ http://mozilla.org/MPL/2.0/.
 #include "utilities/Timer.h"
 #include "vehicle/Driver.h"
 #include "world/catenary_scene.h"
+#include "world/catenary_power_scene.h"
 
 namespace simulation {
 
@@ -136,6 +137,8 @@ state_manager::update( double const Deltatime, int Iterationcount ) {
 
     Timer::subsystem.sim_powergrid.start();
     simulation::Powergrid.update( totaltime );
+    // nowa sieć (łańcuchy): obwód prądu stałego z poborem pojazdów z poprzedniego kroku
+    catenary_power_update( totaltime );
     Timer::subsystem.sim_powergrid.stop();
     // road junctions, level crossings and the points road vehicles appear at; ahead of the vehicles, so the drivers act on what these decide
     Timer::subsystem.sim_roads.start();

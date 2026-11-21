@@ -20,6 +20,7 @@ http://mozilla.org/MPL/2.0/.
 #include "utilities/Timer.h"
 #include "world/Event.h"
 #include "world/TractionPower.h"
+#include "world/catenary_power_scene.h"
 #include "world/catenary_span.h"
 #include "vehicle/Camera.h"
 #include "world/mtable.h"
@@ -1391,6 +1392,22 @@ debug_panel::update_section_powergrid( std::vector<text_line> &Output ) const {
 			    powerstation->m_name )
 			+ "                              " };
 
+        // zasilacz nowej sieci: stan z obwodu prądu stałego (world/catenary_power_scene.h)
+        if( catenary_power_feeder feeder; catenary_power_feeder_state( powerstation->m_name, feeder ) ) {
+            textline =
+                name.substr( 0, 20 )
+                + " " + to_string( feeder.voltage, 0, 5 )
+                + " " + to_string( feeder.current, 1, 8 )
+                + " " + to_string( feeder.timer, 1, 8 )
+                + ( feeder.trips == 0 ? "" : " (x" + std::to_string( feeder.trips ) + ")" )
+                + ( feeder.locked ? " locked" : "" );
+            Output.emplace_back(
+                textline,
+                feeder.tripped ? nopowercolor :
+                feeder.voltage < 0.8 * powerstation->nominal_voltage() ? lowpowercolor :
+                Global.UITextColor );
+            continue;
+        }
         textline =
             name.substr( 0, 20 )
             + " " + to_string( powerstation->OutputVoltage, 0, 5 )

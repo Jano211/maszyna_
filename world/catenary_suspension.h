@@ -84,6 +84,11 @@ struct suspension {
     // <nazwa> z sąsiedniego toru (pojedynczy: od jego liny nośnej, podwójny: dolna od uchwytu ramion, górna od liny nośnej).
     // Wpis "pull_from <nazwa>"; "attach" liczy wtedy exe
     std::string pull_from;
+    // odgromnik rożkowy na słupie (karty 0681/0683/0684, model 7310 wg słupu - wpis "arrester" słupa w traction_supports.txt):
+    // przy szczycie słupa, od strony toru, linka 9812-6 łukiem do liny nośnej. Wpis "arrester <m>": o tyle niżej od położenia
+    // domyślnego (0 = domyślne). Bez wpływu na prąd (sam model)
+    bool   arrester { false };
+    double arrester_drop { 0.0 };
 };
 
 // łańcuch sieci: kolejne przęsła między podwieszeniami z listy (od kotwy do kotwy), wpis

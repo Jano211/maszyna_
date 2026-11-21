@@ -293,6 +293,8 @@ void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data
 	Data.strut_shift = Current.strut_shift; // the bottom mount too
 	Data.turn_by_hand = Current.turn_by_hand; // and the cantilever turned by hand
 	Data.lean = Current.lean;             // and so does the lean of the pole
+	Data.arrester = Current.arrester;     // and the lightning arrester on it
+	Data.arrester_drop = Current.arrester_drop;
 	Data.stay_gap = Current.stay_gap;     // and the corrections from the ground (the user 2026-11-18)
 	Data.arms_spread = Current.arms_spread;
 	Data.rope_shift = Current.rope_shift;
@@ -8380,6 +8382,48 @@ void catenary_editor::render_catenary_cantilever_ui()
 					ImGui::PopItemWidth();
 					if (ImGui::IsItemHovered())
 						ImGui::SetTooltip("%s", STR_C("A pole is seldom quite upright: it leans a little, the mounts with it, the cantilever is assembled to them. + towards the track. Ctrl+click types a value"));
+				}
+			}
+			// the lightning arrester 7310 (cards 0681/0683/0684, the user 2026-11-21): at the top of the pole towards the track, the lead 9812-6
+			// to the messenger; no effect on the current
+			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole)
+			{
+				auto const *catalog{catenary_scene_catalog()};
+				auto const *own{catalog != nullptr ? catalog->pole(data->pole_type) : nullptr};
+				if (own != nullptr && false == own->arrester.empty() && own->drop.empty() && false == own->gantry)
+				{
+					auto const index{static_cast<std::size_t>(tool.selected)};
+					auto on{data->arrester};
+					if (ImGui::Checkbox(STR_C("Lightning arrester 7310"), &on))
+					{
+						auto changed{*data};
+						changed.arrester = on;
+						tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+						catenary_scene_update(index, changed);
+						tool.probed = false;
+						tool.status = on ? STR("Lightning arrester put on the pole") : STR("Lightning arrester taken off");
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("A horn lightning arrester at the top of the pole, on the side of the track, its lead goes to the messenger. Only a model, the current doesn't see it"));
+					if (data->arrester)
+					{
+						auto drop{static_cast<float>(data->arrester_drop)};
+						ImGui::PushItemWidth(160.0f);
+						if (ImGui::SliderFloat(STR_C("Arrester lower by (m)"), &drop, 0.0f, 2.0f, "%.2f"))
+						{
+							drop = std::round(drop * 100.0f) / 100.0f;
+							auto changed{*data};
+							changed.arrester_drop = drop;
+							if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != index || tool.undo.back().chain)
+							{
+								tool.shift_group = ++tool.group;
+								tool.undo.push_back({tool.shift_group, false, index, *data, std::nullopt, false});
+							}
+							catenary_scene_update(index, changed);
+							tool.probed = false;
+						}
+						ImGui::PopItemWidth();
+					}
 				}
 			}
 			// the brace 6506 (as on 102x) on another tubular cantilever; 102x has it of its own

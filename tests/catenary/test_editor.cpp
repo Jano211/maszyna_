@@ -87,6 +87,29 @@ int main( int, char *argv[] ) {
         check( solved && with.parts.size() == plain.parts.size() + 3 && with.find( "link" ) != nullptr && written.find( " override link 6506-01" ) != std::string::npos,
             "zastrzal 6506 dolozony do wysiegnika 1124 przez nadpisania wpisu" );
     }
+    // odgromnik 7310 (2026-11-21): na słupie 1611-11 model 7310-01 przy szczycie, od strony toru; zapis "arrester <m>" i odczyt
+    {
+        auto with { entry };
+        with.arrester = true;
+        with.arrester_drop = 0.25;
+        auto const written { catenary::write_suspension( with ) };
+        std::vector<std::string> tokens; std::istringstream words { written }; for( std::string w; words >> w; ) { tokens.push_back( w ); }
+        catenary::suspension_file parsed; std::vector<std::string> problems;
+        catenary::parse_suspensions( tokens, "zapis", parsed, problems );
+        check( written.find( " arrester 0.25" ) != std::string::npos && problems.empty() && parsed.entries.size() == 1 && parsed.entries.front().arrester
+            && std::abs( parsed.entries.front().arrester_drop - 0.25 ) < 1e-9, "odgromnik: zapis i odczyt wpisu" );
+        auto const from { simulation::State.created.size() };
+        check( catenary_scene_update( index, with ), "odgromnik: podwieszenie z odgromnikiem sie sklada" );
+        glm::dvec3 spot {};
+        auto found { false };
+        for( auto item { from }; item < simulation::State.created.size(); ++item ) {
+            if( simulation::State.created[ item ].entry.find( "7310-01.t3d" ) != std::string::npos ) { spot = simulation::State.created[ item ].position; found = true; }
+        }
+        // słup 1611-11: wierzch 8,20 m nad główką szyny (punkt słupa y 0,2), płyta 0,10, niżej o 0,25; od strony toru (x > oś słupa)
+        std::printf( "  odgromnik 7310-01: x %.3f y %.3f z %.3f\n", spot.x, spot.y, spot.z );
+        check( found && std::abs( spot.y - ( 0.2 + 8.2 - 0.10 - 0.25 ) ) < 0.01 && spot.x > -2.313 && std::abs( spot.z - 100.247 ) < 0.01, "odgromnik: przy szczycie slupa, od strony toru" );
+        catenary_scene_update( index, entry );
+    }
     auto moved { entry };
     moved.pole[ 0 ] = -2.613; moved.card = 1125;   // słup 0,3 m dalej: A o 0,3 m większe, następna karta
     mock_deleted_parts = 0;

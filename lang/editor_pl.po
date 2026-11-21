@@ -13267,3 +13267,18 @@ msgstr "Prowadnica ciężarów"
 
 msgid "Old assemblies (card 0454): the stack goes through two fixed rings on brackets, each with four flat rods; only on structures with the brackets (gantry legs, space masts), otherwise the tube stays. The Ø400 weights don't fit through"
 msgstr "Stare złożenia (karta 0454): stos przechodzi przez dwa nieruchome pierścienie na wspornikach, w każdym cztery pręty z płaskownika; tylko na konstrukcjach z wspornikami (nogi bramek, słupy przestrzenne), na innych zostaje rura. Ciężary Ø400 się nie mieszczą"
+
+msgid "Lightning arrester 7310"
+msgstr "Odgromnik 7310"
+
+msgid "Lightning arrester put on the pole"
+msgstr "Odgromnik założony na słup"
+
+msgid "Lightning arrester taken off"
+msgstr "Odgromnik zdjęty"
+
+msgid "A horn lightning arrester at the top of the pole, on the side of the track, its lead goes to the messenger. Only a model, the current doesn't see it"
+msgstr "Odgromnik rożkowy przy szczycie słupa, od strony toru, linka łukiem do liny nośnej. Sam model, prąd go nie widzi"
+
+msgid "Arrester lower by (m)"
+msgstr "Odgromnik niżej o (m)"

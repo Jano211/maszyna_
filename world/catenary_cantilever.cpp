@@ -365,17 +365,20 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
             continue;
         }
 
-        if( token == "earthing_arm" ) {
+        if( token == "earthing_arm" || token == "arrester" ) {
             // earthing_arm <nazwa> [body <wysięgnik>] back <tył> wire <x> <y> <z> plate <m> mount <mocowanie> <głębokość max> ... endearthing_arm
-            if( index >= count ) { report( "", "\"earthing_arm\" without a name" ); break; }
+            // arrester <nazwa> ... endarrester - odgromnik rożkowy 7310, te same pola (wire = punkt wpięcia linki 9812-6)
+            auto const isarrester { token == "arrester" };
+            auto const ending { "end" + token };
+            if( index >= count ) { report( "", "\"" + token + "\" without a name" ); break; }
             catenary::earthing_arm arm;
             arm.name = Tokens[ index++ ];
-            auto const entry { "earthing_arm \"" + arm.name + "\"" };
+            auto const entry { token + " \"" + arm.name + "\"" };
             auto good { true };
             auto closed { false };
             while( index < count && good ) {
                 auto const key { Tokens[ index++ ] };
-                if( key == "endearthing_arm" ) { closed = true; break; }
+                if( key == ending ) { closed = true; break; }
                 if( key == "back" ) { if( index < count ) { arm.back = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "body" ) { if( index < count ) { arm.body = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "long" ) { if( index < count ) { arm.longer = Tokens[ index++ ]; } else { good = false; } }
@@ -400,13 +403,14 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
             }
             if( good && closed && arm.mounts.empty() && arm.profiles.empty() ) { report( entry, "needs at least one \"mount\" or \"profile\"" ); continue; }
             if( false == good || false == closed ) {
-                if( good ) { report( entry, "missing \"endearthing_arm\"" ); } else if( Errors.empty() || Errors.back().find( entry ) == std::string::npos ) { report( entry, "bad or missing value" ); }
+                if( good ) { report( entry, "missing \"" + ending + "\"" ); } else if( Errors.empty() || Errors.back().find( entry ) == std::string::npos ) { report( entry, "bad or missing value" ); }
                 skip();
                 continue;
             }
             std::sort( arm.mounts.begin(), arm.mounts.end(), []( auto const &A, auto const &B ) { return A.second < B.second; } );
-            if( m_earthing_arms.find( arm.name ) != m_earthing_arms.end() ) { report( entry, "defined more than once, the first definition stays" ); continue; }
-            m_earthing_arms.emplace( arm.name, arm );
+            auto &target { isarrester ? m_arresters : m_earthing_arms };
+            if( target.find( arm.name ) != target.end() ) { report( entry, "defined more than once, the first definition stays" ); continue; }
+            target.emplace( arm.name, arm );
             continue;
         }
 
@@ -446,6 +450,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                     else if( key == "earthing" ) { text( pole.earthing ); }
                     else if( key == "earthing_back" ) { text( pole.earthing_back ); }
                     else if( key == "earthing_arm" ) { text( pole.earthing_arm ); }
+                    else if( key == "arrester" ) { text( pole.arrester ); }
                     else if( key == "feeder" ) { pole.feeder = true; }
                     else { report( entry, "unknown keyword \"" + key + "\"" ); good = false; --index; }
                 }
@@ -722,6 +727,11 @@ cantilever_pole const *cantilever_catalog::pole( std::string const &Name ) const
 catenary::earthing_line const *cantilever_catalog::earthing_line( std::string const &Name ) const {
     for( auto const &line : m_earthing_lines ) { if( Name.empty() || line.name == Name ) { return &line; } }
     return nullptr;
+}
+
+catenary::earthing_arm const *cantilever_catalog::arrester( std::string const &Name ) const {
+    auto const lookup { m_arresters.find( Name ) };
+    return ( lookup != m_arresters.end() ? &lookup->second : nullptr );
 }
 
 catenary::earthing_arm const *cantilever_catalog::earthing_arm( std::string const &Name ) const {

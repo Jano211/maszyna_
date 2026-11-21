@@ -1,0 +1,19 @@
+// Obwod pradu stalego nowej sieci (lancuchy). Plik opcjonalny: bez niego albo bez wpisu obowiazuja te same wartosci, wpisane
+// w symulator. Czytany raz, przy pierwszym uzyciu (zmiana - restart symulatora). Komentarze od //.
+// Stara siec (node traction poza lancuchem) liczy sie dalej po staremu. Napiecie, opor wewnetrzny i nastawa wylacznika
+// zasilacza - z jego wpisu tractionpowersource w scenerii.
+
+// --- przewod powrotny i polaczenia ---
+rail          0.015      // Ohm/km, tor (dwie szyny rownolegle ze zlaczami) - WLASNE WYLICZENIE z przekroju 60E1, do sprawdzenia
+feeder        0.005      // Ohm, kabel zasilacza z odlacznikiem (od szyny zasilacza do sieci)
+cabin         0.002      // Ohm, polaczenie sieci z szyna zbiorcza kabiny sekcyjnej
+leakage       1e-9       // S, uplywnosc wezla do szyn (tylko po to, zeby obwod byl okreslony)
+
+// --- rekuperacja ---
+regen_limit   3900       // V, powyzej siec nie przyjmuje juz energii z pojazdow (brak odbiorcow i zasilacza z rekuperacja)
+
+// --- opor wlasciwy przewodow, Ohm*mm2/m (przekroje z traction_tables.txt) ---
+copper_contact  0.0182   // przewod jezdny Cu twardy (Djp100 0,182 Ohm/km - Glowacki)
+copper_rope     0.0179   // liny nosne Cu
+aluminium       0.0287   // przewody aluminiowe (material przesla 2)
+bronze          0.0280   // lina brazowa CuSi - ZALOZENIE, na razie nieuzywane
