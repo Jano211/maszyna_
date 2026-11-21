@@ -189,6 +189,7 @@ struct earthing_arm {
     double wire[ 3 ] { 0.0, 0.0, 0.0 }; // punkt liny względem zera mocowania
     double plate { 0.0 };               // połowa wysokości płyty mocowania (zero mocowania najwyżej tyle pod wierzchem słupa)
     double turn { 0.0 };                // obrót modelu wokół pionu, stopnie (odgromnik: gdy model ułożony inaczej niż mocowania); punkty obracane z nim
+    double back_turn { 0.0 };           // obrót samego tyłu wokół pionu, stopnie (7310-00 na 1701: 180, użytkownik 2026-11-21)
     // odgromnik: kierunek wyjścia linki z przyłącza (punkt "wire_end" modelu, np. wire_2_end) - linka idzie najpierw prosto do niego
     double wire_end[ 3 ] { 0.0, 0.0, 0.0 };
     bool has_wire_end { false };

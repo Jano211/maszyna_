@@ -14,6 +14,8 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   i `earth` / `earth_end` (wire_1); linka wychodzi z przyłącza prosto do punktu _end, dalej łukiem. Linkę do uszynienia rysuje
   przęsło z liną uszynienia (earthing_rope, `Suspension.arrester_earth`), 0,3 m od uchwytu liny w stronę następnego słupa; nie do
   przewodu wzmacniającego. 7310-04: wire_2 (0,64574; 0,02157; 0,4054), wire_1 (0,24166; 0,02157; 0,4054) - do bramek.
+- 22:00: kierunek linek odwrotnie - od liny łukiem do wire_2, dalej prosto do wire_2_end (tak samo uszynienie: lina → wire_1 →
+  wire_1_end); tył 7310-00 na 1701 obrócony o 180° - klucz `back_turn 180` wpisu arrester (obraca tylko tył).
 
 ## START TUTAJ – 2026-11-21 noc – odłączniki bez modeli (etap E, część obwodowa)
 

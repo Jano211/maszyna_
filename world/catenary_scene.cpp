@@ -897,9 +897,9 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
                 };
                 auto const face { -0.5 * depth };
                 // obrót modelu wokół pionu z wpisu ("turn"): model ułożony inaczej niż mocowania (użytkownik 2026-11-21: obrócony o 90°)
-                auto const turned = [ & ]( catenary::cantilever_placement &Placement ) {
-                    if( arm->turn == 0.0 ) { return; }
-                    auto const angle { arm->turn * 3.14159265358979323846 / 180.0 };
+                auto const turned = [ & ]( catenary::cantilever_placement &Placement, double const Extra = 0.0 ) {
+                    if( arm->turn + Extra == 0.0 ) { return; }
+                    auto const angle { ( arm->turn + Extra ) * 3.14159265358979323846 / 180.0 };
                     auto const c { std::cos( angle ) }, sn { std::sin( angle ) };
                     double const spin[ 9 ] { c, -sn, 0.0, sn, c, 0.0, 0.0, 0.0, 1.0 };
                     double rotated[ 9 ];
@@ -920,7 +920,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
                     auto back { local( 0.0, face + depth, height ) };
                     back.role = "arrester";
                     back.part = arm->back;
-                    turned( back );
+                    turned( back, arm->back_turn );
                     result.parts.push_back( back );
                 }
                 arresterskin = arm->skin;
@@ -934,8 +934,8 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
                         auto const c { std::cos( angle ) }, sn { std::sin( angle ) };
                         return local( c * Point[ 0 ] - sn * Point[ 1 ], face + sn * Point[ 0 ] + c * Point[ 1 ], height + Point[ 2 ] );
                     };
-                    auto const lug { modelpoint( arm->wire ) };
-                    auto const from { arm->has_wire_end ? modelpoint( arm->wire_end ) : lug };
+                    // linka idzie od liny nośnej łukiem do przyłącza wire_2 i dalej prosto do wire_2_end (końcówka w zacisku)
+                    auto const from { modelpoint( arm->wire ) };
                     auto const *clamp { result.find( "messenger_clamp" ) };
                     catenary::cantilever_placement to;
                     to.position[ 0 ] = ( clamp != nullptr ? clamp->position[ 0 ] : 0.0 ) + 1.0;
@@ -947,17 +947,16 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
                     // zwis paraboli o długości łuku ok. 4 m: L ≈ D + 8s²/(3D)
                     auto const sag { gap < 4.0 ? std::min( 1.2, std::sqrt( 3.0 * gap * ( 4.0 - gap ) / 8.0 ) ) : 0.05 };
                     std::vector<glm::dvec3> points;
-                    if( arm->has_wire_end ) {
-                        // odcinek prosto z przyłącza w kierunku "wire_end"
-                        auto const scene { catenary::cantilever_to_scene( lug, heading ) };
-                        points.push_back( glm::dvec3 { Wire.x + scene.offset[ 0 ], Wire.y + scene.offset[ 1 ], Wire.z + scene.offset[ 2 ] } );
-                    }
-                    for( int step = 0; step <= 12; ++step ) {
+                    for( int step = 12; step >= 0; --step ) {
                         auto const t { step / 12.0 };
                         catenary::cantilever_placement at;
                         for( int axis = 0; axis < 3; ++axis ) { at.position[ axis ] = from.position[ axis ] + ( to.position[ axis ] - from.position[ axis ] ) * t; }
                         at.position[ 2 ] -= sag * 4.0 * t * ( 1.0 - t );
                         auto const scene { catenary::cantilever_to_scene( at, heading ) };
+                        points.push_back( glm::dvec3 { Wire.x + scene.offset[ 0 ], Wire.y + scene.offset[ 1 ], Wire.z + scene.offset[ 2 ] } );
+                    }
+                    if( arm->has_wire_end ) {
+                        auto const scene { catenary::cantilever_to_scene( modelpoint( arm->wire_end ), heading ) };
                         points.push_back( glm::dvec3 { Wire.x + scene.offset[ 0 ], Wire.y + scene.offset[ 1 ], Wire.z + scene.offset[ 2 ] } );
                     }
                     add_tube( Suspension.copper, points, 0.0045 );
@@ -3941,13 +3940,15 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
             auto way { Toward - Rope };
             way.y = 0.0;
             auto const clamp { glm::length( way ) > 0.1 ? Rope + glm::normalize( way ) * 0.3 : Rope };
+            // od liny uszynienia łukiem do przyłącza wire_1, dalej prosto do wire_1_end
             auto const &lug { Suspensions[ Pole ].arrester_earth };
-            std::vector<glm::dvec3> points { lug[ 0 ] };
-            auto const sag { std::min( 0.4, 0.15 * glm::length( clamp - lug[ 1 ] ) ) };
+            std::vector<glm::dvec3> points;
+            auto const sag { std::min( 0.4, 0.15 * glm::length( clamp - lug[ 0 ] ) ) };
             for( int step = 0; step <= 10; ++step ) {
                 auto const t { step / 10.0 };
-                points.push_back( lug[ 1 ] + ( clamp - lug[ 1 ] ) * t - glm::dvec3 { 0.0, sag * 4.0 * t * ( 1.0 - t ), 0.0 } );
+                points.push_back( clamp + ( lug[ 0 ] - clamp ) * t - glm::dvec3 { 0.0, sag * 4.0 * t * ( 1.0 - t ), 0.0 } );
             }
+            points.push_back( lug[ 1 ] );
             add_tube( Solid, points, 0.0045 );
         };
         for( std::size_t k = 0; k + 1 < poles.size(); ++k ) {
