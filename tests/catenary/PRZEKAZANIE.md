@@ -2,6 +2,13 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-21 – tereny górnicze (tylko notatki)
+
+- ZADANIA.md: nowa sekcja „tereny górnicze: osiadanie i nadstawki” (osiadanie konstrukcji względem toru, nadstawki na słupy,
+  walidacja odległości od dźwigara tylko jako ostrzeżenie, elementy ESN na podkopy górnicze). Kodu brak – czekamy na modele
+  od użytkownika. Przy okazji potwierdzone: przęsło naprężenia z samymi przewodami wprost na poziomej rurze i odciągiem z drugiej
+  rury to katalogowe 079x (rodzina już jest w traction_catalog.txt, przeznaczenie i hk z „(?)”).
+
 ## START TUTAJ – 2026-11-19 wieczór – stara prowadnica 0454, lista „nietypowe z terenu”
 
 - Stara prowadnica ciężarów 0454 (testy tt/ts/te/tsc/tk/tc/t OK, składnia exe OK, w exe NIESPRAWDZONE): kotwienie `guide old`
