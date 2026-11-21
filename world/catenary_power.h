@@ -67,7 +67,8 @@ struct branch {
     int a { -1 };
     int b { -1 };
     double resistance { 0.0 };          // Ω
-    double load { 0.0 };                // A, pobór pojazdów w tym kroku (w połowie do każdego końca); ujemny - rekuperacja
+    double load { 0.0 };                // A, pobór pojazdów w tym kroku; ujemny - rekuperacja
+    double load_b { 0.0 };              // A, część poboru przypadająca na koniec b (pobór w miejscu f gałęzi: f do b, 1 - f do a)
 };
 
 class circuit {
@@ -83,8 +84,9 @@ public:
     std::vector<branch> const &branches() const { return m_branches; }
     std::vector<source> const &sources() const { return m_sources; }
 
-    // pobór pojazdu z gałęzi w tym kroku (dodawany do już zgłoszonych); A, ujemny - rekuperacja
-    void add_load( int Branch, double Current );
+    // pobór pojazdu z gałęzi w tym kroku (dodawany do już zgłoszonych); A, ujemny - rekuperacja. Position - miejsce na gałęzi
+    // od końca a (0) do b (1)
+    void add_load( int Branch, double Current, double Position = 0.5 );
     void clear_loads();
     // rozwiązanie obwodu z bieżącymi odbiornikami i stan wyłączników po kroku Dt [s]
     void solve( double Dt );
@@ -92,6 +94,8 @@ public:
     double voltage( int Node ) const;
     // napięcie w środku gałęzi (tam przyjmowany jest pojazd): średnia końców minus spadek na połówkach od jej własnego poboru
     double branch_voltage( int Branch ) const;
+    // napięcie w miejscu Position gałęzi (0 - koniec a, 1 - b) przy własnym poborze Current w tym miejscu
+    double branch_voltage_at( int Branch, double Position, double Current ) const;
     // prąd w gałęzi od a do b (bez jej własnego poboru)
     double branch_current( int Branch ) const;
     // wyspa węzła (numer części obwodu połączonej gałęziami)
@@ -143,6 +147,10 @@ struct span_input {
     int nextend[ 2 ] { 0, 0 };          // którym swoim końcem
     std::vector<int> parallel;          // przęsła bieżni wspólnej (przęsło naprężenia)
     double resistivity { 0.075e-3 };    // Ω/m, przewody jezdne i liny nośne razem (bez szyn)
+    // izolator sekcyjny w przęśle: przerwa w przewodach jezdnych od - do, jako część długości przęsła od końca 0 (0-1); bez przerwy
+    // gap[ 0 ] < 0. Część przed przerwą należy do końca 0, za nią - do końca 1; przęsło łączy się z sąsiadami obu końców bez względu
+    // na nazwy zasilaczy (granica elektryczna jest w przerwie, nie na końcu przęsła)
+    double gap[ 2 ] { -1.0, -1.0 };
 };
 struct source_input {
     source parameters;                  // nazwa, napięcie, opór, wyłącznik (node nieistotny)
@@ -152,7 +160,13 @@ struct source_input {
 struct mapping {
     circuit network;
     std::vector<int> branch;            // przęsło -> gałąź obwodu; -1 = przęsło w części bez zasilacza (liczone po staremu)
+                                        // przęsło z izolatorem: gałąź części przed przerwą
+    std::vector<int> branch_after;      // przęsło z izolatorem: gałąź części za przerwą; -1 bez przerwy
     std::vector<std::string> sources;   // źródło obwodu -> nazwa zasilacza
+    std::vector<span_input> spans;      // przęsła, z których zbudowany (przerwy)
+    // gałąź i miejsce na niej dla pantografu w miejscu Along przęsła (0 - koniec 0, 1 - koniec 1); false - przęsło poza obwodem
+    // (albo ta jego część). Ślizg w przerwie izolatora - po stronie bliższej (mostkowanie przerwy - później, etap G)
+    bool locate( std::size_t Span, double Along, int &Branch, double &Position ) const;
 };
 // buduje obwód. Zasady (tests/catenary/ZASILANIE.md, etap B):
 // - końce połączonych przęseł to jeden węzeł, gdy przęsła mają ten sam zasilacz albo jedno z nich ma nazwę kabiny sekcyjnej

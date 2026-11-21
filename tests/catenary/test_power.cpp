@@ -260,6 +260,31 @@ int main() {
         near( feeder_current( map, "B" ), 800.0, 0.01, "izolator sekcyjny: B zasila swoje" );
         check( map.network.island( map.network.branches()[ map.branch[ 19 ] ].b ) != map.network.island( map.network.branches()[ map.branch[ 20 ] ].a ), "izolator sekcyjny: dwie wyspy" );
     }
+    // 11a. izolator w środku przęsła 19 (przerwa 0,45-0,55): granica elektryczna w przerwie, nie na końcu przęsła (użytkownik
+    // 2026-11-21: „napięcie zniknęło dopiero od następnego przęsła”). Tylko zasilacz A: za przerwą 0 V już w przęśle 19
+    {
+        std::vector<span_input> spans;
+        track( spans, 40, 0.0, 0.0, []( int Index ) { return std::string( Index < 20 ? "A" : "B" ); } );
+        spans[ 19 ].gap[ 0 ] = 0.45;
+        spans[ 19 ].gap[ 1 ] = 0.55;
+        mapping map;
+        build( spans, { feeder( "A", 0.0, 10.0 ) }, map );
+        int branch { -1 };
+        double position { 0.0 };
+        auto const before { map.locate( 19, 0.3, branch, position ) };
+        map.network.solve( 0.02 );
+        auto const vbefore { before ? map.network.branch_voltage_at( branch, position, 0.0 ) : -1.0 };
+        auto const after { map.locate( 19, 0.7, branch, position ) };
+        check( before && vbefore > 3000.0 && false == after, "izolator w przesle: przed przerwa napiecie, za nia przeslo poza zasilaniem", vbefore, 3300.0 );
+        // z zasilaczem B: część za przerwą z B
+        mapping both;
+        build( spans, { feeder( "A", 0.0, 10.0 ), feeder( "B", 2000.0, 10.0 ) }, both );
+        auto const located { both.locate( 19, 0.7, branch, position ) };
+        both.network.add_load( branch, 500.0, position );
+        both.network.solve( 0.02 );
+        near( located ? feeder_current( both, "B" ) : -1.0, 500.0, 0.01, "izolator w przesle: za przerwa zasila B" );
+        near( feeder_current( both, "A" ), 0.0, 0.01, "izolator w przesle: A nie zasila za przerwa" );
+    }
     // 12. przęsło naprężenia zwarte (ten sam zasilacz, bieżnia wspólna): łańcuch 2 równolegle obok łańcucha 1 na końcówce,
     // połączony tylko przez bieżnię; izolowane (inny zasilacz) - bez połączenia
     for( auto const isolated : { false, true } ) {

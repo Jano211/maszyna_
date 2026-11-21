@@ -29,7 +29,8 @@ void catenary_power_changed();
 void catenary_power_update( double Dt );
 // napięcie dla pantografu na przęśle (pobór Current [A] zgłaszany do następnego kroku); false - przęsło nie jest w obwodzie
 // (stara sieć albo część bez zasilacza) i liczy się po staremu
-bool catenary_power_voltage( TTraction const &Span, double Current, double &Voltage );
+// Along: miejsce pantografu na przęśle (0 - pPoint1, 1 - pPoint2); <0 - nieznane (środek przęsła)
+bool catenary_power_voltage( TTraction const &Span, double Current, double Along, double &Voltage );
 
 // stan zasilacza w obwodzie (do panelu i podglądu); false, gdy zasilacz nie jest w obwodzie nowej sieci
 struct catenary_power_feeder {

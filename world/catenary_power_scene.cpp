@@ -21,6 +21,8 @@ http://mozilla.org/MPL/2.0/.
 #include "world/catenary_power.h"
 #include "world/catenary_span.h"
 
+#include <algorithm>
+#include <cmath>
 #include <numeric>
 #include <unordered_map>
 
@@ -28,9 +30,10 @@ namespace {
 
 struct power_state {
     catenary_power::mapping map;
-    std::unordered_map<TTraction const *, int> spans;          // przęsło w obwodzie -> gałąź
+    std::unordered_map<TTraction const *, std::size_t> spans;  // przęsło w obwodzie -> numer przęsła w map
     std::unordered_map<std::string, int> sources;              // nazwa zasilacza -> źródło obwodu
     std::vector<double> pending;                               // pobór zgłoszony od ostatniego kroku, wg gałęzi
+    std::vector<double> pending_b;                             // jego część przypadająca na koniec b gałęzi
     bool dirty { true };
     std::size_t spancount { 0 };
     std::size_t sourcecount { 0 };
@@ -91,6 +94,13 @@ void rebuild() {
             if( auto const found { index.find( other ) }; found != index.end() ) { input.parallel.push_back( found->second ); }
         }
         input.resistivity = span_resistivity( span );
+        // izolator sekcyjny w środku przęsła: przerwa w przewodach jezdnych jako część długości (w planie)
+        double from, to;
+        auto const plan { std::hypot( span.pPoint2.x - span.pPoint1.x, span.pPoint2.z - span.pPoint1.z ) };
+        if( plan > 1e-3 && catenary_span_contact_gap( span, from, to ) ) {
+            input.gap[ 0 ] = std::clamp( from / plan, 0.0, 1.0 );
+            input.gap[ 1 ] = std::clamp( to / plan, 0.0, 1.0 );
+        }
     }
     // zasilacze, do których odwołują się przęsła nowej sieci
     std::vector<catenary_power::source_input> sources;
@@ -118,12 +128,13 @@ void rebuild() {
     catenary_power::build( inputs, sources, State.map, previous );
     std::size_t kept { 0 };
     for( std::size_t item = 0; item < spans.size(); ++item ) {
-        if( State.map.branch[ item ] < 0 ) { continue; }
-        State.spans.emplace( spans[ item ], State.map.branch[ item ] );
+        if( State.map.branch[ item ] < 0 && State.map.branch_after[ item ] < 0 ) { continue; }
+        State.spans.emplace( spans[ item ], item );
         ++kept;
     }
     for( std::size_t item = 0; item < State.map.sources.size(); ++item ) { State.sources.emplace( State.map.sources[ item ], static_cast<int>( item ) ); }
     State.pending.assign( State.map.network.branches().size(), 0.0 );
+    State.pending_b.assign( State.map.network.branches().size(), 0.0 );
     if( false == spans.empty() ) {
         WriteLog( "Catenary power: " + std::to_string( kept ) + " of " + std::to_string( spans.size() ) + " spans in the circuit, "
             + std::to_string( State.map.network.nodes() ) + " nodes, " + std::to_string( State.map.network.sources().size() ) + " feeders" );
@@ -172,18 +183,29 @@ void catenary_power_update( double const Dt ) {
     auto &circuit { State.map.network };
     circuit.clear_loads();
     for( std::size_t item = 0; item < State.pending.size(); ++item ) {
-        if( State.pending[ item ] != 0.0 ) { circuit.add_load( static_cast<int>( item ), State.pending[ item ] ); }
+        if( State.pending[ item ] == 0.0 ) { continue; }
+        // pobór w miejscu wynikającym z części na koniec b (kilka pojazdów na gałęzi - średnie miejsce)
+        circuit.add_load( static_cast<int>( item ), State.pending[ item ], State.pending_b[ item ] / State.pending[ item ] );
     }
     std::fill( State.pending.begin(), State.pending.end(), 0.0 );
+    std::fill( State.pending_b.begin(), State.pending_b.end(), 0.0 );
     circuit.solve( Dt );
 }
 
-bool catenary_power_voltage( TTraction const &Span, double const Current, double &Voltage ) {
+bool catenary_power_voltage( TTraction const &Span, double const Current, double const Along, double &Voltage ) {
     if( State.dirty ) { return false; }
     auto const found { State.spans.find( &Span ) };
     if( found == State.spans.end() ) { return false; }
-    State.pending[ found->second ] += Current;
-    Voltage = State.map.network.branch_voltage( found->second );
+    int branch { -1 };
+    double position { 0.5 };
+    if( false == State.map.locate( found->second, Along < 0.0 ? 0.5 : Along, branch, position ) ) {
+        // część przęsła za izolatorem bez zasilacza (np. sekcja bez zasilania)
+        Voltage = 0.0;
+        return true;
+    }
+    State.pending[ branch ] += Current;
+    State.pending_b[ branch ] += Current * position;
+    Voltage = State.map.network.branch_voltage_at( branch, position, Current );
     return true;
 }
 

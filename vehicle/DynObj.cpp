@@ -3791,6 +3791,17 @@ bool TDynamicObject::Update(double dt, double dt1)
             }
         }
         auto const fPantCurrent { fCurrent / std::max( 1, activepantographs ) };
+        // miejsce ślizgu na przęśle (0 - pPoint1, 1 - pPoint2), jak w pantograph_arcing: nowa sieć ma izolator sekcyjny w środku przęsła
+        // i obwód, w którym liczy się, gdzie na przęśle jest pobór (world/catenary_power_scene.h)
+        auto const wire_along = [ this ]( TAnimPant const &Pantograph ) -> double {
+            auto const *wire { Pantograph.hvPowerWire };
+            if( wire == nullptr ) { return -1.0; }
+            auto const front { VectorFront() };
+            auto const base { GetPosition() + VectorLeft() * Pantograph.vPos.z + VectorUp() * Pantograph.vPos.y + front * Pantograph.vPos.x };
+            auto const across { glm::dot( wire->vParametric, front ) };
+            if( std::abs( across ) < 1e-9 ) { return -1.0; }
+            return std::clamp( -( glm::dot( wire->pPoint1, front ) - glm::dot( base, front ) ) / across, 0.0, 1.0 );
+        };
 
         for (int i = 0; i < iAnimType[ANIM_PANTS]; ++i)
         { // pętla po wszystkich pantografach
@@ -3831,10 +3842,10 @@ bool TDynamicObject::Update(double dt, double dt1)
                         // TODO: wyliczyć trzeba prąd przypadający na pantograf i wstawić do GetVoltage()
                         if( lastvoltage == 0.0 ) {
                             // HACK: retrieve the wire voltage for calculations down the road without blowing up the supply
-                            MoverParameters->PantFrontVolt = p->hvPowerWire->VoltageGet( MoverParameters->PantographVoltage, 0.0 );
+                            MoverParameters->PantFrontVolt = p->hvPowerWire->VoltageGet( MoverParameters->PantographVoltage, 0.0, wire_along( *p ) );
                         }
                         else {
-                            MoverParameters->PantFrontVolt = p->hvPowerWire->VoltageGet( MoverParameters->PantographVoltage, fPantCurrent );
+                            MoverParameters->PantFrontVolt = p->hvPowerWire->VoltageGet( MoverParameters->PantographVoltage, fPantCurrent, wire_along( *p ) );
                             if( MoverParameters->PantFrontVolt > 0.0 ) {
                                 fCurrent -= fPantCurrent; // taki prąd płynie przez powyższy pantograf (unless it doesn't)
                             }
@@ -3874,10 +3885,10 @@ bool TDynamicObject::Update(double dt, double dt1)
                         // TODO: wyliczyć trzeba prąd przypadający na pantograf i wstawić do GetVoltage()
                         if( lastvoltage == 0.0 ) {
                             // HACK: retrieve the wire voltage for calculations down the road without blowing up the supply
-                            MoverParameters->PantRearVolt = p->hvPowerWire->VoltageGet( MoverParameters->PantographVoltage, 0.0 );
+                            MoverParameters->PantRearVolt = p->hvPowerWire->VoltageGet( MoverParameters->PantographVoltage, 0.0, wire_along( *p ) );
                         }
                         else {
-                            MoverParameters->PantRearVolt = p->hvPowerWire->VoltageGet( MoverParameters->PantographVoltage, fPantCurrent );
+                            MoverParameters->PantRearVolt = p->hvPowerWire->VoltageGet( MoverParameters->PantographVoltage, fPantCurrent, wire_along( *p ) );
                             if( MoverParameters->PantRearVolt > 0.0 ) {
                                 fCurrent -= fPantCurrent; // taki prąd płynie przez powyższy pantograf (unless it doesn't)
                             }

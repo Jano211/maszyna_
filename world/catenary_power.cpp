@@ -93,13 +93,14 @@ void circuit::clear() {
     m_islandsvalid = false;
 }
 
-void circuit::add_load( int const Branch, double const Current ) {
+void circuit::add_load( int const Branch, double const Current, double const Position ) {
     if( Branch < 0 || Branch >= static_cast<int>( m_branches.size() ) ) { return; }
     m_branches[ Branch ].load += Current;
+    m_branches[ Branch ].load_b += Current * std::clamp( Position, 0.0, 1.0 );
 }
 
 void circuit::clear_loads() {
-    for( auto &item : m_branches ) { item.load = 0.0; }
+    for( auto &item : m_branches ) { item.load = 0.0; item.load_b = 0.0; }
 }
 
 double circuit::voltage( int const Node ) const {
@@ -112,6 +113,14 @@ double circuit::branch_voltage( int const Branch ) const {
     // pobór w środku gałęzi: dopływa połówkami z obu końców, każda przez pół oporu
     // stały pobór przy przeciążeniu daje w modelu liniowym napięcie ujemne - pojazd widzi wtedy zero
     return std::max( 0.0, 0.5 * ( voltage( item.a ) + voltage( item.b ) ) - item.load * item.resistance * 0.25 );
+}
+
+double circuit::branch_voltage_at( int const Branch, double Position, double const Current ) const {
+    if( Branch < 0 || Branch >= static_cast<int>( m_branches.size() ) ) { return 0.0; }
+    auto const &item { m_branches[ Branch ] };
+    Position = std::clamp( Position, 0.0, 1.0 );
+    // pobór w miejscu f: dopływa z końca a przez f oporu i z b przez 1 - f - spadek I·R·f·(1 - f) poniżej prostej między końcami
+    return std::max( 0.0, voltage( item.a ) * ( 1.0 - Position ) + voltage( item.b ) * Position - Current * item.resistance * Position * ( 1.0 - Position ) );
 }
 
 double circuit::branch_current( int const Branch ) const {
@@ -336,8 +345,9 @@ void circuit::solve_island( std::size_t const Island ) {
             auto const &item { m_branches[ index ] };
             if( item.load == 0.0 ) { continue; }
             auto &target { item.load > 0.0 ? load : regen };
-            // gałąź liczona przy każdym ze swoich końców osobno: połowa poboru do tego końca
-            target[ cache.position[ m_local[ node ] ] ] += 0.5 * item.load * ( item.a == item.b ? 2.0 : 1.0 );
+            // gałąź liczona przy każdym ze swoich końców osobno: do końca a część 1 - f, do b część f poboru
+            auto const share { item.a == item.b ? item.load : node == item.b ? item.load_b : item.load - item.load_b };
+            target[ cache.position[ m_local[ node ] ] ] += share;
         }
     }
     std::vector<double> x( count );
@@ -455,7 +465,9 @@ void build( std::vector<span_input> const &Spans, std::vector<source_input> cons
     auto &network { Result.network };
     network.clear();
     Result.branch.assign( Spans.size(), -1 );
+    Result.branch_after.assign( Spans.size(), -1 );
     Result.sources.clear();
+    Result.spans = Spans;
     if( Spans.empty() ) { return; }
     std::map<std::string, std::size_t> named;
     for( std::size_t index = 0; index < Sources.size(); ++index ) { named.emplace( Sources[ index ].parameters.name, index ); }
@@ -463,8 +475,10 @@ void build( std::vector<span_input> const &Spans, std::vector<source_input> cons
         auto const found { named.find( Name ) };
         return found != named.end() && Sources[ found->second ].section;
     };
+    auto const gapped = []( span_input const &Span ) { return Span.gap[ 0 ] >= 0.0 && Span.gap[ 1 ] > Span.gap[ 0 ]; };
     auto const joined = [ & ]( span_input const &A, span_input const &B ) {
-        return A.power == B.power || section( A.power ) || section( B.power );
+        // przęsło z izolatorem: granica elektryczna w jego przerwie, z sąsiadami łączy się zawsze
+        return A.power == B.power || section( A.power ) || section( B.power ) || gapped( A ) || gapped( B );
     };
     // końce przęseł (przęsło * 2 + koniec) łączone w węzły
     auto const count { Spans.size() };
@@ -494,20 +508,31 @@ void build( std::vector<span_input> const &Spans, std::vector<source_input> cons
         if( found == nodes.end() ) { found = nodes.emplace( top, network.add_node() ).first; }
         return found->second;
     };
-    std::vector<int> branches( count );
+    std::vector<int> branches( count ), after( count, -1 );
     for( std::size_t item = 0; item < count; ++item ) {
         auto const &span { Spans[ item ] };
         auto const length { distance( span.ends[ 0 ], span.ends[ 1 ] ) };
-        branches[ item ] = network.add_branch( node_of( item * 2 ), node_of( item * 2 + 1 ), length * ( span.resistivity + config.rail * 1.0e-3 ) );
+        auto const perm { span.resistivity + config.rail * 1.0e-3 };
+        if( span.gap[ 0 ] >= 0.0 && span.gap[ 1 ] > span.gap[ 0 ] ) {
+            // izolator sekcyjny: dwie gałęzie, od końców do brzegów przerwy (brzegi to osobne węzły - przerwa w obwodzie)
+            auto const g0 { std::clamp( span.gap[ 0 ], 0.0, 1.0 ) }, g1 { std::clamp( span.gap[ 1 ], 0.0, 1.0 ) };
+            branches[ item ] = network.add_branch( node_of( item * 2 ), network.add_node(), length * g0 * perm );
+            after[ item ] = network.add_branch( network.add_node(), node_of( item * 2 + 1 ), length * ( 1.0 - g1 ) * perm );
+            continue;
+        }
+        branches[ item ] = network.add_branch( node_of( item * 2 ), node_of( item * 2 + 1 ), length * perm );
     }
     // części sieci (końce połączone przęsłami): zasilacz przyłączony w każdej, w której są przęsła z jego nazwą
     auto whole { parent };
-    for( std::size_t item = 0; item < count; ++item ) { whole[ find_root( whole, item * 2 ) ] = find_root( whole, item * 2 + 1 ); }
+    for( std::size_t item = 0; item < count; ++item ) {
+        if( false == gapped( Spans[ item ] ) ) { whole[ find_root( whole, item * 2 ) ] = find_root( whole, item * 2 + 1 ); }
+    }
     std::map<std::pair<std::size_t, std::size_t>, std::pair<double, std::size_t>> nearest; // (zasilacz, część) -> (odległość, koniec)
     for( std::size_t item = 0; item < count; ++item ) {
         auto const found { named.find( Spans[ item ].power ) };
         if( found == named.end() ) { continue; }
-        for( int end = 0; end < 2; ++end ) {
+        // przęsło z izolatorem: jego zasilacz to część przed przerwą (koniec 0); koniec 1 należy już do sekcji za izolatorem
+        for( int end = 0; end < ( gapped( Spans[ item ] ) ? 1 : 2 ); ++end ) {
             auto const key { std::make_pair( found->second, find_root( whole, item * 2 + end ) ) };
             auto const gap { distance( Spans[ item ].ends[ end ], Sources[ found->second ].location ) };
             auto place { nearest.find( key ) };
@@ -540,8 +565,31 @@ void build( std::vector<span_input> const &Spans, std::vector<source_input> cons
     // w obwodzie tylko przęsła części z zasilaczem; reszta (np. nazwa zasilacza bez wpisu w scenerii) po staremu
     network.prepare();
     for( std::size_t item = 0; item < count; ++item ) {
-        if( network.island_powered( node_of( item * 2 ) ) ) { Result.branch[ item ] = branches[ item ]; }
+        auto const &first { network.branches()[ branches[ item ] ] };
+        if( network.island_powered( first.a ) ) { Result.branch[ item ] = branches[ item ]; }
+        if( after[ item ] >= 0 && network.island_powered( network.branches()[ after[ item ] ].b ) ) { Result.branch_after[ item ] = after[ item ]; }
     }
+}
+
+bool mapping::locate( std::size_t const Span, double Along, int &Branch, double &Position ) const {
+    if( Span >= branch.size() ) { return false; }
+    Along = std::clamp( Along, 0.0, 1.0 );
+    auto const gapped { Span < spans.size() && spans[ Span ].gap[ 0 ] >= 0.0 && spans[ Span ].gap[ 1 ] > spans[ Span ].gap[ 0 ] };
+    if( false == gapped ) {
+        Branch = branch[ Span ];
+        Position = Along;
+        return Branch >= 0;
+    }
+    auto const g0 { std::clamp( spans[ Span ].gap[ 0 ], 0.0, 1.0 ) }, g1 { std::clamp( spans[ Span ].gap[ 1 ], 0.0, 1.0 ) };
+    if( Along < 0.5 * ( g0 + g1 ) ) {
+        Branch = branch[ Span ];
+        Position = g0 > 1.0e-6 ? std::min( 1.0, Along / g0 ) : 1.0;
+    }
+    else {
+        Branch = branch_after[ Span ];
+        Position = g1 < 1.0 - 1.0e-6 ? std::max( 0.0, ( Along - g1 ) / ( 1.0 - g1 ) ) : 0.0;
+    }
+    return Branch >= 0;
 }
 
 } // namespace catenary_power
