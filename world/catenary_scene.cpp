@@ -71,6 +71,10 @@ struct scene_suspension {
     std::vector<catenary::solid_vertex> copper;
     bool removed { false };             // usunięty w edytorze
     // siodło liny nośnej (4160) ostatniego złożenia: obejma liny kotwienia środkowego staje obok niego na teowniku
+    // odgromnik: przyłącze do uszynienia (wire_1 i kierunek wire_1_end modelu, w scenerii) - linkę do liny uszynienia rysuje przęsło
+    // z liną uszynienia (earthing_rope), gdy słup jest w sekcji uszynienia; bez uszynienia na razie nic (użytkownik 2026-11-21)
+    bool has_arrester_earth { false };
+    glm::dvec3 arrester_earth[ 2 ];
     bool has_saddle { false };
     std::string saddle_model;
     catenary::cantilever_placement saddle;
@@ -851,6 +855,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     auto const hanging { data.has_pole && Catalog.pole( data.pole_type ) != nullptr && false == Catalog.pole( data.pole_type )->drop.empty() };
     Suspension.has_saddle = false;
     Suspension.copper.clear();
+    Suspension.has_arrester_earth = false;
     // linki z bryłą proceduralną (Cu 9811) rysuje przęsło łańcucha - tylko gdy podwieszenie jest w łańcuchu, inaczej model linki
     auto const inchain { false == data.name.empty() && std::any_of( Chains.begin(), Chains.end(), [ & ]( scene_chain const &Chain ) {
         return false == Chain.removed && Chain.file == Suspension.file
@@ -923,7 +928,14 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
                 // linka 9812-6: od punktu "wire" odgromnika łukiem (długość 4,00 m z karty 0681) do uchwytu równoległego na linie nośnej,
                 // 1 m wzdłuż toru od uchwytu liny (uchwyt równoległy 5560/5500/5570/5550 - na razie bez modelu)
                 if( inchain ) {
-                    auto const from { local( arm->wire[ 0 ], face + arm->wire[ 1 ], height + arm->wire[ 2 ] ) };
+                    // punkty modelu (przyłącze wire_2 i kierunek wire_2_end, użytkownik 2026-11-21) obrócone razem z modelem
+                    auto const modelpoint = [ & ]( double const *Point ) {
+                        auto const angle { arm->turn * 3.14159265358979323846 / 180.0 };
+                        auto const c { std::cos( angle ) }, sn { std::sin( angle ) };
+                        return local( c * Point[ 0 ] - sn * Point[ 1 ], face + sn * Point[ 0 ] + c * Point[ 1 ], height + Point[ 2 ] );
+                    };
+                    auto const lug { modelpoint( arm->wire ) };
+                    auto const from { arm->has_wire_end ? modelpoint( arm->wire_end ) : lug };
                     auto const *clamp { result.find( "messenger_clamp" ) };
                     catenary::cantilever_placement to;
                     to.position[ 0 ] = ( clamp != nullptr ? clamp->position[ 0 ] : 0.0 ) + 1.0;
@@ -935,6 +947,11 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
                     // zwis paraboli o długości łuku ok. 4 m: L ≈ D + 8s²/(3D)
                     auto const sag { gap < 4.0 ? std::min( 1.2, std::sqrt( 3.0 * gap * ( 4.0 - gap ) / 8.0 ) ) : 0.05 };
                     std::vector<glm::dvec3> points;
+                    if( arm->has_wire_end ) {
+                        // odcinek prosto z przyłącza w kierunku "wire_end"
+                        auto const scene { catenary::cantilever_to_scene( lug, heading ) };
+                        points.push_back( glm::dvec3 { Wire.x + scene.offset[ 0 ], Wire.y + scene.offset[ 1 ], Wire.z + scene.offset[ 2 ] } );
+                    }
                     for( int step = 0; step <= 12; ++step ) {
                         auto const t { step / 12.0 };
                         catenary::cantilever_placement at;
@@ -944,6 +961,18 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
                         points.push_back( glm::dvec3 { Wire.x + scene.offset[ 0 ], Wire.y + scene.offset[ 1 ], Wire.z + scene.offset[ 2 ] } );
                     }
                     add_tube( Suspension.copper, points, 0.0045 );
+                }
+                // przyłącze do uszynienia: punkty w scenerii, linkę do liny uszynienia dorysuje przęsło z tą liną
+                if( arm->has_earth ) {
+                    auto const angle { arm->turn * 3.14159265358979323846 / 180.0 };
+                    auto const c { std::cos( angle ) }, sn { std::sin( angle ) };
+                    double const *ends[ 2 ] { arm->earth, arm->earth_end };
+                    for( int k = 0; k < 2; ++k ) {
+                        auto const at { local( c * ends[ k ][ 0 ] - sn * ends[ k ][ 1 ], face + sn * ends[ k ][ 0 ] + c * ends[ k ][ 1 ], height + ends[ k ][ 2 ] ) };
+                        auto const scene { catenary::cantilever_to_scene( at, heading ) };
+                        Suspension.arrester_earth[ k ] = glm::dvec3 { Wire.x + scene.offset[ 0 ], Wire.y + scene.offset[ 1 ], Wire.z + scene.offset[ 2 ] };
+                    }
+                    Suspension.has_arrester_earth = true;
                 }
             }
         }
@@ -3903,6 +3932,24 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
             }
             add_tube( Solid, points, 0.5 * line->jumper_diameter );
         };
+        // odgromnik na słupie (użytkownik 2026-11-21): linka z przyłącza wire_1 (najpierw w kierunku wire_1_end) łukiem do liny
+        // uszynienia, 0,3 m od uchwytu w stronę następnego słupa; tylko uszynienie, nie przewód wzmacniający
+        auto const arrester = [ & ]( std::size_t const Pole, glm::dvec3 const &Rope, glm::dvec3 const &Toward ) {
+            if( Pole >= Suspensions.size() || false == Suspensions[ Pole ].has_arrester_earth ) { return; }
+            auto const *line { earthing_line_of( earthing ) };
+            if( line != nullptr && line->feeder ) { return; }
+            auto way { Toward - Rope };
+            way.y = 0.0;
+            auto const clamp { glm::length( way ) > 0.1 ? Rope + glm::normalize( way ) * 0.3 : Rope };
+            auto const &lug { Suspensions[ Pole ].arrester_earth };
+            std::vector<glm::dvec3> points { lug[ 0 ] };
+            auto const sag { std::min( 0.4, 0.15 * glm::length( clamp - lug[ 1 ] ) ) };
+            for( int step = 0; step <= 10; ++step ) {
+                auto const t { step / 10.0 };
+                points.push_back( lug[ 1 ] + ( clamp - lug[ 1 ] ) * t - glm::dvec3 { 0.0, sag * 4.0 * t * ( 1.0 - t ), 0.0 } );
+            }
+            add_tube( Solid, points, 0.0045 );
+        };
         for( std::size_t k = 0; k + 1 < poles.size(); ++k ) {
             if( false == ( ( poles[ k ] == a && poles[ k + 1 ] == b ) || ( poles[ k ] == b && poles[ k + 1 ] == a ) ) ) { continue; }
             glm::dvec3 first, second;
@@ -3911,6 +3958,8 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
                 // przyłącza: każdego słupa w przęśle za nim, ostatniego - w przęśle przed nim
                 jumper( poles[ k ], first, second );
                 if( k + 2 == poles.size() ) { jumper( poles[ k + 1 ], second, first ); }
+                arrester( poles[ k ], first, second );
+                if( k + 2 == poles.size() ) { arrester( poles[ k + 1 ], second, first ); }
             }
             // zawinięcia w zaciskach kotwień końców sekcji
             if( k == 0 && earthing.anchored.count( poles[ k ] ) ) { tails( poles[ k ] ); }
