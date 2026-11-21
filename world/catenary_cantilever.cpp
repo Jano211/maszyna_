@@ -384,6 +384,7 @@ void cantilever_catalog::parse( std::vector<std::string> const &Tokens, std::str
                 else if( key == "long" ) { if( index < count ) { arm.longer = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "wire" ) { for( auto &value : arm.wire ) { number( value, good ); } }
                 else if( key == "plate" ) { number( arm.plate, good ); }
+                else if( key == "turn" ) { number( arm.turn, good ); }
                 else if( key == "skin" ) { if( index < count ) { arm.skin = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "skin_default" ) { if( index < count ) { arm.skin_default = Tokens[ index++ ]; } else { good = false; } }
                 else if( key == "mount" ) {

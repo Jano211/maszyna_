@@ -2,6 +2,13 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-21 noc – poprawki odgromnika po pierwszym teście
+
+- Użytkownik 21:38: odgromnik bez tekstury i „obrócony o 90°”, linka w dobrym miejscu; 7310-01 na 161x w ogóle nie leży.
+  Zrobione: tekstura - zamiast "none" tekstura osprzętu (siec*), a z kluczem `skin` / `skin_default` wpisu `arrester` jak przy 6130
+  (DO USTALENIA, na jakiej teksturze są modele 7310); klucz `turn <stopnie>` wpisu `arrester` - obrót modelu wokół pionu (punkt
+  wire bez obrotu) - DO USTALENIA kierunek (+90 / −90), na razie 0; 161x bez odgromnika (klucz słupa usunięty), zostaje 1701.
+
 ## START TUTAJ – 2026-11-21 noc – odłączniki bez modeli (etap E, część obwodowa)
 
 **W exe NIESPRAWDZONE** (testy tp / te OK, składnia exe OK).

@@ -188,6 +188,7 @@ struct earthing_arm {
     std::string back;                   // tył mocowania (płaskownik z nakrętkami)
     double wire[ 3 ] { 0.0, 0.0, 0.0 }; // punkt liny względem zera mocowania
     double plate { 0.0 };               // połowa wysokości płyty mocowania (zero mocowania najwyżej tyle pod wierzchem słupa)
+    double turn { 0.0 };                // obrót modelu wokół pionu, stopnie (odgromnik: gdy model ułożony inaczej niż mocowania); punkt "wire" bez obrotu
     std::string skin;                   // nazwa pliku tekstury części wysięgnika (mapa -1): wstawiana w miejsce nazwy pliku tekstury
                                         // osprzętu, dopisek zużycia zostaje (siec_trakcyjna/siec_used -> siec_trakcyjna/uszynienia_used)
     std::string skin_default;           // tekstura wysięgnika przy teksturze osprzętu bez dopisku zużycia (sama "siec"), np. uszynienia_used
