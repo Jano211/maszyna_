@@ -2,6 +2,20 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-22 14:50 – odgromnik 7310 wg katalogu 2 (grupy 0600 i 0800)
+
+- Karty w „z- KATALOG 2 -z.pdf” (s. 25–27 pdf): **0681 → 7310-1 słupy ceownikowe** (szkic przekroju: słup z ceowników jak 161x),
+  **0683 → 7310-4 dźwigary bramek**, **0684 → 7310-3 słupy dwuteownikowe** (belka + tylna płytka na 4 śrubach wokół dwuteownika
+  = nasz regulowany tył 7310-00). Betonów (1701/1711) ani wirowanych w katalogu nie ma – -03 na 1701 to decyzja użytkownika.
+- Wykonania 5–8 kart = przekrój liny nośnej (L70/95/120/150) → uchwyt równoległy 5560-5 / 5500-6 / 5570-6 / 5550-5 (model brak);
+  linka 9812-6 4,00 m. Nie zależą od słupa.
+- Grupa 0800 odgromnika nie ma (uszynienia, zwierniki 7360/7370 – karty 0891–0897 pokazują ten sam wzór: jedno urządzenie,
+  zamocowanie wg profilu słupa obejmami 6810/6820).
+- Zrobione: `arrester 7310-03` dopisany do 1665/1666/1667 (dwuteowniki; użytkownik 2026-11-22: „7310-03 idzie też na słupy
+  dwuteo”). G: data\traction_supports.txt md5 b5f6650ec9fbb990199e5f0546ae685f.
+- DO USTALENIA z użytkownikiem: 161x wg katalogu to właśnie słupy ceownikowe pod 7310-1 – „nie leży” to raczej model/położenie
+  mocowania, nie katalog. Czy wracamy do 7310-01 na 161x i poprawiamy dopasowanie?
+
 ## START TUTAJ – 2026-11-22 – NA POCZĄTKU PRZYPOMNIEĆ JANOWI (prosił 22.11 00:05)
 
 1. **Uszynienie na 1701 (i 1711):** wpis `pole 1701` w traction_supports.txt nie ma `earthing` (uchwyt 6120) ani `earthing_arm` (6130),
