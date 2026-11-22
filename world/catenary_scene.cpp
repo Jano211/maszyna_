@@ -182,6 +182,9 @@ struct scene_earthing {
     glm::dvec3 split_from { 0.0 }, split_to { 0.0 };   // końce łańcucha punktu izolującego (od strony tej sekcji / następnej)
     double length { 0.0 };                          // długość w planie po słupach
     std::map<std::size_t, std::vector<std::vector<glm::dvec3>>> tails;   // zawinięcia liny w zaciskach końców: słup -> odcinki
+    // lista słupów wstawiona ręcznie (użytkownik 2026-11-22: przez bramki droga po łańcuchach się nie znajduje): odcinek k między
+    // słupami, których nie łączy żadne przęsło łańcucha -> (łańcuch, przęsło), które rysuje jego linę (przęsło przy słupie k)
+    std::map<std::size_t, std::pair<std::size_t, std::size_t>> loose;
 };
 std::vector<scene_earthing> Earthings;
 
@@ -3836,6 +3839,66 @@ earthing_place_at( scene_earthing const &Earthing, std::size_t const Standing, e
     return earthing_place_of( Standing, earthing_holder_of( Earthing, Standing ), Place, earthing_line_of( Earthing ), pulled ? &pull : nullptr, before ? &previous : nullptr );
 }
 
+// przęsła łańcuchów pliku: (łańcuch, przęsło, słup na początku, słup na końcu) - słupy jako wpisy stawiające słup
+template <typename Visit>
+void
+earthing_chain_spans( std::string const &File, Visit const &Each ) {
+    for( std::size_t c = 0; c < Chains.size(); ++c ) {
+        auto const &chain { Chains[ c ] };
+        if( chain.removed || chain.file != File ) { continue; }
+        auto const offset { chain.data.anchor_start.empty() ? 0u : 1u };
+        auto const &names { chain.data.suspensions };
+        for( std::size_t k = 0; k + 1 < names.size(); ++k ) {
+            auto const a { earthing_pole( suspension_named( File, names[ k ] ) ) }, b { earthing_pole( suspension_named( File, names[ k + 1 ] ) ) };
+            if( a >= Suspensions.size() || b >= Suspensions.size() || a == b ) { continue; }
+            if( Each( c, k + offset, a, b ) ) { return; }
+        }
+    }
+}
+
+// odcinki ręcznej listy słupów, których nie łączy przęsło łańcucha (przez bramki, między łańcuchami): linę rysuje pierwsze przęsło
+// łańcucha przy słupie k (albo, gdy go nie ma, przy słupie k+1)
+void
+earthing_loose_pieces( scene_earthing &Earthing ) {
+    Earthing.loose.clear();
+    if( Earthing.data.section() ) { return; }
+    auto const &path { Earthing.path };
+    for( std::size_t k = 0; k + 1 < path.size(); ++k ) {
+        auto const p { path[ k ] }, q { path[ k + 1 ] };
+        auto direct { false };
+        earthing_chain_spans( Earthing.file, [ & ]( std::size_t, std::size_t, std::size_t const A, std::size_t const B ) {
+            direct = ( A == p && B == q ) || ( A == q && B == p );
+            return direct; } );
+        if( direct ) { continue; }
+        for( auto const pole : { p, q } ) {
+            auto found { false };
+            earthing_chain_spans( Earthing.file, [ & ]( std::size_t const C, std::size_t const S, std::size_t const A, std::size_t const B ) {
+                if( A != pole && B != pole ) { return false; }
+                Earthing.loose[ k ] = { C, S };
+                found = true;
+                return true; } );
+            if( found ) { break; }
+        }
+    }
+}
+
+// sekcja tego samego przewodu, która kończy się albo zaczyna kotwieniem na słupie Standing - na styku sekcji jedno mocowanie na słupie,
+// lina jednej wchodzi w nie z jednej strony, następnej wychodzi z drugiej (użytkownik 2026-11-22: przód taki sam jak tył, ta sama
+// wysokość). Earthings.size(), gdy takiej nie ma
+std::size_t
+earthing_shared_anchor( scene_earthing const &Earthing, std::size_t const Standing ) {
+    auto const *line { earthing_line_of( Earthing ) };
+    for( std::size_t index = 0; index < Earthings.size(); ++index ) {
+        auto const &other { Earthings[ index ] };
+        if( &other == &Earthing || other.removed || other.file != Earthing.file || earthing_line_of( other ) != line ) { continue; }
+        auto const route { other.path.empty() ? earthing_route_of( other ) : other.path };
+        if( route.size() < 2 ) { continue; }
+        auto const anchored = []( std::string const &Kind ) { return Kind == "anchor" || Kind == "plain"; };
+        if( ( route.front() == Standing && anchored( other.data.start ) ) || ( route.back() == Standing && anchored( other.data.end ) ) ) { return index; }
+    }
+    return Earthings.size();
+}
+
 // wstawia uchwyty uszynienia na słupach i części końców sekcji (albo usuwa, gdy uszynienie usunięte). zwraca liczbę wstawionych modeli
 std::size_t
 assemble_earthing( scene_earthing &Earthing ) {
@@ -3854,6 +3917,7 @@ assemble_earthing( scene_earthing &Earthing ) {
         return 0;
     }
     for( std::size_t k = 0; k + 1 < Earthing.path.size(); ++k ) { Earthing.length += earthing_plan_distance( Earthing.path[ k ], Earthing.path[ k + 1 ] ); }
+    earthing_loose_pieces( Earthing );
     auto const *line { earthing_line_of( Earthing ) };
     auto const skin { Earthing.data.skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0 ? Earthing.data.skin : kFittingSkin };
     std::size_t count { 0 };
@@ -3934,14 +3998,22 @@ assemble_earthing( scene_earthing &Earthing ) {
                         glm::dvec3 const ez { 0.0, 0.0, 1.0 };
                         auto const ey { glm::cross( ez, ex ) };
                         auto const wire { earthing_to_pole( place.wire, place.origin, place.heading ) };
-                        auto const height { wire.z };
+                        auto height { wire.z };
+                        // styk z sekcją, która kotwi na tym samym słupie: jedno mocowanie - stawia je sekcja o niższym numerze, druga
+                        // wpina się z drugiej strony (tył mocowania jak przód) na tej samej wysokości
+                        auto const partner { earthing_shared_anchor( Earthing, standing ) };
+                        auto const shared { partner < Earthings.size() && partner < static_cast<std::size_t>( &Earthing - Earthings.data() ) };
+                        if( shared ) {
+                            earthing_place theirs;
+                            if( earthing_place_at( Earthings[ partner ], standing, theirs ) ) { height = earthing_to_pole( theirs.wire, place.origin, place.heading ).z; }
+                        }
                         auto const thick { pole != nullptr && pole->width > 0.0 ? pole->width : pole != nullptr ? pole->depth( height ) : 0.20 };
                         auto const face { ex * ( 0.5 * thick ) + ez * height };
                         auto const *devices { tensioners() };
                         auto const *device { devices != nullptr && false == line->brackets.empty() ? devices->device( line->brackets ) : nullptr };
                         auto const *set { device != nullptr ? device->brackets_for( Suspensions[ standing ].data.pole_type ) : nullptr };
                         auto const add = [ & ]( std::string const &Part, glm::dvec3 const &At, glm::dvec3 const &X, glm::dvec3 const &Y, glm::dvec3 const &Z ) {
-                            if( Part.empty() || Part == "-" ) { return; }
+                            if( Part.empty() || Part == "-" || shared ) { return; }
                             catenary::cantilever_placement placement;
                             placement.role = "earthing_end";
                             placement.part = Part;
@@ -4105,8 +4177,11 @@ earthing_rope( scene_chain const &Chain, std::size_t const Span, std::vector<cat
             points.push_back( lug[ 1 ] );
             add_tube( Solid, points, 0.0045 );
         };
+        auto const chainindex { static_cast<std::size_t>( &Chain - Chains.data() ) };
         for( std::size_t k = 0; k + 1 < poles.size(); ++k ) {
-            if( false == ( ( poles[ k ] == a && poles[ k + 1 ] == b ) || ( poles[ k ] == b && poles[ k + 1 ] == a ) ) ) { continue; }
+            auto const loose { earthing.loose.find( k ) };
+            auto const owned { loose != earthing.loose.end() && loose->second.first == chainindex && loose->second.second == Span };
+            if( false == owned && false == ( ( poles[ k ] == a && poles[ k + 1 ] == b ) || ( poles[ k ] == b && poles[ k + 1 ] == a ) ) ) { continue; }
             glm::dvec3 first, second;
             if( point( poles[ k ], first ) && point( poles[ k + 1 ], second ) ) {
                 earthing_rope_piece( first, second, Solid, earthing_line_of( earthing ) );
@@ -4626,6 +4701,10 @@ earthing_spans( scene_earthing const &Earthing ) {
                 && ( ( a == poles.back() && b == Earthing.split_next ) || ( b == poles.back() && a == Earthing.split_next ) ) };
             if( split || ( has( chain.data.suspensions[ k ] ) && has( chain.data.suspensions[ k + 1 ] ) ) ) { rebuild_span( chain, k + offset ); }
         }
+    }
+    // odcinki ręcznej listy bez przęsła łańcucha między słupami: przęsła, które je rysują
+    for( auto const &[ piece, owner ] : Earthing.loose ) {
+        if( owner.first < Chains.size() && false == Chains[ owner.first ].removed && owner.second < Chains[ owner.first ].spans.size() ) { rebuild_span( Chains[ owner.first ], owner.second ); }
     }
 }
 

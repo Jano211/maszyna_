@@ -17437,3 +17437,39 @@ msgstr "Odłącznik %s przez izolator za %s, zamknięty: sekcja za izolatorem bi
 
 msgid "A disconnector across this insulator (no model yet): closed - both sides connected, open - the section after it without power even with the same power source"
 msgstr "Odłącznik przez ten izolator (jeszcze bez modelu): zamknięty - obie strony połączone, otwarty - sekcja za izolatorem bez prądu, nawet z tym samym zasilaczem"
+
+msgid "Anchoring 13-0491 on one pole (both sides of one mount)"
+msgstr "Kotwienie 13-0491 na jednym słupie (obie strony jednego mocowania)"
+
+msgid "Anchoring 23-0419 on one pole (both sides of one mount)"
+msgstr "Kotwienie 23-0419 na jednym słupie (obie strony jednego mocowania)"
+
+msgid "By hand: %zu poles"
+msgstr "Ręcznie: %zu słupów"
+
+msgid "Click: the next pole of the earthing"
+msgstr "Klik: kolejny słup uszynienia"
+
+msgid "Earthing %s by hand over %zu poles"
+msgstr "Uszynienie %s ręcznie po %zu słupach"
+
+msgid "Earthing by hand: %zu poles (LMB the next pole, Enter or the button makes it, Backspace takes the last one off, Esc gives up)"
+msgstr "Uszynienie ręczne: %zu słupów (LPM kolejny słup, Enter lub przycisk je tworzy, Backspace zdejmuje ostatni, Esc porzuca)"
+
+msgid "Earthing by hand: LMB the poles one after another"
+msgstr "Uszynienie ręczne: LPM kolejne słupy"
+
+msgid "Earthing by hand: click the poles one after another"
+msgstr "Uszynienie ręcznie: klikaj słupy po kolei"
+
+msgid "Give up (Esc)##manual"
+msgstr "Porzuć (Esc)##manual"
+
+msgid "Make the earthing (Enter)"
+msgstr "Utwórz uszynienie (Enter)"
+
+msgid "Take the last pole off (Backspace)"
+msgstr "Zdejmij ostatni słup (Backspace)"
+
+msgid "The poles in the order clicked, the rope straight from pole to pole - also over the gantries and between the chains, where the way along the chains isn't found. Written as a list of poles; a pole put into a chain later doesn't come in by itself"
+msgstr "Słupy w kolejności klikania, linka prosto od słupa do słupa - także przez bramki i między łańcuchami, gdzie droga po łańcuchach się nie znajduje. Zapisane jako lista słupów; słup wstawiony później w łańcuch nie wejdzie sam"
