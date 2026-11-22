@@ -126,6 +126,14 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                     std::string listed;
                     if( one( listed ) ) { line.second_net.push_back( listed ); }
                 }
+                else if( key == "connection" ) {
+                    chain::connection connection;
+                    if( one( connection.after ) && one( connection.card ) && one( connection.other ) ) {
+                        if( connection.card != "0642" && connection.card != "0648" && connection.card != "0650" && connection.card != "0652" ) { report( line.name, "connection card \"" + connection.card + "\" isn't 0642, 0648, 0650 or 0652" ); good = false; }
+                        if( index < count && Tokens[ index ] == "at" ) { ++index; number( connection.at ); }
+                        line.connections.push_back( connection );
+                    }
+                }
                 else if( key == "messenger_from" ) {
                     std::string listed, holder;
                     if( one( listed ) && one( holder ) ) { line.messenger_from.emplace_back( listed, holder ); }
@@ -211,6 +219,13 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                     else if( value == "open" ) { line.state = 1; }
                     else if( value == "earthed" ) { line.state = 2; }
                     else { report( line.name, "unknown state \"" + value + "\" of a disconnector (closed, open or earthed)" ); good = false; }
+                }
+                else if( key == "card" && index < count ) { line.card = Tokens[ index++ ]; }
+                else if( key == "on" && index < count ) { line.on = Tokens[ index++ ]; }
+                else if( key == "height" && index < count ) {
+                    std::istringstream stream { Tokens[ index++ ] };
+                    stream.imbue( std::locale::classic() );
+                    stream >> line.height;
                 }
                 else if( ( key == "from" || key == "to" ) && index + 1 < count ) {
                     ( key == "from" ? line.from_chain : line.to_chain ) = Tokens[ index++ ];
@@ -592,6 +607,10 @@ std::string write_chain( chain const &Entry ) {
         text += " insulator " + insulator.after + " " + insulator.kind + " " + ( insulator.power.empty() ? std::string( "-" ) : insulator.power );
         if( insulator.at >= 0.0 ) { text += " at " + number( std::round( insulator.at * 100.0 ) / 100.0 ); }
     }
+    for( auto const &connection : Entry.connections ) {
+        text += " connection " + connection.after + " " + connection.card + " " + connection.other;
+        if( connection.at >= 0.0 ) { text += " at " + number( std::round( connection.at * 100.0 ) / 100.0 ); }
+    }
     text += " suspensions";
     for( auto const &name : Entry.suspensions ) { text += " " + name; }
     return text + " endchain";
@@ -612,6 +631,9 @@ std::string write_disconnector( disconnector const &Entry ) {
     if( false == Entry.number.empty() ) { text += " number " + Entry.number; }
     text += std::string( " state " ) + disconnector_state_name( Entry.state );
     text += " from " + Entry.from_chain + " " + Entry.from_point + " to " + Entry.to_chain + " " + Entry.to_point;
+    if( false == Entry.card.empty() ) { text += " card " + Entry.card; }
+    if( false == Entry.on.empty() ) { text += " on " + Entry.on; }
+    if( Entry.height > 0.0 ) { text += " height " + number( Entry.height ); }
     return text + " enddisconnector";
 }
 

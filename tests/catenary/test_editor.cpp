@@ -611,6 +611,21 @@ int main( int, char *argv[] ) {
         auto const twospans { catenary_chain_overlaps( 1 ) };
         if( false == twospans.empty() ) { std::printf( "  dwa wspolne: przesel %zu, krzyzowe %zu, zwarte %d\n", twospans.front().spans.size(), twospans.front().crossing.size(), twospans.front().connected ? 1 : 0 ); }
         good = good && twospans.size() == 1 && twospans.front().spans.size() == 2 && twospans.front().crossing.size() == 1 && twospans.front().connected && errors.empty();
+        // połączenie 0648 łańcucha na z łańcuchem nb (2026-11-22): w przęśle na, nad którym idzie nb
+        {
+            auto joined { *catenary_chain_get( 0 ) };
+            for( auto const &name : joined.suspensions ) {
+                catenary::chain::connection connection;
+                connection.after = name; connection.card = "0648"; connection.other = catenary_chain_get( 1 )->name; connection.at = 3.0;
+                joined.connections.push_back( connection );
+            }
+            catenary_chain_update( 0, joined );
+            auto const triangles { catenary_chain_connections( 0 ) };
+            std::printf( "  polaczenie 0648 z drugim lancuchem: %zu trojkatow\n", triangles );
+            good = good && triangles > 0;
+            joined.connections.clear();
+            catenary_chain_update( 0, joined );
+        }
         std::remove( "tests/catenary/td_naprezenie_test.scm" );
         check( good, "przeslo naprezenia: wspolne przeslo wykryte, biezna wspolna po wczytaniu i w edytorze, izolowane / zwarte wg zasilacza, slup krzyzowy" );
     }
@@ -849,6 +864,25 @@ int main( int, char *argv[] ) {
             && catenary_earthing_holder_text( 0, "f2" ) == "4910-02 + 6130-00 + 0301-05";
         // przewód w przęsłach (lina rysowana z przęsłami łańcucha) - przęsło f2-f3 istnieje
         good = good && std::find( mock_span_names.begin(), mock_span_names.end(), std::string( "nf_1" ) ) != mock_span_names.end();
+        // przewód jako rozdzielczy 3 kV (karta 0639, 2026-11-22): połączenie 0650 łańcucha nf z nim i odłącznik 0651 od łańcucha do niego
+        {
+            auto joined { *catenary_chain_get( 0 ) };
+            catenary::chain::connection connection;
+            connection.after = "f2"; connection.card = "0650"; connection.other = "wz1"; connection.at = 5.0;
+            joined.connections.push_back( connection );
+            catenary_chain_update( 0, joined );
+            auto const triangles { catenary_chain_connections( 0 ) };
+            catenary::disconnector item;
+            item.name = "Odr1"; item.card = "0661"; item.from_chain = "nf"; item.from_point = "f2"; item.to_chain = "wz1"; item.to_point = "-";
+            auto const index { catenary_disconnector_add( catenary_chain_file( 0 ), item ) };
+            auto const assembled { catenary_disconnector_solid_size( index ) };
+            item.to_chain = "nf"; item.to_point = "f3";
+            catenary_disconnector_update( index, item );
+            auto const tochain { catenary_disconnector_solid_size( index ) };
+            std::printf( "  przewod rozdzielczy: polaczenie 0650 %zu trojkatow, odlacznik do przewodu %zu (do lancucha %zu)\n", triangles, assembled, tochain );
+            good = good && triangles > 0 && assembled > 0 && assembled != tochain;
+            catenary_disconnector_remove( index );
+        }
         std::remove( "tests/catenary/td_wzmacniajacy_test.scm" );
         check( good, "przewod wzmacniajacy: sekcja z line AFL95, wysiegniki 49xx wg glebokosci, izolatory 0301, kotwienie 23-0419" );
     }
@@ -1171,6 +1205,18 @@ int main( int, char *argv[] ) {
             std::printf( "  odlacznik: %s\n", written.c_str() );
             check( ends && from != nullptr && to != nullptr && from != to && fromend == 0 && toend == 0 && problems.empty() && parsed.disconnectors.size() == 1
                 && catenary::write_disconnector( parsed.disconnectors.front() ) == written && switched, "odlacznik przez izolator: konce przesel, zapis, przelaczenie eventem" );
+            // zespół 0661 (zaślepka) i linki 0641 do obu stron; bez karty - nic; kabel zasilacza (0655)
+            auto const without { catenary_disconnector_solid_size( index ) };
+            auto carded { *catenary_disconnector_get( index ) };
+            carded.card = "0661";
+            catenary_disconnector_update( index, carded );
+            auto const assembled { catenary_disconnector_solid_size( index ) };
+            carded.card = "0664"; carded.to_chain = "cable"; carded.to_point = "-";
+            catenary_disconnector_update( index, carded );
+            auto const cabled { catenary_disconnector_solid_size( index ) };
+            auto const cardtext { catenary::write_disconnector( carded ) };
+            std::printf( "  odlacznik z karta: bez karty %zu, 0661 %zu, 0664 z kablem %zu trojkatow; %s\n", without, assembled, cabled, cardtext.c_str() );
+            check( without == 0 && assembled > 100 && cabled > 50 && cardtext.find( " card 0664" ) != std::string::npos, "odlacznik: zaslepka zespolu 0661/0664, linki do lancuchow, kabel zasilacza" );
             catenary_disconnector_remove( index );
         }
         std::remove( "tests/catenary/td_izolator_test.scm" );

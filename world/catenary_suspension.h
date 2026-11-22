@@ -149,6 +149,18 @@ struct chain {
     // (przęsło od kotwienia początkowego), on = zawsze, off = nigdy; bez wpisu - wykrywane samo. Wpis "shared <nazwa|start> on|off",
     // przed "suspensions"
     std::vector<std::pair<std::string, bool>> shared;
+    // połączenia elektryczne bezpośrednie z innym łańcuchem tego pliku (karty 33-0642 równoległe i 33-0648 rozjazdowe; użytkownik
+    // 2026-11-22: „przy rozjazdach też są takie łączki”): w przęśle za podwieszeniem "after", "at" m od niego wzdłuż przęsła (ujemne -
+    // 1,5 m), linka z przewodu tego łańcucha przez jego linę łukiem na linę drugiego i "S" do jego przewodu. Wpis
+    // "connection <podwieszenie> 0642|0648 <łańcuch> [at <m>]", przed "suspensions"; 0650 / 0652 - z przewodem rozdzielczym 3 kV
+    // (wpis uszynienia z przewodem "feeder" tego pliku, karta 0639): <łańcuch> to nazwa tego wpisu
+    struct connection {
+        std::string after;
+        std::string card { "0648" };
+        std::string other;
+        double at { -1.0 };
+    };
+    std::vector<connection> connections;
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
 };
 
@@ -274,7 +286,13 @@ struct disconnector {
     std::string number;                     // numer z planu sekcjonowania (np. 19, 101, 10 - zasilaczowy); pusty - bez numeru
     int state { 0 };                        // 0 - zamknięty, 1 - otwarty, 2 - uszyniony
     std::string from_chain, from_point;
-    std::string to_chain, to_point;
+    std::string to_chain, to_point;         // "to cable -": kabel zasilacza (karty 0655/0656, stara 0617) - linka w dół słupa
+    // zespół odłącznika na słupie (karty 83-0661...0677, użytkownik 2026-11-22: na razie zaślepki zamiast modeli): karta, słup (podwieszenie,
+    // na którego słupie stoi; puste - from_point), wysokość zacisków nad główką szyny (ujemna - nad szczytem słupa). Bez karty - jak dotąd
+    // sam znak w edytorze. Połączenia linek wg kart 0641 (między sekcjami), 0643/0644 (po bramce), 0655 (kabel)
+    std::string card;
+    std::string on;
+    double height { -1.0 };
 };
 char const *disconnector_state_name( int State );
 

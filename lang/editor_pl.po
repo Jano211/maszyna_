@@ -17473,3 +17473,90 @@ msgstr "Zdejmij ostatni słup (Backspace)"
 
 msgid "The poles in the order clicked, the rope straight from pole to pole - also over the gantries and between the chains, where the way along the chains isn't found. Written as a list of poles; a pole put into a chain later doesn't come in by itself"
 msgstr "Słupy w kolejności klikania, linka prosto od słupa do słupa - także przez bramki i między łańcuchami, gdzie droga po łańcuchach się nie znajduje. Zapisane jako lista słupów; słup wstawiony później w łańcuch nie wejdzie sam"
+
+msgid "%s with %s, past %s"
+msgstr "%s z %s, za %s"
+
+msgid "0641/0643 through a disconnector"
+msgstr "0641/0643 przez odłącznik"
+
+msgid "0642 parallel (track with station)"
+msgstr "0642 równoległe (szlak ze stacją)"
+
+msgid "0648 at a switch"
+msgstr "0648 rozjazdowe"
+
+msgid "0650 to the 3 kV line, intermediate"
+msgstr "0650 z przewodem rozdzielczym 3 kV, pośrednie"
+
+msgid "0651/0653 to the 3 kV line through a disconnector"
+msgstr "0651/0653 z przewodem rozdzielczym 3 kV przez odłącznik"
+
+msgid "0652 to the 3 kV line, at its end"
+msgstr "0652 z przewodem rozdzielczym 3 kV, końcowe"
+
+msgid "3 kV line"
+msgstr "Przewód 3 kV"
+
+msgid "Add a connection: LMB the other chain"
+msgstr "Dodaj połączenie: LPM drugi łańcuch"
+
+msgid "Add at the span selected in the view"
+msgstr "Dodaj w przęśle zaznaczonym w widoku"
+
+msgid "Card of a new one"
+msgstr "Karta nowego"
+
+msgid "Cards 0655/0656 (old 0617): the side \"to\" is the cable of the feeder, down the pole"
+msgstr "Karty 0655/0656 (stara 0617): strona „do” to kabel zasilacza, w dół słupa"
+
+msgid "Cards 33-0642 and 33-0648: the cable from the contact wire of this chain up to its messenger, an arc over to the messenger of the other chain and down to its contact wire; 0642 with the joint 9861-1 at the top. It goes where the click on the other chain is, in the span of this chain passing that place"
+msgstr "Karty 33-0642 i 33-0648: linka z przewodu jezdnego tego łańcucha w górę na jego linę nośną, łukiem na linę drugiego łańcucha i w dół do jego przewodu; 0642 z łącznikiem 9861-1 w szczycie. Staje tam, gdzie kliknięto drugi łańcuch, w przęśle tego łańcucha, które przechodzi przez to miejsce"
+
+msgid "Chain %s doesn't go by this place: the connection goes where both chains are"
+msgstr "Łańcuch %s nie przechodzi przez to miejsce: połączenie idzie tam, gdzie są oba łańcuchy"
+
+msgid "Click: the electrical connection with this chain here"
+msgstr "Klik: połączenie elektryczne z tym łańcuchem tutaj"
+
+msgid "Connection %s with chain %s, %.2f m past %s (Ctrl+Z takes it back)"
+msgstr "Połączenie %s z łańcuchem %s, %.2f m za %s (Ctrl+Z cofa)"
+
+msgid "Connection %s with the line %s past %s (Ctrl+Z takes it back)"
+msgstr "Połączenie %s z przewodem %s za %s (Ctrl+Z cofa)"
+
+msgid "Disconnector %s from %s.%s to %s.%s; its card and state are on the Power page"
+msgstr "Odłącznik %s od %s.%s do %s.%s; karta i stan na stronie Zasilanie"
+
+msgid "Disconnector %s from %s.%s to the line %s; its card and state are on the Power page"
+msgstr "Odłącznik %s od %s.%s do przewodu %s; karta i stan na stronie Zasilanie"
+
+msgid "Electrical connections with other chains (%zu)###connections"
+msgstr "Połączenia elektryczne z innymi łańcuchami (%zu)###connections"
+
+msgid "Feeder cable"
+msgstr "Kabel zasilacza"
+
+msgid "Give up (Esc)##connection"
+msgstr "Porzuć (Esc)##connection"
+
+msgid "LMB the span of the other chain where the connection goes (Esc gives up)"
+msgstr "LPM przęsło drugiego łańcucha w miejscu połączenia (Esc porzuca)"
+
+msgid "On pole"
+msgstr "Na słupie"
+
+msgid "Pick the 3 kV line and LMB the span of this chain where the connection goes"
+msgstr "Wybierz przewód 3 kV i kliknij LPM przęsło tego łańcucha w miejscu połączenia"
+
+msgid "The connection joins chains of one catenary file"
+msgstr "Połączenie łączy łańcuchy z jednego pliku sieci"
+
+msgid "The disconnector assembly on the pole: 0661/0662 section, 0663/0664 with an earthing contact, 0667 single feed point (hand drive); 0671/0672/0677 with a motor drive. Odd - across the track, even - along it. Drawn with placeholders until the models come; the cables go to both chains (on a gantry along its beam). \"-\" - only the mark, as before"
+msgstr "Zespół odłącznika na słupie: 0661/0662 sekcyjny, 0663/0664 ze stykiem uszyniającym, 0667 pojedynczego punktu zasilania (napęd ręczny); 0671/0672/0677 z napędem silnikowym. Nieparzysta - prostopadle do toru, parzysta - równolegle. Rysowany zaślepkami, dopóki nie ma modeli; linki idą do obu łańcuchów (na bramce po dźwigarze). „-” - sam znak, jak dotąd"
+
+msgid "The distribution line 3 kV (card 0639) is an earthing run on the Earthing page with a line like L185 (also by hand over poles and gantries)"
+msgstr "Przewód rozdzielczy 3 kV (karta 0639) to sekcja na stronie Uszynienie z przewodem typu L185 (także ręcznie po słupach i bramkach)"
+
+msgid "The suspension on whose pole the disconnector stands (empty - the pole of the side \"from\"; a drop of a gantry - on its nearer leg). Enter takes it"
+msgstr "Podwieszenie, na którego słupie stoi odłącznik (puste - słup strony „od”; zwis bramki - na bliższej nodze). Enter zatwierdza"
