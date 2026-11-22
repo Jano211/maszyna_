@@ -131,7 +131,7 @@ earthing_arm 6131 back 6130-00 wire 0.0 -1.3151 0.7496 plate 0.09 skin uszynieni
 //   "back_turn 180" - tyl 7310-00 obrocony (uzytkownik 2026-11-21). Linki: od liny lukiem do wire, dalej prosto do wire_end.
 //   plate na oko. "turn <stopnie>" - obrot modelu wokol pionu, gdy model lezy inaczej niz mocowania (punkty linki z nim); "skin <nazwa>" / "skin_default" - tekstura jak przy 6130.
 // 7310-01 i -05..-09 na slupy ceownikowe 161x wg ceownika (uzytkownik 2026-11-22): -01 C120, -05 C140, -06 C160, -07 C180, -08 C200,
-//   -09 C220 - inne rozstawy i regulacje srub. Modele -05..-09 w drodze; punkty linek jak w -01 DO SPRAWDZENIA z modeli.
+//   -09 C220 - inne rozstawy i regulacje srub; punkty linek we wszystkich modelach te same co w -01 (uzytkownik 2026-11-22).
 arrester 7310-01 wire 0.64574 -0.01136 0.36542 wire_end 0.55579 -0.01136 0.36542 earth 0.24166 -0.01136 0.36542 earth_end 0.33162 -0.01136 0.36542 plate 0.10 mount 7310-01 1.0 endarrester
 arrester 7310-05 wire 0.64574 -0.01136 0.36542 wire_end 0.55579 -0.01136 0.36542 earth 0.24166 -0.01136 0.36542 earth_end 0.33162 -0.01136 0.36542 plate 0.10 mount 7310-05 1.0 endarrester
 arrester 7310-06 wire 0.64574 -0.01136 0.36542 wire_end 0.55579 -0.01136 0.36542 earth 0.24166 -0.01136 0.36542 earth_end 0.33162 -0.01136 0.36542 plate 0.10 mount 7310-06 1.0 endarrester

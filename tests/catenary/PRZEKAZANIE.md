@@ -14,9 +14,9 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 - Zrobione: `arrester 7310-03` dopisany do 1665/1666/1667 (dwuteowniki; użytkownik 2026-11-22: „7310-03 idzie też na słupy
   dwuteo”). G: data\traction_supports.txt md5 b5f6650ec9fbb990199e5f0546ae685f.
 - Ustalone (użytkownik 15:31/15:51): 161x dostają 7310 wg ceownika – **-01 C120, -05 C140, -06 C160, -07 C180, -08 C200, -09 C220**
-  (inne rozstawy i regulacje śrub; modele -05..-09 robi użytkownik). Wpisy `arrester 7310-05..09` mają na razie punkty linek z -01
-  – DO PODMIANY z modeli. 16 słupów 161x ma klucz arrester wg komentarza `// C...`. -03 na betony wg starego Kolprojektu;
-  na wirowane nic (nie widział tam odgromnika). G: md5 73aeb563750ea2c8bc810ed1eb04e831. Test te: „wszystko OK”.
+  (inne rozstawy i regulacje śrub). Modele -05..-09 są na G: (components), punkty linek we wszystkich te same co w -01
+  (użytkownik 15:59) – wpisy `arrester 7310-05..09` gotowe. 16 słupów 161x ma klucz arrester wg komentarza `// C...`. -03 na betony wg starego Kolprojektu;
+  na wirowane nic (nie widział tam odgromnika). Test te: „wszystko OK”.
 
 ## START TUTAJ – 2026-11-22 – NA POCZĄTKU PRZYPOMNIEĆ JANOWI (prosił 22.11 00:05)
 
