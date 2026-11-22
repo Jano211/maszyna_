@@ -93,7 +93,13 @@ D. **Kabiny sekcyjne** (szyna zbiorcza + odpływy z wyłącznikami), edytor.
 E. **Odłączniki** (modele 0661–0677 + zamocowania 0541–0549, połączenia 0641/0643/0651), stan otwarty/zamknięty/uszyniony,
    edytor (stawianie na słupie, stan początkowy), przełączanie eventem.
 F. **Przewody wzmacniające / rozdzielcze / kable** jako gałęzie.
-G. **Awarie**: zwarcie przez uszynienie, pantograf na przerwie, zerwanie.
+G. **Awarie**: zwarcie przez uszynienie, pantograf na przerwie, zerwanie. Do tego (użytkownik 2026-11-22, „dawaj”) **ptak na odgromniku**:
+   ptak mostkuje przerwę rożków 7310 (~10 mm) → zwarcie sieć–słup–tok szynowy przez odgromnik; łuk na rożkach (iskry, catenary_arcing),
+   wyłącznik szybki odpływu wyłącza sekcję, próba linii / ponowne załączenie (etap C) – zwarcie zniknęło (ptak spadł, łuk zgasł) →
+   sekcja wraca, inaczej wyłączona na dobre. Pociąg w sekcji traci na chwilę napięcie. Wyzwalanie: losowo (rzadko, z ustawieniem
+   częstości, wyłączalne w eu07.ini) albo eventem na słupie. Ślad: opalone rożki (wariant tekstury / decal), ewentualnie ptak pod
+   słupem. Do ustalenia przy etapie: jak długo pali się łuk przy 3 kV DC (w DC brak przejścia przez zero – ile robią rożki, ile
+   wyłącznik), czy izolator odgromnika może się uszkodzić.
 H. **Odgromniki** – sam model (bez wpływu na prąd), stawiane w edytorze.
 I. **Podgląd**: edytor – sekcje kolorami wg zasilacza / napięcia, stan łączników; panel maszynisty / debug – podstacje, odpływy,
    wyłączniki, prądy.

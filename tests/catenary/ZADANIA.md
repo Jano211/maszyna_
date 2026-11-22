@@ -281,6 +281,8 @@ Konstrukcje niekompletne / porzucone / w przebudowie – mają się dać postawi
       ostrzeżenie o sekcji bez zasilania, cofanie zmian
 - [ ] F. Przewody wzmacniające i rozdzielcze jako gałęzie (dziś przewód wzmacniający nie zmienia oporu sieci)
 - [ ] G. Awarie: zwarcie przez uszynienie, pantograf mostkujący przerwę (prąd wyrównawczy), zerwanie przewodu
+- [ ] G. Ptak na odgromniku 7310 (2026-11-22): zwarcie przez rożki, łuk, wyłączenie sekcji i ponowne załączenie; losowo albo
+      eventem, opalone rożki (szczegóły w ZASILANIE.md, etap G; wymaga etapu C - wyłączniki z próbą linii)
 - [ ] I. Podgląd w edytorze: sekcje wg zasilacza / napięcia
 - [ ] Pantograf w miejscu na przęśle (dziś pobór w środku przęsła - przy 50 m bez znaczenia)
 - [ ] Styk starej i nowej sieci w jednej scenerii: dziś granica obwodu (stara część po staremu) - zapytać, czy tak zostaje
