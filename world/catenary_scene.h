@@ -260,6 +260,8 @@ double catenary_scene_swing( std::size_t Index );
 std::size_t catenary_chain_connectors( std::size_t Index );
 // trójkąty połączeń 0642/0648 łańcucha (testy)
 std::size_t catenary_chain_connections( std::size_t Index );
+// trójkąty zaślepki odłącznika z kartą i jego linek (testy)
+std::size_t catenary_disconnector_solid_size( std::size_t Index );
 
 // ---- bramki (wpisy "gantry" w pliku sieci): słupy i dźwigar; zwisy z wysięgnikami to zwykłe podwieszenia -----------------
 std::size_t catenary_gantry_size();

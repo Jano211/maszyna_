@@ -1186,6 +1186,18 @@ int main( int, char *argv[] ) {
             std::printf( "  odlacznik: %s\n", written.c_str() );
             check( ends && from != nullptr && to != nullptr && from != to && fromend == 0 && toend == 0 && problems.empty() && parsed.disconnectors.size() == 1
                 && catenary::write_disconnector( parsed.disconnectors.front() ) == written && switched, "odlacznik przez izolator: konce przesel, zapis, przelaczenie eventem" );
+            // zespół 0661 (zaślepka) i linki 0641 do obu stron; bez karty - nic; kabel zasilacza (0655)
+            auto const without { catenary_disconnector_solid_size( index ) };
+            auto carded { *catenary_disconnector_get( index ) };
+            carded.card = "0661";
+            catenary_disconnector_update( index, carded );
+            auto const assembled { catenary_disconnector_solid_size( index ) };
+            carded.card = "0664"; carded.to_chain = "cable"; carded.to_point = "-";
+            catenary_disconnector_update( index, carded );
+            auto const cabled { catenary_disconnector_solid_size( index ) };
+            auto const cardtext { catenary::write_disconnector( carded ) };
+            std::printf( "  odlacznik z karta: bez karty %zu, 0661 %zu, 0664 z kablem %zu trojkatow; %s\n", without, assembled, cabled, cardtext.c_str() );
+            check( without == 0 && assembled > 100 && cabled > 50 && cardtext.find( " card 0664" ) != std::string::npos, "odlacznik: zaslepka zespolu 0661/0664, linki do lancuchow, kabel zasilacza" );
             catenary_disconnector_remove( index );
         }
         std::remove( "tests/catenary/td_izolator_test.scm" );

@@ -220,6 +220,13 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                     else if( value == "earthed" ) { line.state = 2; }
                     else { report( line.name, "unknown state \"" + value + "\" of a disconnector (closed, open or earthed)" ); good = false; }
                 }
+                else if( key == "card" && index < count ) { line.card = Tokens[ index++ ]; }
+                else if( key == "on" && index < count ) { line.on = Tokens[ index++ ]; }
+                else if( key == "height" && index < count ) {
+                    std::istringstream stream { Tokens[ index++ ] };
+                    stream.imbue( std::locale::classic() );
+                    stream >> line.height;
+                }
                 else if( ( key == "from" || key == "to" ) && index + 1 < count ) {
                     ( key == "from" ? line.from_chain : line.to_chain ) = Tokens[ index++ ];
                     ( key == "from" ? line.from_point : line.to_point ) = Tokens[ index++ ];
@@ -624,6 +631,9 @@ std::string write_disconnector( disconnector const &Entry ) {
     if( false == Entry.number.empty() ) { text += " number " + Entry.number; }
     text += std::string( " state " ) + disconnector_state_name( Entry.state );
     text += " from " + Entry.from_chain + " " + Entry.from_point + " to " + Entry.to_chain + " " + Entry.to_point;
+    if( false == Entry.card.empty() ) { text += " card " + Entry.card; }
+    if( false == Entry.on.empty() ) { text += " on " + Entry.on; }
+    if( Entry.height > 0.0 ) { text += " height " + number( Entry.height ); }
     return text + " enddisconnector";
 }
 

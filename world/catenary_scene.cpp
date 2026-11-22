@@ -3175,6 +3175,177 @@ chain_connections( scene_chain const &Chain, std::size_t const Span, std::vector
     }
 }
 
+// ---- odłącznik na słupie: zaślepka zespołu 83-0661...0677 i linki do łańcuchów (0641, 0643/0644, 0655) ----------------------
+// Użytkownik 2026-11-22: „zrób wszystko, co się da, nawet bez modeli, w oparciu o placeholdery”. Bryły proste w kolorze przewodów:
+// belka 4820-1/-2 na szczycie słupa od strony toru, dwa izolatory 7200-1, nóż 7420-1 (7430-1 ze stykiem uszyniającym: 0663/0664),
+// drążek 6116-1 w dół słupa, napęd 7460-1 ręczny (0661-0667) albo 7470-1 silnikowy (0671-0677) na wysokości ok. 1,2 m. Ostatnia cyfra
+// karty: nieparzysta - prostopadle do toru, parzysta - równolegle. Na bramce (zwis dźwigara) - na bliższej nodze, linka po dźwigarze
+// na wspornikach 4820-3 z izolatorem 7200-1 co ok. 3 m (karta 0630/0639, użytkownik 2026-11-22), zejście nad łańcuchem
+double constexpr kSupportStep { 3.0 };
+double constexpr kBeamDepth { 0.9 };        // ZAŁOŻENIE: pas górny dźwigara 0,9 m nad spodem (głębokość kratownicy)
+double constexpr kDriveHeight { 1.2 };      // napęd odłącznika nad główką szyny (rysunki kart: przy ziemi, na wysokości ręki)
+
+struct disconnector_frame {
+    glm::dvec3 pole { 0.0 };        // oś słupa (nogi bramki) na wysokości główki szyny
+    glm::dvec3 toward { 1.0, 0.0, 0.0 };    // do toru, poziomo
+    glm::dvec3 axis { 1.0, 0.0, 0.0 };      // oś noża
+    glm::dvec3 terminals[ 2 ];
+    double top { 0.0 };             // zaciski nad główką szyny
+    double route { -1.0 };          // wysokość linki po dźwigarze (scenerii); ujemna - słup, nie bramka
+    scene_gantry const *gantry { nullptr };
+};
+
+bool
+disconnector_frame_of( scene_disconnector const &Item, disconnector_frame &Frame ) {
+    auto const &data { Item.data };
+    auto const standing { suspension_named( Item.file, data.on.empty() ? data.from_point : data.on ) };
+    if( standing >= Suspensions.size() ) { return false; }
+    auto const &suspension { Suspensions[ standing ].data };
+    glm::dvec3 const wire { suspension.at[ 0 ], suspension.at[ 1 ], suspension.at[ 2 ] };
+    Frame.pole = { suspension.pole[ 0 ], suspension.pole[ 1 ], suspension.pole[ 2 ] };
+    auto const *catalog { cantilevers() };
+    auto const *pole { catalog != nullptr ? catalog->pole( suspension.pole_type ) : nullptr };
+    auto height { pole != nullptr && pole->top > 0.0 ? pole->top : wire.y - Frame.pole.y + 2.5 };
+    // zwis bramki: odłącznik na bliższej nodze, linka po dźwigarze
+    if( pole != nullptr && false == pole->drop.empty() ) {
+        if( auto const *gantry { drop_gantry( suspension, *pole ) }; gantry != nullptr ) {
+            auto best { -1 };
+            for( int k = 0; k < 2; ++k ) {
+                if( gantry->data.masts[ k ].empty() ) { continue; }
+                glm::dvec3 const mast { gantry->data.points[ k ][ 0 ], gantry->data.points[ k ][ 1 ], gantry->data.points[ k ][ 2 ] };
+                if( best < 0 || glm::length( mast - wire ) < glm::length( glm::dvec3 { gantry->data.points[ best ][ 0 ], gantry->data.points[ best ][ 1 ], gantry->data.points[ best ][ 2 ] } - wire ) ) { best = k; }
+            }
+            if( best >= 0 ) {
+                Frame.gantry = gantry;
+                Frame.route = Frame.pole.y + kBeamDepth + 0.35;    // spód dźwigara (punkt zwisu) + pas górny + izolator 7200
+                Frame.pole = { gantry->data.points[ best ][ 0 ], gantry->data.points[ best ][ 1 ], gantry->data.points[ best ][ 2 ] };
+                auto const *mast { catalog != nullptr ? catalog->mast( gantry->data.masts[ best ] ) : nullptr };
+                height = mast != nullptr && mast->height > 0.0 ? mast->height : Frame.route - Frame.pole.y;
+            }
+        }
+    }
+    glm::dvec3 const flat { wire.x - Frame.pole.x, 0.0, wire.z - Frame.pole.z };
+    Frame.toward = glm::length( flat ) > 1e-3 ? glm::normalize( flat ) : glm::dvec3 { 1.0, 0.0, 0.0 };
+    Frame.top = data.height > 0.0 ? data.height : height + 0.45;
+    auto const parallel { false == data.card.empty() && ( data.card.back() - '0' ) % 2 == 0 };
+    Frame.axis = parallel ? glm::cross( glm::dvec3 { 0.0, 1.0, 0.0 }, Frame.toward ) : Frame.toward;
+    auto const center { Frame.pole + Frame.toward * 0.45 + glm::dvec3 { 0.0, Frame.top, 0.0 } };
+    Frame.terminals[ 0 ] = center - Frame.axis * 0.45;
+    Frame.terminals[ 1 ] = center + Frame.axis * 0.45;
+    return true;
+}
+
+// zespół na słupie: belka, izolatory, nóż (wg stanu), drążek, napęd
+void
+disconnector_assembly( scene_disconnector const &Item, disconnector_frame const &Frame, std::vector<catenary::solid_vertex> &Solid ) {
+    auto const &card { Item.data.card };
+    glm::dvec3 const up { 0.0, 1.0, 0.0 };
+    auto const beam { ( Frame.terminals[ 0 ] + Frame.terminals[ 1 ] ) * 0.5 - up * 0.40 };
+    add_box( Solid, beam, Frame.axis, 1.20, 0.10 );                                         // 4820-1/-2
+    add_tube( Solid, { Frame.pole + up * ( Frame.top - 0.40 ), beam }, 0.03 );              // wspornik od słupa
+    for( auto const &terminal : Frame.terminals ) {
+        add_tube( Solid, { terminal - up * 0.36, terminal - up * 0.02 }, 0.045 );           // 7200-1
+        add_box( Solid, terminal, Frame.axis, 0.08, 0.06 );                                 // zacisk
+    }
+    auto const earthing { card == "0663" || card == "0664" };
+    auto const open { Item.data.state != 0 };
+    // nóż: zamknięty - między zaciskami; otwarty / uszyniony - uniesiony od zacisku "od" (uszyniony: na styk uszyniający przy słupie)
+    auto const hinge { Frame.terminals[ 0 ] + up * 0.05 };
+    auto const knife { open ? hinge + glm::normalize( Frame.axis + up * 1.2 ) * 0.85 : Frame.terminals[ 1 ] + up * 0.05 };
+    add_tube( Solid, { hinge, knife }, 0.015 );                                             // 7420-1 / 7430-1
+    if( earthing ) {
+        auto const contact { Frame.pole + Frame.toward * 0.15 + up * ( Frame.top - 0.15 ) };
+        add_box( Solid, contact, Frame.toward, 0.10, 0.06 );                                // styk uszyniający
+        if( Item.data.state == 2 ) { add_tube( Solid, { hinge, contact }, 0.015 ); }
+    }
+    // drążek 6116-1 po stronie toru w dół słupa i napęd
+    auto const rod { Frame.pole + Frame.toward * 0.28 };
+    add_tube( Solid, { rod + up * ( Frame.top - 0.40 ), rod + up * kDriveHeight }, 0.02 );
+    auto const motor { card.size() == 4 && card[ 2 ] == '7' };
+    add_box( Solid, rod + up * ( kDriveHeight - ( motor ? 0.30 : 0.20 ) ), Frame.toward, motor ? 0.40 : 0.22, motor ? 0.30 : 0.18 );   // 7470-1 / 7460-1
+}
+
+// linka od łańcucha (Chain, punkt Point) do zacisku Terminal: przewód - "S" na linę - łuk do zacisku; zwis bramki - po dźwigarze
+void
+disconnector_cable( scene_disconnector const &Item, disconnector_frame const &Frame, std::string const &Chain, std::string const &Point, glm::dvec3 const &Terminal, std::vector<catenary::solid_vertex> &Solid ) {
+    glm::dvec3 const up { 0.0, 1.0, 0.0 };
+    if( Chain == "cable" ) {
+        // kabel zasilacza (0655/0656, stara 0617): z zacisku w dół słupa do ziemi
+        auto const down { Frame.pole - Frame.toward * 0.25 };
+        add_tube( Solid, { Terminal, glm::dvec3 { down.x, Terminal.y - 0.3, down.z }, down + up * 0.3, down - up * 0.5 }, 0.012 );
+        return;
+    }
+    scene_chain const *chain { nullptr };
+    for( auto const &item : Chains ) { if( false == item.removed && item.file == Item.file && item.data.name == Chain ) { chain = &item; break; } }
+    if( chain == nullptr ) { return; }
+    auto const listed { std::find( chain->data.suspensions.begin(), chain->data.suspensions.end(), Point ) };
+    if( listed == chain->data.suspensions.end() ) { return; }
+    auto const number { static_cast<std::size_t>( listed - chain->data.suspensions.begin() ) + ( chain->data.anchor_start.empty() ? 0u : 1u ) };
+    // przęsło od punktu w głąb łańcucha (za ostatnim - przed nim), miejsce 1,5 m od punktu
+    auto const forward { number < chain->spans.size() && chain->spans[ number ] != nullptr };
+    auto const span { forward ? number : number - 1 };
+    if( span >= chain->spans.size() || chain->spans[ span ] == nullptr ) { return; }
+    double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ];
+    bool anchoreda, anchoredb;
+    if( false == chain_point( *chain, span, wa, ra, anchoreda ) || false == chain_point( *chain, span + 1, wb, rb, anchoredb ) ) { return; }
+    glm::dvec3 const a { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, b { wb[ 0 ], wb[ 1 ], wb[ 2 ] };
+    auto const length { glm::length( b - a ) };
+    if( length < 1e-3 ) { return; }
+    auto const t { std::clamp( kConnectorFromPole / length, 0.0, 0.5 ) };
+    auto const place { forward ? a + ( b - a ) * t : b + ( a - b ) * t };
+    auto const cut { connector_cut_of( *chain->spans[ span ], place ) };
+    if( false == cut.valid() ) { return; }
+    // "S" z przewodów jezdnych na linę (po jednym na przewód, karta 0641: 6601 x2 na sieć dwuprzewodową)
+    auto const rope { cut.ropes.front() };
+    glm::dvec3 const flat { Terminal.x - rope.x, 0.0, Terminal.z - rope.z };
+    auto const away { glm::length( flat ) > 1e-3 ? glm::normalize( flat ) : glm::cross( cut.along, up ) };
+    for( auto const &wire : cut.wires ) {
+        add_tube( Solid, connector_drop( wire, rope, away ), kConnectorRadius );
+        add_box( Solid, wire, cut.along, 0.08, 0.035 );
+    }
+    add_box( Solid, rope, cut.along, 0.08, 0.04 );
+    if( Frame.route < 0.0 ) {
+        add_tube( Solid, connector_arc( rope, Terminal, 0.35 ), kConnectorRadius );
+        return;
+    }
+    // po dźwigarze: z zacisku w górę na wysokość linki, po dźwigarze na wspornikach co ~3 m, nad liną w dół
+    glm::dvec3 const start { Terminal.x, std::max( Terminal.y, Frame.route ), Terminal.z };
+    glm::dvec3 const over { rope.x, Frame.route, rope.z };
+    add_tube( Solid, connector_arc( Terminal, start, 0.05 ), kConnectorRadius );
+    add_tube( Solid, { start, glm::dvec3 { over.x, start.y, over.z } }, kConnectorRadius );
+    auto const run { glm::length( glm::dvec3 { over.x - start.x, 0.0, over.z - start.z } ) };
+    auto const steps { static_cast<int>( std::floor( run / kSupportStep ) ) };
+    for( int k = 1; k <= steps; ++k ) {
+        auto const at { start + ( glm::dvec3 { over.x, start.y, over.z } - start ) * ( k * kSupportStep / std::max( run, 1e-3 ) ) };
+        add_tube( Solid, { at - up * 0.35, at }, 0.045 );                                   // 7200-1 na 4820-3
+        add_box( Solid, at - up * 0.38, Frame.axis, 0.25, 0.06 );                           // 4820-3
+    }
+    add_tube( Solid, connector_drop( glm::dvec3 { over.x, start.y, over.z }, rope, cut.along ), kConnectorRadius );
+}
+
+// cały odłącznik z kartą: zespół i linki "od" / "do"
+void
+disconnector_solid( scene_disconnector const &Item, std::vector<catenary::solid_vertex> &Solid ) {
+    if( Item.removed || Item.data.card.empty() ) { return; }
+    disconnector_frame frame;
+    if( false == disconnector_frame_of( Item, frame ) ) { return; }
+    disconnector_assembly( Item, frame, Solid );
+    disconnector_cable( Item, frame, Item.data.from_chain, Item.data.from_point, frame.terminals[ 0 ], Solid );
+    disconnector_cable( Item, frame, Item.data.to_chain, Item.data.to_point, frame.terminals[ 1 ], Solid );
+}
+
+// przęsło łańcucha "od", które rysuje odłącznik: od punktu "from" w głąb łańcucha (za ostatnim punktem - przed nim)
+std::size_t
+disconnector_span( scene_disconnector const &Item, scene_chain const &Chain ) {
+    auto const none { static_cast<std::size_t>( -1 ) };
+    if( Item.removed || Item.file != Chain.file || Item.data.from_chain != Chain.data.name ) { return none; }
+    auto const listed { std::find( Chain.data.suspensions.begin(), Chain.data.suspensions.end(), Item.data.from_point ) };
+    if( listed == Chain.data.suspensions.end() ) { return none; }
+    auto const number { static_cast<std::size_t>( listed - Chain.data.suspensions.begin() ) + ( Chain.data.anchor_start.empty() ? 0u : 1u ) };
+    if( number < Chain.spans.size() && Chain.spans[ number ] != nullptr ) { return number; }
+    return number > 0 ? number - 1 : none;
+}
+
 // uszynienie grupowe: uchwyt 6120 (karta 0805) na górze słupa podwieszenia, przodem do toru (X wzdłuż toru, słup w +Y, zero na
 // płaszczyźnie przylegania jak w mocowaniach), w połowie marginesu 0,15 m nad najwyższym mocowaniem (ZAŁOŻENIE: 0,075 m nad mount_max,
 // bez wychodzenia nad słup); lina przez punkt "wire" uchwytu (Jan 2026-10-25: X 0,0099, Y -0,0497, Z 0,1042)
@@ -4704,6 +4875,10 @@ span_extras( scene_chain &Chain, std::size_t const Span ) {
             overlap_connector( Chain, Span, rope );
             // połączenia 0642 / 0648 z innym łańcuchem
             chain_connections( Chain, Span, rope );
+            // odłączniki z kartą, których linka "od" wychodzi z tego przęsła: zespół na słupie i obie linki
+            for( auto const &item : Disconnectors ) {
+                if( disconnector_span( item, Chain ) == Span ) { disconnector_solid( item, rope ); }
+            }
             // izolator sekcyjny (modele; części przęsła stawiane od nowa razem z nim)
             section_insulator( Chain, Span, rope );
             // izolowane przęsło naprężenia: izolatory w przewodzie i linie schodzących do kotwienia, przy słupie krzyżowym
@@ -4748,6 +4923,7 @@ refit_span_parts( scene_chain &Chain ) {
 }
 
 // wszystkie przęsła łańcucha od nowa (zmiana typu, materiału, listy podwieszeń)
+void refresh_disconnector( scene_disconnector const &Item );
 void
 rebuild_chain( scene_chain &Chain ) {
     // kotwienia łańcucha od nowa (stan drutów, kierunek do pierwszego/ostatniego podwieszenia), przed przęsłami do nich
@@ -4768,6 +4944,20 @@ rebuild_chain( scene_chain &Chain ) {
     // części liczone z kształtu stawia od nowa catenary_scene_resolve)
     for( std::size_t span = 0; span < Chain.spans.size(); ++span ) { make_span( Chain, span ); }
     for( std::size_t span = 0; span < Chain.spans.size(); ++span ) { span_extras( Chain, span ); }
+    // odłączniki z linką "do" na tym łańcuchu: linka idzie za nim
+    for( auto const &item : Disconnectors ) {
+        if( false == item.removed && item.file == Chain.file && item.data.to_chain == Chain.data.name && item.data.from_chain != Chain.data.name ) { refresh_disconnector( item ); }
+    }
+}
+
+// odłącznik z kartą: przęsło łańcucha "od", które go rysuje, od nowa (po zmianie odłącznika albo łańcucha "do")
+void
+refresh_disconnector( scene_disconnector const &Item ) {
+    if( false == Initialized || Item.data.card.empty() ) { return; }
+    for( auto &chain : Chains ) {
+        if( chain.removed || chain.file != Item.file || chain.data.name != Item.data.from_chain ) { continue; }
+        if( auto const span { disconnector_span( Item, chain ) }; span < chain.spans.size() ) { span_extras( chain, span ); }
+    }
 }
 
 // uszynienia, które idą przez słup podwieszenia: uchwyty od nowa (słup przesunięty w edytorze)
@@ -6432,16 +6622,27 @@ catenary_disconnector_add( std::string const &File, catenary::disconnector const
     Disconnectors.emplace_back( item );
     mark_changed( File );
     ++DisconnectorGeneration;
+    refresh_disconnector( Disconnectors.back() );
     return Disconnectors.size() - 1;
 }
 
 bool
 catenary_disconnector_update( std::size_t const Index, catenary::disconnector const &Data ) {
     if( Index >= Disconnectors.size() ) { return false; }
+    auto const before { Disconnectors[ Index ] };
     Disconnectors[ Index ].data = Data;
     Disconnectors[ Index ].removed = false;
     mark_changed( Disconnectors[ Index ].file );
     ++DisconnectorGeneration;
+    // linka "od" mogła przejść na inne przęsło albo karta zniknąć: stare przęsło też od nowa
+    if( before.data.from_chain != Data.from_chain || before.data.from_point != Data.from_point || false == before.data.card.empty() ) {
+        auto gone { before };
+        gone.data.card = before.data.card.empty() ? Data.card : before.data.card;
+        Disconnectors[ Index ].removed = true;
+        refresh_disconnector( gone );
+        Disconnectors[ Index ].removed = false;
+    }
+    refresh_disconnector( Disconnectors[ Index ] );
     return true;
 }
 
@@ -6451,6 +6652,15 @@ catenary_disconnector_remove( std::size_t const Index ) {
     Disconnectors[ Index ].removed = true;
     mark_changed( Disconnectors[ Index ].file );
     ++DisconnectorGeneration;
+    // przęsło, które go rysowało, bez niego
+    auto gone { Disconnectors[ Index ] };
+    gone.removed = false;
+    Disconnectors[ Index ].removed = false;
+    auto const card { gone.data.card };
+    Disconnectors[ Index ].data.card.clear();
+    refresh_disconnector( gone );
+    Disconnectors[ Index ].data.card = card;
+    Disconnectors[ Index ].removed = true;
 }
 
 bool
@@ -6832,6 +7042,14 @@ catenary_chain_connectors( std::size_t const Index ) {
     if( Index >= Chains.size() ) { return 0; }
     std::vector<catenary::solid_vertex> solid;
     for( std::size_t span = 0; span < Chains[ Index ].spans.size(); ++span ) { overlap_connector( Chains[ Index ], span, solid ); }
+    return solid.size() / 3;
+}
+
+std::size_t
+catenary_disconnector_solid_size( std::size_t const Index ) {
+    if( Index >= Disconnectors.size() ) { return 0; }
+    std::vector<catenary::solid_vertex> solid;
+    disconnector_solid( Disconnectors[ Index ], solid );
     return solid.size() / 3;
 }
 

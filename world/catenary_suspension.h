@@ -285,7 +285,13 @@ struct disconnector {
     std::string number;                     // numer z planu sekcjonowania (np. 19, 101, 10 - zasilaczowy); pusty - bez numeru
     int state { 0 };                        // 0 - zamknięty, 1 - otwarty, 2 - uszyniony
     std::string from_chain, from_point;
-    std::string to_chain, to_point;
+    std::string to_chain, to_point;         // "to cable -": kabel zasilacza (karty 0655/0656, stara 0617) - linka w dół słupa
+    // zespół odłącznika na słupie (karty 83-0661...0677, użytkownik 2026-11-22: na razie zaślepki zamiast modeli): karta, słup (podwieszenie,
+    // na którego słupie stoi; puste - from_point), wysokość zacisków nad główką szyny (ujemna - nad szczytem słupa). Bez karty - jak dotąd
+    // sam znak w edytorze. Połączenia linek wg kart 0641 (między sekcjami), 0643/0644 (po bramce), 0655 (kabel)
+    std::string card;
+    std::string on;
+    double height { -1.0 };
 };
 char const *disconnector_state_name( int State );
 
