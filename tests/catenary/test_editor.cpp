@@ -87,7 +87,7 @@ int main( int, char *argv[] ) {
         check( solved && with.parts.size() == plain.parts.size() + 3 && with.find( "link" ) != nullptr && written.find( " override link 6506-01" ) != std::string::npos,
             "zastrzal 6506 dolozony do wysiegnika 1124 przez nadpisania wpisu" );
     }
-    // odgromnik 7310 (2026-11-21): na słupie 1611-11 model 7310-01 przy szczycie, od strony toru; zapis "arrester <m>" i odczyt
+    // odgromnik 7310 (2026-11-21/22): na słupie 1611-11 model 7310-01 przy szczycie, od strony toru; zapis "arrester <m>" i odczyt
     {
         auto with { entry };
         with.arrester = true;
@@ -98,14 +98,16 @@ int main( int, char *argv[] ) {
         catenary::parse_suspensions( tokens, "zapis", parsed, problems );
         check( written.find( " arrester 0.25" ) != std::string::npos && problems.empty() && parsed.entries.size() == 1 && parsed.entries.front().arrester
             && std::abs( parsed.entries.front().arrester_drop - 0.25 ) < 1e-9, "odgromnik: zapis i odczyt wpisu" );
-        // 161x: 7310-01 nie pasuje (użytkownik 2026-11-21) - bez odgromnika, wysięgnik składa się normalnie
+        // 161x wg ceownika (użytkownik 2026-11-22): 1611-11 to C120 - 7310-01, bez tyłu (śruby hakowe w modelu)
         auto const from { simulation::State.created.size() };
-        auto none { true };
+        auto ceownik { false }, other { false };
         check( catenary_scene_update( index, with ), "odgromnik: podwieszenie z odgromnikiem sie sklada" );
         for( auto item { from }; item < simulation::State.created.size(); ++item ) {
-            if( simulation::State.created[ item ].entry.find( "7310-" ) != std::string::npos ) { none = false; }
+            auto const &name { simulation::State.created[ item ].entry };
+            if( name.find( "7310-01.t3d" ) != std::string::npos ) { ceownik = true; }
+            else if( name.find( "7310-" ) != std::string::npos ) { other = true; }
         }
-        check( none, "odgromnik: na 161x nie wstawiany (brak wykonania)" );
+        check( ceownik && false == other, "odgromnik: na 1611-11 (C120) wykonanie 7310-01, bez tylu" );
         // beton 1701: 7310-03 z tyłem 7310-00, przy szczycie (wierzch 7,46, płyta 0,10, niżej o 0,25), od strony toru
         auto concrete { with };
         concrete.pole_type = "1701";
