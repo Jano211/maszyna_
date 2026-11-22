@@ -3119,6 +3119,17 @@ overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector
             if( cut == &drop ) { down( drop, ropes.back(), across( middle, ropes.back() ) ); }
         }
     };
+    // sieci 10 i 20 (karta 0640 bez uwagi „przy każdym słupie krzyżowym”; użytkownik 2026-11-22: „wpierdol pomiędzy na przęśle”):
+    // jeden łącznik w połowie środkowego przęsła części wspólnej (przy parzystej liczbie przęseł - pierwszego z dwóch środkowych);
+    // sieć bez typu z jednym przewodem jezdnym tak samo
+    auto const *type { Chain.data.type.empty() ? nullptr : catenary::types().find( Chain.data.type ) };
+    if( code == 10 || code == 20 || ( code <= 0 && type != nullptr && type->type.contact_count < 2 ) ) {
+        std::size_t before { 0 }, after { 0 };
+        while( before < Span && shared( Span - before - 1 ) ) { ++before; }
+        while( shared( Span + after + 1 ) ) { ++after; }
+        if( before == ( before + after ) / 2 ) { draw( 0.5 ); }
+        return;
+    }
     if( crossstart ) { draw( kConnectorFromPole / length ); }
     if( crossend ) { draw( 1.0 - kConnectorFromPole / length ); }
 }
