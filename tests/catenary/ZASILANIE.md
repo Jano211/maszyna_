@@ -101,7 +101,8 @@ G. **Awarie**: zwarcie przez uszynienie, pantograf na przerwie, zerwanie. Do teg
    opalanie rożków tylko szybkim, nieobciążającym shaderem (np. parametr per instancja przyciemniający końce rożków, jak pył
    po normalnej) – inaczej nie robić. Przy zwarciu **błysk** (krótkie światło punktowe na rożkach, jak przy iskrzeniu pantografu)
    i **huk** (dźwięk wyładowania przy słupie) – użytkownik 2026-11-22. Losowy ptak **tylko w zasięgu wzroku** kamery (słupy
-   widoczne z miejsca gracza); poza nim nie losujemy. Do ustalenia przy etapie: jak długo pali się łuk przy 3 kV DC
+   widoczne z miejsca gracza); poza nim nie losujemy. Szansa **1 na milion na słup na sekundę widoczności** (ok. 20 słupów w polu
+   widzenia → raz na ~14 h jazdy; użytkownik: „spoko”), liczba w eu07.ini (do testów podkręcana). **Łuk pali się 2–3 s** i gaśnie. Do ustalenia przy etapie: jak długo pali się łuk przy 3 kV DC
    (w DC brak przejścia przez zero – ile robią rożki, ile wyłącznik).
 H. **Odgromniki** – sam model (bez wpływu na prąd), stawiane w edytorze.
 I. **Podgląd**: edytor – sekcje kolorami wg zasilacza / napięcia, stan łączników; panel maszynisty / debug – podstacje, odpływy,
