@@ -33,6 +33,9 @@ double check_length( double const Slope );
 double movable_nose_length( double const Slope );
 // the rails of the track are cut where they cross other rails: plain tracks, and switches whose frog is made from the rails
 bool cut_rails( TTrack const &Track );
+// the blades of the switch are shaped from the tip to the heel: with the rails cut, or alone where only the blades are on, but for the
+// switches of a double slip, whose blades end short of crossings found only with the rails cut
+bool shaped_blades( TTrack const &Track );
 int blade_steps( TTrack const &Track, int const Path );
 double blade_length( TTrack const &Track, int const Path );
 // the plain track a path of a switch goes on into at its end, laid the same way, which the blade of the path may run on into
@@ -45,14 +48,19 @@ glm::vec3 tread_colour( material_handle const Material, glm::vec2 const &Band );
 material_handle tint_material( material_handle const Material, glm::vec3 const &Colour );
 // triangles closing the first and/or the last cross-section of a lofted strip, made of pairs of points for each of Ring profile points, both sides of each
 void cap_loft( gfx::vertex_array const &Strip, std::size_t const Ring, bool const Start, bool const End, gfx::vertex_array &Triangles );
-gfx::userdata_array worn_userdata( std::size_t const Count );
-// the ends of rails left open: at track ends with nothing joined, blade tips, the gap of a frog
-void cut_faces( gfx::vertex_array const &Strip, std::size_t const Ring, bool const Start, bool const End, gfx::geometrybank_handle const &Bank, TTrack::geometryhandle_sequence &Geometry );
+// the wear the shader takes from the vertices: worn, the colour of the steel the wheels polish; or not, the colour of the rail as it is
+gfx::userdata_array worn_userdata( std::size_t const Count, bool const Worn = true );
+// the ends of rails left open: at track ends with nothing joined, blade tips, the gap of a frog. the ends no wheel runs over, the blade
+// tips and the open ends of a track, aren't worn, they keep the dark of the rail
+void cut_faces( gfx::vertex_array const &Strip, std::size_t const Ring, bool const Start, bool const End, gfx::geometrybank_handle const &Bank, TTrack::geometryhandle_sequence &Geometry, bool const Worn = true );
 
 // the geometry of a track laid while one is alive goes into the chunks of the pool given, of the same type, before new ones
 class reused_chunks {
 public:
-    reused_chunks( chunk_pool *Pool );
+    explicit reused_chunks( chunk_pool *Pool );
+    // it puts the pool it took the place of back as it goes: one taking the place of the same one twice would put it back twice
+    reused_chunks( reused_chunks const & ) = delete;
+    reused_chunks &operator=( reused_chunks const & ) = delete;
     ~reused_chunks();
 private:
     chunk_pool *m_previous { nullptr };

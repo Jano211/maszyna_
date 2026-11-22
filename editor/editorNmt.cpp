@@ -10,11 +10,15 @@ http://mozilla.org/MPL/2.0/.
 #include "stdafx.h"
 #include "editor/editorNmt.hpp"
 #include "editor/editorHttp.hpp"
+#include "editor/editorGeometry.hpp"
+#include "editor/editorGeoTiff.hpp"
 #include "utilities/Logs.h"
 #include "utilities/translation.h"
+#include "utilities/utilities.h"
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
@@ -31,10 +35,63 @@ namespace fs = std::filesystem;
 // the model at 1 m of the WCS service of geoportal.gov.pl; the name of the model is read from its capabilities
 char const *const service{"https://mapy.geoportal.gov.pl/wss/service/PZGIK/NMT/GRID1/WCS/DigitalTerrainModelFormatTIFF"};
 char const *const fallback_coverage{"DTM_PL-KRON86-NH_TIFF"};
-char const *const cache_folder{"editor/cache/nmt/grid1/"};
+char const *const game_cache_folder{"editor/cache/nmt/grid1"}; // in the game folder: older builds kept the squares there
 int constexpr worker_count{2}; // the service is quick, but isn't to be hammered
 int constexpr border{1}; // pixels of the neighbouring squares fetched around a square, so the heights interpolate across its edges
 float constexpr no_data{-1000.f}; // the model gives far lower values outside of the country
+double constexpr retry_after{15.0}; // s, a square the service didn't give is asked for again
+
+double seconds()
+{
+	return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+// among the files kept to be fetched again faster, as the orthophoto: the game folder may not be writable. Without a folder of the
+// user's cache, in the game folder
+fs::path cache_root()
+{
+	auto const root{user_cache_path("nmt")};
+	return root.empty() ? fs::path{game_cache_folder} : root / "grid1";
+}
+
+bool read_file(fs::path const &Path, std::vector<std::uint8_t> &Out)
+{
+	std::ifstream file{Path, std::ios::binary};
+	if (false == file.is_open())
+		return false;
+	Out.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+	return true;
+}
+
+// written under a name of its own and renamed, so a write broken off never leaves a part of a square behind
+bool write_file(fs::path const &Path, std::vector<std::uint8_t> const &Data)
+{
+	std::error_code fault;
+	fs::create_directories(Path.parent_path(), fault);
+	std::ostringstream suffix;
+	suffix << ".part" << std::this_thread::get_id();
+	auto temporary{Path};
+	temporary += suffix.str();
+	{
+		std::ofstream file{temporary, std::ios::binary | std::ios::trunc};
+		if (false == file.is_open())
+			return false;
+		file.write(reinterpret_cast<char const *>(Data.data()), static_cast<std::streamsize>(Data.size()));
+		if (false == static_cast<bool>(file))
+		{
+			file.close();
+			fs::remove(temporary, fault);
+			return false;
+		}
+	}
+	fs::rename(temporary, Path, fault);
+	if (fault)
+	{
+		fs::remove(temporary, fault);
+		return false;
+	}
+	return true;
+}
 
 // the name of the model among the names the capabilities of the service list: the first which says it's a terrain model
 std::string coverage_of(std::string const &Capabilities)
@@ -56,94 +113,6 @@ std::string coverage_of(std::string const &Capabilities)
 			return name;
 	}
 	return fallback_coverage;
-}
-
-// a GeoTIFF as the service gives it: one band of 32-bit floats in strips, not compressed, placed on the grid by its tie point
-// and pixel scale. false for anything else
-template <typename Square>
-bool read_geotiff(std::vector<std::uint8_t> const &Data, Square &Out)
-{
-	if (Data.size() < 8)
-		return false;
-	bool const little{Data[0] == 'I' && Data[1] == 'I'};
-	if (false == little && false == (Data[0] == 'M' && Data[1] == 'M'))
-		return false;
-	auto const u16 = [&](std::size_t const At) -> std::uint32_t {
-		if (At + 2 > Data.size())
-			return 0;
-		return little ? Data[At] | (Data[At + 1] << 8) : (Data[At] << 8) | Data[At + 1];
-	};
-	auto const u32 = [&](std::size_t const At) -> std::uint32_t {
-		if (At + 4 > Data.size())
-			return 0;
-		return little ? Data[At] | (Data[At + 1] << 8) | (Data[At + 2] << 16) | (static_cast<std::uint32_t>(Data[At + 3]) << 24) :
-		                (static_cast<std::uint32_t>(Data[At]) << 24) | (Data[At + 1] << 16) | (Data[At + 2] << 8) | Data[At + 3];
-	};
-	auto const f64 = [&](std::size_t const At) {
-		std::uint64_t bits{0};
-		for (int i = 0; i < 8; ++i)
-			bits |= static_cast<std::uint64_t>(At + i < Data.size() ? Data[At + (little ? i : 7 - i)] : 0) << (8 * i);
-		double value;
-		std::memcpy(&value, &bits, sizeof(value));
-		return value;
-	};
-	if (u16(2) != 42)
-		return false;
-	struct entry
-	{
-		std::uint32_t type{0};
-		std::uint32_t count{0};
-		std::size_t at{0}; // of the values: in the entry when they fit in four bytes
-	};
-	std::map<std::uint32_t, entry> entries;
-	auto const ifd{static_cast<std::size_t>(u32(4))};
-	auto const count{u16(ifd)};
-	for (std::uint32_t i = 0; i < count; ++i)
-	{
-		auto const at{ifd + 2 + i * 12};
-		entry value{u16(at + 2), u32(at + 4), at + 8};
-		auto const size{(value.type == 3 ? 2u : value.type == 12 ? 8u : 4u) * value.count};
-		if (size > 4)
-			value.at = u32(at + 8);
-		entries[u16(at)] = value;
-	}
-	auto const number = [&](std::uint32_t const Tag, std::uint32_t const Index) -> std::uint32_t {
-		auto const found{entries.find(Tag)};
-		if (found == entries.end() || Index >= found->second.count)
-			return 0;
-		return found->second.type == 3 ? u16(found->second.at + Index * 2) : u32(found->second.at + Index * 4);
-	};
-	auto const real = [&](std::uint32_t const Tag, std::uint32_t const Index) {
-		auto const found{entries.find(Tag)};
-		return found == entries.end() || Index >= found->second.count ? 0.0 : f64(found->second.at + Index * 8);
-	};
-	auto const width{static_cast<int>(number(256, 0))};
-	auto const height{static_cast<int>(number(257, 0))};
-	if (width < 2 || height < 2 || number(258, 0) != 32 || number(339, 0) != 3 || std::max(1u, number(259, 0)) != 1 || false == entries.contains(273) || false == entries.contains(33550) ||
-	    false == entries.contains(33922))
-		return false;
-	auto const rows{std::max(1u, number(278, 0))};
-	Out.width = width;
-	Out.height = height;
-	Out.heights.assign(static_cast<std::size_t>(width) * height, no_data - 1.f);
-	auto const strips{entries[273].count};
-	for (std::uint32_t strip = 0; strip < strips; ++strip)
-	{
-		auto const offset{static_cast<std::size_t>(number(273, strip))};
-		auto const first{strip * rows};
-		for (std::uint32_t row = first; row < std::min<std::uint32_t>(first + rows, height); ++row)
-			for (int column = 0; column < width; ++column)
-			{
-				auto const bits{u32(offset + ((row - first) * width + column) * 4)};
-				float value;
-				std::memcpy(&value, &bits, sizeof(value));
-				Out.heights[static_cast<std::size_t>(row) * width + column] = value;
-			}
-	}
-	Out.pixel = real(33550, 0);
-	Out.east = real(33922, 3) - real(33922, 0) * Out.pixel;
-	Out.north = real(33922, 4) + real(33922, 1) * Out.pixel;
-	return Out.pixel > 0.0;
 }
 
 // transverse Mercator on GRS80 (Krüger series to the third order of n, millimetres over the width of a zone): PUWG 1992 and
@@ -662,12 +631,17 @@ bool editor_nmt::request(glm::dvec2 const &Min, glm::dvec2 const &Max)
 		auto const low{key_of(m_east - Max.x, m_north + Min.y)};
 		auto const high{key_of(m_east - Min.x, m_north + Max.y)};
 		auto const middle{key_of(m_east - 0.5 * (Min.x + Max.x), m_north + 0.5 * (Min.y + Max.y))};
+		auto const now{seconds()};
 		for (auto e = low.first; e <= high.first; ++e)
 			for (auto n = low.second; n <= high.second; ++n)
 			{
 				key const square{e, n};
-				if (m_squares.contains(square))
-					continue;
+				if (auto const found{m_squares.find(square)}; found != m_squares.end())
+				{
+					if (false == found->second->failed || found->second->outside || now - found->second->failed_at < retry_after)
+						continue;
+					m_squares.erase(found);
+				}
 				all = false;
 				if (false == m_queued.contains(square))
 					wanted.push_back(square);
@@ -681,13 +655,59 @@ bool editor_nmt::request(glm::dvec2 const &Min, glm::dvec2 const &Max)
 			m_queued.insert(square);
 			m_queue.push_back(square);
 		}
-		if (false == wanted.empty() && m_workers.empty())
-			for (int i = 0; i < worker_count; ++i)
-				m_workers.emplace_back([this]() { work(); });
+		if (false == wanted.empty())
+			start_workers();
 	}
 	if (false == wanted.empty())
 		m_wake.notify_all();
 	return all;
+}
+
+void editor_nmt::start_workers()
+{
+	if (m_workers.empty())
+		for (int i = 0; i < worker_count; ++i)
+			m_workers.emplace_back([this]() { work(); });
+}
+
+std::filesystem::path editor_nmt::file_of(key const &Key) const
+{
+	return cache_root() / (std::to_string(Key.first) + "_" + std::to_string(Key.second) + ".tif");
+}
+
+void editor_nmt::prefetch(std::vector<glm::dvec2> const &Polygon)
+{
+	std::vector<key> keys;
+	if (can_download())
+		for (auto const &square : geometry::squares_in(Polygon, square_size))
+			keys.emplace_back(square);
+	{
+		std::lock_guard<std::mutex> lock{m_mutex};
+		m_prefetch = std::move(keys);
+		m_prefetch_next = 0;
+		m_prefetch_again.clear();
+		m_prefetch_cached.clear();
+		m_prefetch_failed.clear();
+		++m_prefetch_generation;
+		if (false == m_prefetch.empty())
+			start_workers();
+	}
+	m_wake.notify_all();
+}
+
+void editor_nmt::prefetch_paused(bool const Paused)
+{
+	{
+		std::lock_guard<std::mutex> lock{m_mutex};
+		m_prefetch_paused = Paused;
+	}
+	m_wake.notify_all();
+}
+
+editor_nmt::prefetch_state editor_nmt::prefetched() const
+{
+	std::lock_guard<std::mutex> lock{m_mutex};
+	return {static_cast<int>(m_prefetch_cached.size()), static_cast<int>(m_prefetch.size()), static_cast<int>(m_prefetch_failed.size())};
 }
 
 std::size_t editor_nmt::waiting() const
@@ -696,10 +716,52 @@ std::size_t editor_nmt::waiting() const
 	return m_queued.size();
 }
 
-std::string editor_nmt::error() const
+bool editor_nmt::retrying(glm::dvec2 const &Min, glm::dvec2 const &Max) const
 {
 	std::lock_guard<std::mutex> lock{m_mutex};
-	return m_error;
+	auto const low{key_of(m_east - Max.x, m_north + Min.y)};
+	auto const high{key_of(m_east - Min.x, m_north + Max.y)};
+	for (auto e = low.first; e <= high.first; ++e)
+		for (auto n = low.second; n <= high.second; ++n)
+			if (auto const found{m_squares.find({e, n})}; found != m_squares.end() && found->second->failed && false == found->second->outside)
+				return true;
+	return false;
+}
+
+void editor_nmt::retry()
+{
+	std::lock_guard<std::mutex> lock{m_mutex};
+	std::erase_if(m_squares, [](auto const &Square) { return Square.second->failed && false == Square.second->outside; });
+}
+
+void editor_nmt::cancel()
+{
+	std::lock_guard<std::mutex> lock{m_mutex};
+	for (auto const &square : m_queue)
+		m_queued.erase(square);
+	m_queue.clear();
+}
+
+std::string editor_nmt::error(bool *Again) const
+{
+	std::lock_guard<std::mutex> lock{m_mutex};
+	std::string result;
+	bool outside{false};
+	if (Again != nullptr)
+		*Again = false;
+	for (auto const &[key, square] : m_squares)
+	{
+		if (false == square->failed)
+			continue;
+		if (Again != nullptr && false == square->outside)
+			*Again = true;
+		if (result.empty() || (square->outside && false == outside))
+		{
+			result = square->error;
+			outside = square->outside;
+		}
+	}
+	return result;
 }
 
 void editor_nmt::clear()
@@ -715,13 +777,48 @@ void editor_nmt::work()
 	while (true)
 	{
 		key square;
+		bool prefetching{false};
+		std::uint32_t generation{0};
 		{
 			std::unique_lock<std::mutex> lock{m_mutex};
-			m_wake.wait(lock, [this]() { return m_stop || false == m_queue.empty(); });
+			auto const prefetchable = [this]() { return false == m_prefetch_paused && (false == m_prefetch_again.empty() || m_prefetch_next < m_prefetch.size()); };
+			m_wake.wait(lock, [&]() { return m_stop || false == m_queue.empty() || prefetchable(); });
 			if (m_stop)
 				return;
-			square = m_queue.front();
-			m_queue.pop_front();
+			if (false == m_queue.empty())
+			{
+				square = m_queue.front();
+				m_queue.pop_front();
+			}
+			else
+			{
+				// a square of the download area, while none is asked for; one broken off before first
+				if (false == m_prefetch_again.empty())
+				{
+					square = m_prefetch_again.front();
+					m_prefetch_again.pop_front();
+				}
+				else
+					square = m_prefetch[m_prefetch_next++];
+				prefetching = true;
+				generation = m_prefetch_generation;
+			}
+		}
+		if (prefetching)
+		{
+			// put into the disk cache only, the file there not read
+			std::error_code fault;
+			std::string error;
+			bool yielded{false};
+			auto const ok{fs::exists(file_of(square), fault) || false == fetch(square, error, &yielded)->failed};
+			std::lock_guard<std::mutex> lock{m_mutex};
+			if (generation != m_prefetch_generation)
+				continue;
+			if (yielded)
+				m_prefetch_again.push_back(square);
+			else
+				(ok ? m_prefetch_cached : m_prefetch_failed).insert(square);
+			continue;
 		}
 		std::string error;
 		auto fetched{fetch(square, error)};
@@ -731,12 +828,11 @@ void editor_nmt::work()
 				continue; // cleared meanwhile
 			m_queued.erase(square);
 			m_squares[square] = std::move(fetched);
-			m_error = error;
 		}
 	}
 }
 
-std::shared_ptr<editor_nmt::square const> editor_nmt::fetch(key const &Key, std::string &Error)
+std::shared_ptr<editor_nmt::square const> editor_nmt::fetch(key const &Key, std::string &Error, bool *Yielded)
 {
 	bool folder;
 	{
@@ -744,15 +840,15 @@ std::shared_ptr<editor_nmt::square const> editor_nmt::fetch(key const &Key, std:
 		folder = false == m_sheets.empty();
 	}
 	if (false == folder)
-		return fetch_service(Key, Error);
+		return fetch_service(Key, Error, Yielded);
 	bool missing;
 	auto local{fetch_local(Key, missing)};
 	if (local == nullptr)
-		return fetch_service(Key, Error);
+		return fetch_service(Key, Error, Yielded);
 	if (missing)
 	{
 		// the edge of the sheets: the rest of the square from the service
-		auto const service{fetch_service(Key, Error)};
+		auto const service{fetch_service(Key, Error, Yielded)};
 		if (false == service->failed && service->width == local->width && service->height == local->height && std::abs(service->east - local->east) < 0.01 && std::abs(service->north - local->north) < 0.01)
 			for (std::size_t i = 0; i < local->heights.size(); ++i)
 				if (local->heights[i] <= no_data)
@@ -762,31 +858,57 @@ std::shared_ptr<editor_nmt::square const> editor_nmt::fetch(key const &Key, std:
 	return local;
 }
 
-std::shared_ptr<editor_nmt::square const> editor_nmt::fetch_service(key const &Key, std::string &Error)
+std::shared_ptr<editor_nmt::square const> editor_nmt::fetch_service(key const &Key, std::string &Error, bool *Yielded)
 {
 	auto result{std::make_shared<square>()};
 	std::error_code fault;
-	fs::create_directories(cache_folder, fault);
-	auto const file{std::string{cache_folder} + std::to_string(Key.first) + "_" + std::to_string(Key.second) + ".tif"};
+	auto const file{file_of(Key)};
 	std::vector<std::uint8_t> data;
-	if (std::ifstream cached{file, std::ios::binary}; cached.is_open())
+	if (read_file(file, data))
 	{
-		data.assign(std::istreambuf_iterator<char>(cached), std::istreambuf_iterator<char>());
-		if (read_geotiff(data, *result))
+		if (editor_geotiff::read(data, *result, no_data - 1.f))
 			return result;
-		// damaged by a fetch broken off: fetched again
+		// damaged: fetched again
 		fs::remove(file, fault);
+	}
+	// a square an older build kept in the game folder is moved to the cache, as it's asked for
+	if (auto const old{fs::path{game_cache_folder} / file.filename()}; old != file && read_file(old, data))
+	{
+		auto const whole{editor_geotiff::read(data, *result, no_data - 1.f)};
+		if (whole)
+		{
+			// moved as it is when the cache is on the same disk, written there and deleted otherwise; one that can't be
+			// written there stays where it is
+			fs::create_directories(file.parent_path(), fault);
+			fs::rename(old, file, fault);
+			if (fault && write_file(file, data))
+				fs::remove(old, fault);
+			return result;
+		}
+		// damaged
+		fs::remove(old, fault);
 	}
 	if (false == can_download())
 	{
 		Error = STRN("This build can't fetch from the internet");
 		result->failed = true;
+		result->outside = true;
+		result->error = Error;
 		return result;
 	}
 	editor_http::client client;
-	auto const stop = [this]() {
+	// the download of the area gives way to the squares asked for: the terrain under the track laid isn't kept waiting for it
+	auto const yield = [this, Yielded]() {
 		std::lock_guard<std::mutex> lock{m_mutex};
-		return m_stop;
+		return Yielded != nullptr && false == m_queue.empty();
+	};
+	auto const stop = [this, &yield]() {
+		{
+			std::lock_guard<std::mutex> lock{m_mutex};
+			if (m_stop)
+				return true;
+		}
+		return yield();
 	};
 	std::string coverage;
 	{
@@ -797,11 +919,17 @@ std::shared_ptr<editor_nmt::square const> editor_nmt::fetch_service(key const &K
 	{
 		std::vector<std::uint8_t> capabilities;
 		std::string unused;
-		coverage = client.get(std::string{service} + "?SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCapabilities", capabilities, unused, stop) ?
-		               coverage_of(std::string(capabilities.begin(), capabilities.end())) :
-		               fallback_coverage;
-		std::lock_guard<std::mutex> lock{m_mutex};
-		m_coverage = coverage;
+		if (client.get(std::string{service} + "?SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCapabilities", capabilities, unused, stop))
+		{
+			coverage = coverage_of(std::string(capabilities.begin(), capabilities.end()));
+			std::lock_guard<std::mutex> lock{m_mutex};
+			m_coverage = coverage;
+		}
+		else
+		{
+			// for this square only: the capabilities are asked for again with the next one
+			coverage = fallback_coverage;
+		}
 	}
 	// the square with a pixel of each neighbour around it
 	auto const pixels{static_cast<int>(square_size) + 2 * border};
@@ -813,19 +941,33 @@ std::shared_ptr<editor_nmt::square const> editor_nmt::fetch_service(key const &K
 	               "&WIDTH=" + std::to_string(pixels) + "&HEIGHT=" + std::to_string(pixels) + "&FORMAT=GEOTIFF"};
 	for (int attempt = 0; attempt < 3; ++attempt)
 	{
-		if (client.get(url, data, Error, stop) && read_geotiff(data, *result))
+		if (client.get(url, data, Error, stop) && editor_geotiff::read(data, *result, no_data - 1.f))
 		{
-			if (std::ofstream out{file, std::ios::binary}; out.is_open())
-				out.write(reinterpret_cast<char const *>(data.data()), static_cast<std::streamsize>(data.size()));
+			write_file(file, data);
 			Error.clear();
 			return result;
 		}
 		if (stop())
 			break;
+		if (std::string const text(data.begin(), data.end()); text.find("outside requested coverage") != std::string::npos)
+		{
+			Error = STRN("The place lies outside of the terrain model of Poland: check the location of the scenery");
+			result->outside = true;
+			break;
+		}
 		if (Error.empty())
 			Error = STRN("The service gave no terrain model");
 	}
+	if (Yielded != nullptr && yield())
+	{
+		// broken off, not failed: downloaded again later
+		*Yielded = true;
+		result->failed = true;
+		return result;
+	}
 	WriteLog("Editor: NMT square " + std::to_string(Key.first) + "," + std::to_string(Key.second) + " not fetched: " + Error, logtype::generic);
 	result->failed = true;
+	result->error = Error;
+	result->failed_at = seconds();
 	return result;
 }

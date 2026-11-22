@@ -16,6 +16,7 @@ http://mozilla.org/MPL/2.0/.
 #include "utilities/utilities.h"
 #include "utilities/motiontelemetry.h"
 #include <map>
+#include <optional>
 
 #ifdef WITH_UART
 #include "utilities/uart.h"
@@ -80,6 +81,7 @@ struct global_settings {
     bool bSmoothTraction{ true };
     bool CatenaryProcedural{ true }; // przęsła z dopiskiem "type" rysowane wg typu sieci (lina nośna, wieszaki i Y liczone)
     bool CreateSwitchTrackbeds{ true };
+    bool Frogs{ false }; // whether the rails are cut where they cross other rails into frogs, wing rails and check rails; off, they're laid whole as before
     std::string szTexturesTGA{ ".tga" }; // lista tekstur od TGA
     std::string szTexturesDDS{ ".dds" }; // lista tekstur od DDS
     std::string szDefaultExt{ szTexturesDDS };
@@ -87,6 +89,20 @@ struct global_settings {
     std::string local_start_vehicle{ "EU07-424" };
     std::string editor_enter_vehicle; // vehicle placed in the editor, to be entered when the driving goes on
     bool editor_session{ false }; // scenery was opened for editing (-edit): loader keeps track of scenery layers and hands over to the editor
+    // integration test mode (--test, eu07/maszyna#541); the limits can be set in the scenery's config block (test.*)
+    struct test_settings {
+        bool enabled{ false };
+        double timeout{ 3600.0 }; // [s] of simulation time; no result by then fails the test
+        double standstill{ 300.0 }; // [s] the tested trains standing still this long ends the test; 0 = never
+        bool pass_on_standstill{ false }; // the standstill end passes the test instead of failing it
+        bool fail_if_stop_overran{ true }; // a train passing a signal at stop ends the test as failed; with false it's only logged
+        bool no_movement_before_pass{ true }; // a pass waits until the tested trains stand still; with false it ends the test at once
+        std::vector<std::string> vehicles; // test.vehicle: the trains under test are the consists of these; none = every vehicle
+        bool timeout_from_command_line{ false }; // --test-timeout given, the scenery doesn't override it
+        std::optional<double> wall_timeout; // [s] of real time since the start; none = test.timeout + time for the loading, 0 = no limit
+        bool wall_timeout_from_command_line{ false }; // --test-wall-timeout given, the scenery doesn't override it
+    };
+    test_settings test;
     bool editor_tracks{ false }; // F3 track workspace: draw and pick tracks without the scenery draw-range cap
     int iConvertModels{ 0 }; // tworzenie plików binarnych
     int iConvertIndexRange{ 1000 }; // range of duplicate vertex scan
@@ -98,6 +114,10 @@ struct global_settings {
 	bool priorityLoadText3D{false}; // ladowanie T3D priorytetowo
     int iWriteLogEnabled{ 3 }; // maska bitowa: 1-zapis do pliku, 2-okienko, 4-nazwy torów
     bool MultipleLogs{ false };
+    bool crashdump_full{ false }; // crash dump with the whole memory of the process instead of the small one
+    // the black box of the session (blackbox_doc.md): "blackbox yes" writes it whatever the physics logs, "blackbox no"
+    // never, and with no entry it is written along with the physics logs
+    std::optional<bool> BlackBox;
     bool ShowSystemConsole{ false }; // toggle visibility of the OS console window with log output
     unsigned int DisabledLogTypes{ 0 };
     bool ParserLogIncludes{ true };
@@ -136,6 +156,7 @@ struct global_settings {
     bool bJoinEvents{ false }; // czy grupować eventy o tych samych nazwach
     int iHiddenEvents{ 1 }; // czy łączyć eventy z torami poprzez nazwę toru
     bool AITrainman{ true }; // virtual assistant performing consist coupling/decoupling and other maintenance tasks
+    bool AIBrakeSettingCw1{ true }; // ai.brakesetting.cw1: the AI wagon inspector sets the brakes (G/P/R/Mg) by the instruction Cw-1, no: as before eu07/maszyna#350
     // ui
     int PythonScreenUpdateRate{ 200 }; // delay between python-based screen updates, in milliseconds
     int iTextMode{ 0 }; // tryb pracy wyświetlacza tekstowego
@@ -179,7 +200,7 @@ struct global_settings {
     float FieldOfView{ 45.f }; // vertical field of view for the camera. TODO: move it to the renderer
     bool EditorOrtho{ false };
     float EditorOrthoExtent{ 150.f };
-    bool EditorOrthoBallast{ true }; // the ballast of the railway drawn in the top view of the editor
+    int EditorOrthoTracks{ 0 }; // the railway in the top view of the editor: 0 whole, 1 without the ballast, 2 the rails alone
     GLint iMaxTextureSize{ 4096 }; // maksymalny rozmiar tekstury
     GLint iMaxCabTextureSize{ 4096 }; // largest allowed texture in vehicle cab
     int iMultisampling{ 2 }; // tryb antyaliasingu: 0=brak,1=2px,2=4px,3=8px,4=16px
@@ -305,6 +326,13 @@ struct global_settings {
     bool captureonstart = true;
 	bool render_cab = true;
 	bool crash_damage = true;
+	// the physical model of the couplings (McZapkie/couplerphysics.h): progressive buffers and draw gear with hysteresis,
+	// the play of the coupling, its yield and breaking; the legacy model of TMoverParameters::CouplerForce() without it.
+	// it covers the player's train and the trains it closes in on (vehicle_table::update_coupler_physics()), or every
+	// train with coupler_physics_all
+	bool coupler_physics = false;
+	bool coupler_physics_all = false;
+	bool control_coupling_engine_check = true; // no multiple-unit control between electric and diesel traction vehicles (eu07/maszyna#520)
 	bool gui_defaultwindows = true;
 	bool gui_showtranscripts = true;
     bool gui_trainingdefault = false;
@@ -325,6 +353,11 @@ struct global_settings {
 	bool python_sharectx = true;
 	bool python_uploadmain = true;
 	std::chrono::duration<float> python_minframetime {0.01f};
+	bool luascreens_enabled{true}; // screens drawn by Lua scripts (luascreen:, luadestinationsign: in the .mmd)
+	bool wasm_enabled{true}; // screens drawn by WebAssembly modules (wasmscreen:, wasmdestinationsign: in the .mmd)
+	int screens_cabframes{4}; // the script screens in the cab are refreshed every so many rendered frames
+	int screens_externalframes{30}; // the script screens outside the cab (destination signs) are refreshed every so many rendered frames
+	bool screens_gpupost{true}; // the post-processing of the script screens (image:led_post, image:resize) on the gpu, when the renderer can
 
     bool gfx_skiprendering = false;
     // the size of the image the scene of the main window is drawn to: -1 until the renderer works it out from the window and
@@ -511,6 +544,26 @@ struct global_settings {
     float gfx_lights_compartment_intensity { 1.f }; // brightness of the light of a lit vehicle compartment
     float gfx_lights_cab_intensity { 1.5f }; // brightness of the cab lamp
     float gfx_lights_cab_bounce { 0.3f }; // share of the former ambient light of the cab lamp kept, for the light which bounces around the cab
+    // a light point of a scenery lamp shining downwards lights its surroundings also closer than its glare is seen from (the
+    // minimal distance of its submodel, which many lamps have set for the glare seen from afar), so the lamp doesn't go out as the
+    // camera comes near it. off: as before
+    bool gfx_lights_points_near { false };
+    // names of the smt_Stars submodels of scenery models (many street lamps have nothing else) whose glowing points light their
+    // surroundings, each one downwards as the lamp of a street light, separated with |. other glowing points (lights of signals,
+    // of chimneys, the stars of the sky) only glow. empty (as before): none. the lamps of many models are named "lamp"
+    std::string gfx_lights_stars {};
+    // the half angle of the cone of the light of a light point of a scenery lamp shining downwards is at least this, degrees.
+    // 0: the cone of its glare, which many lamps have narrow. lights shining sideways (signals) keep their cones
+    float gfx_lights_freespot_mincone { 0.f };
+    // the brightness of the light the lamps of the scenery shining downwards (and their glowing points, gfx_lights_stars) light
+    // their surroundings with is multiplied by this. lights shining sideways (signals) keep theirs
+    float gfx_lights_lamps_gain { 1.f };
+    // the lamps of the scenery are gathered from this far from the camera when it's above gfx_lights_range, metres, so the lit
+    // stations are seen from afar; the vehicles keep gfx_lights_range. 0: from gfx_lights_range
+    float gfx_lights_lamps_range { 0.f };
+    // textures of the planes models fake the light of their lamps with (pools of light on the ground, glows), separated with |:
+    // they aren't drawn while the light points of scenery models light their surroundings. empty: they're drawn
+    std::string gfx_lights_hideglow;
     // the probe of the occupied cab (opengl 4.6 and vulkan, gfx::cab_probe): cube maps of the cab lit by its lamp (and what glows in
     // it) and of its albedo, drawn every few frames: the light of the lamp bounces around the cab from it (in place of
     // gfx_lights_cab_bounce) and the cab reflects itself in its glasses and glossy parts. 0 off, 1 low, 2 medium, 3 high (faces of
@@ -526,6 +579,10 @@ struct global_settings {
     // the light of the sun coming in through the windows of the low poly interiors of the vehicles and of the cab without its probe,
     // bounced around them, as a share of the light of the sun on a surface facing it; 0 for none
     float gfx_interior_bounce { 0.1f };
+    // the water of the scenery (the materials of the water shader, opengl 4.6 and vulkan, shaders/*/water_surface.glsl): rippled by
+    // layers of its normal map, reflecting the scene and the sky with the fresnel of water, seen through as deep as it is and fading
+    // out at the shore. off: the water drawn as before
+    bool gfx_water_realistic { false };
     // the occlusion of the sky and of the sun by the scenery around the camera (opengl 4.6 and vulkan, gfx::sky_occlusion, the track T):
     // tunnels, the ground under bridges and roofs, cuttings and the foot of slopes are dark by their geometry, worked out in the
     // background from the scenery seen from above. 0 off (nothing is occluded), 1 low (256 m around the camera, texels of 1 m),
@@ -598,6 +655,10 @@ struct global_settings {
     bool gfx_clouds_shadows { true };
     int gfx_clouds_shadows_size { 512 };
     float gfx_clouds_shadows_range { 16000.f };
+    // the clouds and the cells of the fog volume the scenery hid in the last frame aren't worked out anew (the vulkan renderer)
+    bool gfx_weather_occlusion { true };
+    // a quarter of the pixels of the clouds of the main view is marched a frame, the image made of the last ones (the vulkan renderer)
+    bool gfx_clouds_interleave { true };
     // stars from the catalogue, and their brightness
     bool gfx_stars { true };
     float gfx_stars_brightness { 1.f };
@@ -676,12 +737,15 @@ struct global_settings {
 	bool ConfigParseSimulation(cParser& Parser, const std::string& token);
 	bool ConfigParseUI(cParser& Parser, const std::string& token);
 	bool ConfigParsePython(cParser& Parser, const std::string& token);
+	bool ConfigParseScriptScreens(cParser& Parser, std::string_view token);
 	bool ConfigParseNetwork(cParser& Parser, const std::string& token);
 	bool ConfigParseHardware(cParser& Parser, const std::string& token);
 	bool ConfigParseDebug(cParser& Parser, const std::string& token);
+	bool ConfigParseTest(cParser& Parser, std::string_view Token);
 	bool ConfigParse_gfx( cParser &parser, std::string_view const Token );
 	// sky light and exposure switches of the opengl 4.6 renderer (gfx.ambient.*, gfx.envmap.ggx, gfx.atmosphere*, gfx.postfx.autoexposure*, gfx.postfx.bloom*, gfx.postfx.whitebalance*, gfx.postfx.ao*)
 	bool ConfigParse_gfx_sky( cParser &parser, std::string_view const Token );
+	bool ConfigParse_gfx_lamps( cParser &parser, std::string_view const Token );
     // sends basic content of the class in legacy (text) format to provided stream
     void
         export_as_text( std::ostream &Output ) const;

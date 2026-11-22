@@ -251,6 +251,12 @@ shadows of the sun, see `headlight shadows:` in Shift+F12); with the vehicle on 
 | `gfx.lights.compartment.intensity` | `1.0` | brightness of the light of a lit compartment |
 | `gfx.lights.cab.intensity` | `1.5` | brightness of the cab lamp |
 | `gfx.lights.cab.bounce` | `0.3` | 0..1: share of the former ambient light of the cab lamp kept with the lamp on |
+| `gfx.lights.stars` | `no` | names of the `Stars` submodels of scenery models whose glowing points light their surroundings, each one downwards as the lamp of a street light, separated with `\|` (the lamps of many models, e.g. the SGP340 street lights, are named `lamp`); other glowing points (signal LEDs, chimneys, the sky) only glow. `no`: none |
+| `gfx.lights.points.near yes/no` | `no` | a light point of a scenery lamp shining downwards lights also closer than its glare is seen from (many lamps have a minimal distance set for the glare), so the lamp doesn't go out as the camera comes near it |
+| `gfx.lights.freespot.mincone` | `0` | 0..89: the half angle of the cone of the light of a scenery lamp shining downwards is at least this, degrees (many lamps have the narrow cone of their glare); `0`: the cone of the model. Lights shining sideways (signals) keep their cones |
+| `gfx.lights.lamps.range` | `0` | 0..10000: the lamps of scenery models are gathered from this far from the camera when it is above `gfx.lights.range`, metres, so lit stations are seen from afar; the lights of vehicles keep `gfx.lights.range` (at the cost of the time of the gathering, see `local lights:` in Shift+F12); `0`: from `gfx.lights.range` |
+| `gfx.lights.lamps.gain` | `1.0` | 0.1..10: the brightness of the light of the scenery lamps shining downwards and of their glowing points is multiplied by this; signals keep theirs |
+| `gfx.lights.hideglow` | `no` | textures of the planes models fake the light of their lamps with (pools of light on the ground, glows), separated with `\|`, e.g. `elektryczne/light1\|elektryczne/light2\|elektryczne/poswiata`: they aren't drawn while the scenery lamps light their surroundings (`gfx.lights.clustered` and `gfx.lights.scenery` on, `gfx.lights.range` above 0). They're left out at any distance, also past the reach the lamps are gathered from, where nothing lights in their place: set it together with `gfx.lights.lamps.range`, or distant stations stay dark at night. List only the textures of models whose lamps light (light points shining downwards, or `Stars` submodels named in `gfx.lights.stars`); a model with a listed texture and no such lamp loses its glow. In the game data `elektryczne/light1`, `light2` and `poswiata` are used by such lamps only. `no`: they're drawn |
 | `gfx.lights.range` | `300` | distance from the camera the lamps of models and vehicles are gathered from, metres |
 | `gfx.lights.shadows` | `medium` | `no`/`low`/`medium`/`high` (or 0..3): shadows of the cab lamp and the scenery lamps, see above |
 | `gfx.lights.shadows.cab` | `8` | 0..16: how many lights of the cab (the brightest; the lamp or the light points of the cab model) have a cube shadow map of their own; the others take the map of the closest light with one (within 1 m); 0: none |
@@ -430,6 +436,29 @@ isn't met for half a minute.
 
 All the entries can be changed while the simulator runs, in the **Sky and exposure** debug window (the ray tracing can be
 turned off and on there once it was started).
+
+### Water
+
+With `gfx.water.realistic` the materials of the `water` and `water_specgloss` shaders (`shaders/*/water_surface.glsl`)
+are drawn as water rather than as a painted surface. Three layers of the normal map at different scales go different ways
+(`param_wave_speed`), bent by the dudv map, so the ripples don't slide along as one sheet; far away they flatten. The surface
+reflects with the fresnel of water (2% looking straight down, nearly all of it at a grazing angle): the scenery where the
+reflections above find it, the sky elsewhere, and the sun and the lamps as small sharp highlights. Under the surface the
+water lets the bottom through, less the deeper it lies, tinting it with its colour, and gives back the light it scatters in
+the colour of the material; at the shore it fades out, without a hard edge where it meets the ground. How deep it is comes
+from the depth of the scene drawn before its colour, which the frame has with the contact shadows, the screen space
+reflections or the ambient occlusion in the light of the surfaces (with `gfx.ssr` on, as by default). Without it, and in the
+reflections, the water is as clear as the alpha of its colour says, as before.
+
+The entries of the existing materials keep their meaning: `param_color` rgb is the colour of the water and a how murky it is
+(0: one sees about 12 metres into it, 1: half a metre; 0.7 as shipped is about 4 metres), `param_wave_strength` how steep the
+ripples are (0.05 as shipped) and how much the dudv map bends them, `param_reflection` the share of the reflection,
+`param_specular` the highlights (1 and more: all of them), `param_glossiness` how smooth the surface is between the ripples;
+the diffuse texture adds its detail to the colour of the water. Nothing in the data has to change.
+
+| Entry | Default | Meaning |
+|---|---|---|
+| `gfx.water.realistic yes/no` | `no` | the water drawn as above; `no`: as before |
 
 ### Weather
 

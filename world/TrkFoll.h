@@ -39,6 +39,10 @@ public:
     // inline double GetLength(vector3 p1, vector3 cp1, vector3 cp2, vector3 p2)
     //{ return pCurrentSegment->ComputeLength(p1,cp1,cp2,p2); };
     // inline double GetRadius(double L, double d);  //McZapkie-150503
+    inline glm::dvec3 UnevenBend() const {
+        return pCurrentSegment ? pCurrentSegment->uneven_bend( fCurrentDistance ) : glm::dvec3 { 0.0 }; };
+    // TTrack::rail_phase of the point Offset ahead of the axle along the vehicle
+    double RailPhase( double const Offset ) const;
     bool Init(TTrack *pTrack, TDynamicObject *NewOwner, double fDir);
 	void Reset();
     void Render(float fNr);
@@ -49,7 +53,6 @@ public:
   private:
 // methods
     bool ComputatePosition(); // przeliczenie pozycji na torze
-    int JoinedEnd( int const End ) const;
     int CrossEntry( TTrack const &Cross, int const Wish, int const End ) const;
 // members
     TTrack *pCurrentTrack = nullptr; // na którym torze siê znajduje
@@ -60,9 +63,6 @@ public:
     int iEventFlag = 0; // McZapkie-020602: informacja o tym czy wyzwalac zdarzenie: 0,1,2,3
     int iEventallFlag = 0;
     int iSegment = 0; // który segment toru jest używany (żeby nie przeskakiwało po przestawieniu zwrotnicy pod taborem)
-    int iPath = -1; // the path of the switch the axle runs on
-    double fTrailAt = -1.0; // coming from the frog end of a switch: where along the path the wheels push the blades over
-
 };
 //---------------------------------------------------------------------------
 #endif

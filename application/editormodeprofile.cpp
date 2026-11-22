@@ -54,6 +54,7 @@ double constexpr kNoBed{0.05}; // m, a trackbed shallower is none
 double constexpr kApplied{0.01};
 double constexpr kStale{0.02};
 double constexpr kStaleMargin{15.0};
+double constexpr kDesignOff{0.25}; // m, of a line put together or read that says little of the track
 ImU32 const kGrid{IM_COL32(255, 255, 255, 22)};
 ImU32 const kLabel{IM_COL32(200, 200, 200, 200)};
 ImU32 const kSwitch{IM_COL32(160, 100, 220, 45)};
@@ -82,15 +83,8 @@ double nice_step(double const Approximate)
 	return power * 10.0;
 }
 
-double route_speed(editor_track::route const &Route)
-{
-	double speed{-1.0};
-	for (auto const &span : Route.spans)
-		speed = std::max(speed, editor_track::velocity(*span.track));
-	return speed > 0.0 ? speed : 100.0;
-}
-
 std::string const kProfileMark{"//$p"};
+std::string const kFittedMark{"//$t"};
 
 profile::line reversed_line(profile::line Line, double const Length)
 {
@@ -107,6 +101,27 @@ bool end_locked(profile::line const &Line, profile::context const &Context, int 
 		return Line.join_start && Context.start_joined;
 	if (Index + 1 == static_cast<int>(Line.points.size()))
 		return Line.join_end && Context.end_joined;
+	return false;
+}
+
+// an error of the line where the edit changes nothing holds nothing up: a long route read from the track has some, fitted to the terrain
+// model at last, and a change elsewhere on it doesn't make them worse
+bool errors_in_change(std::vector<profile::issue> const &Issues, profile::line const &Line, profile::line const &Read, std::vector<editor_track::route_sample> const &Samples)
+{
+	double constexpr kAround{60.0}; // m on both sides of the error
+	for (auto const &issue : Issues)
+	{
+		if (false == issue.error)
+			continue;
+		if (Samples.empty())
+			return true;
+		for (auto const &sample : Samples)
+			if (std::abs(sample.chainage - issue.chainage) <= kAround && std::abs(profile::elevation(Line, sample.chainage) - profile::elevation(Read, sample.chainage)) > kStale)
+			{
+				WriteLog(format("Editor: vertical profile - held up at %.1f m, the line changed by %.3f m there: %s", sample.chainage, profile::elevation(Line, sample.chainage) - profile::elevation(Read, sample.chainage), issue.text.c_str()), logtype::generic);
+				return true;
+			}
+	}
 	return false;
 }
 
@@ -254,6 +269,123 @@ void editor_mode::profile_library_mark(std::vector<scene::layer_handle> Layers)
 		}
 		scene::Layers.mark(layer, kProfileMark, std::move(lines));
 	}
+}
+
+void editor_mode::profiles_to_history(std::vector<stored_profile> Library)
+{
+	if (m_history.empty() || m_history.back().action != EditorSnapshot::Action::TrackEdit || m_history.back().profiles)
+		return;
+	m_history.back().profiles = true;
+	m_history.back().profile_library = std::move(Library);
+}
+
+void editor_mode::profiles_restore(std::vector<stored_profile> Library)
+{
+	std::vector<scene::layer_handle> layers;
+	for (auto const *library : {&std::as_const(m_profiles), &std::as_const(Library)})
+		for (auto const &entry : *library)
+			layers.push_back(entry.layer);
+	m_profiles = std::move(Library);
+	profile_library_mark(std::move(layers));
+}
+
+std::uint64_t editor_mode::fitted_shape(TTrack const &Track)
+{
+	// the points of the paths to a centimetre: what's read back from the files is the same shape
+	std::uint64_t hash{1469598103934665603ull};
+	auto const add = [&](std::int64_t const Value) {
+		for (int i = 0; i < 8; ++i)
+			hash = (hash ^ static_cast<std::uint64_t>((Value >> (8 * i)) & 0xff)) * 1099511628211ull;
+	};
+	for (auto const &path : Track.m_paths)
+		for (auto const &point : path.points)
+			for (int axis = 0; axis < 3; ++axis)
+				// through the precision of the files first: what's read back from one has the shape it had when it was written
+				add(std::llround(std::round(point[axis] * 10000.0) / 100.0));
+	return hash;
+}
+
+void editor_mode::fitted_load()
+{
+	if (m_fitted_loaded)
+		return;
+	m_fitted_loaded = true;
+	m_fitted.clear();
+	for (auto const layer : scene::Layers.marked_layers(kFittedMark))
+		for (auto const &text : scene::Layers.marked(layer, kFittedMark))
+		{
+			std::istringstream line{text};
+			std::string keyword, name, shape, kind;
+			line >> keyword >> name >> shape;
+			if (keyword == "fitted" && false == line.fail())
+			{
+				line >> kind;
+				auto const value{std::strtoull(shape.c_str(), nullptr, 16)};
+				m_fitted[{name, value}] = {layer, value, kind == "hand"};
+			}
+		}
+}
+
+void editor_mode::fitted_set(std::vector<TTrack *> const &Tracks, bool const Hand)
+{
+	fitted_load();
+	std::vector<scene::layer_handle> layers;
+	for (auto const *track : Tracks)
+	{
+		if (track == nullptr || track->m_editorremoved || track->name().empty())
+			continue;
+		scene::layer_handle layer{null_handle};
+		if (false == scene::Layers.empty())
+		{
+			layer = scene::Layers.resolve(track->layer());
+			if (false == scene::Layers.valid(layer) || false == scene::Layers.accepts(layer))
+				layer = scene::Layers.active();
+		}
+		// a mark of the name in another layer leaves it when it's written again
+		for (auto found{m_fitted.lower_bound({track->name(), 0})}; found != m_fitted.end() && found->first.first == track->name(); ++found)
+			if (found->second.layer != layer)
+				layers.push_back(found->second.layer);
+		auto const shape{fitted_shape(*track)};
+		m_fitted[{track->name(), shape}] = {layer, shape, Hand};
+		layers.push_back(layer);
+	}
+	if (scene::Layers.empty())
+		return;
+	std::sort(layers.begin(), layers.end());
+	layers.erase(std::unique(layers.begin(), layers.end()), layers.end());
+	// the marks of the tracks there are no more, or changed since, aren't written again
+	std::set<std::pair<std::string, std::uint64_t>> standing;
+	for (auto const *track : simulation::Paths.sequence())
+		if (track != nullptr && false == track->m_editorremoved && false == track->name().empty())
+			standing.emplace(track->name(), fitted_shape(*track));
+	for (auto const layer : layers)
+	{
+		if (false == scene::Layers.valid(layer))
+			continue;
+		std::vector<std::string> lines;
+		for (auto const &[key, mark] : m_fitted)
+		{
+			if (mark.layer != layer || false == standing.contains(key))
+				continue;
+			if (lines.empty())
+				lines.emplace_back("# the tracks whose grade line was fitted in the track editor, with their shape then; the simulation skips these lines");
+			lines.push_back(format("fitted %s %016llx%s", key.first.c_str(), static_cast<unsigned long long>(mark.shape), mark.hand ? " hand" : ""));
+		}
+		scene::Layers.mark(layer, kFittedMark, std::move(lines));
+	}
+}
+
+bool editor_mode::grade_hand(TTrack const &Track)
+{
+	fitted_load();
+	auto const found{m_fitted.find({Track.name(), fitted_shape(Track)})};
+	return found != m_fitted.end() && found->second.hand;
+}
+
+bool editor_mode::grade_fitted(TTrack const &Track)
+{
+	fitted_load();
+	return m_fitted.contains({Track.name(), fitted_shape(Track)});
 }
 
 int editor_mode::profile_find(bool &Reversed) const
@@ -487,6 +619,12 @@ bool editor_mode::profile_restore_parts()
 	state.selected = -1;
 	state.changed = false;
 	profile_check();
+	// designs that don't come together along the track, its heights changed since by more than they tell: the track is what stands
+	if (state.departure > kDesignOff)
+	{
+		profile_recognize();
+		return true;
+	}
 	state.status = format(STR_C("Design put together from %zu designs kept for the routes along this one, largest departure from the track %.3f m"), parts, state.departure);
 	if (retaken > 0)
 		state.status += format(STR_C("; %zu stretches changed on the track since read from it again"), retaken);
@@ -590,12 +728,15 @@ std::optional<editor_track::route> editor_mode::profile_stored_route(stored_prof
 	for (auto *from : touching(Entry.start))
 		for (auto *to : touching(Entry.end))
 		{
+			// the route of the fewest paths, or where the design was laid along another, the one as long through its middle; the length of
+			// a route comes with its samples
+			auto const fits = [&](editor_track::route &Route) {
+				auto const samples{editor_track::sample_route(Route, 1.0)};
+				return false == samples.empty() && std::abs(Route.length - Entry.length) <= 0.5 && plan_distance(samples.front().position, Entry.start) <= 0.1 && plan_distance(editor_track::sampled_position(samples, Route.length * 0.5), Entry.middle) <= 0.5;
+			};
 			editor_track::route route;
 			std::string error;
-			if (false == editor_track::find_route(from, to, route, error) || std::abs(route.length - Entry.length) > 0.5)
-				continue;
-			auto const samples{editor_track::sample_route(route, 1.0)};
-			if (samples.empty() || plan_distance(samples.front().position, Entry.start) > 0.1 || plan_distance(editor_track::sampled_position(samples, route.length * 0.5), Entry.middle) > 0.5)
+			if ((false == editor_track::find_route(from, to, route, error) || false == fits(route)) && (false == editor_track::find_route_along(from, to, Entry.length, Entry.middle, route) || false == fits(route)))
 				continue;
 			if (From != nullptr)
 				*From = from;
@@ -606,6 +747,91 @@ std::optional<editor_track::route> editor_mode::profile_stored_route(stored_prof
 	return std::nullopt;
 }
 
+std::pair<std::size_t, std::size_t> editor_mode::profile_refit_stored(std::unordered_set<TTrack const *> const &Moved)
+{
+	// the designs were applied to the tracks one line at a time, the grade lines shared moved the tracks after them: a design left as
+	// it was parts from them, and a profile opened over them reads the stretches changed from the track again, a polyline bending
+	// wherever it falls, on the switches too. Each is laid anew onto the tracks as they lie now, as a line is onto the ground, within a
+	// centimetre and to the norms; one which can't be without an error stays as it was
+	double constexpr kTolerance{0.01}; // m
+	double constexpr kReach{100.0}; // m, however far a track is, it's what the line keeps to
+	double constexpr kSteepest{50.0}; // per mille, as the lines are fitted to the terrain, past the limit of the norms
+	profile_library_load();
+	auto &state{m_profile};
+	auto const show_model{state.show_model};
+	state.show_model = false;
+	std::size_t refitted{0}, failed{0};
+	std::vector<scene::layer_handle> layers;
+	for (auto &entry : m_profiles)
+	{
+		auto route{profile_stored_route(entry)};
+		if (false == route.has_value() || std::none_of(route->spans.begin(), route->spans.end(), [&](editor_track::route_span const &Span) { return Moved.contains(Span.track); }))
+			continue;
+		state.route = std::move(*route);
+		profile_resample();
+		auto const &samples{state.samples};
+		if (samples.size() < 2)
+			continue;
+		state.line = entry.line;
+		state.changed = false;
+		profile_check();
+		if (state.departure <= kStale && false == has_errors(state.issues))
+			continue;
+		auto const before{state.departure};
+		// the tracks are no ground with structures to go past: the line keeps to all of them, as steep as they are, as sharply bent as
+		// on a hump the line was fitted to
+		std::vector<double> chainages, heights;
+		for (auto const &sample : samples)
+		{
+			chainages.push_back(sample.chainage);
+			heights.push_back(sample.position.y);
+		}
+		std::vector<double> const tolerances(samples.size(), kTolerance * 0.5);
+		std::vector<double> const reaches(samples.size(), kReach);
+		profile::ground_fit options;
+		options.tolerance = kTolerance;
+		options.grade_max = kSteepest;
+		options.humps = profile::humps(chainages, heights, state.context, kTolerance);
+		options.hump_radius = 300.0;
+		auto line{profile::fit_ground(chainages, heights, state.context, entry.line, options, tolerances, reaches)};
+		if (line.points.size() < 2)
+			continue;
+		state.line = std::move(line);
+		profile_check();
+		if (has_errors(state.issues))
+		{
+			++failed;
+			std::string errors;
+			for (auto const &issue : state.issues)
+				if (issue.error)
+					errors += " | " + issue.text;
+			WriteLog(format("Editor: vertical profile - the design of %.0f m from %.1f %.1f, %.3f m off the tracks moved, can't be laid onto them anew without an error, it stays as it was%s", state.route.length, entry.start.x, entry.start.z, before, errors.c_str()), logtype::generic);
+			continue;
+		}
+		++refitted;
+		entry.length = state.route.length;
+		entry.start = samples.front().position;
+		entry.end = samples.back().position;
+		entry.middle = editor_track::sampled_position(samples, state.route.length * 0.5);
+		entry.line = state.line;
+		entry.departure = state.departure;
+		for (auto &point : entry.line.points)
+			if (point.joint)
+			{
+				point.joint = false;
+				point.automatic = false;
+			}
+		layers.push_back(entry.layer);
+	}
+	state.show_model = show_model;
+	state.open = false;
+	state.route = {};
+	state.samples.clear();
+	if (false == layers.empty())
+		profile_library_mark(std::move(layers));
+	return {refitted, failed};
+}
+
 void editor_mode::profile_open_stored(std::size_t const Index)
 {
 	auto &state{m_profile};
@@ -614,9 +840,13 @@ void editor_mode::profile_open_stored(std::size_t const Index)
 	auto const entry{m_profiles[Index]};
 	TTrack *from{nullptr};
 	TTrack *to{nullptr};
-	if (profile_stored_route(entry, &from, &to).has_value())
+	// the route the design lies along, not the one of the fewest paths between its ends
+	if (auto route{profile_stored_route(entry, &from, &to)})
 	{
-		profile_open(from, to);
+		state.open = true;
+		state.status.clear();
+		state.error.clear();
+		profile_take(std::move(*route), from, to);
 		return;
 	}
 	state.open = true;
@@ -628,6 +858,20 @@ void editor_mode::profile_edited()
 	m_profile.changed = true;
 	profile_check();
 	first_step_done(first_step::profile_point);
+}
+
+void editor_mode::profile_remove_point(int const Index)
+{
+	auto &state{m_profile};
+	auto &points{state.line.points};
+	if (Index <= 0 || Index + 1 >= static_cast<int>(points.size()))
+		return;
+	points.erase(points.begin() + Index);
+	for (auto const neighbour : {Index - 1, Index})
+		if (neighbour > 0 && neighbour + 1 < static_cast<int>(points.size()) && false == points[neighbour].joint)
+			points[neighbour].automatic = true;
+	state.selected = -1;
+	profile_edited();
 }
 
 void editor_mode::profile_open(TTrack *From, TTrack *To)
@@ -732,8 +976,6 @@ void editor_mode::profile_take(editor_track::route Route, TTrack *From, TTrack *
 		}
 	}
 	profile_fit_view();
-	// the camera stays where the route was picked, it follows the plot once that's moved
-	state.view_seen = state.view_framed = {state.view_from, state.view_to};
 }
 
 void editor_mode::profile_resample()
@@ -899,11 +1141,23 @@ void editor_mode::profile_recognize()
 		grades.push_back(sample.grade);
 	}
 	auto const norms{state.line.norms};
-	state.line = profile::recognize(chainages, elevations, grades, {});
-	state.line.norms = norms;
-	state.line.speed = route_speed(state.route);
-	state.selected = -1;
-	profile_check();
+	auto const read = [&](profile::recognition const &Options) {
+		state.line = profile::recognize(chainages, elevations, grades, Options);
+		state.line.norms = norms;
+		state.line.speed = editor_track::route_speed(state.route);
+		state.selected = -1;
+		profile_check();
+	};
+	state.changed = false;
+	read({});
+	// the constant grades alone don't tell a line bent all along: its bends read as they lie
+	if (state.departure > kDesignOff)
+	{
+		profile::recognition options;
+		options.minimum_length = 5.0;
+		options.detail = kStale;
+		read(options);
+	}
 	state.status = format(STR_P("Grade line recognized from the track: %zu point, largest departure %.3f m", "Grade line recognized from the track: %zu points, largest departure %.3f m", state.line.points.size()), state.line.points.size(), state.departure);
 }
 
@@ -919,7 +1173,7 @@ void editor_mode::profile_fit_ground()
 		return;
 	}
 	auto settings{state.line};
-	settings.speed = route_speed(state.route);
+	settings.speed = editor_track::route_speed(state.route);
 	// the grade line is the rail top: it's fitted so the formation under it, not the rails, follows the ground
 	auto ground{state.terrain};
 	for (std::size_t i = 0; i < ground.size() && i < state.beds.size(); ++i)
@@ -1318,6 +1572,9 @@ void editor_mode::profile_check()
 {
 	auto &state{m_profile};
 	auto &points{state.line.points};
+	// what the edits start from
+	if (false == state.changed)
+		state.line_read = state.line;
 	// joint points come and go, the selection follows the point it was made on
 	struct mark
 	{
@@ -1357,21 +1614,32 @@ void editor_mode::profile_fit_view()
 	state.exaggeration = 0.0f;
 }
 
-void editor_mode::profile_follow_view()
+void editor_mode::profile_to_camera()
 {
 	auto &state{m_profile};
-	std::pair<double, double> const shown{state.view_from, state.view_to};
-	auto const now{ImGui::GetTime()};
-	if (shown != state.view_seen)
+	if (state.samples.empty())
+		return;
+	// where the view looks: from above the camera itself, else the middle of the view on the level of the route
+	glm::dvec3 target{Camera.Pos};
+	if (false == Global.EditorOrtho)
 	{
-		state.view_seen = shown;
-		state.view_seen_time = now;
-		return;
+		auto const low{editor_ui::view_min()};
+		auto const high{editor_ui::view_max()};
+		glm::dvec3 point;
+		if (screen_projection{}.on_level(ImVec2{(low.x + high.x) * 0.5f, (low.y + high.y) * 0.5f}, state.samples[state.samples.size() / 2].position.y, point))
+			target = point;
 	}
-	if (false == state.camera_follows || shown == state.view_framed || now - state.view_seen_time < 0.25)
-		return;
-	state.view_framed = shown;
-	profile_frame_view();
+	auto best{std::numeric_limits<double>::max()};
+	double chainage{0.0};
+	for (auto const &sample : state.samples)
+		if (auto const distance{geometry::plan_distance(sample.position, target)}; distance < best)
+		{
+			best = distance;
+			chainage = sample.chainage;
+		}
+	auto const span{state.view_to - state.view_from};
+	state.view_from = chainage - 0.5 * span;
+	state.view_to = chainage + 0.5 * span;
 }
 
 void editor_mode::profile_frame_view()
@@ -1415,6 +1683,7 @@ void editor_mode::profile_frame_view()
 		Global.EditorOrthoExtent = std::clamp(static_cast<float>(extent), 5.0f, 50000.0f);
 		auto const scale{2.0 * static_cast<double>(Global.EditorOrthoExtent) / screen.y};
 		auto const offset{RotateY(glm::dvec3{shift.x * scale, 0.0, shift.y * scale}, yaw)};
+		m_ride.leave();
 		Camera.Pos.x = centre.x - offset.x;
 		Camera.Pos.z = centre.z - offset.z;
 		Camera.Velocity = {};
@@ -1444,7 +1713,7 @@ void editor_mode::profile_frame_view()
 	fly_to(centre - right * (shift.x * pixel) + above * (shift.y * pixel), look, distance, 0.35);
 }
 
-void editor_mode::profile_apply(bool const Terrain)
+void editor_mode::profile_apply(bool const Terrain, std::vector<profile::departure> const &Bridges, double const Fewest)
 {
 	auto &state{m_profile};
 	state.status.clear();
@@ -1452,9 +1721,10 @@ void editor_mode::profile_apply(bool const Terrain)
 	if (state.route.spans.empty() || state.line.points.size() < 2)
 		return;
 	auto const edits{m_track_edits};
-	if (has_errors(state.issues))
+	if (state.changed && false == state.fitting ? errors_in_change(state.issues, state.line, state.line_read, state.samples) : has_errors(state.issues))
 	{
 		state.error = STR_C("Correct the errors to apply the grade line");
+		state.show_remarks = true;
 		return;
 	}
 	std::vector<TTrack *> tracks;
@@ -1469,11 +1739,61 @@ void editor_mode::profile_apply(bool const Terrain)
 	auto const before{state.samples};
 	std::vector<std::pair<TTrack *, editor_track::state>> states;
 	std::vector<TTrack *> created;
+	std::vector<double> ends;
+	for (auto const &span : state.route.spans)
+		ends.insert(ends.end(), {span.from, span.to});
+	auto cuts{profile::breaks(line)};
+	// an edit goes onto the track as what it changed in the line: where it changed nothing the track stays as it lies, whatever the line
+	// read from it is off it by, and isn't cut
+	bool const edit_only{state.changed && false == state.fitting};
+	auto const read_line{state.line_read};
+	auto const changed_at = [&](double const Chainage) { return profile::elevation(line, Chainage) - profile::elevation(read_line, Chainage); };
+	if (edit_only)
+		std::erase_if(cuts, [&](double const Cut) {
+			double constexpr kCutNear{1.0}; // m
+			double constexpr kNoChange{0.001}; // m
+			return std::abs(changed_at(Cut - kCutNear)) < kNoChange && std::abs(changed_at(Cut + kCutNear)) < kNoChange;
+		});
+	auto const height_at = [&](double const Chainage) { return edit_only ? editor_track::sampled_elevation(before, Chainage) + changed_at(Chainage) : profile::elevation(line, Chainage); };
+	auto const grade_at = [&](double const Chainage) { return edit_only ? editor_track::sampled_grade(before, Chainage) + profile::grade(line, Chainage) - profile::grade(read_line, Chainage) : profile::grade(line, Chainage); };
+	// the paths are cut only at the breaks they can't go over keeping to the line within a hair: one cut there, by a joint, or by
+	// another cut, would leave a sliver of a track, the line applied again leaving more of them by the first, the ballast mapped
+	// on each from its start. A path just laid keeps to it as closely as Fewest
+	double constexpr kFollow{0.002}; // m
+	cuts = profile::fewest_breaks(cuts, ends, Fewest > 0.0 ? Fewest : kFollow, height_at, grade_at);
+	// a bridge ends at a joint or a break of the line by its abutment rather than leave a sliver of a path there
+	double constexpr kBridgeSnap{1.0}; // m
+	auto joints{cuts};
+	joints.insert(joints.end(), ends.begin(), ends.end());
+	auto bridges{Bridges};
+	for (auto &bridge : bridges)
+		for (auto *end : {&bridge.from, &bridge.to})
+			if (auto const nearest{std::min_element(joints.begin(), joints.end(), [&](double const A, double const B) { return std::abs(A - *end) < std::abs(B - *end); })};
+			    nearest != joints.end() && std::abs(*nearest - *end) <= kBridgeSnap)
+				*end = *nearest;
+	for (auto const &bridge : bridges)
+		cuts.insert(cuts.end(), {bridge.from, bridge.to});
+	std::sort(cuts.begin(), cuts.end());
 	auto const gaps{editor_track::apply_profile(
-	    state.route, [&](double const Chainage) { return profile::elevation(line, Chainage); }, [&](double const Chainage) { return profile::grade(line, Chainage); }, profile::breaks(line), states, created)};
+	    state.route, height_at, grade_at, cuts, states, created)};
+	// the paths over a bridge sound and light as on one, and get no formation; within what a cut too near an end leaves on
+	double constexpr kBridgeEnd{0.5}; // m
+	std::size_t bridged{0};
+	for (auto const &span : state.route.spans)
+		if (span.track->eEnvironment != e_bridge && span.track->eEnvironment != e_tunnel
+		    && std::any_of(bridges.begin(), bridges.end(), [&](profile::departure const &Bridge) { return span.from >= Bridge.from - kBridgeEnd && span.to <= Bridge.to + kBridgeEnd; }))
+		{
+			span.track->eEnvironment = e_bridge;
+			++bridged;
+		}
 	auto const changed{states.size()};
 	auto const added{created.size()};
 	state.created = created;
+	{
+		auto marked{tracks};
+		marked.insert(marked.end(), created.begin(), created.end());
+		fitted_set(marked, edit_only);
+	}
 	// the stored design changes with the paths, an undo takes both back
 	profile_library_load();
 	auto library{m_profiles};
@@ -1493,7 +1813,9 @@ void editor_mode::profile_apply(bool const Terrain)
 	state.status = format(STR_P("Grade line applied: %zu path changed, %zu added, largest departure %.3f m", "Grade line applied: %zu paths changed, %zu added, largest departure %.3f m", changed), changed, added, state.departure);
 	if (false == scene::Layers.empty())
 		state.status += STR_C("\nThe paths and the design (//$p lines) go to the scenery files on save");
-	auto const name = [](TTrack const *Track) { return Track->name().empty() ? std::string{STR_C("(no name)")} : Track->name(); };
+	if (bridged > 0)
+		state.status += format(STR_P("\nOver a bridge or a viaduct: %zu path", "\nOver a bridge or a viaduct: %zu paths", bridged), bridged);
+	auto const name = [](TTrack const *Track) { return name_of(*Track); };
 	auto const closed{std::count_if(gaps.begin(), gaps.end(), [](auto const &Gap) { return Gap.closed; })};
 	if (closed > 0)
 		state.status += STR_C("\nPaths off the route brought to its height:");
@@ -1509,6 +1831,9 @@ void editor_mode::profile_apply(bool const Terrain)
 	auto const followed{follow_crossovers(before)};
 	if (followed > 0)
 		state.status += format(STR_C("\nThe tracks across %zu crossover(s) followed the change"), followed);
+	// a line fitted to the terrain model goes by itself: the ones sharing its grade line are worked out after them all
+	if (auto const beside{state.fitting ? std::size_t{0} : grade_line_follow(before)}; beside > 0)
+		state.status += format(STR_P("\nThe common grade line: %zu track beside went with the route", "\nThe common grade line: %zu tracks beside went with the route", beside), beside);
 	if (Terrain)
 		profile_follow_terrain(static_cast<std::size_t>(m_track_edits - edits));
 	WriteLog("Editor: vertical profile - " + state.status, logtype::generic);
@@ -1635,6 +1960,7 @@ void editor_mode::render_profile_body()
 			ImGui::TextDisabled(STR_C("The design goes to the scenery file of the route on save"));
 	}
 
+	render_profile_grade_line();
 	step_heading(2, STR_C("Grade line"));
 	if (render_profile_parameters())
 		profile_edited();
@@ -1645,6 +1971,8 @@ void editor_mode::render_profile_body()
 void editor_mode::render_profile_strip()
 {
 	profile_follow_edits();
+	// the strip follows the selection by itself: the panel of the tool needn't be the one in front
+	profile_follow_selection();
 	auto &state{m_profile};
 	auto const &io{ImGui::GetIO()};
 	// along the bottom of the 3d view, as wide as it; each time the profile opens, wherever it was left before
@@ -1912,6 +2240,8 @@ bool editor_mode::render_profile_parameters()
 			ImGui::EndTable();
 		}
 		norms.grade_switch_max = std::max(0.0, norms.grade_switch_max);
+		norms.radius_factor = std::max(0.0, norms.radius_factor);
+		norms.radius_min = std::max(10.0, norms.radius_min);
 		if (ImGui::SmallButton(STR_C("Automatic R at all points")))
 		{
 			for (auto &point : line.points)
@@ -2084,9 +2414,8 @@ void editor_mode::render_profile_point()
 			ImGui::SameLine();
 			if (ImGui::Button(STR_C("Remove  Del")))
 			{
-				points.erase(points.begin() + index);
-				state.selected = -1;
-				changed = true;
+				profile_remove_point(index);
+				return;
 			}
 		}
 	}
@@ -2232,10 +2561,16 @@ void editor_mode::render_profile_toolbar()
 		profile_fit_view();
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%s", STR_C("Shows the whole route"));
-	next(14.0f, pill(STR_C("Camera follows")));
-	if (pill_toggle(STR_C("Camera follows"), kGradeLine, state.camera_follows) && state.camera_follows)
-		state.view_framed = {};
-	item_tooltip("The view shows the part of the route the plot shows, once the plot is zoomed or moved");
+	// the camera and the plot brought to one another only when asked: the camera doesn't turn as the plot is zoomed
+	auto const button = [](char const *Label) { return ImGui::CalcTextSize(Label).x + ImGui::GetStyle().FramePadding.x * 2.0f; };
+	next(14.0f, button(STR_C("Camera to the plot")));
+	if (ImGui::Button(STR_C("Camera to the plot")))
+		profile_frame_view();
+	item_tooltip("Moves the camera to the part of the route the plot shows");
+	next(ImGui::GetStyle().ItemSpacing.x, button(STR_C("Plot to the camera")));
+	if (ImGui::Button(STR_C("Plot to the camera")))
+		profile_to_camera();
+	item_tooltip("Moves the plot to the part of the route where the camera is, its zoom kept");
 }
 
 void editor_mode::render_profile_canvas(float const Height)
@@ -2254,7 +2589,6 @@ void editor_mode::render_profile_canvas(float const Height)
 	if (state.model_waiting && ImGui::GetTime() - state.model_polled > 0.5)
 		profile_sample_model();
 	profile_navigate(profile_view{state, corner, size}, hovered);
-	profile_follow_view();
 	profile_view const view{state, corner, size};
 	if (profile_canvas_edit(view, hovered))
 		profile_edited();
@@ -2511,11 +2845,7 @@ bool editor_mode::profile_canvas_edit(profile_view const &View, bool const Hover
 	else
 		state.curve_grip = -1;
 	if ((Hovered || ImGui::IsWindowFocused()) && state.selected > 0 && state.selected + 1 < static_cast<int>(points.size()) && false == points[state.selected].joint && ImGui::IsKeyPressed(ImGuiKey_Delete))
-	{
-		points.erase(points.begin() + state.selected);
-		state.selected = -1;
-		changed = true;
-	}
+		profile_remove_point(state.selected);
 	return changed;
 }
 
@@ -2555,8 +2885,11 @@ void editor_mode::draw_profile_canvas(profile_view const &View, ImDrawList &Draw
 			// breaks the grade over them
 			Draw.PushClipRect(ImVec2(left, plottop), ImVec2(right, plotbottom), true);
 			auto const height{plotbottom - plottop};
-			for (auto x = left - height; x < right; x += 8.0f)
+			for (int k = 0; left - height + 8.0f * static_cast<float>(k) < right; ++k)
+			{
+				auto const x{left - height + 8.0f * static_cast<float>(k)};
 				Draw.AddLine(ImVec2(x, plotbottom), ImVec2(x + height, plottop), kShared, 1.5f);
+			}
 			Draw.PopClipRect();
 			Draw.AddLine(ImVec2(left, plottop), ImVec2(left, plotbottom), kSharedEdge, 1.0f);
 			Draw.AddLine(ImVec2(right, plottop), ImVec2(right, plotbottom), kSharedEdge, 1.0f);
@@ -2780,6 +3113,11 @@ void editor_mode::draw_profile_overlay() const
 		previous = next;
 		designedprevious = designed;
 	}
+	// the tracks sharing the grade line that go with the route
+	if (state.whole_grade_line)
+		for (auto const *track : state.beside)
+			for (auto const &path : track->m_paths)
+				projection.line(drawlist, path.points[segment_data::point::start], path.points[segment_data::point::end], IM_COL32(70, 170, 255, 200), 2.0f);
 	// the grade line told in the view: the grades of its straight stretches, the ranges of its vertical curves, its points
 	glm::dvec3 const eye{Global.pCamera.Pos};
 	double constexpr labels_range{1500.0};
