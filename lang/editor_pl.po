@@ -17502,3 +17502,12 @@ msgstr "Przewód rozdzielczy 3 kV (karta 0639) to sekcja na stronie Uszynienie z
 
 msgid "The suspension on whose pole the disconnector stands (empty - the pole of the side \"from\"; a drop of a gantry - on its nearer leg). Enter takes it"
 msgstr "Podwieszenie, na którego słupie stoi odłącznik (puste - słup strony „od”; zwis bramki - na bliższej nodze). Enter zatwierdza"
+
+msgid "Arrester to the track side"
+msgstr "Odgromnik na stronę toru"
+
+msgid "Arrester to the other side of the pole"
+msgstr "Odgromnik na drugą stronę słupa"
+
+msgid "The arrester with its lead turned round the axis of the pole: on the back wall, away from the track (or back to the track)"
+msgstr "Odgromnik z linką obrócony wokół osi słupa: na tylnej ścianie, od toru (albo z powrotem do toru)"

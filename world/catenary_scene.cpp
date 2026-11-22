@@ -898,6 +898,16 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
                         for( int column = 0; column < 3; ++column ) { result_.position[ row ] += standing->rotation[ row * 3 + column ] * in[ column ]; }
                     }
                     std::copy( std::begin( standing->rotation ), std::end( standing->rotation ), result_.rotation );
+                    if( data.arrester_away ) {
+                        // na drugiej stronie słupa: X i Y modelu odwrócone (obrót o 180° wokół osi słupa), punkty też
+                        double const flipped[ 3 ] { -X, -Y, Z };
+                        for( int row = 0; row < 3; ++row ) {
+                            result_.position[ row ] = standing->position[ row ];
+                            for( int column = 0; column < 3; ++column ) { result_.position[ row ] += standing->rotation[ row * 3 + column ] * flipped[ column ]; }
+                            result_.rotation[ row * 3 + 0 ] = -standing->rotation[ row * 3 + 0 ];
+                            result_.rotation[ row * 3 + 1 ] = -standing->rotation[ row * 3 + 1 ];
+                        }
+                    }
                     return result_;
                 };
                 auto const face { -0.5 * depth };

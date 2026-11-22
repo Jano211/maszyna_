@@ -34,7 +34,7 @@ std::string normalize_path( std::string Path ) {
 
 // słowa kluczowe wewnątrz wpisu podwieszenia
 bool is_keyword( std::string const &Token ) {
-    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "strut_shift", "turn_by_hand", "lean", "pull_from", "stay_gap", "arms_spread", "rope_shift", "cord_shift", "cord_band", "stay_hole", "arrester", "endsuspension" };
+    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "strut_shift", "turn_by_hand", "lean", "pull_from", "stay_gap", "arms_spread", "rope_shift", "cord_shift", "cord_band", "stay_hole", "arrester", "arrester_away", "endsuspension" };
     return keywords.find( Token ) != keywords.end();
 }
 
@@ -424,6 +424,10 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 if( list.size() == 1 && to_number( list[ 0 ], entry.arrester_drop ) && entry.arrester_drop >= 0.0 && entry.arrester_drop <= 5.0 ) { entry.arrester = true; }
                 else { report( entry.name, "\"arrester\" needs one number: metres below the default place, 0-5" ); entry.arrester_drop = 0.0; good = false; }
             }
+            else if( key == "arrester_away" ) {
+                if( list.empty() ) { entry.arrester_away = true; }
+                else { report( entry.name, "\"arrester_away\" takes no values" ); good = false; }
+            }
             else if( key == "lean" ) {
                 if( list.size() == 1 && to_number( list[ 0 ], entry.lean ) && std::abs( entry.lean ) <= 10.0 ) {}
                 else { report( entry.name, "\"lean\" needs one number of degrees, up to 10" ); entry.lean = 0.0; good = false; }
@@ -555,7 +559,7 @@ std::string write_suspension( suspension const &Entry ) {
     if( Entry.strut_shift != 0.0 ) { text += " strut_shift " + number( Entry.strut_shift, 3 ); }
     if( Entry.turn_by_hand != 0.0 ) { text += " turn_by_hand " + number( Entry.turn_by_hand, 2 ); }
     if( Entry.lean != 0.0 ) { text += " lean " + number( Entry.lean, 2 ); }
-    if( Entry.arrester ) { text += " arrester " + number( Entry.arrester_drop, 2 ); }
+    if( Entry.arrester ) { text += " arrester " + number( Entry.arrester_drop, 2 ) + ( Entry.arrester_away ? " arrester_away" : "" ); }
     if( Entry.stay_gap != 0.0 ) { text += " stay_gap " + number( Entry.stay_gap, 3 ); }
     if( Entry.arms_spread != 0.0 ) { text += " arms_spread " + number( Entry.arms_spread, 3 ); }
     if( Entry.rope_shift != 0.0 ) { text += " rope_shift " + number( Entry.rope_shift, 3 ); }

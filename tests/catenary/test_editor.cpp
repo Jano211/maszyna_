@@ -122,6 +122,25 @@ int main( int, char *argv[] ) {
         std::printf( "  odgromnik 7310-03 na 1701: x %.3f y %.3f z %.3f, tyl %d\n", spot.x, spot.y, spot.z, back ? 1 : 0 );
         check( placed && found && back && std::abs( spot.y - ( 0.2 + 7.46 - 0.10 - 0.25 ) ) < 0.01 && spot.x > -2.313 && std::abs( spot.z - 100.247 ) < 0.01,
             "odgromnik: na betonie przy szczycie slupa, od strony toru, z tylem" );
+        // na drugiej stronie słupa (2026-11-22): odgromnik za osią słupa, od toru; zapis i odczyt
+        {
+            auto away { concrete };
+            away.arrester_away = true;
+            auto const from3 { simulation::State.created.size() };
+            catenary_scene_update( index, away );
+            glm::dvec3 turned {};
+            auto there { false };
+            for( auto item { from3 }; item < simulation::State.created.size(); ++item ) {
+                if( simulation::State.created[ item ].entry.find( "7310-03.t3d" ) != std::string::npos ) { turned = simulation::State.created[ item ].position; there = true; }
+            }
+            auto const text { catenary::write_suspension( away ) };
+            std::vector<std::string> words; std::istringstream stream { text }; for( std::string w; stream >> w; ) { words.push_back( w ); }
+            catenary::suspension_file again; std::vector<std::string> trouble;
+            catenary::parse_suspensions( words, "odgromnik_away", again, trouble, false );
+            std::printf( "  odgromnik na drugiej stronie: x %.3f (od toru %.3f), wysokosc %.3f\n", turned.x, spot.x, turned.y );
+            check( there && turned.x < -2.313 && std::abs( turned.y - spot.y ) < 0.01 && text.find( " arrester 0.25 arrester_away" ) != std::string::npos
+                && trouble.empty() && again.entries.size() == 1 && again.entries.front().arrester_away, "odgromnik: przelozony na druga strone slupa, zapis i odczyt" );
+        }
         catenary_scene_update( index, entry );
     }
     auto moved { entry };

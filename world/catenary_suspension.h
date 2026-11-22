@@ -89,6 +89,9 @@ struct suspension {
     // domyślnego (0 = domyślne). Bez wpływu na prąd (sam model)
     bool   arrester { false };
     double arrester_drop { 0.0 };
+    // odgromnik na drugiej stronie słupa (od toru), razem z linką i przyłączem obrócony wokół osi słupa jak wysięgnik uszynienia "away"
+    // (użytkownik 2026-11-22). Wpis "arrester_away" za "arrester"
+    bool   arrester_away { false };
 };
 
 // łańcuch sieci: kolejne przęsła między podwieszeniami z listy (od kotwy do kotwy), wpis
