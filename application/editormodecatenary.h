@@ -131,7 +131,9 @@ struct catenary_editor
 		std::vector<double> earthing_distances;
 		float earthing_section{3000.0f}; // the target length of a section (Iet-106: about 3 km)
 		int earthing_ends{0};            // the ends of the run: 0 anchoring without insulation (13-0492), 1 with it (13-0491)
-		int earthing_joint{0};           // between the sections: 0 insulating point in the span (13-0493), 1 anchorings 13-0491 on both poles
+		int earthing_joint{0};           // between the sections: 0 insulating point in the span (13-0493), 1 anchorings 13-0491 on both poles,
+		                                 // 2 anchoring on one pole: one section ends in the mount, the next leaves it on the other side
+		bool earthing_manual{false};     // the poles clicked one after another, the rope straight from pole to pole (over gantries too)
 		std::string earthing_line;       // the rope of the new run (earthing_line in traction_supports.txt): empty - the earthing (AFL120); a feeder line - reinforcing feeder
 		bool wide_stagger{false}; // stagger -0.50..+0.50 m from the track axis (tuning at turnouts; not allowed on a line)
 		int bend{0}; // 0: from the track, 1: straight, 2: curve
@@ -359,6 +361,7 @@ struct catenary_editor
 	void catenary_earthing_finish();
 	// the sections of the way picked made and put into the file
 	void catenary_earthing_make();
+	void catenary_earthing_make_manual();
 	void render_catenary_chain_report(std::size_t const Chain);
 	// a pole of this type can't stand there: its group doesn't stand by switches and a switch is by it
 	bool catenary_switch_error(std::string const &Pole, glm::dvec3 const &Foot, TTrack const *Track) const;
@@ -446,7 +449,8 @@ struct catenary_editor
 	bool catenary_chain_continue(std::size_t Pole);
 	// the chain block of the poles page: what the next click does, end, anchor, go on from the selected pole
 	void render_catenary_chain_state();
-	void catenary_chain_apply();
+	void catenary_chain_apply(unsigned Fields);
+	void catenary_chain_take(std::size_t Chain);
 	void render_catenary_messenger_from(std::size_t Chain);
 	void catenary_connect(std::size_t const To);
 	int catenary_gantry_hit() const;

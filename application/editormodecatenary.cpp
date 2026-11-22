@@ -658,6 +658,12 @@ std::vector<std::string> catenary_skins(std::string const &Prefix)
 // "black": czarne matowe druty, brudny osprzęt - między przejściowymi a zaśniedziałymi (Jan 2026-11-01: stare rurowe, świeże teowniki)
 char const *const kStates[] = {"new", "worn", "black", "tarnished"};
 int const kStateValues[] = {0, 2, 4, 1};
+// the settings of a chain changed in its panel: only those go to the chain
+constexpr unsigned kChainNetwork{1U << 0};
+constexpr unsigned kChainMaterial{1U << 1};
+constexpr unsigned kChainState{1U << 2};
+constexpr unsigned kChainPower{1U << 3};
+constexpr unsigned kChainVoltage{1U << 4};
 
 } // namespace
 
@@ -4519,6 +4525,22 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		if (data == nullptr || data->name.empty())
 			return;
 		auto const file{catenary_scene_file_of(static_cast<std::size_t>(Intent.index))};
+		if (tool.earthing_manual)
+		{
+			// by hand: every pole clicked one after another, the rope straight between them (the way along the chains isn't looked for)
+			if (false == tool.earthing_poles.empty() && file != tool.earthing_file)
+			{
+				tool.status = STR("The earthing goes over the poles of one catenary file");
+				return;
+			}
+			if (false == tool.earthing_poles.empty() && tool.earthing_poles.back() == data->name)
+				return;
+			if (tool.earthing_poles.empty())
+				tool.earthing_file = file;
+			tool.earthing_poles.push_back(data->name);
+			tool.status = format(STR_C("Earthing by hand: %zu poles (LMB the next pole, Enter or the button makes it, Backspace takes the last one off, Esc gives up)"), tool.earthing_poles.size());
+			return;
+		}
 		if (tool.earthing_poles.empty())
 		{
 			tool.earthing_file = file;
@@ -4869,16 +4891,41 @@ void catenary_editor::catenary_chain_show(int const Chain)
 	if (tool.chain_selected != Chain)
 		tool.span_selected = -1;
 	tool.chain_selected = Chain;
-	if (auto const *chain{Chain >= 0 ? catenary_chain_get(static_cast<std::size_t>(Chain)) : nullptr}; chain != nullptr)
+	if (Chain >= 0)
+		catenary_chain_take(static_cast<std::size_t>(Chain));
+}
+
+namespace
+{
+int chain_state_index(int const State)
+{
+	switch (State)
 	{
-		// the panel shows what the chain has
-		std::snprintf(tool.power, sizeof(tool.power), "%s", chain->power.c_str());
-		tool.voltage = static_cast<float>(chain->voltage);
-		tool.material = chain->material == "al" ? 1 : 0;
-		tool.state = chain->state == 2 ? 1 : chain->state == 4 ? 2 : chain->state == 1 ? 3 : 0;
-		if (auto const found{std::find(tool.networks.begin(), tool.networks.end(), chain->type)}; found != tool.networks.end())
-			tool.network = static_cast<int>(found - tool.networks.begin());
+	case 2:
+		return 1;
+	case 4:
+		return 2;
+	case 1:
+		return 3;
+	default:
+		return 0;
 	}
+}
+} // namespace
+
+// the panel shows what the chain has (whichever way it got selected: its span, a pole of it, the anchor, a new chain)
+void catenary_editor::catenary_chain_take(std::size_t const Chain)
+{
+	auto &tool{m_catenary};
+	auto const *chain{catenary_chain_get(Chain)};
+	if (chain == nullptr)
+		return;
+	std::snprintf(tool.power, sizeof(tool.power), "%s", chain->power.c_str());
+	tool.voltage = static_cast<float>(chain->voltage);
+	tool.material = chain->material == "al" ? 1 : 0;
+	tool.state = chain_state_index(chain->state);
+	if (auto const found{std::ranges::find(tool.networks, chain->type)}; found != tool.networks.end())
+		tool.network = static_cast<int>(found - tool.networks.begin());
 }
 
 void catenary_editor::catenary_span_remove(std::size_t const Chain, std::size_t const Span)
@@ -4941,7 +4988,7 @@ void catenary_editor::catenary_span_remove(std::size_t const Chain, std::size_t 
 }
 
 // the panel settings of the chain go to the selected chain
-void catenary_editor::catenary_chain_apply()
+void catenary_editor::catenary_chain_apply(unsigned const Fields)
 {
 	auto &tool{m_catenary};
 	if (tool.chain_selected < 0)
@@ -4950,12 +4997,17 @@ void catenary_editor::catenary_chain_apply()
 	auto const *chain{catenary_chain_get(index)};
 	if (chain == nullptr)
 		return;
+	// only what was changed in the panel: the rest stays as the chain has it
 	auto changed{*chain};
-	changed.power = tool.power;
-	changed.voltage = tool.voltage;
-	changed.material = kMaterials[std::clamp(tool.material, 0, 1)];
-	changed.state = kStateValues[std::clamp(tool.state, 0, 3)];
-	if (false == tool.networks.empty())
+	if ((Fields & kChainPower) != 0)
+		changed.power = tool.power;
+	if ((Fields & kChainVoltage) != 0)
+		changed.voltage = tool.voltage;
+	if ((Fields & kChainMaterial) != 0)
+		changed.material = kMaterials[std::clamp(tool.material, 0, 1)];
+	if ((Fields & kChainState) != 0)
+		changed.state = kStateValues[std::clamp(tool.state, 0, 3)];
+	if ((Fields & kChainNetwork) != 0 && false == tool.networks.empty())
 		changed.type = tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
 	auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
 	if (tool.undo.empty() || false == last.chain || last.index != index || false == last.chain_before.has_value())
@@ -5150,6 +5202,7 @@ void catenary_editor::catenary_earthing_finish()
 {
 	auto &tool{m_catenary};
 	tool.earthing_building = false;
+	tool.earthing_manual = false;
 	tool.earthing_poles.clear();
 	tool.earthing_route.clear();
 	tool.earthing_distances.clear();
@@ -5187,7 +5240,9 @@ void catenary_editor::catenary_earthing_make()
 	auto const *rope{catalog != nullptr ? catalog->earthing_line(tool.earthing_line) : nullptr};
 	auto const feeder{rope != nullptr && rope->feeder};
 	auto const ending{tool.earthing_ends == 1 ? std::string{"anchor"} : feeder ? std::string{} : std::string{"plain"}};
-	auto const joint{tool.earthing_joint == 1 ? std::string{"anchor"} : feeder ? std::string{} : std::string{"split"}};
+	auto const joint{tool.earthing_joint >= 1 ? std::string{"anchor"} : feeder ? std::string{} : std::string{"split"}};
+	// anchoring on one pole: the next section starts at the pole the previous ends at, from the other side of its mount
+	auto const shared{tool.earthing_joint == 2};
 	std::size_t from{0};
 	for (std::size_t k = 0; k < ends.size(); ++k)
 	{
@@ -5199,12 +5254,35 @@ void catenary_editor::catenary_earthing_make()
 		data.start = (k == 0 ? ending : joint);
 		data.end = (k + 1 == ends.size() ? ending : joint);
 		catenary_earthing_add(tool.earthing_file, data);
-		from = ends[k] + 1;
+		from = shared ? ends[k] : ends[k] + 1;
 	}
 	tool.status = format(feeder ? STR_C("%zu feeder sections over %.2f km") : STR_C("%zu earthing sections over %.2f km"), ends.size(), total / 1000.0);
 	tool.earthing_poles.clear();
 	tool.earthing_route.clear();
 	tool.earthing_distances.clear();
+}
+
+// the earthing by hand: the poles clicked one after another as a list ("poles"), the rope straight between them, the ends as set
+void catenary_editor::catenary_earthing_make_manual()
+{
+	auto &tool{m_catenary};
+	if (tool.earthing_poles.size() < 2)
+		return;
+	auto const *catalog{catenary_scene_catalog()};
+	auto const *rope{catalog != nullptr ? catalog->earthing_line(tool.earthing_line) : nullptr};
+	auto const feeder{rope != nullptr && rope->feeder};
+	auto const ending{tool.earthing_ends == 1 ? std::string{"anchor"} : feeder ? std::string{} : std::string{"plain"}};
+	catenary::earthing data;
+	data.name = catenary_scene_new_earthing_name(tool.earthing_file);
+	data.line = (feeder ? tool.earthing_line : std::string{});
+	data.poles = tool.earthing_poles;
+	data.start = ending;
+	data.end = ending;
+	catenary_earthing_add(tool.earthing_file, data);
+	tool.status = format(STR_C("Earthing %s by hand over %zu poles"), data.name.c_str(), tool.earthing_poles.size());
+	tool.earthing_poles.clear();
+	tool.earthing_building = false;
+	tool.earthing_manual = false;
 }
 
 // group earthing (cards 0805-0807, Iet-106): the earthing rope over the tops of the poles in sections of about 3 km; a section
@@ -5215,9 +5293,9 @@ void catenary_editor::render_catenary_earthing_ui()
 	auto &tool{m_catenary};
 	ImGui::Separator();
 	ImGui::TextWrapped("%s", STR_C("Group earthing and reinforcing feeders: the rope over the poles in sections (earthing about 3 km). Pick the rope, click the first and the last pole of the run, the way goes along the chains and is cut into sections"));
-	if (ImGui::Button(tool.earthing_building ? STR_C("Give up (Esc)") : STR_C("Earthing along the line: click the first and the last pole")))
+	if (ImGui::Button(tool.earthing_building && false == tool.earthing_manual ? STR_C("Give up (Esc)") : STR_C("Earthing along the line: click the first and the last pole")))
 	{
-		if (tool.earthing_building || false == tool.earthing_route.empty())
+		if (tool.earthing_building && false == tool.earthing_manual)
 			catenary_earthing_finish();
 		else
 		{
@@ -5226,6 +5304,20 @@ void catenary_editor::render_catenary_earthing_ui()
 			tool.status = STR("LMB the first pole of the run");
 		}
 	}
+	// by hand: the way along the chains isn't looked for (over gantries it isn't found, and it makes no sense to force it)
+	if (ImGui::Button(tool.earthing_manual ? STR_C("Give up (Esc)##manual") : STR_C("Earthing by hand: click the poles one after another")))
+	{
+		auto const was{tool.earthing_manual};
+		catenary_earthing_finish();
+		if (false == was)
+		{
+			tool.earthing_building = true;
+			tool.earthing_manual = true;
+			tool.status = STR("Earthing by hand: LMB the poles one after another");
+		}
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("The poles in the order clicked, the rope straight from pole to pole - also over the gantries and between the chains, where the way along the chains isn't found. Written as a list of poles; a pole put into a chain later doesn't come in by itself"));
 	// the rope of the run: the earthing or a reinforcing feeder (lines "feeder" of traction_supports.txt; Jan 2026-11-16: one tab for
 	// the wires on the poles)
 	auto const *catalog{catenary_scene_catalog()};
@@ -5250,7 +5342,32 @@ void catenary_editor::render_catenary_earthing_ui()
 	auto const *rope{catalog != nullptr ? catalog->earthing_line(tool.earthing_line) : nullptr};
 	auto const feeder{rope != nullptr && rope->feeder};
 	char const *ends[]{feeder ? STR_C("The rope ends on the arm") : STR_C("Anchoring 13-0492 (no insulation)"), feeder ? STR_C("Anchoring 23-0419") : STR_C("Anchoring 13-0491 (with insulation)")};
-	char const *joints[]{feeder ? STR_C("The ropes end on the arms") : STR_C("Insulating point 13-0493 in the span"), feeder ? STR_C("Anchorings 23-0419 on both poles") : STR_C("Anchorings 13-0491 on both poles")};
+	char const *joints[]{feeder ? STR_C("The ropes end on the arms") : STR_C("Insulating point 13-0493 in the span"), feeder ? STR_C("Anchorings 23-0419 on both poles") : STR_C("Anchorings 13-0491 on both poles"),
+	                     feeder ? STR_C("Anchoring 23-0419 on one pole (both sides of one mount)") : STR_C("Anchoring 13-0491 on one pole (both sides of one mount)")};
+	if (tool.earthing_manual)
+	{
+		ImGui::TextUnformatted(format(STR_C("By hand: %zu poles"), tool.earthing_poles.size()).c_str());
+		if (false == tool.earthing_poles.empty())
+		{
+			std::string list;
+			for (auto const &name : tool.earthing_poles)
+				list += (list.empty() ? "" : " - ") + name;
+			ImGui::PushTextWrapPos(0.0f);
+			ImGui::TextDisabled("%s", list.c_str());
+			ImGui::PopTextWrapPos();
+		}
+		ImGui::SetNextItemWidth(260.0f);
+		ImGui::Combo(STR_C("Ends of the run"), &tool.earthing_ends, ends, 2);
+		ImGui::BeginDisabled(tool.earthing_poles.size() < 2);
+		if (ImGui::Button(STR_C("Make the earthing (Enter)")))
+			catenary_earthing_make_manual();
+		ImGui::EndDisabled();
+		ImGui::SameLine();
+		ImGui::BeginDisabled(tool.earthing_poles.empty());
+		if (ImGui::Button(STR_C("Take the last pole off (Backspace)")))
+			tool.earthing_poles.pop_back();
+		ImGui::EndDisabled();
+	}
 	if (false == tool.earthing_route.empty())
 	{
 		auto const total{tool.earthing_distances.back()};
@@ -5260,7 +5377,7 @@ void catenary_editor::render_catenary_earthing_ui()
 		ImGui::SetNextItemWidth(260.0f);
 		ImGui::Combo(STR_C("Ends of the run"), &tool.earthing_ends, ends, 2);
 		ImGui::SetNextItemWidth(260.0f);
-		ImGui::Combo(STR_C("Between sections"), &tool.earthing_joint, joints, 2);
+		ImGui::Combo(STR_C("Between sections"), &tool.earthing_joint, joints, 3);
 		auto const count{std::max<long>(1, std::lround(total / std::max(100.0f, tool.earthing_section)))};
 		if (ImGui::Button(format(STR_C("Make %ld sections"), count).c_str()))
 			catenary_earthing_make();
@@ -5537,8 +5654,9 @@ void catenary_editor::render_catenary_earthing_ui()
 							middle = p;
 					auto second{data};
 					second.name = catenary_scene_new_earthing_name(catenary_earthing_file(index));
-					second.from = names[middle + 1];
-					second.start = (tool.earthing_joint == 1 ? "anchor" : feeder ? "" : "split");
+					// anchoring on one pole: the second section leaves the mount the first one ends in, on the other side
+					second.from = names[tool.earthing_joint == 2 ? middle : middle + 1];
+					second.start = (tool.earthing_joint >= 1 ? "anchor" : feeder ? "" : "split");
 					auto first{data};
 					first.to = names[middle];
 					first.end = second.start;
@@ -6053,8 +6171,11 @@ void catenary_editor::render_catenary_chain_ui()
 	else
 	{
 		ImGui::TextColored(ImVec4(0.3f, 0.85f, 1.0f, 1.0f), "%s", format(STR_C("Chain %s: %zu poles, %zu spans; changes apply to all of them"), chain->name.c_str(), chain->suspensions.size(), chain->suspensions.size() - 1).c_str());
+		// what the chain really has, also after an undo or when it got selected through a pole; not while a field is being typed in
+		if (false == ImGui::IsAnyItemActive())
+			catenary_chain_take(static_cast<std::size_t>(tool.chain_selected));
 	}
-	auto changed{false};
+	unsigned changed{0};
 	ImGui::PushItemWidth(180.0f);
 	if (false == tool.networks.empty() && ImGui::BeginCombo(STR_C("Network type"), tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)].c_str()))
 	{
@@ -6062,23 +6183,23 @@ void catenary_editor::render_catenary_chain_ui()
 			if (ImGui::Selectable(tool.networks[i].c_str(), i == tool.network))
 			{
 				tool.network = i;
-				changed = true;
+				changed |= kChainNetwork;
 			}
 		ImGui::EndCombo();
 	}
 	if (ImGui::Combo(STR_C("Material"), &tool.material, kMaterials, 2))
-		changed = true;
+		changed |= kChainMaterial;
 	std::string const statenames[] = {STR(kStates[0]), STR(kStates[1]), STR(kStates[2]), STR(kStates[3])};
 	char const *const states[] = {statenames[0].c_str(), statenames[1].c_str(), statenames[2].c_str(), statenames[3].c_str()};
 	if (ImGui::Combo(STR_C("Wires"), &tool.state, states, 4))
-		changed = true;
+		changed |= kChainState;
 	if (catenary_power_combo(STR_C("Power source"), tool.power, sizeof(tool.power)))
-		changed = true;
+		changed |= kChainPower;
 	if (ImGui::InputFloat(STR_C("Voltage (V)"), &tool.voltage, 0.0f, 0.0f, "%.0f"))
-		changed = true;
+		changed |= kChainVoltage;
 	ImGui::PopItemWidth();
-	if (changed && chain != nullptr)
-		catenary_chain_apply();
+	if (changed != 0 && chain != nullptr)
+		catenary_chain_apply(changed);
 	// poles of the chain with arms for another count of contact wires than its network has: a remark and one button for all
 	if (chain != nullptr)
 	{
@@ -10923,7 +11044,7 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 	if (auto const hit{catenary_hit()}; hit >= 0)
 	{
 		Intent.index = hit;
-		Intent.action = m_catenary.page == 3 && m_catenary.earthing_building ? STR("Click: the first or the last pole of the earthing run") : m_catenary.anchor_pick >= 0 || m_catenary.anchor_move >= 0 ? STR("Click: the tensioning device on this pole") : m_catenary.connect_from >= 0 ? STR("Click: hang the span to this pole") : STR("Click: select the pole");
+		Intent.action = m_catenary.page == 3 && m_catenary.earthing_manual ? STR("Click: the next pole of the earthing") : m_catenary.page == 3 && m_catenary.earthing_building ? STR("Click: the first or the last pole of the earthing run") : m_catenary.anchor_pick >= 0 || m_catenary.anchor_move >= 0 ? STR("Click: the tensioning device on this pole") : m_catenary.connect_from >= 0 ? STR("Click: hang the span to this pole") : STR("Click: select the pole");
 		Intent.what = kind::catenary;
 		Intent.detail = static_cast<int>(intent_detail::select);
 		return true;
@@ -11124,6 +11245,17 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 	}
 	if ((Mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT | GLFW_MOD_SHIFT)) != 0)
 		return false;
+	// earthing by hand: Enter makes it, Backspace takes the last pole off
+	if (tool.earthing_manual && Key == GLFW_KEY_ENTER)
+	{
+		catenary_earthing_make_manual();
+		return true;
+	}
+	if (tool.earthing_manual && Key == GLFW_KEY_BACKSPACE && false == tool.earthing_poles.empty())
+	{
+		tool.earthing_poles.pop_back();
+		return true;
+	}
 	if (Key == GLFW_KEY_ESCAPE)
 	{
 		// first the span typed, then what's being picked, then the chain going on; with nothing of that the editor has the key
