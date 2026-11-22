@@ -586,6 +586,18 @@ int main( int, char *argv[] ) {
         auto const connectors { catenary_chain_connectors( 1 ) }, connectorsother { catenary_chain_connectors( 0 ) };
         std::printf( "  laczniki 0640 przy jednym wspolnym przesle: %zu trojkatow (drugi lancuch %zu)\n", connectors, connectorsother );
         good = good && connectors > 0 && connectorsother == 0;
+        // sieć 10 (C95-C): jeden łącznik w połowie przęsła zamiast dwóch przy słupach krzyżowych (użytkownik 2026-11-22)
+        {
+            auto single { *catenary_chain_get( 1 ) };
+            auto const kept { single.type };
+            single.type = "C95-C";
+            catenary_chain_update( 1, single );
+            auto const one { catenary_chain_connectors( 1 ) };
+            std::printf( "  laczniki 0640 w sieci 10: %zu trojkatow\n", one );
+            good = good && one > 0 && one < connectors;
+            single.type = kept;
+            catenary_chain_update( 1, single );
+        }
         {
             auto isolated { *catenary_chain_get( 1 ) };
             isolated.isolated[ 0 ] = true;
