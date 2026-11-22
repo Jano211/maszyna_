@@ -6212,6 +6212,49 @@ void catenary_editor::render_catenary_overlaps(std::size_t const Chain)
 			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("Insulators in the wires and the messenger leaving to the anchors by the crossing poles (placeholder shapes), the outgoing chain from another power source; off: connected, one power source and connectors 33-0640"));
+			// where the insulators are: each chain its own, from its crossing pole along the span to its anchor (like a section insulator)
+			if (isolated)
+			{
+				for (auto const side : {0, 1})
+				{
+					auto const index{side == 0 ? Chain : overlap.other};
+					auto const *data{side == 0 ? chain : other};
+					auto const end{side == 0 ? (leavesend ? 1 : 0) : (leavesend ? 0 : 1)};
+					if (data == nullptr || false == data->isolated[end])
+						continue;
+					ImGui::PushID(100 + side);
+					auto at{static_cast<float>(data->isolated_at[end] < 0.0 ? 2.0 : data->isolated_at[end])};
+					ImGui::PushItemWidth(140.0f);
+					auto const moved{ImGui::DragFloat(format(STR_C("Insulators of %s from the crossing pole (m)"), data->name.c_str()).c_str(), &at, 0.05f, 0.5f, 60.0f, "%.2f")};
+					// one step of the undo for the whole drag: taken when the slider is grabbed
+					if (ImGui::IsItemActivated())
+						tool.undo.push_back({++tool.group, true, index, std::nullopt, *data, false});
+					ImGui::PopItemWidth();
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("Where the insulators of this chain are, from the crossing pole along the span to the anchor (at least 0.5 m from its ends). Ctrl+click types a value"));
+					auto changed{*data};
+					auto update{false};
+					if (moved)
+					{
+						changed.isolated_at[end] = at;
+						update = true;
+					}
+					ImGui::SameLine();
+					ImGui::BeginDisabled(data->isolated_at[end] < 0.0);
+					if (ImGui::SmallButton(STR_C("2 m")))
+					{
+						tool.undo.push_back({++tool.group, true, index, std::nullopt, *data, false});
+						changed.isolated_at[end] = -1.0;
+						update = true;
+					}
+					ImGui::EndDisabled();
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("Back to the default: 2 m from the crossing pole"));
+					ImGui::PopID();
+					if (update)
+						catenary_chain_update(index, changed);
+				}
+			}
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("The shared spans take the running line of both chains (parallel). A connected overlap gets connectors 33-0640 at its crossing poles (procedural cords, placeholder clamps)"));

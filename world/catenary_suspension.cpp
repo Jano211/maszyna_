@@ -114,7 +114,11 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 }
                 else if( key == "isolated" ) {
                     std::string end;
-                    if( one( end ) ) { line.isolated[ end == "end" ? 1 : 0 ] = true; }
+                    if( one( end ) ) {
+                        auto const which { end == "end" ? 1 : 0 };
+                        line.isolated[ which ] = true;
+                        if( index < count && Tokens[ index ] == "at" ) { ++index; number( line.isolated_at[ which ] ); }
+                    }
                 }
                 else if( key == "middle_device" ) { one( line.middle_device ); }
                 else if( key == "middle_height" ) { number( line.middle_heights[ 0 ] ); number( line.middle_heights[ 1 ] ); }
@@ -578,8 +582,11 @@ std::string write_chain( chain const &Entry ) {
     }
     for( auto const &pair : Entry.messenger_from ) { text += " messenger_from " + pair.first + " " + pair.second; }
     for( auto const &listed : Entry.second_net ) { text += " second_net " + listed; }
-    if( Entry.isolated[ 0 ] ) { text += " isolated start"; }
-    if( Entry.isolated[ 1 ] ) { text += " isolated end"; }
+    for( auto const end : { 0, 1 } ) {
+        if( false == Entry.isolated[ end ] ) { continue; }
+        text += end == 0 ? " isolated start" : " isolated end";
+        if( Entry.isolated_at[ end ] >= 0.0 ) { text += " at " + number( std::round( Entry.isolated_at[ end ] * 100.0 ) / 100.0 ); }
+    }
     for( auto const &shared : Entry.shared ) { text += " shared " + shared.first + ( shared.second ? " on" : " off" ); }
     for( auto const &insulator : Entry.insulators ) {
         text += " insulator " + insulator.after + " " + insulator.kind + " " + ( insulator.power.empty() ? std::string( "-" ) : insulator.power );
