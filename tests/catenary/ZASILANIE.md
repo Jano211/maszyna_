@@ -98,7 +98,8 @@ G. **Awarie**: zwarcie przez uszynienie, pantograf na przerwie, zerwanie. Do teg
    wyłącznik szybki odpływu wyłącza sekcję, próba linii / ponowne załączenie (etap C) – zwarcie zniknęło (ptak spadł, łuk zgasł) →
    sekcja wraca, inaczej wyłączona na dobre. Pociąg w sekcji traci na chwilę napięcie. Wyzwalanie: losowo (rzadko, z ustawieniem
    częstości, wyłączalne w eu07.ini) albo eventem na słupie. Bez uszkodzeń: izolatorów nie wypalamy (użytkownik 2026-11-22),
-   opalania rożków raczej nie (wątpi w sens – z kabiny niewidoczne). Do ustalenia przy etapie: jak długo pali się łuk przy 3 kV DC
+   opalanie rożków tylko szybkim, nieobciążającym shaderem (np. parametr per instancja przyciemniający końce rożków, jak pył
+   po normalnej) – inaczej nie robić. Do ustalenia przy etapie: jak długo pali się łuk przy 3 kV DC
    (w DC brak przejścia przez zero – ile robią rożki, ile wyłącznik).
 H. **Odgromniki** – sam model (bez wpływu na prąd), stawiane w edytorze.
 I. **Podgląd**: edytor – sekcje kolorami wg zasilacza / napięcia, stan łączników; panel maszynisty / debug – podstacje, odpływy,
