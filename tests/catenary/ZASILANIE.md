@@ -97,9 +97,9 @@ G. **Awarie**: zwarcie przez uszynienie, pantograf na przerwie, zerwanie. Do teg
    ptak mostkuje przerwę rożków 7310 (~10 mm) → zwarcie sieć–słup–tok szynowy przez odgromnik; łuk na rożkach (iskry, catenary_arcing),
    wyłącznik szybki odpływu wyłącza sekcję, próba linii / ponowne załączenie (etap C) – zwarcie zniknęło (ptak spadł, łuk zgasł) →
    sekcja wraca, inaczej wyłączona na dobre. Pociąg w sekcji traci na chwilę napięcie. Wyzwalanie: losowo (rzadko, z ustawieniem
-   częstości, wyłączalne w eu07.ini) albo eventem na słupie. Ślad: opalone rożki (wariant tekstury / decal), ewentualnie ptak pod
-   słupem. Do ustalenia przy etapie: jak długo pali się łuk przy 3 kV DC (w DC brak przejścia przez zero – ile robią rożki, ile
-   wyłącznik), czy izolator odgromnika może się uszkodzić.
+   częstości, wyłączalne w eu07.ini) albo eventem na słupie. Bez uszkodzeń: izolatorów nie wypalamy (użytkownik 2026-11-22),
+   opalania rożków raczej nie (wątpi w sens – z kabiny niewidoczne). Do ustalenia przy etapie: jak długo pali się łuk przy 3 kV DC
+   (w DC brak przejścia przez zero – ile robią rożki, ile wyłącznik).
 H. **Odgromniki** – sam model (bez wpływu na prąd), stawiane w edytorze.
 I. **Podgląd**: edytor – sekcje kolorami wg zasilacza / napięcia, stan łączników; panel maszynisty / debug – podstacje, odpływy,
    wyłączniki, prądy.
