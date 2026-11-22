@@ -105,8 +105,8 @@ gap_within( TTraction const &Traction, int const End, double const Reach ) {
     auto const length { std::hypot( Traction.pPoint2.x - Traction.pPoint1.x, Traction.pPoint2.z - Traction.pPoint1.z ) };
     for( int which = 0; which < 2; ++which ) {
         if( false == span.gapped[ which ] ) { continue; }
-        auto const near { End == 0 ? span.gap[ which ][ 0 ] : length - span.gap[ which ][ 1 ] };
-        if( near < Reach ) { return true; }
+        auto const closest { End == 0 ? span.gap[ which ][ 0 ] : length - span.gap[ which ][ 1 ] };
+        if( closest < Reach ) { return true; }
     }
     return false;
 }
