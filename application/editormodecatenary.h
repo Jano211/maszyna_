@@ -134,7 +134,8 @@ struct catenary_editor
 		int earthing_joint{0};           // between the sections: 0 insulating point in the span (13-0493), 1 anchorings 13-0491 on both poles,
 		                                 // 2 anchoring on one pole: one section ends in the mount, the next leaves it on the other side
 		bool connection_pick{false};     // LMB on a span of another chain puts there a connection 0642/0648 with the selected chain
-		int connection_card{1};          // the card of the new connection: 0 - 0642 parallel, 1 - 0648 at a switch
+		int connection_card{1};          // the new connection: 0 - 0642, 1 - 0648, 2 - 0650, 3 - 0652 (to a 3 kV line), 4 - 0641/0643 through a disconnector, 5 - 0651/0653 to a line through a disconnector
+		std::string connection_line;     // the 3 kV distribution line (a feeder earthing of the file) of cards 0650-0653
 		bool earthing_manual{false};     // the poles clicked one after another, the rope straight from pole to pole (over gantries too)
 		std::string earthing_line;       // the rope of the new run (earthing_line in traction_supports.txt): empty - the earthing (AFL120); a feeder line - reinforcing feeder
 		bool wide_stagger{false}; // stagger -0.50..+0.50 m from the track axis (tuning at turnouts; not allowed on a line)
@@ -454,6 +455,7 @@ struct catenary_editor
 	void catenary_chain_apply(unsigned Fields);
 	void catenary_chain_take(std::size_t Chain);
 	bool catenary_connection_make(int Other, std::size_t Span);
+	bool catenary_connection_to_line();
 	void render_catenary_connections_ui();
 	void render_catenary_messenger_from(std::size_t Chain);
 	void catenary_connect(std::size_t const To);

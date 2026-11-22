@@ -864,6 +864,25 @@ int main( int, char *argv[] ) {
             && catenary_earthing_holder_text( 0, "f2" ) == "4910-02 + 6130-00 + 0301-05";
         // przewód w przęsłach (lina rysowana z przęsłami łańcucha) - przęsło f2-f3 istnieje
         good = good && std::find( mock_span_names.begin(), mock_span_names.end(), std::string( "nf_1" ) ) != mock_span_names.end();
+        // przewód jako rozdzielczy 3 kV (karta 0639, 2026-11-22): połączenie 0650 łańcucha nf z nim i odłącznik 0651 od łańcucha do niego
+        {
+            auto joined { *catenary_chain_get( 0 ) };
+            catenary::chain::connection connection;
+            connection.after = "f2"; connection.card = "0650"; connection.other = "wz1"; connection.at = 5.0;
+            joined.connections.push_back( connection );
+            catenary_chain_update( 0, joined );
+            auto const triangles { catenary_chain_connections( 0 ) };
+            catenary::disconnector item;
+            item.name = "Odr1"; item.card = "0661"; item.from_chain = "nf"; item.from_point = "f2"; item.to_chain = "wz1"; item.to_point = "-";
+            auto const index { catenary_disconnector_add( catenary_chain_file( 0 ), item ) };
+            auto const assembled { catenary_disconnector_solid_size( index ) };
+            item.to_chain = "nf"; item.to_point = "f3";
+            catenary_disconnector_update( index, item );
+            auto const tochain { catenary_disconnector_solid_size( index ) };
+            std::printf( "  przewod rozdzielczy: polaczenie 0650 %zu trojkatow, odlacznik do przewodu %zu (do lancucha %zu)\n", triangles, assembled, tochain );
+            good = good && triangles > 0 && assembled > 0 && assembled != tochain;
+            catenary_disconnector_remove( index );
+        }
         std::remove( "tests/catenary/td_wzmacniajacy_test.scm" );
         check( good, "przewod wzmacniajacy: sekcja z line AFL95, wysiegniki 49xx wg glebokosci, izolatory 0301, kotwienie 23-0419" );
     }

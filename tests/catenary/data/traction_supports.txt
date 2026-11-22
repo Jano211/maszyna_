@@ -182,6 +182,41 @@ earthing_line AFL240 feeder description AFL 240 - przewod wzmacniajacy enddescri
   chain anchor 4450-01 0.0747 4710-01 0.075 esn_2025 0.60043 4420-01 0.93 5180-07 0.14724
 endearthing_line
 
+// ---- przewod rozdzielczy 3 kV (karta 23-0639, uzytkownik 2026-11-22: "zrob wszystko, co sie da, na placeholderach") ------------------
+//   Wykonanie 1 - 185 mm2 Cu (linka 9815-9 L185), 2 - 370 (2x L185), 4 - 555 (3x L185); wykonanie 3 (465) na karcie skreslone.
+//   Prowadzony jak przewod wzmacniajacy (sekcja "earthing ... line <nazwa>", rowniez recznie po slupach i bramkach). Na kartach na
+//   dzwigarze bramki na wspornikach 4820-3 z izolatorem 7200-1 co ok. 3 m - modeli brak, na razie jak przewod wzmacniajacy: wysiegniki
+//   49xx i izolatory 0301 na slupach, 4950-01 na bramce (ZALOZENIE). Kilka linek rysowane jako jedna grubsza (ZALOZENIE: srednica
+//   z sumy przekrojow, masa x2 / x3). L185 Cu: 17,6 mm, 1,65 kg/m (tablice producentow). Polaczenia z siecia: wpis "connection
+//   <podwieszenie> 0650|0652 <nazwa sekcji>" w lancuchu, przez odlacznik - "to <nazwa sekcji> -" w odlaczniku (0651/0653).
+earthing_line L185 feeder description L 185 Cu - przewod rozdzielczy 3 kV (0639 wyk. 1) enddescription diameter 0.0176 mass 1.65 tension 400
+  arms 4910 4920 4930 4940 ESN-2141 ESN-2510 ESN-2635A
+  insulator 0301-07 wire -0.52
+  insulator_new 0301-071 wire -0.64
+  gantry_arm 4950-01 drop 0.0 wire 0.0 -1.12552 0.88067
+  guide 5180-07 -0.14724 0.0 -0.00227 -0.07392 0.0 -0.03375 -0.04314 0.00006 -0.07688
+  brackets 0403
+  chain anchor 4450-01 0.0747 4710-01 0.075 esn_2025 0.60043 4420-01 0.93 5180-07 0.14724
+endearthing_line
+earthing_line 2xL185 feeder description 2 x L 185 Cu - przewod rozdzielczy 3 kV (0639 wyk. 2) enddescription diameter 0.0249 mass 3.30 tension 800
+  arms 4910 4920 4930 4940 ESN-2141 ESN-2510 ESN-2635A
+  insulator 0301-07 wire -0.52
+  insulator_new 0301-071 wire -0.64
+  gantry_arm 4950-01 drop 0.0 wire 0.0 -1.12552 0.88067
+  guide 5180-07 -0.14724 0.0 -0.00227 -0.07392 0.0 -0.03375 -0.04314 0.00006 -0.07688
+  brackets 0403
+  chain anchor 4450-01 0.0747 4710-01 0.075 esn_2025 0.60043 4420-01 0.93 5180-07 0.14724
+endearthing_line
+earthing_line 3xL185 feeder description 3 x L 185 Cu - przewod rozdzielczy 3 kV (0639 wyk. 4) enddescription diameter 0.0305 mass 4.95 tension 1200
+  arms 4910 4920 4930 4940 ESN-2141 ESN-2510 ESN-2635A
+  insulator 0301-07 wire -0.52
+  insulator_new 0301-071 wire -0.64
+  gantry_arm 4950-01 drop 0.0 wire 0.0 -1.12552 0.88067
+  guide 5180-07 -0.14724 0.0 -0.00227 -0.07392 0.0 -0.03375 -0.04314 0.00006 -0.07688
+  brackets 0403
+  chain anchor 4450-01 0.0747 4710-01 0.075 esn_2025 0.60043 4420-01 0.93 5180-07 0.14724
+endearthing_line
+
 // wysiegniki przewodu wzmacniajacego (modele 2026-11-16, punkt eye = zaczep uchwytu 0301): mocowanie wg glebokosci slupa jak 6130
 // (-02 sruby do Y 0,253 -> slup do 0,223; -01 do 0,293 -> do 0,263; uzytkownik: wlasciwe -01 na 1601/1602, -02 na 1604/1605/1701/1711,
 // na innych slupach tylko gdy pasuja wymiarem). 4910 krotki, 4920 dlugi, 4930 / 4940 esowe (eye nad plyta). Tyl 6130-00 jak

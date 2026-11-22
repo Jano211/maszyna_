@@ -129,7 +129,7 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else if( key == "connection" ) {
                     chain::connection connection;
                     if( one( connection.after ) && one( connection.card ) && one( connection.other ) ) {
-                        if( connection.card != "0642" && connection.card != "0648" ) { report( line.name, "connection card \"" + connection.card + "\" isn't 0642 or 0648" ); good = false; }
+                        if( connection.card != "0642" && connection.card != "0648" && connection.card != "0650" && connection.card != "0652" ) { report( line.name, "connection card \"" + connection.card + "\" isn't 0642, 0648, 0650 or 0652" ); good = false; }
                         if( index < count && Tokens[ index ] == "at" ) { ++index; number( connection.at ); }
                         line.connections.push_back( connection );
                     }

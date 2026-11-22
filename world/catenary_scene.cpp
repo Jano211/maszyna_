@@ -3123,6 +3123,37 @@ overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector
     if( crossend ) { draw( 1.0 - kConnectorFromPole / length ); }
 }
 
+// przewód rozdzielczy 3 kV (karta 0639; wpis uszynienia z przewodem "feeder", użytkownik 2026-11-22): punkt jego liny najbliżej
+// miejsca Place w planie (odcinki prosto między słupami, bez zwisu); false - nie ma takiego w pliku albo bez słupów
+bool line_point_near( std::string const &File, std::string const &Name, glm::dvec3 const &Place, glm::dvec3 &Point );
+
+// połączenie z przewodem rozdzielczym (33-0650 pośrednie, 33-0652 końcowe): "S" z przewodów jezdnych na linę, z liny łukiem w górę
+// do przewodu rozdzielczego (zacisk 6605-8, łącznik 9861-1 przy nim)
+void
+line_connection( connector_cut const &Here, glm::dvec3 const &Line, std::vector<catenary::solid_vertex> &Solid ) {
+    auto const rope { Here.ropes.front() };
+    glm::dvec3 const flat { Line.x - rope.x, 0.0, Line.z - rope.z };
+    auto const away { glm::length( flat ) > 1e-3 ? glm::normalize( flat ) : glm::cross( Here.along, glm::dvec3 { 0.0, 1.0, 0.0 } ) };
+    for( auto const &wire : Here.wires ) {
+        add_tube( Solid, connector_drop( wire, rope, away ), kConnectorRadius );
+        add_box( Solid, wire, Here.along, 0.08, 0.035 );
+    }
+    add_box( Solid, rope, Here.along, 0.08, 0.04 );
+    add_tube( Solid, connector_arc( rope, Line, 0.25 ), kConnectorRadius );
+    add_box( Solid, Line, Here.along, 0.10, 0.05 );
+}
+
+// numer typu sieci łańcucha z pliku (0 - bez typu albo nie ma takiego)
+int
+chain_code( std::string const &File, std::string const &Name ) {
+    for( auto const &chain : Chains ) {
+        if( chain.removed || chain.file != File || chain.data.name != Name ) { continue; }
+        auto const *type { chain.data.type.empty() ? nullptr : catenary::types().find( chain.data.type ) };
+        return type != nullptr ? type->type.code : 0;
+    }
+    return 0;
+}
+
 // połączenia bezpośrednie z innym łańcuchem (33-0642 równoległe, 33-0648 rozjazdowe): przewód tego łańcucha - "S" w górę na jego
 // linę - łuk - lina drugiego - "S" w dół do jego przewodu (zacisk na pierwszym przewodzie jezdnym, karta: 6601 po jednym z każdej
 // strony); 0642 z łącznikiem 9861-1 w szczycie łuku. Drugi łańcuch: jego przęsło nad tym miejscem
@@ -3143,6 +3174,11 @@ chain_connections( scene_chain const &Chain, std::size_t const Span, std::vector
         auto const t { std::clamp( ( connection.at < 0.0 ? kConnectorFromPole : connection.at ) / plan, 0.0, 1.0 ) };
         auto const place { a + ( b - a ) * t };
         auto const here { connector_cut_of( *Chain.spans[ Span ], place ) };
+        if( connection.card == "0650" || connection.card == "0652" ) {
+            glm::dvec3 line;
+            if( here.valid() && line_point_near( Chain.file, connection.other, place, line ) ) { line_connection( here, line, Solid ); }
+            continue;
+        }
         connector_cut there;
         for( auto const &other : Chains ) {
             if( other.removed || other.file != Chain.file || other.data.name != connection.other || &other == &Chain ) { continue; }
@@ -3158,13 +3194,21 @@ chain_connections( scene_chain const &Chain, std::size_t const Span, std::vector
             glm::dvec3 const flat { To.x - From.x, 0.0, To.z - From.z };
             return glm::length( flat ) > 1e-3 ? glm::normalize( flat ) : glm::cross( here.along, glm::dvec3 { 0.0, 1.0, 0.0 } );
         };
-        auto const wirehere { here.wires.front() }, wirethere { there.wires.front() };
-        auto const ropehere { connector_rope_over( here, wirehere ) }, ropethere { connector_rope_over( there, wirethere ) };
-        add_tube( Solid, connector_drop( wirehere, ropehere, across( ropethere, ropehere ) ), kConnectorRadius );
-        add_tube( Solid, connector_arc( ropehere, ropethere, 0.45 ), kConnectorRadius );
-        add_tube( Solid, connector_drop( ropethere, wirethere, across( ropehere, ropethere ) ), kConnectorRadius );
-        for( auto const &rope : { ropehere, ropethere } ) { add_box( Solid, rope, here.along, 0.08, 0.04 ); }        // 6605
-        for( auto const &wire : { wirehere, wirethere } ) { add_box( Solid, wire, here.along, 0.08, 0.035 ); }       // 6601
+        // sieć 32/35/36/37 z drugiej albo tej strony (karty 13-0654 / 13-0659 z 2010: z siecią C120-2C): linka do każdego przewodu
+        auto const heavy = []( int const Code ) { return Code == 32 || Code == 35 || Code == 36 || Code == 37; };
+        auto const cables { heavy( chain_code( Chain.file, data.name ) ) || heavy( chain_code( Chain.file, connection.other ) ) ? std::min( here.wires.size(), there.wires.size() ) : std::size_t { 1 } };
+        glm::dvec3 ropehere { here.ropes.front() }, ropethere { there.ropes.front() };
+        for( std::size_t cable = 0; cable < cables; ++cable ) {
+            auto const shift { here.along * ( 0.3 * static_cast<double>( cable ) ) };
+            auto const wirehere { here.wires[ cable ] + shift }, wirethere { there.wires[ cable ] + shift };
+            ropehere = connector_rope_over( here, wirehere ) + shift;
+            ropethere = connector_rope_over( there, wirethere ) + shift;
+            add_tube( Solid, connector_drop( wirehere, ropehere, across( ropethere, ropehere ) ), kConnectorRadius );
+            add_tube( Solid, connector_arc( ropehere, ropethere, 0.45 ), kConnectorRadius );
+            add_tube( Solid, connector_drop( ropethere, wirethere, across( ropehere, ropethere ) ), kConnectorRadius );
+            for( auto const &rope : { ropehere, ropethere } ) { add_box( Solid, rope, here.along, 0.08, 0.04 ); }        // 6605
+            for( auto const &wire : { wirehere, wirethere } ) { add_box( Solid, wire, here.along, 0.08, 0.035 ); }       // 6601
+        }
         if( connection.card == "0642" ) {
             // łącznik 9861-1 w szczycie łuku (tam, gdzie łuk connector_arc ma najwyższy punkt)
             auto const arc { connector_arc( ropehere, ropethere, 0.45 ) };
@@ -3277,7 +3321,15 @@ disconnector_cable( scene_disconnector const &Item, disconnector_frame const &Fr
     }
     scene_chain const *chain { nullptr };
     for( auto const &item : Chains ) { if( false == item.removed && item.file == Item.file && item.data.name == Chain ) { chain = &item; break; } }
-    if( chain == nullptr ) { return; }
+    if( chain == nullptr ) {
+        // przewód rozdzielczy (0651 pośrednie, 0653 końcowe, 0656 z kablem): linka z zacisku łukiem do przewodu najbliżej słupa
+        glm::dvec3 line;
+        if( line_point_near( Item.file, Chain, Terminal, line ) ) {
+            add_tube( Solid, connector_arc( Terminal, line, 0.25 ), kConnectorRadius );
+            add_box( Solid, line, Frame.axis, 0.10, 0.05 );
+        }
+        return;
+    }
     auto const listed { std::find( chain->data.suspensions.begin(), chain->data.suspensions.end(), Point ) };
     if( listed == chain->data.suspensions.end() ) { return; }
     auto const number { static_cast<std::size_t>( listed - chain->data.suspensions.begin() ) + ( chain->data.anchor_start.empty() ? 0u : 1u ) };
@@ -4357,6 +4409,33 @@ line_radius( catenary::earthing_line const *line ) {
 }
 
 // lina z naciągu (parabola) od A do B
+bool
+line_point_near( std::string const &File, std::string const &Name, glm::dvec3 const &Place, glm::dvec3 &Point ) {
+    for( auto const &earthing : Earthings ) {
+        if( earthing.removed || earthing.file != File || earthing.data.name != Name ) { continue; }
+        std::vector<glm::dvec3> points;
+        for( auto const pole : earthing.path ) {
+            if( auto const anchored { earthing.anchored.find( pole ) }; anchored != earthing.anchored.end() ) { points.push_back( anchored->second ); continue; }
+            earthing_place place;
+            if( earthing_place_at( earthing, pole, place ) ) { points.push_back( place.wire ); }
+        }
+        if( points.empty() ) { return false; }
+        auto best { std::numeric_limits<double>::max() };
+        for( std::size_t k = 0; k < points.size(); ++k ) {
+            auto const &a { points[ k ] };
+            auto const &b { k + 1 < points.size() ? points[ k + 1 ] : points[ k ] };
+            glm::dvec2 const step { b.x - a.x, b.z - a.z };
+            auto const length2 { glm::dot( step, step ) };
+            auto const t { length2 > 1e-9 ? std::clamp( glm::dot( glm::dvec2 { Place.x - a.x, Place.z - a.z }, step ) / length2, 0.0, 1.0 ) : 0.0 };
+            auto const on { a + ( b - a ) * t };
+            auto const distance { std::hypot( on.x - Place.x, on.z - Place.z ) };
+            if( distance < best ) { best = distance; Point = on; }
+        }
+        return true;
+    }
+    return false;
+}
+
 void
 earthing_rope_piece( glm::dvec3 const &A, glm::dvec3 const &B, std::vector<catenary::solid_vertex> &Solid, catenary::earthing_line const *line ) {
     auto const length { glm::length( B - A ) };

@@ -152,7 +152,8 @@ struct chain {
     // połączenia elektryczne bezpośrednie z innym łańcuchem tego pliku (karty 33-0642 równoległe i 33-0648 rozjazdowe; użytkownik
     // 2026-11-22: „przy rozjazdach też są takie łączki”): w przęśle za podwieszeniem "after", "at" m od niego wzdłuż przęsła (ujemne -
     // 1,5 m), linka z przewodu tego łańcucha przez jego linę łukiem na linę drugiego i "S" do jego przewodu. Wpis
-    // "connection <podwieszenie> 0642|0648 <łańcuch> [at <m>]", przed "suspensions"
+    // "connection <podwieszenie> 0642|0648 <łańcuch> [at <m>]", przed "suspensions"; 0650 / 0652 - z przewodem rozdzielczym 3 kV
+    // (wpis uszynienia z przewodem "feeder" tego pliku, karta 0639): <łańcuch> to nazwa tego wpisu
     struct connection {
         std::string after;
         std::string card { "0648" };
