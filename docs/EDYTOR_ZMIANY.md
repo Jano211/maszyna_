@@ -14,6 +14,21 @@ Najnowsze na górze. Przy każdej zmianie: co widać w edytorze, czego wymaga i 
   pliku rozwiązuje się, biorąc obie strony. Nowe wpisy idą przy pokrewnych tekstach, więc konfliktów będzie mniej.
 - Zmiana pól w `application/editormode.h` oznacza przebudowę prawie całego edytora (ok. 30 min).
 
+## 2026-11-22
+
+Merge zmian kolegów z `feat/gl46-migration` (553 commity) na `siec-gl46`, potem na `wszystko-gl46`. Opis rozwiązanych
+konfliktów jest w treści obu commitów merge.
+
+### Minimapa: mapa pod torami (warstwy z pliku źródeł), północą do góry — commit o tym tytule
+- Co widać: nasza osobna minimapa (okno z mapą z `editor/foreign_sources.txt`) zniknęła. Jest teraz przełącznikiem „Mapa pod
+  spodem” w minimapie torów (Ctrl+M), z wyborem warstwy obok. Włączona: pod kreskami torów rysuje się mapa (przyciemniona, żeby
+  tory były widać), a cały widok obraca się północą do góry. Pod mapą jest jej podpis albo liczba kafli w drodze. Wyłączona:
+  minimapa jest dokładnie taka jak bez tej zmiany (sam plan torów, x w prawo, z w dół).
+- Zmienia: `application/editormodeminimap.h/.cpp` (interfejs `minimap_underlay`; bez niego albo z wyłączonym nic się nie
+  zmienia), `editor/editorMinimap.hpp/.cpp` (zamiast okna: `controls()`, `draw()`, `status()`), `application/editormode.h/.cpp`
+  (łącznik `map_underlay` z punktem odniesienia ortofoto), `lang/editor_pl.po`.
+- Wymaga: geoportale (`editor/editorForeign`, warstwy `map` w pliku źródeł).
+
 ## 2026-11-19
 
 Commity na `siec-gl46`.

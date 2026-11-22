@@ -16976,11 +16976,17 @@ msgstr "Mapa wokół kamery (warstwy map z editor/foreign_sources.txt): przecią
 msgid "Follow the camera"
 msgstr "Za kamerą"
 
-msgid "No map layers: the minimap shows the map lines of editor/foreign_sources.txt (OpenStreetMap, topographic maps). Put the file in the folder of the simulator and reload the sources in the orthophoto window."
-msgstr "Brak warstw map: minimapa pokazuje linie map z editor/foreign_sources.txt (OpenStreetMap, mapy topograficzne). Wrzuć plik do folderu symulatora i wczytaj ponownie źródła w oknie ortofoto."
+msgid "No map layers: the map comes from the map lines of editor/foreign_sources.txt (OpenStreetMap, topographic maps). Put the file in the folder of the simulator and reload the sources in the orthophoto settings."
+msgstr "Brak warstw map: mapa pochodzi z linii map w editor/foreign_sources.txt (OpenStreetMap, mapy topograficzne). Wrzuć plik do folderu symulatora i wczytaj ponownie źródła w ustawieniach ortofoto."
 
-msgid "The scenery has no place on the map: set its origin in PUWG 1992 in the orthophoto window."
-msgstr "Sceneria nie ma miejsca na mapie: ustaw jej punkt odniesienia w PUWG 1992 w oknie ortofoto."
+msgid "The scenery has no place on the map: set its origin in PUWG 1992 in the orthophoto settings."
+msgstr "Sceneria nie ma miejsca na mapie: ustaw jej punkt odniesienia w PUWG 1992 w ustawieniach ortofoto."
+
+msgid "Map underneath"
+msgstr "Mapa pod spodem"
+
+msgid "A map under the tracks: the map layers of editor/foreign_sources.txt (OpenStreetMap, topographic maps), north up.\nOff, the minimap is the plan of the tracks alone"
+msgstr "Mapa pod torami: warstwy map z editor/foreign_sources.txt (OpenStreetMap, mapy topograficzne), północą do góry.\nWyłączone – minimapa to sam plan torów"
 
 msgid "Drag: move the map. Wheel: zoom. Double click: the camera goes there"
 msgstr "Przeciągnij: przesuń mapę. Kółko: przybliż. Dwuklik: kamera idzie tam"

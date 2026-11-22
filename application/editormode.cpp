@@ -553,6 +553,7 @@ editor_mode::editor_mode() {
 	kilometrage::reset();
 	m_userinterface = std::make_shared<editor_ui>();
 	// the area fill settings live in the node bank window, in the tab of the fill mode
+	m_minimap.underlay(&m_map_underlay_link);
 	ui()->set_fill_options([this]() { render_area_fill(); });
 	ui()->set_gizmo_options([this]() { render_gizmo_options(); });
 	ui()->set_toolbar_options([this]() { render_toolbar(); });
@@ -4324,6 +4325,29 @@ void editor_mode::render_map_menu()
         m_orthophoto_window = true;
     }
     ImGui::EndMenu();
+}
+
+bool editor_mode::map_underlay::controls()
+{
+	m_mode.load_orthophoto_settings(); // the origin of the scenery, as the orthophoto has it
+	auto const &origin{m_mode.m_orthophoto.settings()};
+	return m_mode.m_map_underlay.controls(origin.north != 0.0 || origin.east != 0.0);
+}
+
+void editor_mode::map_underlay::draw(ImDrawList &Drawlist, std::function<ImVec2(glm::dvec2 const &)> const &Screen, glm::dvec2 const &Low, glm::dvec2 const &High, double const Scale)
+{
+	auto const &origin{m_mode.m_orthophoto.settings()};
+	m_mode.m_map_underlay.draw(Drawlist, editor_minimap::view{origin.north, origin.east, Low, High, Scale, Screen});
+}
+
+std::string editor_mode::map_underlay::status()
+{
+	return m_mode.m_map_underlay.status();
+}
+
+void editor_mode::map_underlay::release()
+{
+	m_mode.m_map_underlay.release();
 }
 
 bool editor_mode::orthophoto_settings_open() const

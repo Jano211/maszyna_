@@ -11,10 +11,31 @@ http://mozilla.org/MPL/2.0/.
 
 #include "application/editortool.h"
 
+#include <functional>
 #include <string>
 #include <vector>
 
+struct ImDrawList;
+struct ImVec2;
+
 class track_ride;
+
+// what another part of the editor draws under the tracks of the minimap, such as a map. Without one, or with it turned off, the
+// minimap is as it is on its own
+class minimap_underlay
+{
+  public:
+	virtual ~minimap_underlay() = default;
+	// its settings above the map; true when it's drawn
+	virtual bool controls() = 0;
+	// under the tracks: Screen gives the point of the window of a point (x, z) of the scenery, Low and High the corners of the part
+	// of the scenery in view, Scale the metres a pixel
+	virtual void draw(ImDrawList &Drawlist, std::function<ImVec2(glm::dvec2 const &)> const &Screen, glm::dvec2 const &Low, glm::dvec2 const &High, double const Scale) = 0;
+	// a line under the map: whose the map is, or how much of it is still coming
+	virtual std::string status() = 0;
+	// the window closed or the underlay turned off: what it holds let go of
+	virtual void release() = 0;
+};
 
 // the tracks of the scenery seen from above with the camera on them, and the stations the stop indicators (W4) name, to find
 // one by its name and go there
@@ -41,6 +62,8 @@ class minimap_tool final : public editor_tool
 	editor_selftest_result selftest(std::string const &Command, std::istringstream &Words) override;
 	bool is_open() const { return m_open; }
 	void toggle() { m_open = !m_open; }
+	// drawn under the tracks when its controls turn it on; nullptr: none
+	void underlay(minimap_underlay *Underlay) { m_underlay = Underlay; }
 	// the stations of the scenery, gathered again where the scenery changed
 	std::vector<station> const &stations();
 	// the camera to the next stop of the station: riding along the track it rides on from there, else it flies over to it
@@ -82,4 +105,8 @@ class minimap_tool final : public editor_tool
 	bool m_fitted{false};
 	glm::vec2 m_pressed{0.0f};
 	bool m_dragging{false};
+	// what's drawn under the tracks: with it the map turns north up, as the maps are (the plan alone keeps x to the right, z down,
+	// as the top view)
+	minimap_underlay *m_underlay{nullptr};
+	bool m_underlaid{false};
 };

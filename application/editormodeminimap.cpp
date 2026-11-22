@@ -308,15 +308,17 @@ void minimap_tool::render_map(float const Height)
 	auto const &io{ImGui::GetIO()};
 	glm::vec2 const mouse{io.MousePos.x, io.MousePos.y};
 	glm::dvec2 const middle{origin.x + size.x * 0.5, origin.y + size.y * 0.5};
-	// x to the right, z down: as the top view looking north along -z
-	auto const to_world = [&](glm::vec2 const &Screen) { return glm::dvec2{m_centre.x + (Screen.x - middle.x) * m_scale, m_centre.y + (Screen.y - middle.y) * m_scale}; };
-	auto const to_screen = [&](glm::dvec2 const &World) { return ImVec2(static_cast<float>(middle.x + (World.x - m_centre.x) / m_scale), static_cast<float>(middle.y + (World.y - m_centre.y) / m_scale)); };
+	// x to the right, z down: as the top view looking north along -z. Under a map turned half round, north up: x grows to the west
+	// and z to the north
+	auto const turn{m_underlaid ? -1.0 : 1.0};
+	auto const to_world = [&](glm::vec2 const &Screen) { return glm::dvec2{m_centre.x + turn * (Screen.x - middle.x) * m_scale, m_centre.y + turn * (Screen.y - middle.y) * m_scale}; };
+	auto const to_screen = [&](glm::dvec2 const &World) { return ImVec2(static_cast<float>(middle.x + turn * (World.x - m_centre.x) / m_scale), static_cast<float>(middle.y + turn * (World.y - m_centre.y) / m_scale)); };
 	if (hovered && io.MouseWheel != 0.0f)
 	{
 		auto const under{to_world(mouse)};
 		m_scale = std::clamp(m_scale * std::pow(0.8, static_cast<double>(io.MouseWheel)), 0.05, 500.0);
 		if (false == m_follow)
-			m_centre = {under.x - (mouse.x - middle.x) * m_scale, under.y - (mouse.y - middle.y) * m_scale};
+			m_centre = {under.x - turn * (mouse.x - middle.x) * m_scale, under.y - turn * (mouse.y - middle.y) * m_scale};
 	}
 	if (ImGui::IsItemActivated())
 	{
@@ -330,8 +332,8 @@ void minimap_tool::render_map(float const Height)
 		if (m_dragging && (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f))
 		{
 			m_follow = false;
-			m_centre.x -= io.MouseDelta.x * m_scale;
-			m_centre.y -= io.MouseDelta.y * m_scale;
+			m_centre.x -= turn * io.MouseDelta.x * m_scale;
+			m_centre.y -= turn * io.MouseDelta.y * m_scale;
 		}
 	}
 	if (ImGui::IsItemDeactivated() && false == m_dragging)
@@ -344,8 +346,16 @@ void minimap_tool::render_map(float const Height)
 	ImVec2 const corner{origin.x + size.x, origin.y + size.y};
 	drawlist->PushClipRect(origin, corner, true);
 	drawlist->AddRectFilled(origin, corner, IM_COL32(28, 32, 36, 255));
-	auto const low{to_world({origin.x, origin.y})};
-	auto const high{to_world({corner.x, corner.y})};
+	auto const first{to_world({origin.x, origin.y})};
+	auto const last{to_world({corner.x, corner.y})};
+	auto const low{glm::min(first, last)};
+	auto const high{glm::max(first, last)};
+	if (m_underlaid)
+	{
+		m_underlay->draw(*drawlist, to_screen, low, high, m_scale);
+		// darkened, so the tracks stand out on the light colours of the map
+		drawlist->AddRectFilled(origin, corner, IM_COL32(0, 0, 0, 110));
+	}
 	auto const *ridden{m_ride.track()};
 	// what's left of the vertices for the tracks, some kept for the stations, the camera and the scale
 	auto const budget{drawlist->VtxBuffer.Size + 56000};
@@ -416,7 +426,7 @@ void minimap_tool::render_map(float const Height)
 	{
 		auto const at{to_screen({camera.x, camera.z})};
 		auto const look{camera_look()};
-		ImVec2 const forward{static_cast<float>(look.x), static_cast<float>(look.z)};
+		ImVec2 const forward{static_cast<float>(turn * look.x), static_cast<float>(turn * look.z)};
 		ImVec2 const side{-forward.y, forward.x};
 		auto const point = [&](float const Ahead, float const Across) { return ImVec2(at.x + forward.x * Ahead + side.x * Across, at.y + forward.y * Ahead + side.y * Across); };
 		drawlist->AddTriangleFilled(point(11.0f, 0.0f), point(-6.0f, 6.0f), point(-6.0f, -6.0f), IM_COL32(255, 60, 60, 255));
@@ -445,7 +455,12 @@ void minimap_tool::render_map(float const Height)
 void minimap_tool::render_windows()
 {
 	if (false == m_open)
+	{
+		if (m_underlaid)
+			m_underlay->release();
+		m_underlaid = false;
 		return;
+	}
 	// first in the top right corner of the view, over the scene rather than over the panels
 	ImVec2 const size{340.0f * Global.ui_scale, 460.0f * Global.ui_scale};
 	ImGui::SetNextWindowPos(ImVec2(editor_ui::view_max().x - size.x - 60.0f, editor_ui::view_min().y + 50.0f), ImGuiCond_FirstUseEver);
@@ -467,7 +482,15 @@ void minimap_tool::render_windows()
 		auto const room{ImGui::GetContentRegionAvail()};
 		m_scale = std::max((m_high.x - m_low.x) / std::max(room.x, 50.0f), (m_high.y - m_low.y) / std::max(room.y, 80.0f)) * 1.05;
 	}
-	render_map(ImGui::GetContentRegionAvail().y);
+	// what's under the tracks, when there's something to draw there
+	auto const underlaid{m_underlay != nullptr && m_underlay->controls()};
+	if (m_underlaid && false == underlaid)
+		m_underlay->release();
+	m_underlaid = underlaid;
+	auto const line{m_underlaid ? ImGui::GetTextLineHeightWithSpacing() : 0.0f};
+	render_map(ImGui::GetContentRegionAvail().y - line);
+	if (m_underlaid)
+		ImGui::TextDisabled("%s", m_underlay->status().c_str());
 	ImGui::End();
 }
 

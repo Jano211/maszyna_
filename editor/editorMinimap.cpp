@@ -10,6 +10,7 @@ http://mozilla.org/MPL/2.0/.
 #include "stdafx.h"
 #include "editor/editorMinimap.hpp"
 #include "editor/editorForeign.hpp"
+#include "editor/editorFormat.hpp"
 #include "editor/editorHttp.hpp"
 #include "editor/editorOrthophoto.hpp"
 
@@ -18,6 +19,7 @@ http://mozilla.org/MPL/2.0/.
 #include "imgui/imgui.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <filesystem>
 
@@ -198,20 +200,26 @@ editor_minimap::tile *editor_minimap::ready(key const &Key)
 	return &found->second;
 }
 
-bool editor_minimap::ui(camera const &Camera, glm::dvec2 &Target)
+bool editor_minimap::controls(bool const Placed)
 {
 	++m_frame;
 	start();
 	upload();
 	auto const layers{editor_foreign::layers()};
+	ImGui::Checkbox(STR_C("Map underneath"), &m_on);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("A map under the tracks: the map layers of editor/foreign_sources.txt (OpenStreetMap, topographic maps), north up.\n"
+		                              "Off, the minimap is the plan of the tracks alone"));
+	if (false == m_on)
+		return false;
 	if (layers.empty())
 	{
-		ImGui::TextWrapped("%s", STR_C("No map layers: the minimap shows the map lines of editor/foreign_sources.txt (OpenStreetMap, topographic maps). Put the file in the folder of the simulator and reload the sources in the orthophoto window."));
+		ImGui::TextWrapped("%s", STR_C("No map layers: the map comes from the map lines of editor/foreign_sources.txt (OpenStreetMap, topographic maps). Put the file in the folder of the simulator and reload the sources in the orthophoto settings."));
 		return false;
 	}
-	if (Camera.north == 0.0 && Camera.east == 0.0)
+	if (false == Placed)
 	{
-		ImGui::TextWrapped("%s", STR_C("The scenery has no place on the map: set its origin in PUWG 1992 in the orthophoto window."));
+		ImGui::TextWrapped("%s", STR_C("The scenery has no place on the map: set its origin in PUWG 1992 in the orthophoto settings."));
 		return false;
 	}
 	// the layer: the one picked, at first the Polish topographic maps of geoportal.gov.pl (topo_pl), else OpenStreetMap,
@@ -232,7 +240,8 @@ bool editor_minimap::ui(camera const &Camera, glm::dvec2 &Target)
 		m_layer = current->name;
 		clear();
 	}
-	ImGui::SetNextItemWidth(220.0f);
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(-FLT_MIN);
 	if (ImGui::BeginCombo("##minimap_layer", STR(current->title).c_str()))
 	{
 		for (auto const &item : layers)
@@ -243,168 +252,100 @@ bool editor_minimap::ui(camera const &Camera, glm::dvec2 &Target)
 			}
 		ImGui::EndCombo();
 	}
-	ImGui::SameLine();
-	ImGui::Checkbox(STR_C("Follow the camera"), &m_follow);
-	// where the camera is, in PUWG 1992
-	auto const camera_east{Camera.east - Camera.x}, camera_north{Camera.north + Camera.z};
-	if (m_follow)
-	{
-		m_east = camera_east;
-		m_north = camera_north;
-	}
-	// the canvas
-	auto const low{ImGui::GetCursorScreenPos()};
-	auto size{ImGui::GetContentRegionAvail()};
-	size.y -= ImGui::GetTextLineHeightWithSpacing();
-	if (size.x < 32.0f || size.y < 32.0f)
-		return false;
-	ImGui::InvisibleButton("##minimap_canvas", size);
-	auto const hovered{ImGui::IsItemHovered()};
-	auto const high{ImVec2(low.x + size.x, low.y + size.y)};
-	auto const middle{ImVec2(low.x + size.x * 0.5f, low.y + size.y * 0.5f)};
-	auto const &io{ImGui::GetIO()};
-	auto const to_screen = [&](double const East, double const North) {
-		return ImVec2(middle.x + static_cast<float>((East - m_east) / m_scale), middle.y - static_cast<float>((North - m_north) / m_scale));
-	};
-	auto const to_map = [&](ImVec2 const Point, double &East, double &North) {
-		East = m_east + (Point.x - middle.x) * m_scale;
-		North = m_north - (Point.y - middle.y) * m_scale;
-	};
-	bool go{false};
-	if (hovered)
-	{
-		// dragged: the map goes with the mouse
-		if (ImGui::IsMouseDragging(0) && (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f))
-		{
-			m_follow = false;
-			m_east -= io.MouseDelta.x * m_scale;
-			m_north += io.MouseDelta.y * m_scale;
-		}
-		// the wheel: zoomed about the point under the mouse
-		if (io.MouseWheel != 0.0f)
-		{
-			double east, north;
-			to_map(io.MousePos, east, north);
-			auto const scale{std::clamp(m_scale * std::pow(0.8, static_cast<double>(io.MouseWheel)), 0.25, side_of(max_level) / pixels * 2.0)};
-			if (false == m_follow)
-			{
-				m_east = east - (io.MousePos.x - middle.x) * scale;
-				m_north = north + (io.MousePos.y - middle.y) * scale;
-			}
-			m_scale = scale;
-		}
-		if (ImGui::IsMouseDoubleClicked(0))
-		{
-			double east, north;
-			to_map(io.MousePos, east, north);
-			Target = {Camera.east - east, north - Camera.north};
-			go = true;
-		}
-	}
+	m_credit = current->credit.empty() ? STR(current->title) : current->credit;
+	return true;
+}
+
+void editor_minimap::draw(ImDrawList &Drawlist, view const &View)
+{
+	// the corners of the part of the scenery in view, in PUWG 1992 (east = origin - x, north = origin + z)
+	auto const west{View.east - View.high.x};
+	auto const east{View.east - View.low.x};
+	auto const south{View.north + View.low.y};
+	auto const north{View.north + View.high.y};
+	auto const screen = [&](double const East, double const North) { return View.screen(glm::dvec2{View.east - East, North - View.north}); };
 	// the level whose pixel is closest to that of the screen
-	auto const level{std::clamp(static_cast<int>(std::lround(std::log2(std::max(1.0, m_scale)))), 0, max_level)};
+	auto const level{std::clamp(static_cast<int>(std::lround(std::log2(std::max(1.0, View.scale)))), 0, max_level)};
 	auto const side{side_of(level)};
-	double west, north, east, south;
-	to_map(low, west, north);
-	to_map(high, east, south);
-	auto *draw{ImGui::GetWindowDrawList()};
-	draw->PushClipRect(low, high, true);
-	draw->AddRectFilled(low, high, IM_COL32(40, 40, 40, 255));
 	auto const first_x{static_cast<int>(std::floor(west / side))}, last_x{static_cast<int>(std::floor(east / side))};
 	auto const first_y{static_cast<int>(std::floor(south / side))}, last_y{static_cast<int>(std::floor(north / side))};
+	// too many tiles for the view: the map is too small at this scale, nothing asked for
+	if (static_cast<long long>(last_x - first_x + 1) * (last_y - first_y + 1) > static_cast<long long>(kept_tiles / 2))
+		return;
 	std::vector<key> wanted;
 	for (int iy = first_y; iy <= last_y; ++iy)
 		for (int ix = first_x; ix <= last_x; ++ix)
-		{
-			key const where{level, ix, iy};
-			auto &entry{m_tiles[where]};
-			entry.used = m_frame;
-			auto const tile_low{to_screen(ix * side, (iy + 1) * side)}, tile_high{to_screen((ix + 1) * side, iy * side)};
-			if (entry.state == 0 && m_frame >= entry.retry)
-			{
-				entry.state = 1;
-				wanted.push_back(where);
-			}
-			if (auto const *shown{ready(where)})
-			{
-				auto const id{GfxRenderer->Texture(shown->texture).get_id()};
-				draw->AddImage((ImTextureID)(intptr_t)(id), tile_low, tile_high, ImVec2(0, 0), ImVec2(1, 1));
-				continue;
-			}
-			// not in yet: a part of a coarser one, if there is
-			for (int up = 1; up <= 3 && level + up <= max_level; ++up)
-			{
-				auto const coarse{side_of(level + up)};
-				auto const cx{static_cast<int>(std::floor(ix * side / coarse))}, cy{static_cast<int>(std::floor(iy * side / coarse))};
-				auto const *shown{ready({level + up, cx, cy})};
-				if (shown == nullptr)
-					continue;
-				auto const u0{static_cast<float>((ix * side - cx * coarse) / coarse)}, u1{static_cast<float>(((ix + 1) * side - cx * coarse) / coarse)};
-				auto const v0{static_cast<float>(((cy + 1) * coarse - (iy + 1) * side) / coarse)}, v1{static_cast<float>(((cy + 1) * coarse - iy * side) / coarse)};
-				auto const id{GfxRenderer->Texture(shown->texture).get_id()};
-				draw->AddImage((ImTextureID)(intptr_t)(id), tile_low, tile_high, ImVec2(u0, v0), ImVec2(u1, v1));
-				break;
-			}
-		}
+			draw_tile(Drawlist, {level, ix, iy}, screen, wanted);
 	if (false == wanted.empty())
+		ask(wanted, (View.east - (View.low.x + View.high.x) * 0.5) / side, (View.north + (View.low.y + View.high.y) * 0.5) / side);
+}
+
+void editor_minimap::draw_tile(ImDrawList &Drawlist, key const &Where, std::function<ImVec2(double, double)> const &Screen, std::vector<key> &Wanted)
+{
+	auto const [level, ix, iy]{Where};
+	auto const side{side_of(level)};
+	auto &entry{m_tiles[Where]};
+	entry.used = m_frame;
+	if (entry.state == 0 && m_frame >= entry.retry)
 	{
-		// the middle of the view first
-		auto const centre_x{std::floor(m_east / side)}, centre_y{std::floor(m_north / side)};
-		std::sort(wanted.begin(), wanted.end(), [&](key const &Left, key const &Right) {
-			auto const distance = [&](key const &Key) { return std::abs(std::get<1>(Key) - centre_x) + std::abs(std::get<2>(Key) - centre_y); };
-			return distance(Left) > distance(Right);
-		});
+		entry.state = 1;
+		Wanted.push_back(Where);
+	}
+	// the corners of the tile, north-west first and clockwise: the first row of its image is its north edge
+	auto const quad = [&](texture_handle const Texture, ImVec2 const &Low, ImVec2 const &High) {
+		auto const id{GfxRenderer->Texture(Texture).get_id()};
+		Drawlist.AddImageQuad((ImTextureID)(intptr_t)(id), Screen(ix * side, (iy + 1) * side), Screen((ix + 1) * side, (iy + 1) * side), Screen((ix + 1) * side, iy * side),
+		                      Screen(ix * side, iy * side), Low, ImVec2(High.x, Low.y), High, ImVec2(Low.x, High.y));
+	};
+	if (auto const *shown{ready(Where)})
+	{
+		quad(shown->texture, ImVec2(0, 0), ImVec2(1, 1));
+		return;
+	}
+	// not in yet: a part of a coarser one, if there is
+	for (int up = 1; up <= 3 && level + up <= max_level; ++up)
+	{
+		auto const coarse{side_of(level + up)};
+		auto const cx{static_cast<int>(std::floor(ix * side / coarse))}, cy{static_cast<int>(std::floor(iy * side / coarse))};
+		auto const *shown{ready({level + up, cx, cy})};
+		if (shown == nullptr)
+			continue;
+		auto const u0{static_cast<float>((ix * side - cx * coarse) / coarse)}, u1{static_cast<float>(((ix + 1) * side - cx * coarse) / coarse)};
+		auto const v0{static_cast<float>(((cy + 1) * coarse - (iy + 1) * side) / coarse)}, v1{static_cast<float>(((cy + 1) * coarse - iy * side) / coarse)};
+		quad(shown->texture, ImVec2(u0, v0), ImVec2(u1, v1));
+		return;
+	}
+}
+
+void editor_minimap::ask(std::vector<key> &Wanted, double const Centre_x, double const Centre_y)
+{
+	// the middle of the view first
+	std::sort(Wanted.begin(), Wanted.end(), [&](key const &Left, key const &Right) {
+		auto const distance = [&](key const &Key) { return std::abs(std::get<1>(Key) - Centre_x) + std::abs(std::get<2>(Key) - Centre_y); };
+		return distance(Left) > distance(Right);
+	});
+	{
+		std::scoped_lock lock{m_mutex};
+		for (auto const &where : Wanted)
+			m_queue.emplace_front(where, m_layer);
+		while (m_queue.size() > max_queue)
 		{
-			std::lock_guard<std::mutex> lock{m_mutex};
-			for (auto const &where : wanted)
-				m_queue.emplace_front(where, m_layer);
-			while (m_queue.size() > max_queue)
-			{
-				// dropped: asked for again when seen
-				auto const found{m_tiles.find(m_queue.back().first)};
-				if (found != m_tiles.end() && found->second.state == 1)
-					found->second.state = 0;
-				m_queue.pop_back();
-			}
+			// dropped: asked for again when seen
+			auto const found{m_tiles.find(m_queue.back().first)};
+			if (found != m_tiles.end() && found->second.state == 1)
+				found->second.state = 0;
+			m_queue.pop_back();
 		}
-		m_wake.notify_all();
 	}
-	// the camera: a triangle pointing where it looks (forward in the scenery is -sin, -cos of the yaw in x, z; x grows west)
-	{
-		auto const at{to_screen(camera_east, camera_north)};
-		auto const dx{std::sin(Camera.yaw)}, dy{std::cos(Camera.yaw)}; // east, south on the screen
-		auto const point = [&](float const Forward, float const Side) { return ImVec2(at.x + dx * Forward - dy * Side, at.y + dy * Forward + dx * Side); };
-		draw->AddTriangleFilled(point(12.0f, 0.0f), point(-6.0f, 7.0f), point(-6.0f, -7.0f), IM_COL32(230, 40, 40, 255));
-		draw->AddTriangle(point(12.0f, 0.0f), point(-6.0f, 7.0f), point(-6.0f, -7.0f), IM_COL32(255, 255, 255, 255), 1.5f);
-	}
-	// the scale bar
-	{
-		auto metres{100.0 * m_scale};
-		auto const step{std::pow(10.0, std::floor(std::log10(metres)))};
-		metres = metres / step >= 5.0 ? 5.0 * step : metres / step >= 2.0 ? 2.0 * step : step;
-		auto const length{static_cast<float>(metres / m_scale)};
-		ImVec2 const start{low.x + 10.0f, high.y - 12.0f};
-		draw->AddRectFilled(ImVec2(start.x - 4.0f, start.y - 18.0f), ImVec2(start.x + length + 4.0f, start.y + 5.0f), IM_COL32(255, 255, 255, 180));
-		draw->AddLine(start, ImVec2(start.x + length, start.y), IM_COL32(0, 0, 0, 255), 2.0f);
-		auto const label{metres >= 1000.0 ? std::to_string(static_cast<int>(metres / 1000.0)) + " km" : std::to_string(static_cast<int>(metres)) + " m"};
-		draw->AddText(ImVec2(start.x, start.y - 16.0f), IM_COL32(0, 0, 0, 255), label.c_str());
-	}
-	draw->PopClipRect();
-	if (hovered)
-		ImGui::SetTooltip("%s", STR_C("Drag: move the map. Wheel: zoom. Double click: the camera goes there"));
-	// the line under the map
-	std::string error;
-	std::size_t waiting;
-	{
-		std::lock_guard<std::mutex> lock{m_mutex};
-		error = m_error;
-		waiting = m_queue.size();
-	}
-	if (false == error.empty())
-		ImGui::TextDisabled("%s", error.c_str());
-	else if (waiting > 0)
-		ImGui::TextDisabled(STR_C("Loading: %d"), static_cast<int>(waiting));
-	else
-		ImGui::TextDisabled("%s", current->credit.c_str());
-	return go;
+	m_wake.notify_all();
+}
+
+std::string editor_minimap::status()
+{
+	std::scoped_lock lock{m_mutex};
+	if (false == m_error.empty())
+		return m_error;
+	if (false == m_queue.empty())
+		return format(STR_C("Loading: %d"), static_cast<int>(m_queue.size()));
+	return m_credit;
 }

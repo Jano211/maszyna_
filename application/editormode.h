@@ -1033,6 +1033,19 @@ class editor_mode : public application_mode, private editor_track::observer, pri
 	std::size_t m_ortho_waiting{0}; // squares of the terrain model asked for and not in yet, the same
 	// the map layers of the foreign sources (editor/foreign_sources.txt) drawn under the tracks of the minimap, when it's asked for
 	editor_minimap m_map_underlay;
+	// the map above under the minimap of the tracks, at the place of the scenery the orthophoto has
+	class map_underlay final : public minimap_underlay
+	{
+	  public:
+		explicit map_underlay(editor_mode &Mode) : m_mode{Mode} {}
+		bool controls() override;
+		void draw(ImDrawList &Drawlist, std::function<ImVec2(glm::dvec2 const &)> const &Screen, glm::dvec2 const &Low, glm::dvec2 const &High, double const Scale) override;
+		std::string status() override;
+		void release() override;
+
+	  private:
+		editor_mode &m_mode;
+	} m_map_underlay_link{*this};
 	std::string m_orthophoto_scenery;            // scenery whose origin is loaded
 	std::string m_orthophoto_mark;
 	std::vector<std::string> m_orthophoto_area_mark; // the lines of the download area as the scenery keeps them
