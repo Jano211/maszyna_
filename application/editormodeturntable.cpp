@@ -21,6 +21,7 @@ http://mozilla.org/MPL/2.0/.
 #include "scene/scenelayers.h"
 #include "simulation/simulation.h"
 #include "utilities/Globals.h"
+#include "utilities/Logs.h"
 #include "utilities/translation.h"
 #include "utilities/utilities.h"
 #include "world/Track.h"
@@ -75,19 +76,6 @@ double line_angle(double const Angle)
 	if (result < -90.0)
 		result += 180.0;
 	return result;
-}
-
-bool numeric(std::string const &Text, double &Value)
-{
-	char *end{nullptr};
-	Value = std::strtod(Text.c_str(), &end);
-	return false == Text.empty() && *end == '\0';
-}
-
-std::string normalized(std::string File)
-{
-	std::replace(File.begin(), File.end(), '\\', '/');
-	return ToLower(File);
 }
 
 std::vector<double> fixed_angles(std::string const &File)
@@ -187,6 +175,20 @@ void label(screen_projection const &Projection, glm::dvec3 const &Point, std::st
 	drawlist->AddText(ImVec2(at.x + 12.f, at.y), IM_COL32(255, 255, 255, 235), Text.c_str());
 }
 
+// the first line of the file of the turntable controls, which tells it from the files of the scenery made by hand
+char const *const kControlsHeader{"// made by the scenery editor on each save: T turns each turntable to its next position, Shift+T to the previous one"};
+
+// true if the file is one of the turntable controls the editor writes
+bool controls_file(std::string const &Path)
+{
+	std::ifstream input{Path, std::ios_base::binary};
+	std::string first;
+	std::getline(input, first);
+	if (false == first.empty() && first.back() == '\r')
+		first.pop_back();
+	return first == kControlsHeader;
+}
+
 } // namespace
 
 bool editor_mode::scan_turntables(bool const Wait)
@@ -280,8 +282,8 @@ bool editor_mode::turntable_read(TTrack *Table)
 		auto const &included{scene::Layers.instance(handle)};
 		if (included.removed || included.dead || included.file == nullptr)
 			continue;
-		auto const file{normalized(*included.file)};
-		auto const kind{std::find_if(tool.templates.begin(), tool.templates.end(), [&](turntable_template const &Template) { return normalized(Template.file) == file; })};
+		auto const file{editor_includes::normalized(*included.file)};
+		auto const kind{std::find_if(tool.templates.begin(), tool.templates.end(), [&](turntable_template const &Template) { return editor_includes::normalized(Template.file) == file; })};
 		if (kind == tool.templates.end())
 			continue;
 		std::string target;
@@ -559,7 +561,7 @@ std::vector<scene::instance_handle> editor_mode::turntable_includes(TTrack const
 		auto const &included{scene::Layers.instance(handle)};
 		if (included.removed || included.dead || included.file == nullptr)
 			continue;
-		auto const kind{std::find_if(m_turntable.templates.begin(), m_turntable.templates.end(), [&](turntable_template const &Template) { return normalized(Template.file) == normalized(*included.file); })};
+		auto const kind{std::find_if(m_turntable.templates.begin(), m_turntable.templates.end(), [&](turntable_template const &Template) { return editor_includes::normalized(Template.file) == editor_includes::normalized(*included.file); })};
 		std::string target;
 		std::vector<std::string> values;
 		if (kind != m_turntable.templates.end() && editor_includes::parse_directive(scene::Layers.directive(handle), target, values) && kind->track <= static_cast<int>(values.size()) && ToLower(values[kind->track - 1]) == Table.name())
@@ -959,7 +961,7 @@ void editor_mode::render_turntable_ui()
 				else
 					ImGui::TextDisabled("  -  ");
 				ImGui::SameLine();
-				auto const name{fit.end.track->name().empty() ? std::string{STR_C("(no name)")} : fit.end.track->name()};
+				auto const name{name_of(*fit.end.track)};
 				if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_None, ImVec2(ImGui::CalcTextSize(name.c_str()).x, 0.f)))
 					focus_track(*fit.end.track, fit.end.point.path, fit.end.position);
 				if (ImGui::IsItemHovered())
@@ -1158,7 +1160,7 @@ bool editor_mode::turntable_controls(std::vector<std::string> &Rootstatements)
 			auto const &included{scene::Layers.instance(handle)};
 			if (included.removed || included.dead || included.file == nullptr)
 				continue;
-			auto const kind{std::find_if(m_turntable.templates.begin(), m_turntable.templates.end(), [&](turntable_template const &Template) { return normalized(Template.file) == normalized(*included.file); })};
+			auto const kind{std::find_if(m_turntable.templates.begin(), m_turntable.templates.end(), [&](turntable_template const &Template) { return editor_includes::normalized(Template.file) == editor_includes::normalized(*included.file); })};
 			if (kind == m_turntable.templates.end() || kind->angles == 0)
 				continue;
 			std::string target;
@@ -1228,7 +1230,7 @@ bool editor_mode::turntable_controls(std::vector<std::string> &Rootstatements)
 	auto const exists{std::filesystem::exists(path, error)};
 	if (tables == 0 && false == exists)
 		return false;
-	auto const content{"// made by the scenery editor on each save: T turns each turntable to its next position, Shift+T to the previous one\r\n" + text.str()};
+	auto const content{std::string{kControlsHeader} + "\r\n" + text.str()};
 	std::string current;
 	{
 		std::ifstream input{path, std::ios_base::binary};
@@ -1238,6 +1240,21 @@ bool editor_mode::turntable_controls(std::vector<std::string> &Rootstatements)
 	{
 		std::ofstream output{path, std::ios_base::binary | std::ios_base::trunc};
 		output << content;
+	}
+	// the controls written for this scenery under another name, the file it was copied from, give way to these: with both
+	// included each turntable would have its events twice. their files stay on the disk, for the scenery they were made for
+	for (std::size_t handle = 1; handle <= scene::Layers.size(); ++handle)
+	{
+		auto const layer{static_cast<scene::layer_handle>(handle)};
+		if (false == scene::Layers.listed(layer) || scene::Layers.layer(layer).removed)
+			continue;
+		auto name{scene::Layers.layer(layer).name};
+		std::replace(name.begin(), name.end(), '\\', '/');
+		auto const lower{ToLower(name)};
+		if (lower == ToLower(file) || lower.ends_with("/" + ToLower(file)) || false == lower.ends_with("_obrotnice.scm"))
+			continue;
+		if (controls_file(Global.asCurrentSceneryPath + scene::Layers.layer(layer).name) && scene::Layers.remove(layer))
+			WriteLog("Editor: " + name + " left out of the scenery, the turntable controls are in " + file + " now");
 	}
 	auto included{m_turntable_included};
 	for (std::size_t handle = 1; handle <= scene::Layers.size() && false == included; ++handle)

@@ -37,6 +37,8 @@ http://mozilla.org/MPL/2.0/.
 //   undoall                              undoes every change in the history
 //   trackhash                            logs the number of the tracks and a hash of their names and points to the millimetre
 //   tutorial <page>                      opens the tutorial at the lesson, from 0; -1 closes it
+//   badge [<x> <y> <gesture>]            the mouse or the keys drawn with the bottom left corner at the point of the window, as
+//                                        "LMB" or "Enter", for the clips of the tutorial; with nothing after it none
 //   shortcuts [filter]                   opens the list of the shortcuts
 editor_mode::selftest_result editor_mode::selftest_monkey(std::string const &command, std::istringstream &words)
 {
@@ -45,7 +47,7 @@ editor_mode::selftest_result editor_mode::selftest_monkey(std::string const &com
 		unsigned int seed{1};
 		int steps{100};
 		words >> seed >> steps;
-		std::mt19937 random{seed};
+		std::mt19937 random{seed}; // NOSONAR: seeded on purpose, so that a run of the test can be repeated; nothing secret is drawn
 		auto const pick = [&](int const Count) { return std::uniform_int_distribution<int>(0, Count - 1)(random); };
 		auto const within = [&](float const Low, float const High) { return std::uniform_real_distribution<float>(Low, std::max(Low + 1.0f, High))(random); };
 		struct area
@@ -82,7 +84,7 @@ editor_mode::selftest_result editor_mode::selftest_monkey(std::string const &com
 			lines.push_back(std::string{"button "} + Button + " release");
 			lines.emplace_back("wait 2");
 		};
-		char const *const tools[]{"esc", "l", "g", "c", "t", "n", "u", "h", "b", "p", "v", "j", "k", "o", "q", "w", "e"};
+		char const *const tools[]{"esc", "l", "g", "c", "t", "n", "u", "i", "b", "p", "v", "j", "k", "o", "q", "w", "e"};
 		char const *const modifiers[]{"", "ctrl", "shift", "alt"};
 		for (int step = 0; step < steps; ++step)
 		{
@@ -218,7 +220,7 @@ editor_mode::selftest_result editor_mode::selftest_monkey(std::string const &com
 	{
 		unsigned int seed{1};
 		words >> seed;
-		std::mt19937 random{seed};
+		std::mt19937 random{seed}; // NOSONAR: seeded on purpose, so that a run of the test can be repeated; nothing secret is drawn
 		std::vector<TTrack *> tracks;
 		for (auto *track : simulation::Paths.sequence())
 			if (track != nullptr && false == track->m_editorremoved && false == track->m_paths.empty())
@@ -256,7 +258,7 @@ editor_mode::selftest_result editor_mode::selftest_monkey(std::string const &com
 		screen_projection const projection;
 		auto const low{editor_ui::view_min()};
 		auto const high{editor_ui::view_max()};
-		std::shuffle(tracks.begin(), tracks.end(), random);
+		std::shuffle(tracks.begin(), tracks.end(), random); // NOSONAR: the seeded generator of the test, so the order can be repeated
 		for (auto const *track : tracks)
 		{
 			ImVec2 at;
@@ -309,6 +311,14 @@ editor_mode::selftest_result editor_mode::selftest_monkey(std::string const &com
 		words >> page;
 		m_first_steps_open = page >= 0;
 		m_tutorial_page = std::max(0, page);
+		return selftest_result::handled;
+	}
+	if (command == "badge")
+	{
+		std::string gesture;
+		words >> m_selftest.badge_at.x >> m_selftest.badge_at.y;
+		std::getline(words >> std::ws, gesture);
+		m_selftest.badge = gesture;
 		return selftest_result::handled;
 	}
 	if (command == "shortcuts")

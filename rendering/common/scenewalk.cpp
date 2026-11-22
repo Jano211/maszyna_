@@ -16,6 +16,7 @@ http://mozilla.org/MPL/2.0/.
 #include "rendering/common/walksync.h"
 #include "utilities/color.h"
 #include "utilities/Globals.h"
+#include "utilities/utilities.h"
 #include "vehicle/Train.h"
 #include "vehicle/Camera.h"
 #include "vehicle/DynObj.h"
@@ -25,9 +26,14 @@ http://mozilla.org/MPL/2.0/.
 #include "world/catenary_span.h"
 #include "world/MemCell.h"
 #include "world/TrackSleepers.h"
+#include "world/SleeperRules.h"
 #include "model/AnimModel.h"
 #include "model/Model3d.h"
 #include "rendering/common/skyocclusion.h"
+#include <algorithm>
+#include <chrono>
+#include <string>
+#include <string_view>
 
 namespace gfx
 {
@@ -42,7 +48,66 @@ TEnvironmentType track_environment(TTrack const *Track)
 	return (Global.gfx_tunnelflags ? Track->eEnvironment : e_flat);
 }
 
+// the name of a texture or a material the way gfx_lights_hideglow lists it: lower case, with /, without the folder of the textures
+// and without the extension
+std::string glow_name(std::string_view const Name)
+{
+	auto name{ToLower(std::string{Name})};
+	std::ranges::replace(name, '\\', '/');
+	if (name.starts_with("textures/"))
+	{
+		name.erase(0, std::string_view{"textures/"}.size());
+	}
+	if (auto const dot{name.rfind('.')}; (dot != std::string::npos) && (name.find('/', dot) == std::string::npos))
+	{
+		name.erase(dot);
+	}
+	return name;
+}
+
+// whether the material named Name is one of the textures separated with | in List: the same name, or the end of it after a /
+bool is_listed_glow(std::string_view const Name, std::string_view const List)
+{
+	std::size_t start{0};
+	while (start <= List.size())
+	{
+		auto end{List.find('|', start)};
+		if (end == std::string_view::npos)
+		{
+			end = List.size();
+		}
+		if (auto const entry{glow_name(List.substr(start, end - start))}; (false == entry.empty()) && ((Name == entry) || Name.ends_with("/" + entry)))
+		{
+			return true;
+		}
+		start = end + 1;
+	}
+	return false;
+}
+
 } // namespace
+
+bool scene_walk::drawn_in_phase(TSubModel const *Submodel, int const Mask)
+{
+	return ((Submodel->iAlpha & Submodel->iFlags & Mask) != 0) && (false == is_fake_glow(Submodel));
+}
+
+bool scene_walk::is_fake_glow(TSubModel const *Submodel)
+{
+	// kept when no lamp lights in their place: the local lights off, or gathered from nowhere (gfx_lights_range 0)
+	if (Global.gfx_lights_hideglow.empty() || (false == Global.gfx_lights_clustered) || (false == Global.gfx_lights_scenery) || (Global.gfx_lights_range <= 0.f) ||
+	    (Submodel->m_material <= 0))
+	{
+		return false;
+	}
+	auto lookup{m_fakeglows.find(Submodel->m_material)};
+	if (lookup == m_fakeglows.end())
+	{
+		auto const fake{is_listed_glow(glow_name(walk_material_data(Submodel->m_material).GetName()), Global.gfx_lights_hideglow)};
+		lookup = m_fakeglows.emplace(Submodel->m_material, fake).first;
+	}
+	return lookup->second;
+}
 
 // the top view of the editor shows everything this close to the camera, the corners of the screen included
 float scene_walk::editor_ortho_reach()
@@ -64,15 +129,25 @@ float scene_walk::editor_track_view_range(float const Range, bool const Apply)
 // the top view of the editor may leave the ballast of the railway out, for the ground under the tracks to show
 bool scene_walk::editor_ballast_hidden(TTrack const *Track, bool const Colour)
 {
-	return Colour && EditorModeFlag && Global.EditorOrtho && false == Global.EditorOrthoBallast && (Track->iCategoryFlag & 15) == 1;
+	return Colour && EditorModeFlag && Global.EditorOrtho && Global.EditorOrthoTracks > 0 && (Track->iCategoryFlag & 15) == 1;
 }
 
-// the top view draws the scenery as far as the tracks; its models keep their own ranges
-bool scene_walk::editor_far_tracks_only(bool const Apply, scene::basic_cell const *Cell, glm::dvec3 const &Camera, double const SceneryLimit)
+// ...or the sleepers and the timbers of the switches too, the rails alone as on a plan
+bool scene_walk::editor_sleepers_hidden()
 {
-	if (false == Apply || Global.EditorOrtho)
+	return EditorModeFlag && Global.EditorOrtho && Global.EditorOrthoTracks > 1;
+}
+
+// far off the camera the tracks of the editor are drawn alone, the terrain, the models and the rest only as far as the
+// scenery reaches in the game; the top view measures it off its centre on the ground, its camera being high above it
+bool scene_walk::editor_far_tracks_only(bool const Apply, scene::bounding_area const &Area, glm::dvec3 const &Camera, double const SceneryLimit)
+{
+	if (false == Apply)
 		return false;
-	double nearest = glm::length(Cell->m_area.center - Camera) - static_cast<double>(Cell->m_area.radius);
+	auto offset{Area.center - Camera};
+	if (Global.EditorOrtho)
+		offset.y = 0.0;
+	double nearest = glm::length(offset) - static_cast<double>(Area.radius);
 	if (nearest < 0.0)
 		nearest = 0.0;
 	return nearest > SceneryLimit;
@@ -355,6 +430,11 @@ void scene_walk::Render(section_sequence::iterator First, section_sequence::iter
 		break;
 	}
 
+	// the ground of the sections far off, the terrain of the editor among it, isn't drawn with the tracks reaching there
+	auto const scenery_limit{static_cast<double>(Global.BaseDrawRange) * Global.fDistanceFactor + 250.0};
+	bool const far_paths{EditorModeFlag && Global.editor_tracks && (m_renderpass.draw_mode == rendermode::color || m_renderpass.draw_mode == rendermode::pickscenery)};
+	glm::dvec3 const camera{m_renderpass.pass_camera.position()};
+
 	while (First != Last)
 	{
 
@@ -374,7 +454,7 @@ void scene_walk::Render(section_sequence::iterator First, section_sequence::iter
 		case rendermode::shadows:
         case rendermode::pickscenery:
 		{
-			if (false == section->m_shapes.empty())
+			if (false == section->m_shapes.empty() && false == editor_far_tracks_only(far_paths, section->m_area, camera, scenery_limit))
 			{
 				// since all shapes of the section share center point we can optimize out a few calls here
 				::glPushMatrix();
@@ -471,7 +551,7 @@ void scene_walk::Render(cell_sequence::iterator First, cell_sequence::iterator L
 			gfx::walk_sync::change change{cell->animation_pending(m_framestamp)};
 			cell->RaAnimate(m_framestamp);
 		}
-		bool const tracks_only{editor_far_tracks_only(far_paths, cell, camera, scenery_limit)};
+		bool const tracks_only{editor_far_tracks_only(far_paths, cell->m_area, camera, scenery_limit)};
 
 		switch (m_renderpass.draw_mode)
 		{
@@ -572,6 +652,8 @@ void scene_walk::Render(cell_sequence::iterator First, cell_sequence::iterator L
 
 		++First;
 	}
+	// the sleepers and timbers of the tracks of all the cells at once
+	Flush_Timbers();
 	// second pass draws elements with their own vbos
 	while (first != Last)
 	{
@@ -584,7 +666,7 @@ void scene_walk::Render(cell_sequence::iterator First, cell_sequence::iterator L
 		case rendermode::color:
         case rendermode::shadows:
         {
-			if (editor_far_tracks_only(far_paths, cell, camera, scenery_limit))
+			if (editor_far_tracks_only(far_paths, cell->m_area, camera, scenery_limit))
 				break;
             // TBD, TODO: refactor in to a method to reuse in branch below?
 			// opaque parts of instanced models -- accumulate this cell's buckets
@@ -624,9 +706,9 @@ void scene_walk::Render(cell_sequence::iterator First, cell_sequence::iterator L
 				}
 				// remaining (non-instanceable) opaque instance nodes go through the per-node path, or with the instances
 				// to the gpu culling, each on its own
-				for (auto *instance : cell->m_instancesopaque)
+				// (the instanceable ones are handled via bucket)
+				for (auto *instance : Single_Instances(*cell))
 				{
-					if( instance->m_instanceable ) { continue; } // already handled via bucket
 					// the model of a lamp would shadow everything in the map of the lamp
 					if( instance == m_cubeskipinstance ) { continue; }
 					if( walk_queue_model( instance, cellinrange ) ) { continue; }
@@ -661,8 +743,7 @@ void scene_walk::Render(cell_sequence::iterator First, cell_sequence::iterator L
                 // opaque parts of instanced models -- accumulate into the
                 // frame-level map; flushed once per unique model after the loop.
                 Queue_Instances( cell );
-                for( auto *instance : cell->m_instancesopaque ) {
-                    if( instance->m_instanceable ) { continue; }
+                for( auto *instance : Single_Instances( *cell ) ) {
                     if( walk_queue_model( instance, true ) ) { continue; }
                     Render( instance );
                     m_modelcomparekey = nullptr;
@@ -681,7 +762,7 @@ void scene_walk::Render(cell_sequence::iterator First, cell_sequence::iterator L
         }
         case rendermode::pickscenery:
 		{
-			if (editor_far_tracks_only(far_paths, cell, camera, scenery_limit))
+			if (editor_far_tracks_only(far_paths, cell->m_area, camera, scenery_limit))
 				break;
 			// opaque parts of instanced models
 			// same procedure like with regular render, but each node receives custom colour used for picking.
@@ -796,8 +877,16 @@ void scene_walk::Render(scene::shape_node const &Shape, bool const Ignorerange)
 		break;
 	}
 	// render
-
+	auto const decal{data.decal && (m_renderpass.draw_mode != rendermode::shadows)};
+	if (decal)
+	{
+		walk_decal(true);
+	}
 	walk_draw(data.geometry);
+	if (decal)
+	{
+		walk_decal(false);
+	}
 	// debug data
 	++m_renderpass.draw_stats.shapes;
 	++m_renderpass.draw_stats.drawcalls;
@@ -1065,6 +1154,32 @@ void scene_walk::Update_Instance_Records( TModel3d const *Model, scene::basic_ce
 	}
 	Bucket.recordsversion = m_instancerecordsversion;
 	Bucket.gpustale = true;
+}
+
+// the opaque instances of a scene cell drawn each on its own. an instance stops being drawn with the others of its model by an event
+// (TAnimModel::AddContainer()), which changes scene::node_state_version and with it the version of the instance records; the editor
+// makes the records anew in every frame. the list is made once for a version, before any walk of the frame reads it, so a walk going
+// through it doesn't see it change
+scene::basic_cell::instance_sequence const &scene_walk::Single_Instances( scene::basic_cell const &Cell ) const
+{
+	auto const stale = [ this, &Cell ]() {
+		return ( Cell.m_instancessingleversion != m_instancerecordsversion )
+		    || ( Cell.m_instancessinglesource != Cell.m_instancesopaque.size() ); };
+	if( stale() ) {
+		// the lists the passes share are made by one walk at a time (walk_sync)
+		gfx::walk_sync::change change;
+		if( stale() ) {
+			Cell.m_instancessingle.clear();
+			for( auto *instance : Cell.m_instancesopaque ) {
+				if( false == instance->m_instanceable ) {
+					Cell.m_instancessingle.emplace_back( instance );
+				}
+			}
+			Cell.m_instancessinglesource = Cell.m_instancesopaque.size();
+			Cell.m_instancessingleversion = m_instancerecordsversion;
+		}
+	}
+	return Cell.m_instancessingle;
 }
 
 // whether none of the instances of a bucket can pass the tests of the culling of the pass (Render_Instanced(), on the gpu
@@ -1495,10 +1610,11 @@ void scene_walk::Render_Sleepers( TTrack *Track )
 	walk_sleepers_drawn( *Track, lodbounds, survivors );
 }
 
-// Renders the sleepers and switch timbers of a run of tracks of a cell. Each beam is made of instances of the parts of a model or
-// of a whole model, kept by its track relative to the origin of the track. The runs of beams in range and in sight are gathered
-// for the whole run of tracks by the model and its part or its level of detail, and each is drawn in one instanced batch.
-// In the shadow pass only those near the camera are drawn, their shadows falling where they can be seen.
+// Gathers the sleepers and switch timbers of a run of tracks of a cell. Each beam is made of instances of the parts of a model or
+// of a whole model, kept by its track relative to the origin of the track (and with walk_timbers_gpu() on the gpu as well). The runs
+// of beams in range and in sight are gathered by the model and its part or its level of detail, for all the cells of the pass, which
+// Flush_Timbers() draws each in one instanced batch. In the shadow pass only those near the camera are drawn, their shadows falling
+// where they can be seen.
 void scene_walk::Render_Timbers( scene::basic_cell::path_sequence::const_iterator First, scene::basic_cell::path_sequence::const_iterator Last )
 {
 	if( Global.SleeperDistance <= 0.f ) { return; }
@@ -1518,19 +1634,21 @@ void scene_walk::Render_Timbers( scene::basic_cell::path_sequence::const_iterato
 			track_sleepers::release_far( camera, range + 600.0 );
 		}
 	}
-	glm::mat4 const originmodelview = OpenGLMatrices.data( GL_MODELVIEW );
-	for( auto &bucket : m_timberbuckets ) {
-		bucket.instances.clear();
+	if( m_timberlayframe != m_framestamp ) {
+		m_timberlayframe = m_framestamp;
+		m_timberlaying = 0.0;
 	}
-	auto const bucket_for = [&]( track_sleepers::beam_model const *Model, int const Part, float const Band ) -> std::vector<glm::mat4> & {
+	// the fastenings laid out to a little past where they're drawn
+	auto const fasteningrange = std::min( static_cast<double>( Global.SleeperDistance ), track_sleepers::fastening_range ) + track_sleepers::fastening_lead;
+	auto const bucket_for = [&]( track_sleepers::beam_model const *Model, int const Part, float const Band ) -> timber_bucket & {
 		for( auto &bucket : m_timberbuckets ) {
 			if( bucket.model == Model && bucket.part == Part && bucket.band == Band ) {
-				return bucket.instances;
+				return bucket;
 			}
 		}
-		m_timberbuckets.push_back( { Model, Part, Band, {} } );
-		return m_timberbuckets.back().instances; };
-	// the level of detail of the whole model a beam is seen at, from its distance
+		m_timberbuckets.push_back( { Model, Part, Band, {}, {}, 0, 0 } );
+		return m_timberbuckets.back(); };
+	// the level of detail of the whole model a run of beams is seen at, from its distance
 	auto const band_of = []( track_sleepers::beam_model const &Model, double const Distance ) {
 		auto const squaredistance { static_cast<float>( Distance * Distance ) };
 		auto band { Model.bands.empty() ? 0.f : Model.bands.front() };
@@ -1540,27 +1658,14 @@ void scene_walk::Render_Timbers( scene::basic_cell::path_sequence::const_iterato
 			}
 		}
 		return band; };
-	// the beams of a run made of a whole model, each at the level of detail of its own distance; the run is culled as one
-	auto const put_by_band = [&]( track_sleepers::beam_model const &Model, std::vector<glm::mat4> const &Transforms, std::uint32_t const From, std::uint32_t const To, glm::dvec3 const &Origin ) {
-		std::vector<glm::mat4> *instances { nullptr };
-		auto current { 0.f };
-		for( auto index = From; index < To; ++index ) {
-			auto const &local = Transforms[ index ];
-			auto const band = band_of( Model, glm::length( Origin + glm::dvec3( glm::vec3( local[ 3 ] ) ) - camera ) );
-			if( instances == nullptr || band != current ) {
-				// looked up again only as the band changes; a bucket added on the way moves the others, so the pointer goes with it
-				instances = &bucket_for( &Model, -1, band );
-				current = band;
-			}
-			instances->emplace_back( originmodelview * local );
-		}
-	};
+	m_timbertracks.clear();
 	for( auto first { First }; first != Last; ++first ) {
 		auto *track = *first;
 		if( false == track->m_visible || false == track->m_sleepers3d.active ) { continue; }
-		if( glm::length( track->location() - camera ) > range + track->radius() ) {
+		auto const trackdistance = glm::length( track->location() - camera );
+		if( trackdistance > range + track->radius() ) {
 			// worked out ahead, in the background, before it comes in range
-			if( false == shadows && track->m_sleepers3d.dirty && glm::length( track->location() - camera ) < range + track->radius() + 300.0 ) {
+			if( false == shadows && track->m_sleepers3d.dirty && trackdistance < range + track->radius() + 300.0 ) {
 				if( gfx::walk_sync::parallel() ) {
 					m_deferredprefetch.push_back( track );
 				}
@@ -1570,17 +1675,61 @@ void scene_walk::Render_Timbers( scene::basic_cell::path_sequence::const_iterato
 			}
 			continue;
 		}
-		if( track->m_sleepers3d.dirty ) {
-			// laid by one walk at a time (walk_sync)
-			gfx::walk_sync::change change;
-			if( track->m_sleepers3d.dirty ) {
-				track_sleepers::lay( *track );
+		auto const fastened = ( trackdistance < fasteningrange + track->radius() );
+		if( track->m_sleepers3d.dirty || ( fastened && false == track->m_sleepers3d.fastened ) ) {
+			// the nearest at once, the others while the frame has the time, the cells nearest coming first; till then a track draws
+			// what it had
+			if( trackdistance < track_sleepers::lay_near + track->radius() || m_timberlaying < track_sleepers::lay_budget ) {
+				// laid by one walk at a time (walk_sync)
+				gfx::walk_sync::change change;
+				auto const start = std::chrono::steady_clock::now();
+				if( track->m_sleepers3d.dirty ) {
+					track_sleepers::lay( *track, fastened );
+				}
+				else if( fastened && false == track->m_sleepers3d.fastened ) {
+					track_sleepers::fasten( *track );
+				}
+				m_timberlaying += std::chrono::duration<double, std::milli>( std::chrono::steady_clock::now() - start ).count();
 			}
 		}
+		if( track->m_sleepers3d.timbers == nullptr || track->m_sleepers3d.chunks.empty() ) { continue; }
+		m_timbertracks.push_back( track );
+	}
+	if( m_timbertracks.empty() ) { return; }
+	auto const gpu = walk_timbers_gpu();
+	// the instances of the tracks on the gpu; those of the cells before expanded first when the buffer is to be started over
+	if( gpu && false == walk_timbers_place( m_timbertracks, false ) ) {
+		Flush_Timbers();
+		walk_timbers_place( m_timbertracks, true );
+	}
+	// the runs of them in range and in sight, turned by the modelview of the cell: on the gpu, or here
+	glm::mat4 const originmodelview = OpenGLMatrices.data( GL_MODELVIEW );
+	auto const origin { static_cast<std::uint32_t>( m_timberorigins.size() ) };
+	if( gpu ) {
+		m_timberorigins.push_back( originmodelview );
+	}
+	// a run of instances of a track for the bucket; the reference to it goes with the next bucket added
+	auto const add_run = [&]( timber_bucket &Bucket, std::vector<glm::mat4> const &Transforms, std::uint32_t const From, std::uint32_t const Source, std::uint32_t const Count ) {
+		if( gpu ) {
+			Bucket.runs.push_back( { Source, Count, 0, origin } );
+		}
+		else {
+			for( auto index = From; index < From + Count; ++index ) {
+				Bucket.instances.emplace_back( originmodelview * Transforms[ index ] );
+			}
+		}
+		Bucket.count += Count; };
+	for( auto *track : m_timbertracks ) {
 		auto const &laid = track->m_sleepers3d;
-		if( laid.timbers == nullptr ) { continue; }
-		// the transforms of the beams are relative to the origin of the track, which the modelview is translated to already
-		auto const &trackmodelview = originmodelview;
+		// where the instances of the parts, of the whole timbers and of the plain sleepers of the track start on the gpu
+		std::array<std::uint32_t, track_sleepers::part_count> partfirst;
+		auto next { gpu ? walk_timbers_first( *track ) : 0 };
+		for( int part = 0; part < track_sleepers::part_count; ++part ) {
+			partfirst[ part ] = next;
+			next += static_cast<std::uint32_t>( laid.instances[ part ].size() );
+		}
+		auto const wholefirst { next };
+		auto const plainfirst { wholefirst + static_cast<std::uint32_t>( laid.whole.size() ) };
 		for( auto const &chunk : laid.chunks ) {
 			auto const centre = track->m_origin + glm::dvec3( chunk.centre );
 			auto const distance = glm::length( centre - camera );
@@ -1588,64 +1737,100 @@ void scene_walk::Render_Timbers( scene::basic_cell::path_sequence::const_iterato
 			if( false == m_renderpass.pass_camera.visible( scene::bounding_area{ centre, chunk.radius } ) ) { continue; }
 			if( laid.timbers->stretchable ) {
 				for( int part = 0; part < track_sleepers::part_count; ++part ) {
-					auto &instances = bucket_for( laid.timbers, part, 0.f );
-					for( auto index = chunk.first[ part ]; index < chunk.last[ part ]; ++index ) {
-						instances.emplace_back( trackmodelview * laid.instances[ part ][ index ] );
+					if( chunk.last[ part ] <= chunk.first[ part ] ) { continue; }
+					// the fastenings only near, they're small
+					if( part >= track_sleepers::timber_parts && distance > std::min( range, track_sleepers::fastening_range ) + chunk.radius ) { continue; }
+					add_run( bucket_for( laid.timbers, part, 0.f ), laid.instances[ part ], chunk.first[ part ], partfirst[ part ] + chunk.first[ part ], chunk.last[ part ] - chunk.first[ part ] );
+				}
+			}
+			// the beams made of a whole model at the level of detail of the distance of the run
+			if( chunk.wholelast > chunk.wholefirst ) {
+				add_run( bucket_for( laid.timbers, -1, band_of( *laid.timbers, distance ) ), laid.whole, chunk.wholefirst, wholefirst + chunk.wholefirst, chunk.wholelast - chunk.wholefirst );
+			}
+			if( laid.plains != nullptr && chunk.plainlast > chunk.plainfirst ) {
+				add_run( bucket_for( laid.plains, -1, band_of( *laid.plains, distance ) ), laid.plain, chunk.plainfirst, plainfirst + chunk.plainfirst, chunk.plainlast - chunk.plainfirst );
+			}
+		}
+	}
+}
+
+// the sleepers and timbers gathered by Render_Timbers() over the cells of the pass placed in the instance buffer of the frame at once
+// (with walk_timbers_gpu() made into modelviews on the gpu there), and each bucket drawn in one instanced batch
+void scene_walk::Flush_Timbers()
+{
+	std::size_t total { 0 };
+	for( auto const &bucket : m_timberbuckets ) {
+		total += bucket.count;
+	}
+	if( total > 0 ) {
+		// in the instance buffer of the frame bucket after bucket, as in Render_Sleepers(), which the recorded walk of the depth
+		// pass keeps for its replay as well
+		if( walk_timbers_gpu() ) {
+			auto target { walk_instances_reserve( total ) };
+			m_timberranges.clear();
+			for( auto &bucket : m_timberbuckets ) {
+				bucket.first = target;
+				for( auto const &run : bucket.runs ) {
+					m_timberranges.push_back( { run.source, run.count, target, run.origin } );
+					target += run.count;
+				}
+			}
+			walk_timbers_expand( m_timberorigins, m_timberranges );
+		}
+		else {
+			for( auto &bucket : m_timberbuckets ) {
+				if( bucket.count == 0 ) { continue; }
+				bucket.first = walk_instances( bucket.instances.data(), bucket.instances.size() );
+			}
+		}
+		auto const alpha = ( 0x30300030 ^ 0x0F0F000F );
+		for( auto &bucket : m_timberbuckets ) {
+			if( bucket.count == 0 ) { continue; }
+			auto const &beammodel = *bucket.model;
+			auto *model = beammodel.model;
+			// the parts of the model shown and hidden for the bucket, held till it's drawn (walk_sync)
+			gfx::walk_sync::model_hold hold { model };
+			if( bucket.part >= 0 ) {
+				// only the part of the model is visible, its siblings are skipped as the model is walked
+				for( int part = 0; part < track_sleepers::part_count; ++part ) {
+					if( beammodel.parts[ part ] != nullptr ) {
+						beammodel.parts[ part ]->iVisible = ( part == bucket.part ? 1 : 0 );
 					}
 				}
 			}
-			if( chunk.wholelast > chunk.wholefirst ) {
-				put_by_band( *laid.timbers, laid.whole, chunk.wholefirst, chunk.wholelast, track->m_origin );
+			material_data skins {};
+			if( beammodel.skin != null_handle ) {
+				skins.replacable_skins[ 1 ] = beammodel.skin;
 			}
-			if( laid.plains != nullptr && chunk.plainlast > chunk.plainfirst ) {
-				put_by_band( *laid.plains, laid.plain, chunk.plainfirst, chunk.plainlast, track->m_origin );
+			::glPushMatrix();
+			::glLoadIdentity();
+			m_current_instance_count = bucket.count;
+			m_current_instance_base = bucket.first;
+			// inside the range of the level of detail the beams are at
+			model->Root->fSquareDist = ( bucket.part >= 0 ? 0.f : bucket.band + 1.f );
+			model->Root->ReplacableSet( ( beammodel.skin != null_handle ? skins.replacable_skins : nullptr ), alpha );
+			model->Root->pRoot = model;
+			Render( model->Root );
+			m_current_instance_count = 0;
+			m_current_instance_base = 0;
+			::glPopMatrix();
+			++m_renderpass.draw_stats.instanced_drawcalls;
+			if( bucket.part >= 0 ) {
+				for( int part = 0; part < track_sleepers::part_count; ++part ) {
+					if( beammodel.parts[ part ] != nullptr ) {
+						beammodel.parts[ part ]->iVisible = 1;
+					}
+				}
 			}
 		}
+		m_renderpass.draw_stats.instances += static_cast<int>( total );
 	}
-
-	auto const alpha = ( 0x30300030 ^ 0x0F0F000F );
-	std::size_t total { 0 };
 	for( auto &bucket : m_timberbuckets ) {
-		auto const &instances = bucket.instances;
-		if( instances.empty() ) { continue; }
-		total += instances.size();
-		auto const &beammodel = *bucket.model;
-		auto *model = beammodel.model;
-		// the parts of the model shown and hidden for the bucket, held till it's drawn (walk_sync)
-		gfx::walk_sync::model_hold hold { model };
-		if( bucket.part >= 0 ) {
-			// only the part of the model is visible, its siblings are skipped as the model is walked
-			for( int part = 0; part < track_sleepers::part_count; ++part ) {
-				beammodel.parts[ part ]->iVisible = ( part == bucket.part ? 1 : 0 );
-			}
-		}
-		material_data skins {};
-		if( beammodel.skin != null_handle ) {
-			skins.replacable_skins[ 1 ] = beammodel.skin;
-		}
-		// the instances go to the instance stream of the frame, as in Render_Sleepers(), which the recorded walk of the depth
-		// pass keeps for its replay as well
-		auto const baseinstance { walk_instances( instances.data(), instances.size() ) };
-		::glPushMatrix();
-		::glLoadIdentity();
-		m_current_instance_count = instances.size();
-		m_current_instance_base = baseinstance;
-		// inside the range of the level of detail the beams are at
-		model->Root->fSquareDist = ( bucket.part >= 0 ? 0.f : bucket.band + 1.f );
-		model->Root->ReplacableSet( ( beammodel.skin != null_handle ? skins.replacable_skins : nullptr ), alpha );
-		model->Root->pRoot = model;
-		Render( model->Root );
-		m_current_instance_count = 0;
-		m_current_instance_base = 0;
-		::glPopMatrix();
-		++m_renderpass.draw_stats.instanced_drawcalls;
-		if( bucket.part >= 0 ) {
-			for( int part = 0; part < track_sleepers::part_count; ++part ) {
-				beammodel.parts[ part ]->iVisible = 1;
-			}
-		}
+		bucket.instances.clear();
+		bucket.runs.clear();
+		bucket.count = 0;
 	}
-	m_renderpass.draw_stats.instances += static_cast<int>( total );
+	m_timberorigins.clear();
 }
 
 bool scene_walk::Render(TDynamicObject *Dynamic)
@@ -2478,6 +2663,7 @@ void scene_walk::Render(scene::basic_cell::path_sequence::const_iterator First, 
 	switch( m_renderpass.draw_mode ) {
 	case rendermode::color:
 	case rendermode::reflections: {
+		if( editor_sleepers_hidden() ) { break; }
 		for( auto first { First }; first != Last; ++first ) {
 			auto *track = *first;
 			if( false == track->m_visible )       { continue; }
@@ -2562,6 +2748,11 @@ void scene_walk::Render_Alpha(cell_sequence::reverse_iterator First, cell_sequen
 {
 
 	// NOTE: this method is launched only during color pass therefore we don't bother with mode test here
+	// the cells far off with the tracks alone drawn there have nothing translucent drawn either
+	auto const scenery_limit{static_cast<double>(Global.BaseDrawRange) * Global.fDistanceFactor + 250.0};
+	bool const far_paths{EditorModeFlag && Global.editor_tracks};
+	glm::dvec3 const camera{m_renderpass.pass_camera.position()};
+	auto const distant = [&](scene::basic_cell const *Cell) { return editor_far_tracks_only(far_paths, Cell->m_area, camera, scenery_limit); };
 	// first pass draws elements which we know are located in section banks, to reduce vbo switching
 	{
 		auto first{First};
@@ -2570,7 +2761,7 @@ void scene_walk::Render_Alpha(cell_sequence::reverse_iterator First, cell_sequen
 
 			auto const *cell = first->second;
 
-			if (false == cell->m_shapestranslucent.empty())
+			if (false == cell->m_shapestranslucent.empty() && false == distant(cell))
 			{
 				// since all shapes of the cell share center point we can optimize out a few calls here
 				::glPushMatrix();
@@ -2597,6 +2788,11 @@ void scene_walk::Render_Alpha(cell_sequence::reverse_iterator First, cell_sequen
 
 			auto const *cell = first->second;
 			gfx::walk_sync::yield();
+			if (distant(cell))
+			{
+				++first;
+				continue;
+			}
 
 			// translucent parts of instanced models
 			for (auto *instance : cell->m_instancetranslucent)
@@ -2624,7 +2820,7 @@ void scene_walk::Render_Alpha(cell_sequence::reverse_iterator First, cell_sequen
 
 			auto const *cell = first->second;
 
-			if ((false == cell->m_traction.empty() || (false == cell->m_lines.empty())))
+			if ((false == cell->m_traction.empty() || (false == cell->m_lines.empty())) && false == distant(cell))
 			{
 				// since all shapes of the cell share center point we can optimize out a few calls here
 				::glPushMatrix();
@@ -3043,7 +3239,7 @@ void scene_walk::Render_Alpha(TSubModel *Submodel)
 		if (Submodel->eType < TP_ROTATOR)
 		{
 			// renderowanie obiektów OpenGL
-			if (Submodel->iAlpha & Submodel->iFlags & 0x2F)
+			if (drawn_in_phase(Submodel, 0x2F))
 			{
                 // rysuj gdy element przezroczysty
 

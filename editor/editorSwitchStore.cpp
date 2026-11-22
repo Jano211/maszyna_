@@ -19,6 +19,7 @@ http://mozilla.org/MPL/2.0/.
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <set>
 #include <sstream>
 
@@ -124,11 +125,13 @@ void mark(scene::layer_handle const Layer)
 		text += " number " + word(entry.number) + " source " + word(entry.source);
 		if (entry.middle > 0.0)
 			text += format(" middle %.3f", entry.middle);
-		if (entry.lift != 0.0)
+		if (entry.lift != 0.0 || entry.lift_end != 0.0)
 		{
 			auto const from{context.to_local(entry.lift_from)};
 			auto const to{context.to_local(entry.lift_to)};
 			text += format(" lift %.4f %.4f %.4f %.4f %.4f %.4f %.4f ramp %.3f", entry.lift, from.x, from.y, from.z, to.x, to.y, to.z, entry.ramp);
+			if (entry.lift_end != entry.lift)
+				text += format(" liftend %.4f", entry.lift_end);
 		}
 		lines.push_back(text);
 	}
@@ -167,7 +170,7 @@ void load()
 			if (entry.kind != "switch" && entry.kind != "slip" && entry.kind != "crossing" && entry.kind != "double" && entry.kind != "connection")
 				continue;
 			line >> entry.name >> entry.type >> entry.rail >> entry.radius >> entry.ratio >> hand >> entry.a >> entry.b >> entry.main_radius >> keyword >> count;
-			if (line.fail() || keyword != "parts" || count > 64)
+			if (line.fail() || keyword != "parts" || count == 0 || count > 64)
 				continue;
 			entry.hand = hand.empty() ? '-' : hand.front();
 			entry.parts.resize(count);
@@ -193,16 +196,24 @@ void load()
 				{
 					glm::dvec3 from{0.0}, to{0.0};
 					line >> entry.lift >> from.x >> from.y >> from.z >> to.x >> to.y >> to.z >> keyword >> entry.ramp;
+					entry.lift_end = entry.lift;
 					entry.lift_from = context.to_world(from);
 					entry.lift_to = context.to_world(to);
 				}
+				else if (keyword == "liftend")
+					line >> entry.lift_end;
 			}
 			entry.start = context.to_world(start);
 			ahead = context.to_world(start + glm::dvec3{direction.x, 0.0, direction.y});
 			entry.direction = plan_of(ahead - entry.start);
 			entry.direction = glm::length(entry.direction) > 1e-12 ? glm::normalize(entry.direction) : glm::dvec2{0.0, 1.0};
 			if (km != "-")
-				entry.km = std::stod(km) * 1000.0;
+			{
+				char *end{nullptr};
+				auto const value{std::strtod(km.c_str(), &end)};
+				if (end != km.c_str() && *end == '\0' && std::isfinite(value))
+					entry.km = value * 1000.0;
+			}
 			g_records.push_back(std::move(entry));
 		}
 	}
@@ -216,6 +227,12 @@ std::vector<record> const &records()
 {
 	load();
 	return g_records;
+}
+
+bool has(std::string const &Name)
+{
+	auto const &all{records()};
+	return std::any_of(all.begin(), all.end(), [&](record const &Record) { return Record.name == Name; });
 }
 
 std::optional<record> named(TTrack const &Track)
@@ -324,6 +341,42 @@ void forget(std::string const &Name)
 		mark(layer);
 }
 
+void rename(std::map<std::string, std::string> const &Parts, std::map<std::string, std::string> const &Bases)
+{
+	load();
+	auto const renamed = [](std::map<std::string, std::string> const &Names, std::string &Name) {
+		auto const found{Names.find(Name)};
+		if (found == Names.end() || found->second == Name)
+			return false;
+		Name = found->second;
+		return true;
+	};
+	std::set<scene::layer_handle> layers;
+	for (auto &entry : g_records)
+	{
+		auto changed{renamed(entry.kind == "slip" || entry.kind == "crossing" ? Bases : Parts, entry.name)};
+		for (auto &part : entry.parts)
+			changed = renamed(Parts, part) || changed;
+		if (changed)
+			layers.insert(entry.layer);
+	}
+	for (auto const layer : layers)
+		mark(layer);
+	g_changed = g_changed || false == layers.empty();
+}
+
+void number(std::string const &Name, std::string const &Number)
+{
+	load();
+	for (auto &entry : g_records)
+		if (entry.kind != "connection" && entry.name == Name && entry.number != Number)
+		{
+			entry.number = Number;
+			mark(entry.layer);
+			g_changed = true;
+		}
+}
+
 void tidy()
 {
 	load();
@@ -409,17 +462,21 @@ void place(record &Entry, TTrack const &First)
 	Entry.km = alignment_store::chainage_at(Entry.start);
 }
 
-void classify(record &Entry, TTrack const &Switch)
+double main_radius_of(TTrack const &Switch)
 {
 	geometry::bezier const main{Switch.m_paths[0]};
-	auto const &diverging{Switch.m_paths[1]};
-	Entry.hand = geometry::cross(Entry.direction, geometry::plan_of(diverging.points[segment_data::point::end] - Entry.start)) > 0.0 ? 'R' : 'L';
 	auto const first{geometry::plan_of(main.first(0.0))};
 	auto const last{geometry::plan_of(main.first(1.0))};
 	auto const turn{glm::length(first) > 1e-12 && glm::length(last) > 1e-12 ? geometry::signed_angle(glm::normalize(first), glm::normalize(last)) : 0.0};
-	Entry.main_radius = std::abs(turn) > 1e-6 ? main.plan_length() / turn : 0.0;
-	if (std::abs(Entry.main_radius) > 20000.0)
-		Entry.main_radius = 0.0;
+	auto const radius{std::abs(turn) > 1e-6 ? main.plan_length() / turn : 0.0};
+	return std::abs(radius) > 20000.0 ? 0.0 : radius;
+}
+
+void classify(record &Entry, TTrack const &Switch)
+{
+	auto const &diverging{Switch.m_paths[1]};
+	Entry.hand = geometry::cross(Entry.direction, geometry::plan_of(diverging.points[segment_data::point::end] - Entry.start)) > 0.0 ? 'R' : 'L';
+	Entry.main_radius = main_radius_of(Switch);
 	if (Entry.type == "Rz" || Entry.type == "Rlj" || Entry.type == "Rld")
 		Entry.type = Entry.main_radius == 0.0 ? "Rz" : (Entry.main_radius > 0.0) == (Entry.hand == 'R') ? "Rlj" : "Rld";
 }

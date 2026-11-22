@@ -15,6 +15,7 @@ http://mozilla.org/MPL/2.0/.
 #include "application/editormode.h"
 #include "application/editoruilayer.h"
 #include "application/editormodeshared.h"
+#include "application/editormodetrackshared.h"
 #include "editor/editorFormat.hpp"
 #include "editor/editorGeometry.hpp"
 #include "editor/editorSwitchStore.hpp"
@@ -36,6 +37,75 @@ namespace
 // vertical curve: the ramps break the grade line without one
 double constexpr kRampShare{0.9};
 double constexpr kOtherReach{10.0}; // m, from the release to the other track
+double constexpr kStraightReach{track_mode::kCrossoverStraights};
+
+// the first curved track a straight track leads to along its straight, either way, within the reach
+TTrack *curve_ahead(TTrack &Track, editor_track::straight_tolerance const &Tolerance, double const Reach)
+{
+	TTrack *found{nullptr};
+	auto nearest{Reach};
+	for (auto const throughend : {true, false})
+	{
+		TTrack const *previous{&Track};
+		TTrack *current{throughend ? Track.trNext : Track.trPrev};
+		double distance{0.0};
+		for (int count = 0; current != nullptr && count < 1000 && distance < nearest; ++count)
+		{
+			if (current->eType != tt_Normal || current->m_editorremoved || current->m_paths.empty())
+				break;
+			if (false == editor_track::is_straight(*current, Tolerance))
+			{
+				found = current;
+				nearest = distance;
+				break;
+			}
+			auto const &path{current->m_paths.front()};
+			distance += plan_distance(path.points[segment_data::point::start], path.points[segment_data::point::end]);
+			auto *next{current->trPrev == previous ? current->trNext : current->trPrev};
+			previous = current;
+			current = next;
+		}
+	}
+	return found;
+}
+
+// the lift of the outer track along its line: from First at the chainage From to Second at To in a straight line, down to none over
+// the ramps beyond them
+struct outer_lift
+{
+	double from, to;
+	double first, second;
+	double ramp;
+
+	double at(double const Chainage) const
+	{
+		if (Chainage <= from - ramp || Chainage >= to + ramp)
+			return 0.0;
+		if (Chainage < from)
+			return first * (Chainage - (from - ramp)) / ramp;
+		if (Chainage > to)
+			return second * ((to + ramp) - Chainage) / ramp;
+		return to - from > 1e-6 ? first + (second - first) * (Chainage - from) / (to - from) : first;
+	}
+	double grade(double const Chainage) const
+	{
+		if (Chainage > from - ramp && Chainage < from)
+			return first / ramp;
+		if (Chainage > to && Chainage < to + ramp)
+			return -second / ramp;
+		if (Chainage >= from && Chainage <= to && to - from > 1e-6)
+			return (second - first) / (to - from);
+		return 0.0;
+	}
+	std::vector<double> breaks(double const Length) const
+	{
+		std::vector<double> found;
+		for (auto const chainage : {from - ramp, from, to, to + ramp})
+			if (chainage > 0.5 && chainage < Length - 0.5)
+				found.push_back(chainage);
+		return found;
+	}
+};
 
 } // namespace
 
@@ -111,19 +181,55 @@ struct editor_mode::curve_mapping
 };
 
 // the curve the track is a part of, as a frame of samples, and its tracks
-bool editor_mode::curve_of(TTrack &Track, editor_track::straight_tolerance const &Tolerance, double const Gauge, std::vector<curve_sample> &Frame, std::vector<TTrack *> &Tracks)
+bool editor_mode::curve_of(TTrack &Track, editor_track::straight_tolerance const &Tolerance, double const Gauge, std::vector<curve_sample> &Frame, std::vector<TTrack *> &Tracks, double const Beyond)
 {
+	auto *base{&Track};
+	if (Beyond > 0.0 && Track.eType == tt_Normal && editor_track::is_straight(Track, Tolerance))
+		base = curve_ahead(Track, Tolerance, Beyond);
+	if (base == nullptr)
+		return false;
 	editor_track::curve curve;
 	editor_track::chain chain;
 	std::string error;
-	if (false == editor_track::find_curve(Track, Tolerance, Gauge, curve) || false == editor_track::find_chain(curve.from, curve.to, chain, error, true))
+	if (false == editor_track::find_curve(*base, Tolerance, Gauge, curve) || false == editor_track::find_chain(curve.from, curve.to, chain, error, true))
 		return false;
 	for (auto const &part : editor_track::chain_parts(chain))
-		if (std::find(part.tracks.begin(), part.tracks.end(), &Track) != part.tracks.end())
+		if (std::find(part.tracks.begin(), part.tracks.end(), base) != part.tracks.end())
 		{
 			chain = part;
 			break;
 		}
+	if (Beyond > 0.0)
+	{
+		// the straights past both ends, as far as the reach, taken along the curve: the one before it from its far end
+		auto const taken = [&](editor_track::straight_run const &Run) {
+			std::size_t count{0};
+			for (double reached{0.0}; count < Run.tracks.size() && reached < Beyond; ++count)
+			{
+				auto const &path{Run.tracks[count]->m_paths.front()};
+				reached += plan_distance(path.points[segment_data::point::start], path.points[segment_data::point::end]);
+			}
+			return count;
+		};
+		auto const before{editor_track::straight_beyond(chain, false, Tolerance)};
+		auto const after{editor_track::straight_beyond(chain, true, Tolerance)};
+		editor_track::chain extended;
+		for (auto i{taken(before)}; i-- > 0;)
+		{
+			extended.tracks.push_back(before.tracks[i]);
+			extended.forward.push_back(false == before.outward[i]);
+		}
+		extended.tracks.insert(extended.tracks.end(), chain.tracks.begin(), chain.tracks.end());
+		extended.forward.insert(extended.forward.end(), chain.forward.begin(), chain.forward.end());
+		for (std::size_t i = 0, count = taken(after); i < count; ++i)
+		{
+			extended.tracks.push_back(after.tracks[i]);
+			extended.forward.push_back(after.outward[i]);
+		}
+		chain = std::move(extended);
+	}
+	if (std::find(chain.tracks.begin(), chain.tracks.end(), &Track) == chain.tracks.end())
+		return false;
 	Frame = sample_chain(chain);
 	Tracks = chain.tracks;
 	return Frame.size() >= 2;
@@ -166,7 +272,12 @@ void editor_mode::cut_curve(std::vector<TTrack *> &Candidates, std::vector<curve
 		if (where > From + 0.01 && where < To - 0.01)
 		{
 			editor_track::retire(*candidate);
-			Removed.push_back(candidate);
+			// a piece split off in this step goes as if it had never been made: kept among the ones made and the ones taken out
+			// too, an undo would retire it and then bring it back
+			if (auto const made{std::find(Created.begin(), Created.end(), candidate)}; made != Created.end())
+				Created.erase(made);
+			else
+				Removed.push_back(candidate);
 		}
 	}
 }
@@ -178,15 +289,37 @@ void editor_mode::insert_curved_connection()
 	auto const fail = [&](std::string const &Reason) {
 		tool.status = Reason;
 		ui()->set_status(Reason, true);
+		flash_switch_problem(Reason, {}, {{tool.point, ""}});
 	};
 	if (tool.connection != static_cast<int>(connection::kind::crossover))
 		return fail(STR("Along a curve only a crossover can be laid"));
+	// the curve pressed on with the straights past its ends: from a transition the crossover goes on onto the straight
+	auto pressedframe{tool.frame};
+	auto pressedtracks{tool.frame_tracks};
+	auto *pressed{tool.frame_tracks.front()};
+	{
+		auto nearest{std::numeric_limits<double>::max()};
+		for (auto *track : tool.frame_tracks)
+			if (false == track->m_editorremoved)
+				if (auto const distance{plan_distance(editor_track::point_at(*track, editor_track::nearest_parameter(*track, tool.point)), tool.point)}; distance < nearest)
+				{
+					nearest = distance;
+					pressed = track;
+				}
+		std::vector<curve_sample> frame;
+		std::vector<TTrack *> tracks;
+		if (curve_of(*pressed, m_straights.tolerance, m_route.design.norms.gauge, frame, tracks, kStraightReach))
+		{
+			pressedframe = std::move(frame);
+			pressedtracks = std::move(tracks);
+		}
+	}
 	// the other track: one beside this curve near the release, running along with it
 	TTrack *other{nullptr};
 	auto best{kOtherReach};
 	for (auto *track : simulation::Paths.sequence())
 	{
-		if (track == nullptr || track->m_editorremoved || track->eType != tt_Normal || track->m_paths.empty() || std::find(tool.frame_tracks.begin(), tool.frame_tracks.end(), track) != tool.frame_tracks.end())
+		if (track == nullptr || track->m_editorremoved || track->eType != tt_Normal || track->m_paths.empty() || std::find(pressedtracks.begin(), pressedtracks.end(), track) != pressedtracks.end())
 			continue;
 		auto const distance{plan_distance(editor_track::point_at(*track, editor_track::nearest_parameter(*track, tool.mouse)), tool.mouse)};
 		if (distance < best)
@@ -199,12 +332,12 @@ void editor_mode::insert_curved_connection()
 		return fail(STR("Drag onto the other track"));
 	std::vector<curve_sample> otherframe;
 	std::vector<TTrack *> othertracks;
-	if (false == curve_of(*other, m_straights.tolerance, m_route.design.norms.gauge, otherframe, othertracks))
+	if (false == curve_of(*other, m_straights.tolerance, m_route.design.norms.gauge, otherframe, othertracks, kStraightReach))
 		return fail(STR("The other track isn't a curve running along this one"));
 	// the inner track is the frame: the plane of its cant carries the crossover, the outer track goes up onto it
-	auto innerframe{tool.frame};
-	auto innertracks{tool.frame_tracks};
-	auto station{tool.along};
+	auto innerframe{pressedframe};
+	auto innertracks{pressedtracks};
+	auto station{nearest_station(innerframe, tool.point)};
 	auto const at{sample_at(innerframe, station)};
 	auto const across{sample_at(otherframe, nearest_station(otherframe, at.position))};
 	glm::dvec2 const left{-at.tangent.y, at.tangent.x};
@@ -271,7 +404,9 @@ void editor_mode::insert_curved_connection()
 	std::vector<std::pair<TTrack *, editor_track::state>> states;
 	std::vector<TTrack *> created;
 	std::vector<TTrack *> removed;
-	auto *style{tool.frame_tracks.front()};
+	auto *style{pressed};
+	// the kept grade lines before the outer track went up, the design of which goes up with it
+	std::optional<std::vector<stored_profile>> library;
 	auto const undo_all = [&]() {
 		for (auto *track : created)
 			editor_track::retire(*track);
@@ -285,6 +420,8 @@ void editor_mode::insert_curved_connection()
 			editor_track::revive(*track);
 			editor_track::commit({track});
 		}
+		if (library.has_value())
+			profiles_restore(std::move(*library));
 		straight_refresh();
 	};
 
@@ -298,13 +435,11 @@ void editor_mode::insert_curved_connection()
 				low = std::min(low, path.points[end].z);
 				high = std::max(high, path.points[end].z);
 			}
-	auto *outertrack{swapped ? tool.frame_tracks.front() : other};
+	auto *outertrack{swapped ? pressed : other};
 	for (auto const &entry : plan.switches)
 		WriteLog(format("Editor: curved crossover - planned switch on %d: %.3f %.3f -> %.3f %.3f; extent %.3f..%.3f", entry.line, entry.paths.front().points[segment_data::point::start].x, entry.paths.front().points[segment_data::point::start].z, entry.paths.front().points[segment_data::point::end].x, entry.paths.front().points[segment_data::point::end].z, low, high), logtype::generic);
-	std::size_t raised{0};
 	glm::dvec3 flatfrom{0.0}, flatto{0.0};
-	double ramplength{0.0};
-	if (std::abs(lift) > 0.002)
+	outer_lift raise{0.0, 0.0, 0.0, 0.0, 0.0};
 	{
 		auto route{editor_track::run_route(*outertrack, 3000.0)};
 		auto const samples{editor_track::sample_route(route, 1.0)};
@@ -327,97 +462,100 @@ void editor_mode::insert_curved_connection()
 			}
 			return chainage;
 		};
-		auto const outerx{swapped ? 0.0 : -offset};
+		// the outer track lies at -offset in the frame of the inner one, whichever of them was pressed on
+		auto const outerx{-offset};
 		auto c1{chainage_of(mapping.point({outerx, 0.0, low}))};
 		auto c2{chainage_of(mapping.point({outerx, 0.0, high}))};
 		// the top of the ramps where the switch on the outer track ends: no short paths left between the two
 		if (c1 > c2)
 			std::swap(c1, c2);
-		auto const ramp{std::abs(lift) / (kRampShare * m_profile.line.norms.curve_threshold / 1000.0)};
-		flatfrom = editor_track::sampled_position(samples, c1);
-		flatto = editor_track::sampled_position(samples, c2);
-		ramplength = ramp;
-		auto const share = [&](double const Chainage) {
-			if (Chainage <= c1 - ramp || Chainage >= c2 + ramp)
-				return 0.0;
-			if (Chainage < c1)
-				return (Chainage - (c1 - ramp)) / ramp;
-			if (Chainage > c2)
-				return ((c2 + ramp) - Chainage) / ramp;
-			return 1.0;
-		};
-		auto const slope = [&](double const Chainage) {
-			if (Chainage > c1 - ramp && Chainage < c1)
-				return 1.0 / ramp;
-			if (Chainage > c2 && Chainage < c2 + ramp)
-				return -1.0 / ramp;
-			return 0.0;
-		};
-		std::vector<double> breaks;
-		for (auto const chainage : {c1 - ramp, c1, c2, c2 + ramp})
-			if (chainage > 0.5 && chainage < route.length - 0.5)
-				breaks.push_back(chainage);
-		// the design of the outer track before, kept or read from the track, to go up with it
-		auto *first{route.spans.front().track};
-		auto *last{route.spans.back().track};
-		profile_take(route, first, last);
-		auto const before{m_profile.line};
-		std::vector<std::pair<TTrack *, editor_track::state>> raisestates;
-		std::vector<TTrack *> raisecreated;
-		editor_track::apply_profile(
-		    route, [&](double const Chainage) { return editor_track::sampled_elevation(samples, Chainage) + lift * share(Chainage); },
-		    [&](double const Chainage) { return editor_track::sampled_grade(samples, Chainage) + lift * slope(Chainage); }, breaks, raisestates, raisecreated);
-		raised = raisestates.size() + raisecreated.size();
-		states.insert(states.end(), raisestates.begin(), raisestates.end());
-		created.insert(created.end(), raisecreated.begin(), raisecreated.end());
-		// the raised grade line kept as the design of the outer track, in place of the one it had: its points gone up with it
-		// and the corners of the ramps, straight between them as the ramps are
-		if (false == route.spans.empty())
+		// the switch on the outer track lies on the plane of the inner one at both its ends: the grade lines of the two tracks needn't run
+		// alike, so the lift goes along in a straight line through what the two ends need
+		auto ca{c1}, cb{c2};
+		auto la{lift}, lb{lift};
+		for (auto const &entry : plan.switches)
+			if (entry.line == outerline)
+			{
+				auto const path{mapping.path(entry.paths.front())};
+				auto const &a{path.points[segment_data::point::start]};
+				auto const &b{path.points[segment_data::point::end]};
+				ca = chainage_of(a);
+				cb = chainage_of(b);
+				la = a.y - editor_track::sampled_elevation(samples, ca);
+				lb = b.y - editor_track::sampled_elevation(samples, cb);
+				break;
+			}
+		auto const rise{std::abs(cb - ca) > 1.0 ? (lb - la) / (cb - ca) : 0.0};
+		raise = {c1, c2, la + rise * (c1 - ca), la + rise * (c2 - ca), 0.0};
+		if (std::max(std::abs(raise.first), std::abs(raise.second)) > 0.002)
 		{
-			profile_take(route, route.spans.front().track, route.spans.back().track);
-			std::vector<profile::pvi> points;
-			for (auto point : before.points)
+			raise.ramp = std::max(std::abs(raise.first), std::abs(raise.second)) / (std::max(0.5, kRampShare * m_profile.line.norms.curve_threshold) / 1000.0);
+			flatfrom = editor_track::sampled_position(samples, c1);
+			flatto = editor_track::sampled_position(samples, c2);
+			auto const breaks{raise.breaks(route.length)};
+			// the design of the outer track before, kept or read from the track, to go up with it
+			auto *first{route.spans.front().track};
+			auto *last{route.spans.back().track};
+			profile_library_load();
+			library = m_profiles;
+			profile_take(route, first, last);
+			auto const before{m_profile.line};
+			std::vector<std::pair<TTrack *, editor_track::state>> raisestates;
+			std::vector<TTrack *> raisecreated;
+			editor_track::apply_profile(
+			    route, [&](double const Chainage) { return editor_track::sampled_elevation(samples, Chainage) + raise.at(Chainage); },
+			    [&](double const Chainage) { return editor_track::sampled_grade(samples, Chainage) + raise.grade(Chainage); }, breaks, raisestates, raisecreated);
+			states.insert(states.end(), raisestates.begin(), raisestates.end());
+			created.insert(created.end(), raisecreated.begin(), raisecreated.end());
+			// the raised grade line kept as the design of the outer track, in place of the one it had: its points gone up with it
+			// and the corners of the ramps, straight between them as the ramps are
+			if (false == route.spans.empty())
 			{
-				point.elevation += lift * share(point.chainage);
-				points.push_back(point);
-			}
-			for (auto const chainage : breaks)
-			{
-				profile::pvi corner;
-				corner.chainage = chainage;
-				corner.elevation = profile::elevation(before, chainage) + lift * share(chainage);
-				corner.automatic = false;
-				points.push_back(corner);
-			}
-			std::sort(points.begin(), points.end(), [](auto const &Left, auto const &Right) { return Left.chainage < Right.chainage; });
-			std::vector<profile::pvi> line;
-			for (auto const &point : points)
-			{
-				if (false == line.empty() && point.chainage - line.back().chainage < 0.5)
+				profile_take(route, route.spans.front().track, route.spans.back().track);
+				std::vector<profile::pvi> points;
+				for (auto point : before.points)
 				{
-					// the corner of a ramp before a point of the design at the same place
-					if (false == point.automatic && point.radius == 0.0)
-						line.back() = point;
-					continue;
+					point.elevation += raise.at(point.chainage);
+					points.push_back(point);
 				}
-				line.push_back(point);
+				for (auto const chainage : breaks)
+				{
+					profile::pvi corner;
+					corner.chainage = chainage;
+					corner.elevation = profile::elevation(before, chainage) + raise.at(chainage);
+					corner.automatic = false;
+					points.push_back(corner);
+				}
+				std::sort(points.begin(), points.end(), [](auto const &Left, auto const &Right) { return Left.chainage < Right.chainage; });
+				std::vector<profile::pvi> line;
+				for (auto const &point : points)
+				{
+					if (false == line.empty() && point.chainage - line.back().chainage < 0.5)
+					{
+						// the corner of a ramp before a point of the design at the same place
+						if (false == point.automatic && point.radius == 0.0)
+							line.back() = point;
+						continue;
+					}
+					line.push_back(point);
+				}
+				if (line.size() >= 2)
+				{
+					m_profile.line = before;
+					m_profile.line.points = std::move(line);
+					m_profile.selected = -1;
+					profile_check();
+					profile_store();
+				}
 			}
-			if (line.size() >= 2)
-			{
-				m_profile.line = before;
-				m_profile.line.points = std::move(line);
-				m_profile.selected = -1;
-				profile_check();
-				profile_store();
-			}
+			WriteLog(format("Editor: curved crossover - the outer track %s raised by %.3f .. %.3f m from %.1f to %.1f m of its line, ramps %.1f m", outertrack->name().c_str(), raise.first, raise.second, c1, c2, raise.ramp), logtype::generic);
 		}
-		WriteLog(format("Editor: curved crossover - the outer track %s raised by %.3f m from %.1f to %.1f m of its line, ramps %.1f m", outertrack->name().c_str(), lift, c1, c2, ramp), logtype::generic);
 	}
 	// the outer curve again, as it lies now
 	std::vector<curve_sample> outerframe;
 	std::vector<TTrack *> outertracks;
 	{
-		auto const probe{mapping.point({swapped ? 0.0 : -offset, 0.0, 0.5 * (low + high)})};
+		auto const probe{mapping.point({-offset, 0.0, 0.5 * (low + high)})};
 		TTrack *closest{nullptr};
 		auto nearest{1.0};
 		for (auto *track : simulation::Paths.sequence())
@@ -431,7 +569,7 @@ void editor_mode::insert_curved_connection()
 				closest = track;
 			}
 		}
-		if (closest == nullptr || false == curve_of(*closest, m_straights.tolerance, m_route.design.norms.gauge, outerframe, outertracks))
+		if (closest == nullptr || false == curve_of(*closest, m_straights.tolerance, m_route.design.norms.gauge, outerframe, outertracks, kStraightReach))
 		{
 			undo_all();
 			return fail(STR("The outer track can't be followed after it went up"));
@@ -439,7 +577,7 @@ void editor_mode::insert_curved_connection()
 	}
 	// the inner curve again: the outer track may be split where the ramps end
 	if (false == swapped)
-		innertracks = tool.frame_tracks;
+		innertracks = pressedtracks;
 
 	std::vector<TTrack *> switches;
 	for (auto const &entry : plan.switches)
@@ -455,8 +593,10 @@ void editor_mode::insert_curved_connection()
 		for (auto const end : {segment_data::point::start, segment_data::point::end})
 		{
 			auto const &point{paths.front().points[end]};
-			if (plan_distance(sample_at(frame, nearest_station(frame, point)).position, point) > 0.1)
+			if (auto const off{plan_distance(sample_at(frame, nearest_station(frame, point)).position, point)}; off > 0.1)
 			{
+				WriteLog(format("Editor: curved crossover - the switch on %s misses it by %.3f m at %.3f %.3f, station %.1f of %.1f", onouter ? "the outer track" : "the inner track", off, point.x, point.z, nearest_station(frame, point), frame.empty() ? 0.0 : frame.back().station),
+				         logtype::generic);
 				undo_all();
 				return fail(STR("The other track doesn't run along at the same distance there"));
 			}
@@ -521,17 +661,21 @@ void editor_mode::insert_curved_connection()
 	}
 	record_connection(request.type, switches, plan, request.first);
 	// the lift kept with the crossover, so it can be taken back when the crossover moves or goes
-	if (std::abs(lift) > 0.002)
+	if (raise.ramp > 0.0)
 		for (auto entry : switch_store::connections(*switches.front()))
 			if (entry.kind == "connection" && entry.name == switches.front()->name())
 			{
-				entry.lift = lift;
+				entry.lift = raise.first;
+				entry.lift_end = raise.second;
 				entry.lift_from = flatfrom;
 				entry.lift_to = flatto;
-				entry.ramp = ramplength;
+				entry.ramp = raise.ramp;
 				switch_store::put(entry, entry.layer);
 			}
 	push_track_snapshot(std::move(states), std::move(created), std::move(removed));
+	// the design of the outer track goes back down with it
+	if (library.has_value())
+		profiles_to_history(std::move(*library));
 	straight_refresh();
 	first_step_done(first_step::turnout);
 	m_node = switches.front();
@@ -544,8 +688,8 @@ void editor_mode::insert_curved_connection()
 		names += (names.empty() ? "" : ", ") + track->name();
 	}
 	tool.status = format(STR_C("Crossover laid along the curve, switches %s, the tracks %.2f m apart"), names.c_str(), std::abs(offset));
-	if (std::abs(lift) > 0.002)
-		tool.status += format(STR_C("\nThe outer track went up %.3f m onto the plane of the cant of the inner one, with ramps of %.1f per mille"), std::abs(lift), kRampShare * m_profile.line.norms.curve_threshold);
+	if (raise.ramp > 0.0)
+		tool.status += format(STR_C("\nThe outer track went up %.3f m onto the plane of the cant of the inner one, with ramps of %.1f per mille"), std::max(std::abs(raise.first), std::abs(raise.second)), std::max(0.5, kRampShare * m_profile.line.norms.curve_threshold));
 	tool.status += "\n" + connection_readout(plan);
 	ui()->set_status(tool.status, false);
 }
@@ -611,7 +755,7 @@ bool editor_mode::take_out_crossover(curved_crossover const &Crossover, std::vec
 	First = plains[0];
 	Second = plains[1];
 	auto const &record{Crossover.record};
-	if (std::abs(record.lift) <= 0.002 || record.ramp <= 0.0)
+	if (false == record.lifted() || record.ramp <= 0.0)
 		return true;
 	// the outer track is the one the level stretch of the lift lies on
 	TTrack *outer{nullptr};
@@ -641,42 +785,24 @@ bool editor_mode::take_out_crossover(curved_crossover const &Crossover, std::vec
 		}
 		return chainage;
 	};
-	auto c1{chainage_of(record.lift_from)};
-	auto c2{chainage_of(record.lift_to)};
-	if (c1 > c2)
-		std::swap(c1, c2);
-	auto const ramp{record.ramp};
-	auto const share = [&](double const Chainage) {
-		if (Chainage <= c1 - ramp || Chainage >= c2 + ramp)
-			return 0.0;
-		if (Chainage < c1)
-			return (Chainage - (c1 - ramp)) / ramp;
-		if (Chainage > c2)
-			return ((c2 + ramp) - Chainage) / ramp;
-		return 1.0;
-	};
-	auto const slope = [&](double const Chainage) {
-		if (Chainage > c1 - ramp && Chainage < c1)
-			return 1.0 / ramp;
-		if (Chainage > c2 && Chainage < c2 + ramp)
-			return -1.0 / ramp;
-		return 0.0;
-	};
-	std::vector<double> breaks;
-	for (auto const chainage : {c1 - ramp, c1, c2, c2 + ramp})
-		if (chainage > 0.5 && chainage < route.length - 0.5)
-			breaks.push_back(chainage);
+	outer_lift lowered{chainage_of(record.lift_from), chainage_of(record.lift_to), record.lift, record.lift_end, record.ramp};
+	if (lowered.from > lowered.to)
+	{
+		std::swap(lowered.from, lowered.to);
+		std::swap(lowered.first, lowered.second);
+	}
+	auto const breaks{lowered.breaks(route.length)};
 	profile_take(route, route.spans.front().track, route.spans.back().track);
 	auto const before{m_profile.line};
 	editor_track::apply_profile(
-	    route, [&](double const Chainage) { return editor_track::sampled_elevation(samples, Chainage) - record.lift * share(Chainage); },
-	    [&](double const Chainage) { return editor_track::sampled_grade(samples, Chainage) - record.lift * slope(Chainage); }, breaks, States, Created);
+	    route, [&](double const Chainage) { return editor_track::sampled_elevation(samples, Chainage) - lowered.at(Chainage); },
+	    [&](double const Chainage) { return editor_track::sampled_grade(samples, Chainage) - lowered.grade(Chainage); }, breaks, States, Created);
 	// the design of the outer track down with it, the corners of the ramps left out where the line runs on straight through them
 	profile_take(route, route.spans.front().track, route.spans.back().track);
 	std::vector<profile::pvi> points;
 	for (auto point : before.points)
 	{
-		point.elevation -= record.lift * share(point.chainage);
+		point.elevation -= lowered.at(point.chainage);
 		points.push_back(point);
 	}
 	for (std::size_t k = 1; k + 1 < points.size();)
@@ -696,18 +822,19 @@ bool editor_mode::take_out_crossover(curved_crossover const &Crossover, std::vec
 		profile_check();
 		profile_store();
 	}
-	WriteLog(format("Editor: curved crossover - the outer track %s down by %.3f m again", outer->name().c_str(), record.lift), logtype::generic);
+	WriteLog(format("Editor: curved crossover - the outer track %s down by %.3f .. %.3f m again", outer->name().c_str(), record.lift, record.lift_end), logtype::generic);
 	return true;
 }
 
-// the crossover along a curve moved along it by the distance, from its first switch towards the second: taken out and laid again
-bool editor_mode::slide_curved_connection(TTrack &Switch, double const Distance)
+// the crossover along a curve moved along it by the distance, from its first switch towards the second: taken out and laid again,
+// of the template Shape when it's given
+bool editor_mode::slide_curved_connection(TTrack &Switch, double const Distance, int const Shape)
 {
 	auto const crossover{crossover_of(Switch)};
 	if (false == crossover.has_value())
 		return false;
 	auto &tool{m_switch};
-	auto const shape{crossover_template(crossover->record)};
+	auto const shape{Shape >= 0 ? Shape : crossover_template(crossover->record)};
 	if (shape < 0)
 	{
 		tool.status = STR_C("The template the crossover was laid of isn't among the templates");
@@ -723,13 +850,16 @@ bool editor_mode::slide_curved_connection(TTrack &Switch, double const Distance)
 	std::vector<TTrack *> removed;
 	TTrack *first{nullptr};
 	TTrack *second{nullptr};
+	// the design of the outer track comes down with the lift taken back, an undo puts both back
+	profile_library_load();
+	auto library{m_profiles};
 	if (false == take_out_crossover(*crossover, states, created, removed, first, second))
 		return false;
 	// the new places of the press and of the release, along the two curves, or the two straights
 	std::vector<curve_sample> firstframe, secondframe;
 	std::vector<TTrack *> firsttracks, secondtracks;
 	glm::dvec3 press, release;
-	if (curve_of(*first, m_straights.tolerance, m_route.design.norms.gauge, firstframe, firsttracks) && curve_of(*second, m_straights.tolerance, m_route.design.norms.gauge, secondframe, secondtracks))
+	if (curve_of(*first, m_straights.tolerance, m_route.design.norms.gauge, firstframe, firsttracks, kStraightReach) && curve_of(*second, m_straights.tolerance, m_route.design.norms.gauge, secondframe, secondtracks, kStraightReach))
 	{
 		auto const towards{nearest_station(firstframe, firstend) >= nearest_station(firstframe, firststart) ? 1.0 : -1.0};
 		press = sample_at(firstframe, nearest_station(firstframe, firststart) + towards * Distance).position;
@@ -747,6 +877,8 @@ bool editor_mode::slide_curved_connection(TTrack &Switch, double const Distance)
 	switch_store::follow();
 	push_track_snapshot(std::move(states), std::move(created), std::move(removed));
 	records_to_history();
+	if (crossover->record.lifted())
+		profiles_to_history(std::move(library));
 	// laid again
 	if (false == lay_crossover(shape, press, release, 3.0, names))
 	{
@@ -757,7 +889,7 @@ bool editor_mode::slide_curved_connection(TTrack &Switch, double const Distance)
 		return false;
 	}
 	join_last_steps();
-	tool.status = format(STR_C("Crossover moved %.2f m"), Distance) + "\n" + tool.status;
+	tool.status = (Shape >= 0 ? format(STR_C("Crossover laid again of %s"), template_name(tool.templates[shape]).c_str()) : format(STR_C("Crossover moved %.2f m"), Distance)) + "\n" + tool.status;
 	ui()->set_status(tool.status, false);
 	return true;
 }
@@ -802,6 +934,9 @@ std::size_t editor_mode::follow_crossovers(std::vector<editor_track::route_sampl
 		if (false == crossover.has_value())
 			continue;
 		auto *other{crossover->first == span.track ? crossover->second : crossover->first};
+		// on the same grade line it goes with the route anyway, grade_line_follow sees to it; what a fit to the terrain leaves as it is stays
+		if ((m_profile.whole_grade_line && false == m_profile.fitting && on_route_grade_line(*other)) || (m_profile.fitting && m_nmt_state.stayed.contains(other)))
+			continue;
 		if (std::any_of(changedroute.spans.begin(), changedroute.spans.end(), [&](auto const &Span) { return Span.track == other; }) || std::find(done.begin(), done.end(), other) != done.end())
 			continue;
 		done.push_back(other);
@@ -912,12 +1047,8 @@ int editor_mode::crossover_template(switch_store::record const &Record)
 	auto &tool{m_switch};
 	show_track_tab(track_tab::turnout);
 	arm_switch();
-	for (int i = 0; i < static_cast<int>(tool.templates.size()); ++i)
-	{
-		auto const &candidate{tool.templates[i]};
-		if (candidate.source == nullptr && false == candidate.double_slip && false == candidate.twofold() && std::abs(candidate.radius - Record.radius) < 0.5 && std::abs(candidate.ratio - Record.ratio) < 0.01 && (Record.rail == "-" || candidate.rail == Record.rail))
-			return i;
-	}
+	if (auto const found{matching_template(Record, false)}; found >= 0)
+		return found;
 	// switches of no template of the catalogue, as the digitized ones of the old sceneries: the first one is the template
 	if (Record.source != "measured" || Record.parts.empty())
 		return -1;

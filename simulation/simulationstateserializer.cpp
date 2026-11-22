@@ -15,6 +15,7 @@ http://mozilla.org/MPL/2.0/.
 #include "simulation/simulationtime.h"
 #include "simulation/simulationsounds.h"
 #include "simulation/simulationenvironment.h"
+#include "simulation/simulationtest.h"
 #include "scene/scenenodegroups.h"
 #include "scene/scenelayers.h"
 #include "scene/sceneterrain.h"
@@ -38,6 +39,7 @@ http://mozilla.org/MPL/2.0/.
 #include "utilities/utilities.h"
 #include "editor/editorTerrainStreamer.hpp"
 
+#include <format>
 
 namespace simulation {
 
@@ -391,6 +393,10 @@ state_serializer::deserialize_config( cParser &Input, scene::scratch_data &Scrat
 
     // config parameters (re)definition
     Global.ConfigParse( Input );
+    if( Global.test.enabled ) {
+        // a scenery doesn't get to turn on what a test keeps off
+        simulation::apply_test_mode_settings();
+    }
 }
 
 void
@@ -576,7 +582,14 @@ state_serializer::deserialize_node( cParser &Input, scene::scratch_data &Scratch
     }
     else if( nodedata.type == "track" ) {
 
-        auto *path { deserialize_path( Input, Scratchpad, nodedata ) };
+        std::unique_ptr<TTrack> made { deserialize_path( Input, Scratchpad, nodedata ) };
+        if( made->eType == tt_Unknown ) {
+            // with no path made it can't be joined nor drawn, and nothing could run on it: it goes with its holder
+            ErrorLog( std::format( R"(Bad scenario: track "{}" of an unknown type defined in file "{}" (line {}) left out)", made->name(), Input.Name(), inputline ) );
+            return;
+        }
+        // from here on the scene owns it
+        auto *path { made.release() };
         // duplicates of named tracks are currently experimentally allowed
         if( false == simulation::Paths.insert( path ) ) {
             ErrorLog( "Bad scenario: duplicate track name \"" + path->name() + "\" defined in file \"" + Input.Name() + "\" (line " + std::to_string( inputline ) + ")" );
@@ -1253,6 +1266,8 @@ include_terrain_file( std::string File, std::string &Includes, scene::scratch_da
 
     replace_slashes( File );
     erase_extension( File );
+    // the parser gives the name in lowercase, the files may be named in another case; the binary file is made next to the text
+    File = FileStemOnDisk( Global.asCurrentSceneryPath, File, { ".txtf", ".btf" } );
     if( std::find( binary.terrain_textfiles.begin(), binary.terrain_textfiles.end(), File ) != binary.terrain_textfiles.end() ) {
         WriteLog( "Terrain file: " + File + " is already in use, ignored" );
         return;
@@ -1933,7 +1948,7 @@ state_serializer::export_nodes_to_stream(std::ostream &scmfile, bool Dirty) cons
 	}
 }
 
-TAnimModel *state_serializer::create_model(const std::string &src, const std::string &name, const glm::dvec3 &position) {
+TAnimModel *state_serializer::create_model(const std::string &src, const std::string &name, const glm::dvec3 &position, scene::layer_handle const Layer) {
 	cParser parser(src);
 	parser.getTokens(); // "node"
 	parser.getTokens(2); // ranges
@@ -1944,7 +1959,8 @@ TAnimModel *state_serializer::create_model(const std::string &src, const std::st
 	parser.getTokens(2); // name, type
 	nodedata.name = name;
 	nodedata.type = "model";
-	nodedata.layer = scene::Layers.active(); // null_handle unless the scenery was opened for editing
+	// null_handle unless the scenery was opened for editing
+	nodedata.layer = Layer != null_handle ? Layer : scene::Layers.active();
 
 	scene::scratch_data scratch;
 

@@ -10,6 +10,7 @@ http://mozilla.org/MPL/2.0/.
 #include "stdafx.h"
 #include "world/TrackSleepers.h"
 #include <filesystem>
+#include <format>
 #include <iterator>
 #include <fstream>
 #include <regex>
@@ -26,6 +27,7 @@ extern char **environ;
 #include "application/editorprojection.h"
 
 #include "application/application.h"
+#include "editor/editorKilometrage.hpp"
 #include "editor/editorSettings.hpp"
 #include "editor/editorForeign.hpp"
 #include "editor/editorModelSets.hpp"
@@ -45,6 +47,7 @@ extern char **environ;
 #include "simulation/simulationtime.h"
 #include "simulation/simulationenvironment.h"
 #include "widgets/weatherpanel.h"
+#include "simulation/blackboxrecorder.h"
 #include "utilities/Timer.h"
 #include "Console.h"
 #include "rendering/renderer.h"
@@ -82,6 +85,38 @@ namespace
 {
     using vec3 = glm::vec3;
     using dvec2 = glm::dvec2;
+
+    // the steps of a frame of the editor timed: a frame whose update takes longer than kSlow tells in the log which of them took
+    // the time, at most twice a second
+    class frame_steps
+    {
+      public:
+        void step(char const *Name)
+        {
+            auto const now{std::chrono::steady_clock::now()};
+            m_steps.emplace_back(Name, std::chrono::duration<double, std::milli>(now - m_last).count());
+            m_last = now;
+        }
+        ~frame_steps()
+        {
+            constexpr double kSlow{50.0}; // ms
+            auto const total{std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - m_start).count()};
+            static auto told{std::chrono::steady_clock::time_point{}};
+            if (total < kSlow || m_start - told < std::chrono::milliseconds{500})
+                return;
+            told = m_start;
+            std::string text{"Editor: slow frame, update " + std::to_string(static_cast<int>(total)) + " ms:"};
+            for (auto const &[name, time] : m_steps)
+                if (time >= 3.0)
+                    text += " " + std::string{name} + " " + std::to_string(static_cast<int>(time));
+            WriteLog(text, logtype::generic);
+        }
+
+      private:
+        std::chrono::steady_clock::time_point const m_start{std::chrono::steady_clock::now()};
+        std::chrono::steady_clock::time_point m_last{m_start};
+        std::vector<std::pair<char const *, double>> m_steps;
+    };
 
     inline bool is_release(int state)
     {
@@ -204,6 +239,12 @@ namespace
         triangle_grid(std::vector<world_triangle> Triangles, glm::dvec2 const &Min, glm::dvec2 const &Max) : m_triangles(std::move(Triangles)), m_min(Min)
         {
             glm::dvec2 const extent = glm::max(Max - Min, glm::dvec2(1.0));
+            if (false == std::isfinite(extent.x) || false == std::isfinite(extent.y))
+            {
+                m_triangles.clear();
+                m_cells.resize(1);
+                return;
+            }
             // ~8 m cells, coarser for big areas so large terrain triangles don't flood the grid
             m_cellsize = std::max(8.0, std::max(extent.x, extent.y) / 128.0);
             m_columns = static_cast<int>(std::ceil(extent.x / m_cellsize)) + 1;
@@ -245,11 +286,13 @@ namespace
       private:
         int column(double const X) const
         {
-            return static_cast<int>(std::clamp(std::floor((X - m_min.x) / m_cellsize), 0.0, static_cast<double>(m_columns - 1)));
+            double const cell = std::floor((X - m_min.x) / m_cellsize);
+            return cell > 0.0 ? static_cast<int>(std::min(cell, static_cast<double>(m_columns - 1))) : 0;
         }
         int row(double const Z) const
         {
-            return static_cast<int>(std::clamp(std::floor((Z - m_min.y) / m_cellsize), 0.0, static_cast<double>(m_rows - 1)));
+            double const cell = std::floor((Z - m_min.y) / m_cellsize);
+            return cell > 0.0 ? static_cast<int>(std::min(cell, static_cast<double>(m_rows - 1))) : 0;
         }
 
         std::vector<world_triangle> m_triangles;
@@ -506,6 +549,8 @@ void editor_mode::editormode_input::poll()
 editor_mode::editor_mode() {
 	alignment_store::reset();
 	switch_store::reset();
+	fill_store::reset();
+	kilometrage::reset();
 	m_userinterface = std::make_shared<editor_ui>();
 	// the area fill settings live in the node bank window, in the tab of the fill mode
 	ui()->set_fill_options([this]() { render_area_fill(); });
@@ -523,7 +568,7 @@ editor_mode::editor_mode() {
 		std::string reason;
 		if (Node->from_template() || false == scene::Layers.editable(Node, &reason))
 		{
-			ui()->set_status(format(STR_C("\"%s\" can't be edited: %s"), (Node->name().empty() ? std::string{STR_C("(no name)")} : Node->name()).c_str(), reason.c_str()), true);
+			ui()->set_status(format(STR_C("\"%s\" can't be edited: %s"), name_of(*Node).c_str(), reason.c_str()), true);
 			return;
 		}
 		m_track_window_open = false;
@@ -547,14 +592,29 @@ editor_mode::editor_mode() {
 	});
 	m_roadtool.settings.normalize();
 	road_select(nullptr);
-	// the orthophoto is fitted onto the same ground as the area fill uses, terrain tile models included
-	// the roads built in the editor aren't ground: the imagery goes under them
-	m_orthophoto.ground_source([](glm::dvec2 const &Min, glm::dvec2 const &Max, bool const Heightmap, std::vector<world_triangle> &Out) {
-		gather_ground_triangles(Min, Max, true, 50.0f, Out, true, Heightmap);
-	});
-	m_orthophoto.height_source([](double const X, double const Z, double &Height) { return EditorTerrain.height_at(X, Z, Height); });
+	ground_sources(m_orthophoto);
+	ui()->set_base_layers([this]() { render_base_layers(); });
 	editor_track::observe(this);
  }
+
+void editor_mode::ground_sources(editor_orthophoto &Layer)
+{
+	// the imagery is fitted onto the same ground as the area fill uses, terrain tile models included
+	// the roads built in the editor aren't ground: the imagery goes under them
+	Layer.ground_source([](glm::dvec2 const &Min, glm::dvec2 const &Max, bool const Heightmap, std::vector<world_triangle> &Out) {
+		gather_ground_triangles(Min, Max, true, 50.0f, Out, true, Heightmap);
+	});
+	Layer.height_source([](double const X, double const Z, double &Height) { return EditorTerrain.height_at(X, Z, Height); });
+	// the imagery often comes before the terrain made from the model: it lies where the terrain will be
+	Layer.guess_source([this](double const X, double const Z, double &Height) {
+		if (nmt_ground(X, Z, Height))
+			return true;
+		// asked for, the tile goes onto it once it comes
+		if (m_nmt.placed())
+			m_nmt.request({X - 1.0, Z - 1.0}, {X + 1.0, Z + 1.0});
+		return false;
+	});
+}
 
 editor_mode::~editor_mode()
 {
@@ -642,7 +702,14 @@ editor_ui *editor_mode::ui() const
 bool editor_mode::init()
 {
     EditorSettings.load();
-    Global.EditorOrthoBallast = EditorSettings.top_ballast();
+    Global.EditorOrthoTracks = EditorSettings.top_tracks();
+    // the terrain model as the user left it; the settings are read only here, after the mode was made
+    auto const &model{EditorSettings.terrain_model()};
+    m_nmt_state.grow = EditorSettings.terrain_while_laying();
+    m_nmt_state.band = std::clamp(model.band, 50.0, 3000.0);
+    // the formation and the slopes are always made along the tracks: the switch of them is gone, a setting left off by it isn't kept
+    m_nmt_state.follow = model.follow;
+    m_terrain_add_count = std::clamp(model.around, 1, 8);
     EditorModelSets.load();
     EditorTrackPresets.load();
     Camera.Init({0, 15, 0}, {glm::radians(-30.0), glm::radians(180.0), 0}, nullptr);
@@ -691,6 +758,8 @@ void editor_mode::start_focus(scene::basic_node *node, double duration)
 
 void editor_mode::fly_to(glm::dvec3 const &Target, glm::dvec3 const &Look, double const Distance, double const Duration)
 {
+    // the camera flown off somewhere leaves the track it rode along
+    m_ride.leave();
     m_focus_start_pos = Camera.Pos;
     m_focus_start_angle = Camera.Angle;
     m_focus_target_pos = Target - Look * Distance;
@@ -869,6 +938,13 @@ void editor_mode::nullify_history_pointers(scene::basic_node *node)
     if (!node)
         return;
 
+    if (ui()->node() == node)
+        ui()->set_node(nullptr);
+    infra_forget(node);
+    for (auto *tool : m_tools)
+        tool->forget(node);
+
+    auto const followed = [node](infra::object_state const &State) { return State.saved.node == node; };
     for (auto &s : m_history)
     {
         if (s.node_ptr == node)
@@ -878,17 +954,17 @@ void editor_mode::nullify_history_pointers(scene::basic_node *node)
             if (copy.model == node)
                 copy.model = nullptr;
         }
+        s.infra.erase(std::remove_if(s.infra.begin(), s.infra.end(), followed), s.infra.end());
     }
 
     for (auto &s : g_redo)
     {
         if (s.node_ptr == node)
             s.node_ptr = nullptr;
+        s.infra.erase(std::remove_if(s.infra.begin(), s.infra.end(), followed), s.infra.end());
     }
 
-    // deleted nodes also drop out of the "undo last fill" set
-    m_fill_last.erase(std::remove(m_fill_last.begin(), m_fill_last.end(), node), m_fill_last.end());
-    // and out of the selection and their group
+    // deleted nodes drop out of the selection and their group
     m_selection.erase(std::remove(m_selection.begin(), m_selection.end(), node), m_selection.end());
     scene::Groups.remove(node);
 
@@ -900,6 +976,9 @@ void editor_mode::nullify_history_pointers(scene::basic_node *node)
 void editor_mode::terrain_history_step()
 {
     if (false == m_streamer.active())
+        return;
+    // the terrain loaded from the model is taken back as a whole
+    if (nmt_busy() && false == m_history_busy)
         return;
     if (m_streamer.recording())
     {
@@ -939,6 +1018,8 @@ void editor_mode::restore_terrain(EditorSnapshot &Snapshot)
 void editor_mode::undo_last()
 {
     first_step_done(first_step::undo);
+    // the warning by the cursor told of the step taken back now: "Ctrl+Z takes it back" is done
+    ui()->drop_refusal();
     // a change of the terrain made a moment ago is a step of its own before it's taken back
     m_history_busy = true;
     terrain_history_step();
@@ -963,17 +1044,46 @@ void editor_mode::undo_last()
     }
 }
 
+std::string editor_mode::refused(std::string Text)
+{
+    ui()->set_status(Text, true);
+    return Text;
+}
+
+void editor_mode::drop_step(std::size_t const Step)
+{
+    if (Step == 0 || m_history.size() != Step)
+        return;
+    auto const redo{g_redo.size()};
+    undo_one();
+    if (g_redo.size() > redo)
+        g_redo.erase(g_redo.begin() + redo, g_redo.end());
+}
+
 void editor_mode::undo_one()
 {
     if (m_history.empty())
         return;
 
+    m_nmt_state.restoring = true;
+    struct restored
+    {
+        bool &flag;
+        ~restored() { flag = false; }
+    } const restoring{m_nmt_state.restoring};
     EditorSnapshot snap = m_history.back();
     m_history.pop_back();
 
     if (snap.action == EditorSnapshot::Action::Terrain)
     {
         restore_terrain(snap);
+        g_redo.push_back(std::move(snap));
+        return;
+    }
+
+    if (snap.action == EditorSnapshot::Action::Kilometrage)
+    {
+        restore_kilometrage(snap);
         g_redo.push_back(std::move(snap));
         return;
     }
@@ -1083,9 +1193,7 @@ void editor_mode::undo_one()
         if (auto *model = dynamic_cast<TAnimModel *>(target))
         {
           
-            nullify_history_pointers(model);
-            remove_from_hierarchy(model);
-            simulation::State.delete_model(model);
+            erase_model(model);
             m_node = nullptr;
             ui()->set_node(nullptr);
         }
@@ -1133,12 +1241,25 @@ void editor_mode::redo_one()
     if (g_redo.empty())
         return;
 
+    m_nmt_state.restoring = true;
+    struct restored
+    {
+        bool &flag;
+        ~restored() { flag = false; }
+    } const restoring{m_nmt_state.restoring};
     EditorSnapshot snap = g_redo.back();
     g_redo.pop_back();
 
     if (snap.action == EditorSnapshot::Action::Terrain)
     {
         restore_terrain(snap);
+        m_history.push_back(std::move(snap));
+        return;
+    }
+
+    if (snap.action == EditorSnapshot::Action::Kilometrage)
+    {
+        restore_kilometrage(snap);
         m_history.push_back(std::move(snap));
         return;
     }
@@ -1211,9 +1332,7 @@ void editor_mode::redo_one()
         {
             if (auto *model = dynamic_cast<TAnimModel *>(target))
             {
-                nullify_history_pointers(model);
-                remove_from_hierarchy(model);
-                simulation::State.delete_model(model);
+                erase_model(model);
                 m_node = nullptr;
                 ui()->set_node(nullptr);
             }
@@ -1278,17 +1397,43 @@ void editor_mode::redo_one()
 
 bool editor_mode::update()
 {
+    frame_steps steps;
     // the catenary doesn't need the far tracks drawn (50 km of them cost a lot in a big scenery)
     Global.editor_tracks = (current_work_area() == work_area::tracks);
     selftest_step();
-    if (m_vehicle.leave)
+    steps.step("selftest");
+    thumbnails_trim();
+    // the drives of the switches go to the tips of their blades once, as the templates of the scenery are known
+    if (false == m_drives_checked)
     {
-        m_vehicle.leave = false;
+        EditorIncludes.start();
+        if (EditorIncludes.scanned())
+        {
+            m_drives_checked = true;
+            if (auto const moved{drives_to_blade_tips()}; moved > 0)
+            {
+                auto const text{format(STR_P("The drive of %zu switch is moved to the tips of its blades", "The drives of %zu switches are moved to the tips of their blades", static_cast<long long>(moved)), moved)};
+                ui()->set_status(text, false);
+                WriteLog("Editor: " + text, logtype::generic);
+            }
+        }
+    }
+    // after the tool has told its own status
+    if (false == m_orphan_note.empty())
+    {
+        ui()->set_notice(m_orphan_note);
+        WriteLog("Editor: " + m_orphan_note);
+        m_orphan_note.clear();
+    }
+    if (m_vehicle.take_leave())
+    {
         Application.pop_mode();
         return true;
     }
 
+    steps.step("start");
     Timer::UpdateTimers(true);
+    move_thrown_switches();
 
     simulation::State.update_clocks();
     simulation::Environment.update();
@@ -1303,6 +1448,9 @@ bool editor_mode::update()
     }
 
     auto const deltarealtime = Timer::GetDeltaRenderTime();
+    // the whole frame before, drawing included: one slow where its update wasn't took the time drawing
+    if (deltarealtime > 0.15 && simulation::is_ready)
+        WriteLog("Editor: slow frame before, " + std::to_string(static_cast<int>(deltarealtime * 1000.0)) + " ms in all", logtype::generic);
 
     // reconcile camera fly-mode with the real right-button state. ImGui is always fed the button
     // events (even when it captures the mouse), so io.MouseDown[1] is authoritative; if a release
@@ -1329,6 +1477,7 @@ bool editor_mode::update()
         m_input.mouse.button(GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
     }
     terrain_history_step();
+    steps.step("simulation");
 
     // fixed step render time routines (50 Hz)
     fTime50Hz += deltarealtime; // accumulate even when paused to keep frame reads stable
@@ -1359,8 +1508,10 @@ bool editor_mode::update()
  
     }
 
+    steps.step("ui");
     // variable step routines
     update_camera(deltarealtime);
+    steps.step("camera");
 
     // drop the selection if its layer was hidden or locked in the meantime
     if (m_node != nullptr && false == scene::Layers.editable(m_node))
@@ -1383,6 +1534,9 @@ bool editor_mode::update()
     {
         m_include_gesture = false;
     }
+    // the gizmo let go of a signal while it wasn't drawn
+    if (false == m_gizmo_using)
+        signal_gizmo_end();
     // models replaced after changes of includes are destroyed once the renderer can't have them among its pick candidates
     for (auto &retired : m_retired)
     {
@@ -1397,6 +1551,7 @@ bool editor_mode::update()
     audio::renderer.update(Global.iPause ? 0.0 : deltarealtime);
 
     GfxRenderer->Update(deltarealtime);
+    steps.step("renderer");
 
     simulation::is_ready = true;
 
@@ -1412,17 +1567,50 @@ bool editor_mode::update()
         draw_terrain_overlay();
 
     // --- geoportal orthophoto: streamed around the camera, drawn beneath the other overlays ---
+    // chunks of the terrain come from the files and from the model: the imagery lying at guessed heights goes onto them
+    // and so do the squares of the model it lies on meanwhile
+    auto const resident{m_streamer.resident()};
+    auto const waiting{m_nmt.waiting()};
+    if (resident > m_ortho_resident || waiting < m_ortho_waiting)
+    {
+        m_orthophoto.ground_arrived();
+        for (auto &layer : m_wms)
+            layer->ground_arrived();
+    }
+    m_ortho_resident = resident;
+    m_ortho_waiting = waiting;
+    steps.step("terrain");
     m_orthophoto.update(Camera.Pos);
+    steps.step("orthophoto");
+    update_wms_layers();
+    steps.step("wms");
     nmt_update();
+    keep_nmt_settings();
+    steps.step("nmt");
+    // what's drawn over the 3d view stays in it, the docks around it are see-through a little
+    auto *background{ImGui::GetBackgroundDrawList(ImGui::GetMainViewport())};
+    background->PushClipRect(ImVec2(editor_ui::view_min().x, editor_ui::view_min().y), ImVec2(editor_ui::view_max().x, editor_ui::view_max().y), true);
     draw_orthophoto();
+    draw_nmt_pending();
+    area_update();
+    draw_download_area();
+    steps.step("imagery");
 
     // --- ImGuizmo: in-viewport transform gizmo for the selected node ---
     render_gizmo();
     // the tools, the gizmo modes and the axes over the 3d view
     render_viewport_overlays();
+    m_ride.draw_hud();
 
     render_track_inspector();
+    steps.step("inspector");
     if (ui()->mode() == nodebank_panel::TRACK)
+    {
+        draw_track_lines();
+        draw_track_labels();
+        draw_track_legend();
+    }
+    else if (Global.EditorOrtho && Global.EditorOrthoTracks > 1)
         draw_track_lines();
     if (selected_track())
         draw_track_overlay();
@@ -1430,11 +1618,13 @@ bool editor_mode::update()
         draw_route_overlay();
     if (ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::straights)
         draw_straights_overlay();
+    steps.step("track lines");
     if (ui()->mode() == nodebank_panel::TRACK)
     {
         if (m_track_box.active && false == ImGui::GetIO().MouseDown[0])
             finish_track_box();
         update_track_hover();
+        steps.step("hover");
         point_drag_update();
         switch_slide_update();
         draw_switch_slide();
@@ -1451,29 +1641,53 @@ bool editor_mode::update()
             catenary_drag_update();
             draw_catenary_overlay();
         }
-        draw_parallel_preview();
+        m_parallel.draw_overlay();
         if (m_track_tab == track_tab::lineside)
         {
-            draw_hekto_overlay();
-            draw_fouling_overlay();
-            draw_vehicle_marker();
+            m_hekto.draw_overlay();
+            m_fouling.draw_overlay();
+            m_vehicle.draw_overlay();
         }
         render_track_context();
+        steps.step("context");
         update_build_tools();
+        steps.step("laying");
+        tape_update();
         update_track_intent();
+        steps.step("intent");
         draw_track_hover();
         draw_track_set();
         draw_track_spread();
         draw_build_overlay();
+        steps.step("laying drawn");
+        draw_blade_tips();
         draw_track_intent();
-        speed_step();
-        joints_step();
+        draw_tape();
+        steps.step("track drawn");
+        m_speed.update();
+        steps.step("speed");
+        m_joints.update();
+        steps.step("joints");
+        if (m_nmt_state.grade_lines_dirty)
+        {
+            m_nmt_state.grade_lines_dirty = false;
+            grade_lines_store();
+        }
+        m_nmt_state.grade_line_replaced.clear();
+        m_srk.update();
+        kilometrage::follow(m_track_edits);
+        m_km.update();
+        steps.step("srk km");
         draw_track_hints();
         draw_empty_scenery_hint();
         draw_profile_overlay();
+        draw_grade_line_pick();
         draw_infra_overlay();
-        draw_speed_overlay();
-        draw_joints_overlay();
+        m_speed.draw_overlay();
+        m_joints.draw_overlay();
+        m_srk.draw_overlay();
+        m_km.draw_overlay();
+        steps.step("overlays");
     }
     else
     {
@@ -1482,8 +1696,9 @@ bool editor_mode::update()
         bend_drag_update();
         draw_bend_overlay();
     }
-    update_gauge();
-    render_gauge_window();
+    m_gauge.update();
+    m_gauge.render_windows();
+    m_minimap.render_windows();
 
     // roads: trajectories of the lanes, and the tools of the road window
     update_road_tool();
@@ -1491,12 +1706,14 @@ bool editor_mode::update()
     // the roads and the terrain are fields of work, their tools are drawn in the tool options window in place of the edit mode ones
     ui()->set_workspace(m_terrain_open ? editor_ui::workspace::terrain : m_roadtool.window ? editor_ui::workspace::roads : editor_ui::workspace::none);
 
+    steps.step("roads");
     // --- array: the one made last is kept in line with its settings ---
     update_array();
 
     // --- area fill: outline overlay while the mode is active (its settings are drawn in the node bank window) ---
     if (ui()->mode() == nodebank_panel::FILL)
         draw_area_fill_outline();
+    background->PopClipRect();
     draw_ortho_compass();
 
     render_new_scenery_popup();
@@ -1504,8 +1721,10 @@ bool editor_mode::update()
     render_shortcuts_window();
     render_first_steps();
     render_nmt_prompt();
-    render_orthophoto_window();
-    render_minimap_window();
+    render_nmt_banner();
+    render_nmt_buried();
+    render_empty_scenery_hint();
+    render_outside_area_hint();
     render_switch_designer();
     render_environment_window();
     if (m_terrain_open)
@@ -1514,6 +1733,7 @@ bool editor_mode::update()
         m_chunklist.scanned = false; // the files are read again when the terrain is the field of work again
     draw_selection_overlay();
     render_context_menu();
+    steps.step("windows");
 
     // --- ImGui: Editor Settings & History windows ---
     if(m_settings_open)
@@ -1597,16 +1817,24 @@ void editor_mode::render_terrain_ui()
 {
     if (false == m_streamer.active())
     {
-        ImGui::TextWrapped("%s", STR_C("The scenery has no terrain yet. Make an empty one, or load it from the terrain model below"));
-        if (ImGui::Button(STR_C("Make heightmap terrain for this scenery")))
-            ensure_terrain();
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("%s", STR_C("Kept in the folder terrain/<name of the scenery>/ and written there with the scenery (Ctrl+S)"));
+        ImGui::TextUnformatted(STR_C("The scenery has no terrain yet"));
         // the terrain model makes the terrain itself
         if (ImGui::CollapsingHeader(STR_C("Terrain model (NMT)"), ImGuiTreeNodeFlags_DefaultOpen))
             render_nmt_ui();
+        ImGui::Spacing();
+        ImGui::TextDisabled("%s", STR_C("Or without the real ground:"));
+        if (ImGui::Button(STR_C("Make an empty, flat terrain")))
+            ensure_terrain();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("%s", STR_C("Kept in the folder terrain/<name of the scenery>/ and written there with the scenery (Ctrl+S)"));
         return;
     }
+    // the real terrain first, open: the tracks put onto it from there
+    if (nmt_busy())
+        ImGui::SetNextItemOpen(true);
+    if (ImGui::CollapsingHeader(STR_C("Terrain model (NMT)"), ImGuiTreeNodeFlags_DefaultOpen))
+        render_nmt_ui();
+
     // the tools are chosen in the toolbar, here are their settings
     if (ImGui::CollapsingHeader(STR_C("Chunks"), m_terrain_tool == terrain_tool::chunks ? ImGuiTreeNodeFlags_DefaultOpen : 0))
     {
@@ -1641,9 +1869,6 @@ void editor_mode::render_terrain_ui()
                 ImGui::SetTooltip("%s", STR_C("The chunks under the model take its shape, and the model is removed"));
         }
     }
-
-    if (ImGui::CollapsingHeader(STR_C("Terrain model (NMT)")))
-        render_nmt_ui();
 
     if (ImGui::CollapsingHeader(STR_C("Chunk resolution"), m_terrain_tool == terrain_tool::spacing ? ImGuiTreeNodeFlags_DefaultOpen : 0))
     {
@@ -1683,6 +1908,10 @@ void editor_mode::render_terrain_ui()
             ImGui::SameLine();
             if (ImGui::Button(STR_C("Clear the selection")))
                 m_terrain_selection.clear();
+            if (ImGui::Button(STR_C("Remove the selected (Del)")))
+                remove_selected_chunks();
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", STR_C("Takes the selected chunks out of the terrain of the scenery, and out of its files on save; Ctrl+Z brings them back"));
             ImGui::Checkbox(STR_C("Paint every 0.5 m with 0.5 m spacing"), &m_terrain_convert_paint);
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("%s", STR_C("Chunks converted to 0.5 m get their paint samples every 0.5 m as well (every metre otherwise),\n"
@@ -1783,9 +2012,7 @@ void editor_mode::render_terrain_ui()
                 ImGui::SetTooltip("%s", STR_C("Angle the textures of the chosen material are turned by, on every chunk painted with it.\n"
                                         "Ctrl+click to type it. To have the material turned in one place only, fill it there with an angle of its own."));
         }
-        ImGui::SetNextItemWidth(160.0f);
-        ImGui::InputText(STR_C("Material"), m_terrain_material, IM_ARRAYSIZE(m_terrain_material));
-        material_drop(m_terrain_material, IM_ARRAYSIZE(m_terrain_material));
+        texture_field(STR_C("Material"), 160.0f, m_terrain_material, IM_ARRAYSIZE(m_terrain_material), terrain_texture_offer(nullptr));
         ImGui::SameLine();
         if (ImGui::Button(STR_C("Add to the palette")) && m_terrain_material[0] != '\0')
             m_terrain_layer = m_streamer.layer(m_terrain_material, m_terrain_material_size);
@@ -1802,6 +2029,9 @@ void editor_mode::render_terrain_ui()
                                        "the brush stays on the ground also over an opening. An area outlined with the Fill tool can be cut or closed in the Fill section."));
         ImGui::TextDisabled("%s", STR_C("The holes follow the ground every metre (every grid point of finer chunks), whatever the drawn grid"));
     }
+
+    if (ImGui::CollapsingHeader(STR_C("Fields"), m_terrain_tool == terrain_tool::fields ? ImGuiTreeNodeFlags_DefaultOpen : 0))
+        render_fields_ui();
 
     if (ImGui::CollapsingHeader(STR_C("Fill"), m_terrain_tool == terrain_tool::fill ? ImGuiTreeNodeFlags_DefaultOpen : 0))
     {
@@ -1829,7 +2059,10 @@ void editor_mode::render_terrain_ui()
         ImGui::EndDisabled();
         ImGui::SameLine();
         if (ImGui::Button(STR_C("Clear the outline##fill")))
+        {
             m_paint_outline.clear();
+            m_patch_reoutline.clear();
+        }
         // the same outline for the holes and the grass
         std::vector<glm::dvec2> outline;
         for (auto const &point : m_paint_outline)
@@ -1883,11 +2116,9 @@ void editor_mode::render_terrain_ui()
             ImGui::SetNextItemWidth(120.0f);
             if (ImGui::DragFloat(STR_C("Level (m)"), &m_water_level, 0.01f, -1000.0f, 5000.0f, "%.2f"))
                 m_water_level_edited = true;
-            ImGui::SetNextItemWidth(160.0f);
-            ImGui::InputText(STR_C("Material##water"), m_water_material, IM_ARRAYSIZE(m_water_material));
-            material_drop(m_water_material, IM_ARRAYSIZE(m_water_material));
+            texture_field(STR_C("Material##water"), 160.0f, m_water_material, IM_ARRAYSIZE(m_water_material), terrain_texture_offer(STR_C("The default water material")));
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip(STR_C("Empty: %s, the water material of the terrain"), m_streamer.manifest().water_material.c_str());
+                ImGui::SetTooltip(STR_C("The default one: %s, the water material of the terrain"), m_streamer.manifest().water_material.c_str());
             ImGui::BeginDisabled(m_water_points.size() < 3);
             if (ImGui::Button(STR_C("Make the water")))
             {
@@ -1957,12 +2188,9 @@ void editor_mode::render_terrain_ui()
                 m_water_material_of = m_water_selected;
             }
             bool retexture = false;
-            ImGui::SetNextItemWidth(160.0f);
-            ImGui::InputText(STR_C("Material of the chosen"), m_water_selected_material, IM_ARRAYSIZE(m_water_selected_material));
-            retexture |= ImGui::IsItemDeactivatedAfterEdit();
-            retexture |= material_drop(m_water_selected_material, IM_ARRAYSIZE(m_water_selected_material));
+            retexture |= texture_field(STR_C("Material of the chosen"), 160.0f, m_water_selected_material, IM_ARRAYSIZE(m_water_selected_material), terrain_texture_offer(STR_C("The default water material")));
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip(STR_C("A material or a texture (drag one from the texture browser).\nEmpty: %s, the water material of the terrain"), m_streamer.manifest().water_material.c_str());
+                ImGui::SetTooltip(STR_C("Chosen from the textures, or dragged from the texture browser.\nThe default one: %s, the water material of the terrain"), m_streamer.manifest().water_material.c_str());
             ImGui::SetNextItemWidth(120.0f);
             ImGui::DragFloat(STR_C("Texture repeats every (m)##water"), &m_water_selected_size, 0.1f, 0.0f, 500.0f, "%.1f");
             m_water_selected_size = std::max(0.0f, m_water_selected_size);
@@ -1988,17 +2216,12 @@ void editor_mode::render_terrain_ui()
             m_water_material_of = -1;
         }
         // the material of the bodies of water which don't name their own
-        if (false == m_water_default_edited)
-            std::snprintf(m_water_default_material, sizeof(m_water_default_material), "%s", m_streamer.manifest().water_material.c_str());
-        ImGui::SetNextItemWidth(160.0f);
-        ImGui::InputText(STR_C("Default water material"), m_water_default_material, IM_ARRAYSIZE(m_water_default_material));
-        m_water_default_edited = ImGui::IsItemActive();
-        bool redefault = ImGui::IsItemDeactivatedAfterEdit();
-        redefault |= material_drop(m_water_default_material, IM_ARRAYSIZE(m_water_default_material));
+        auto defaultmaterial{m_streamer.manifest().water_material};
+        auto const redefault{texture_field(STR_C("Default water material"), 160.0f, defaultmaterial, terrain_texture_offer(nullptr))};
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", STR_C("Material of the bodies of water which don't name their own"));
         if (redefault)
-            m_streamer.water_material(m_water_default_material);
+            m_streamer.water_material(defaultmaterial);
     }
 
     if (ImGui::CollapsingHeader(STR_C("Modifiers")))
@@ -2066,9 +2289,9 @@ void editor_mode::draw_terrain_overlay()
         return;
     screen_projection const projection;
     auto *drawlist = ImGui::GetBackgroundDrawList();
-    glm::dvec3 const offset = GfxRenderer->Mouse_Position();
-    bool const hovering = glm::length(offset) > 1e-3 && false == ImGui::GetIO().WantCaptureMouse;
-    glm::dvec3 const cursor = Camera.Pos + offset;
+    // the cursor where a click would put the point: the ground along the ray through the cursor in this frame
+    glm::dvec3 cursor{Camera.Pos};
+    bool const hovering = false == ImGui::GetIO().WantCaptureMouse && cursor_on_ground(cursor);
     auto const ground = [&](double const X, double const Z, double const Fallback) {
         double height;
         return m_streamer.height_at(X, Z, height) ? height : Fallback;
@@ -2083,12 +2306,12 @@ void editor_mode::draw_terrain_overlay()
         }
     };
 
-    // the holes and the grass are aimed at the ground itself, also over an opening and behind the blades
+    // the brush aimed at the ground itself along the ray through the cursor
     glm::dvec3 brushcentre = cursor;
-    bool const onground = (m_terrain_tool == terrain_tool::holes || m_terrain_tool == terrain_tool::grass) && false == ImGui::GetIO().WantCaptureMouse && terrain_cursor(brushcentre);
-    if (terrain_brush() && (hovering || onground))
+    bool const onground = false == ImGui::GetIO().WantCaptureMouse && terrain_cursor(brushcentre);
+    if (terrain_brush() && onground)
     {
-        auto const cursor = onground ? brushcentre : Camera.Pos + offset;
+        auto const cursor = brushcentre;
         std::vector<glm::dvec3> circle;
         for (int i = 0; i < 64; ++i)
         {
@@ -2186,7 +2409,7 @@ void editor_mode::draw_terrain_overlay()
             outline.emplace_back(point.x, water[i].level, point.y);
         polyline(outline, static_cast<int>(i) == m_water_selected ? IM_COL32(120, 200, 255, 255) : IM_COL32(60, 120, 220, 160), true, static_cast<int>(i) == m_water_selected ? 2.5f : 1.5f);
     }
-    if (m_terrain_tool == terrain_tool::fill && false == m_paint_outline.empty())
+    if ((m_terrain_tool == terrain_tool::fill || m_terrain_tool == terrain_tool::fields) && false == m_paint_outline.empty())
     {
         // laid over the ground, the edges followed every few metres
         std::vector<glm::dvec3> outline;
@@ -2233,6 +2456,12 @@ void editor_mode::load_orthophoto_settings()
     if (scenery == m_orthophoto_scenery)
         return;
     m_orthophoto_scenery = scenery;
+    // a scenery of its own: nobody chose for it yet, unless the user or the scenery keeps the orthophoto on or off
+    m_orthophoto_chosen = false;
+    // the height of the terrain model against the tracks of the scenery, as it was fitted or typed in last
+    m_nmt_state.offset = 0.0;
+    m_nmt_state.fitted = false;
+    std::as_const(EditorSettings).terrain_model_offset(scenery, m_nmt_state.offset, m_nmt_state.fitted);
 
     auto const &stored = EditorSettings.orthophoto();
     editor_orthophoto::config config = m_orthophoto.settings();
@@ -2259,10 +2488,24 @@ void editor_mode::load_orthophoto_settings()
     {
         m_orthophoto_mark = marked.front();
         m_orthophoto.enabled(enabled);
+        m_orthophoto_chosen = true;
         WriteLog(format("Editor: the map settings of the scenery, orthophoto %s", enabled ? "on" : "off"));
+    }
+    // the user's choice stands over the scenery's; turned on only where the scenery lies on the map, a fictional one has nothing to
+    // show, and there it's left to the terrain model once the scenery is placed
+    if (auto const on{stored.on}; on.has_value() && (false == *on || config.north != 0.0 || config.east != 0.0))
+    {
+        m_orthophoto.enabled(*on);
+        m_orthophoto_chosen = true;
+        WriteLog(format("Editor: the orthophoto %s, as the user left it", *on ? "on" : "off"));
     }
     m_orthophoto.settings(config);
     m_orthophoto_origin_edit = {config.north, config.east};
+    // the area the imagery and the terrain model are downloaded in, none in a scenery which has none
+    m_orthophoto_area_mark = scene::Layers.empty() ? std::vector<std::string>{} : scene::Layers.marked(scene::layer_handle{1}, "//$z");
+    m_orthophoto.area(editor_orthophoto::read_area(m_orthophoto_area_mark));
+    if (false == m_orthophoto.area().empty())
+        WriteLog(format("Editor: the download area of the scenery, %zu points, %d tiles of the orthophoto", m_orthophoto.area().size(), m_orthophoto.stats().area_tiles));
 }
 
 void editor_mode::save_orthophoto_settings()
@@ -2282,6 +2525,42 @@ void editor_mode::save_orthophoto_settings()
     EditorSettings.save();
 }
 
+void editor_mode::choose_orthophoto(bool const On)
+{
+    m_orthophoto.enabled(On);
+    m_orthophoto_chosen = true;
+    EditorSettings.orthophoto().on = On;
+    EditorSettings.save();
+}
+
+void editor_mode::keep_nmt_settings()
+{
+    // not while a number is being typed in, which changes it at every key
+    if (ImGui::IsAnyItemActive())
+        return;
+    auto const &state{m_nmt_state};
+    auto &stored{EditorSettings.terrain_model()};
+    auto changed{stored.band != state.band || stored.around != m_terrain_add_count || stored.shape != state.shape || stored.follow != state.follow};
+    stored.band = state.band;
+    stored.around = m_terrain_add_count;
+    stored.shape = state.shape;
+    stored.follow = state.follow;
+    // the offset of the model is the scenery's, fitted to its tracks or typed in
+    if (false == m_orthophoto_scenery.empty())
+    {
+        double offset{0.0};
+        bool fitted{false};
+        std::as_const(EditorSettings).terrain_model_offset(m_orthophoto_scenery, offset, fitted);
+        if (offset != state.offset || fitted != state.fitted)
+        {
+            EditorSettings.terrain_model_offset(m_orthophoto_scenery, state.offset, state.fitted);
+            changed = true;
+        }
+    }
+    if (changed)
+        EditorSettings.save();
+}
+
 void editor_mode::render_orthophoto_ui()
 {
     load_orthophoto_settings();
@@ -2289,10 +2568,6 @@ void editor_mode::render_orthophoto_ui()
     editor_orthophoto::config config = m_orthophoto.settings();
     bool changed = false; // apply to the layer
     bool persist = false; // and store in the editor settings
-
-    bool enabled = m_orthophoto.enabled();
-    if (ImGui::Checkbox(STR_C("Show orthophoto (geoportal.gov.pl)"), &enabled))
-        m_orthophoto.enabled(enabled);
 
     // what lies under the scenery: the orthophoto of geoportal.gov.pl, or a map layer which comes much quicker
     {
@@ -2393,7 +2668,7 @@ void editor_mode::render_orthophoto_ui()
     };
 
     auto const stats = m_orthophoto.stats();
-    if (stats.failed > 0)
+    if (stats.failed > 0 || stats.area_failed > 0)
     {
         ImGui::Text(STR_C("Tiles: %d shown, %d loading, %d failed"), stats.resident, stats.loading, stats.failed);
         ImGui::SameLine();
@@ -2401,54 +2676,86 @@ void editor_mode::render_orthophoto_ui()
             m_orthophoto.retry_failed();
     }
 
+    ImGui::Separator();
+    render_download_area_ui(stats);
+    ImGui::Separator();
+
     if (ImGui::TreeNode(STR_C("More settings")))
     {
-        if (ImGui::Checkbox(STR_C("Fit to terrain"), &config.drape))
+        // one choice of three, what it means under it: drawn over the view (laid on the ground, where there's none at the height), a
+        // surface of the scene on the ground, or a flat sheet in the scene; flat over the view says nothing more than on the ground
+        enum class look
         {
-            changed = true;
-            persist = true;
+            overlay,
+            ground,
+            sheet
+        };
+        auto const current{false == config.in_scene ? look::overlay : config.drape ? look::ground : look::sheet};
+        auto const choice = [&](char const *Label, look const Look) {
+            if (ImGui::RadioButton(Label, current == Look) && current != Look)
+            {
+                config.in_scene = Look != look::overlay;
+                config.drape = Look != look::sheet;
+                changed = true;
+                persist = true;
+            }
+        };
+        auto const explain = [](char const *Text) {
+            ImGui::Indent();
+            ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 360.0f);
+            ImGui::TextDisabled("%s", Text);
+            ImGui::PopTextWrapPos();
+            ImGui::Unindent();
+        };
+
+        ImGui::TextUnformatted(STR_C("Show the photos"));
+        choice(STR_C("Over the view"), look::overlay);
+        choice(STR_C("On the terrain, in the scene"), look::ground);
+        choice(STR_C("A flat sheet in the scene"), look::sheet);
+        switch (current)
+        {
+        case look::overlay:
+            explain(STR_C("The photos are drawn over the whole view, over the tracks and models as well: lower the opacity to see "
+                          "what's under them. The quickest way to compare the scenery with the map."));
+            break;
+        case look::ground:
+            explain(STR_C("The photos lie on the terrain as its surface: tracks and models standing on them cover them, the scene lights "
+                          "them, and fully opaque the mouse places objects on them as on the ground."));
+            break;
+        case look::sheet:
+            explain(STR_C("One flat sheet at the height below, in the scene: for a scenery with no terrain yet. Where there is "
+                          "terrain, it cuts through the sheet."));
+            break;
         }
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(STR_C("Lays the imagery onto the ground geometry (terrain shapes, terrain tile models, heightmap terrain).\n"
-                              "Places without any ground use the height below."));
+
         if (config.drape)
         {
-            ImGui::SameLine();
             if (ImGui::Button(STR_C("Refit")))
             {
                 // the ground was edited: what's kept of it has to go as well
                 ground_tiles.clear();
                 forget_ground_shapes();
                 m_orthophoto.refit();
+                for (auto &layer : m_wms)
+                    layer->refit();
             }
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip(STR_C("Samples the ground again, after it was edited"));
+                ImGui::SetTooltip("%s", STR_C("Samples the ground again, after it was edited"));
+            // the lift only matters where the scene can cover the photos
+            if (config.in_scene)
+            {
+                ImGui::SetNextItemWidth(160.0f);
+                changed |= ImGui::DragFloat(STR_C("Lift above ground (m)"), &config.lift, 0.01f, 0.0f, 50.0f, "%.2f");
+                persist |= ImGui::IsItemDeactivatedAfterEdit();
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("%s", STR_C("Raises the photos above the ground.\n"
+                                                  "Whatever is lower than this, the rails and the sleepers too, ends up under them: keep it small."));
+            }
         }
-
-        begin_disabled(!config.drape);
         ImGui::SetNextItemWidth(160.0f);
-        changed |= ImGui::DragFloat(STR_C("Lift above ground (m)"), &config.lift, 0.01f, 0.0f, 50.0f, "%.2f");
+        changed |= ImGui::DragFloat(config.drape ? STR_C("Height where there's no ground (m)") : STR_C("Height (m)"), &config.height, 0.1f, -1000.0f, 3000.0f, "%.2f");
         persist |= ImGui::IsItemDeactivatedAfterEdit();
-        end_disabled(!config.drape);
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(STR_C("Raises the fitted imagery above the ground. Keep it below the objects you want to see:\n"
-                              "in the scene everything lower than this ends up under the imagery."));
-
-        begin_disabled(config.drape);
-        ImGui::SetNextItemWidth(160.0f);
-        changed |= ImGui::DragFloat(STR_C("Height (m)"), &config.height, 0.1f, -1000.0f, 3000.0f, "%.2f");
-        persist |= ImGui::IsItemDeactivatedAfterEdit();
-        end_disabled(config.drape);
-
-        if (ImGui::Checkbox(STR_C("Covered by objects and terrain"), &config.in_scene))
-        {
-            changed = true;
-            persist = true;
-        }
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(STR_C("Draws the imagery as part of the scene, so tracks, models and terrain in front of it hide it.\n"
-                              "It is lit like the scene. Fully opaque, mouse placement lands on it as on any surface;\n"
-                              "translucent, it doesn't catch the mouse."));
+        ImGui::Spacing();
 
         ImGui::SetNextItemWidth(160.0f);
         changed |= ImGui::SliderFloat(STR_C("Opacity"), &config.opacity, 0.0f, 1.0f, "%.2f");
@@ -2524,7 +2831,7 @@ void editor_mode::render_orthophoto_ui()
 
 void editor_mode::draw_orthophoto()
 {
-    if (!m_orthophoto.enabled())
+    if (false == m_orthophoto.enabled() && std::none_of(m_wms.begin(), m_wms.end(), [](auto const &Layer) { return Layer->enabled(); }))
         return;
     // the camera was just published to the renderer (update_camera), so build the view from it rather than
     // from the renderer's previous frame; camera-relative rotation, same projection as the other overlays
@@ -2533,7 +2840,11 @@ void editor_mode::draw_orthophoto()
     glm::mat4 const view = glm::mat4(glm::mat3(viewmatrix));
     ImGuiIO const &io = ImGui::GetIO();
     float const aspect = io.DisplaySize.y > 0.0f ? io.DisplaySize.x / io.DisplaySize.y : 1.0f;
-    m_orthophoto.draw(editor_mode::projection_matrix(aspect) * view, Camera.Pos, io.DisplaySize.x, io.DisplaySize.y);
+    auto const projection{editor_mode::projection_matrix(aspect) * view};
+    m_orthophoto.draw(projection, Camera.Pos, io.DisplaySize.x, io.DisplaySize.y);
+    // the WMS layers over it, the top one of the list last
+    for (auto layer{m_wms.rbegin()}; layer != m_wms.rend(); ++layer)
+        (*layer)->draw(projection, Camera.Pos, io.DisplaySize.x, io.DisplaySize.y);
 }
 
 void editor_mode::draw_ortho_compass() const
@@ -2559,7 +2870,8 @@ void editor_mode::draw_ortho_compass() const
     ImGuiIO const &io = ImGui::GetIO();
     float const radius{36.0f};
     float const margin{16.0f};
-    ImVec2 const center{io.DisplaySize.x - margin - radius, margin + radius};
+    // in the corner of the view, where the buttons of the toolbar and the hints along its bottom aren't
+    ImVec2 const center{editor_ui::view_max().x - margin - radius - 14.0f, editor_ui::view_max().y - margin - radius - 54.0f};
     auto *drawlist{ImGui::GetForegroundDrawList()};
     drawlist->AddCircleFilled(center, radius + 14.0f, IM_COL32(0, 0, 0, 180), 48);
     drawlist->AddCircle(center, radius - 6.0f, IM_COL32(255, 255, 255, 50), 48, 1.2f);
@@ -2585,6 +2897,18 @@ void editor_mode::forget_ground()
 {
     ground_tiles.clear();
     forget_ground_shapes();
+}
+
+void editor_mode::forget_ground_in(glm::dvec2 const &Min, glm::dvec2 const &Max)
+{
+    for (auto tile{ground_tiles.begin()}; tile != ground_tiles.end();)
+    {
+        glm::dvec2 const low{tile->first.first * ground_tile_size, tile->first.second * ground_tile_size};
+        if (low.x <= Max.x && low.x + ground_tile_size >= Min.x && low.y <= Max.y && low.y + ground_tile_size >= Min.y)
+            tile = ground_tiles.erase(tile);
+        else
+            ++tile;
+    }
 }
 
 editor_terrain *editor_mode::terrain_at(double X, double Z)
@@ -2669,10 +2993,9 @@ void editor_mode::add_chunks_around(int const Count)
 
 void editor_mode::handle_terrain_click(bool const Shift)
 {
-    glm::dvec3 const offset = GfxRenderer->Mouse_Position();
-    if (glm::length(offset) < 1e-3)
-        return; // nothing under the cursor (yet)
-    glm::dvec3 const world = Camera.Pos + offset;
+    glm::dvec3 world;
+    if (false == cursor_on_ground(world))
+        return; // nothing under the cursor
     switch (m_terrain_tool)
     {
     case terrain_tool::chunks:
@@ -2728,6 +3051,7 @@ void editor_mode::handle_terrain_click(bool const Shift)
         break;
     }
     case terrain_tool::fill:
+    case terrain_tool::fields:
     {
         if (Shift)
         {
@@ -3032,8 +3356,9 @@ bool editor_mode::save()
     }
     first_step_done(first_step::save);
 
-    // the heightmap terrain is kept in files of its own, the scenery only needs the directive which loads it
+    // the heightmap terrain is kept in files of its own, the scenery only needs the directive which loads it, in a layer of its own
     std::vector<std::string> rootstatements;
+    std::map<scene::layer_handle, std::vector<std::string>> statements;
     if (m_streamer.active())
     {
         std::string error;
@@ -3043,10 +3368,16 @@ bool editor_mode::save()
             return false;
         }
         if (false == scene::Layers.terrain_directive())
-            rootstatements.emplace_back("heightmap_terrain " + m_streamer.name() + " endheightmap_terrain");
+        {
+            auto const directive{"heightmap_terrain " + m_streamer.name() + " endheightmap_terrain"};
+            if (auto const layer{output_layer("teren")}; layer != null_handle)
+                statements[layer].push_back(directive);
+            else
+                rootstatements.push_back(directive);
+        }
     }
 
-    auto const terrainadded{false == rootstatements.empty()};
+    auto const terrainadded{false == rootstatements.empty() || false == statements.empty()};
     if (m_profile.changed)
         profile_store();
     switch_store::tidy();
@@ -3055,7 +3386,6 @@ bool editor_mode::save()
     // the catenary (cantilevers on the poles) lives in files of its own; a file made in the editor needs the directive, in the file
     // of the layer it was made on (the scenario file when that layer can't take it)
     std::vector<std::string> catenarynew;
-    std::map<scene::layer_handle, std::vector<std::string>> layerstatements;
     auto const same_file = [](std::string const &A, std::string const &B) {
         auto a{std::filesystem::path(A).lexically_normal().generic_string()}, b{std::filesystem::path(B).lexically_normal().generic_string()};
         std::transform(a.begin(), a.end(), a.begin(), [](unsigned char const C) { return static_cast<char>(std::tolower(C)); });
@@ -3130,11 +3460,12 @@ bool editor_mode::save()
     {
         auto const layer{static_cast<scene::layer_handle>(catenary_scene_file_layer(file))};
         if (layer > 1 && scene::Layers.accepts(layer))
-            layerstatements[scene::Layers.resolve(layer)].emplace_back("catenary " + file + " endcatenary");
+            statements[scene::Layers.resolve(layer)].emplace_back("catenary " + file + " endcatenary");
         else
             rootstatements.emplace_back("catenary " + file + " endcatenary");
         catenarynew.push_back(file);
     }
+    m_srk.store();
     if (false == m_saved_camera.has_value() || glm::distance(m_saved_camera->first, glm::dvec3{Camera.Pos}) > 0.5 || glm::distance(m_saved_camera->second, glm::vec3{Camera.Angle}) > 0.01f)
     {
         m_saved_camera = std::make_pair(glm::dvec3{Camera.Pos}, glm::vec3{Camera.Angle});
@@ -3145,19 +3476,18 @@ bool editor_mode::save()
         m_orthophoto_mark = map;
         scene::Layers.mark(scene::layer_handle{1}, "//$o", {map});
     }
+    if (auto const area{editor_orthophoto::area_lines(m_orthophoto.area())}; false == m_orthophoto_scenery.empty() && area != m_orthophoto_area_mark)
+    {
+        m_orthophoto_area_mark = area;
+        scene::Layers.mark(scene::layer_handle{1}, "//$z", area);
+    }
     auto const controls{turntable_controls(rootstatements)};
     auto const noses{nose_controls(rootstatements)};
     std::vector<std::string> trailing;
-    std::erase_if(m_vehicle.trainsets, [](auto const &Trainset) {
-        auto const *track{simulation::Paths.find(Trainset.track)};
-        return track == nullptr || track->m_editorremoved;
-    });
-    auto const placed{m_vehicle.trainsets.size()};
-    for (auto const &trainset : m_vehicle.trainsets)
-        trailing.insert(trailing.end(), trainset.lines.begin(), trainset.lines.end());
+    auto const placed{m_vehicle.trainset_lines(trailing)};
     if (placed == 0)
         starter_trainset(trailing);
-    auto const result = scene::Layers.save(rootstatements, trailing, layerstatements, &catenaryblocks);
+    auto const result = scene::Layers.save(rootstatements, trailing, statements, &catenaryblocks);
     if (result.success)
     {
         for (auto const &file : catenaryinline)
@@ -3169,10 +3499,7 @@ bool editor_mode::save()
     if (result.success && noses)
         m_nose_included = true;
     if (result.success && placed > 0)
-    {
-        m_vehicle.trainsets.clear();
-        m_vehicle.status = format(STR_C("%d trainset(s) written to the scenery"), static_cast<int>(placed));
-    }
+        m_vehicle.trainsets_written();
     if (result.success && placed == 0 && trailing.size() == 3)
     {
         std::istringstream header{trailing.front()};
@@ -3208,6 +3535,7 @@ void editor_mode::toggle_include(scene::instance_handle const Instance)
         return;
     }
     scene::Layers.removed(Instance, false == included.removed);
+    m_drives_standing.reset();
     ui()->set_status(format(included.removed ? STR_C("Include of \"%s\" removed") : STR_C("Include of \"%s\" restored"), included.file->c_str()));
 }
 
@@ -3244,6 +3572,7 @@ void editor_mode::restore_includes(EditorSnapshot &Snapshot)
         }
         scene::Layers.removed(instance, false == scene::Layers.instance(instance).removed);
     }
+    m_drives_standing.reset();
     for (auto &entry : Snapshot.directives)
     {
         auto current = scene::Layers.directive(entry.first);
@@ -3288,13 +3617,22 @@ void editor_mode::select_include(scene::instance_handle const Instance)
 
 void editor_mode::set_include_directive(scene::instance_handle const Instance, std::string const &Directive)
 {
-    if (false == scene::Layers.modify(Instance, Directive))
+    m_drives_standing.reset();
+    std::string file;
+    std::vector<std::string> values;
+    if (scene::Layers.tracked(Instance) && editor_includes::parse_directive(Directive, file, values) && scene::Layers.instance(Instance).file != nullptr &&
+        editor_includes::normalized(file) == editor_includes::normalized(*scene::Layers.instance(Instance).file))
+        file.clear();
+    if (false == scene::Layers.modify(Instance, Directive, file))
         return;
     std::vector<TAnimModel *> retired;
     simulation::State.rebuild_include(Instance, retired);
     // the pick of the renderer is resolved a few frames after it's requested, and can still deliver one of these
     for (auto *model : retired)
+    {
+        nullify_history_pointers(model);
         m_retired.emplace_back(model, 120);
+    }
 }
 
 void editor_mode::apply_include()
@@ -3312,19 +3650,51 @@ void editor_mode::apply_include()
         }
     }
     auto before = scene::Layers.directive(m_instance);
+    if (false == m_include.info.signal_kind.empty()
+     && std::ranges::any_of(m_include.info.parameters, [](auto const &Parameter) { return Parameter.id == 6 && Parameter.role == "texture"; }))
+    {
+        // the drawn plate of a signal follows its name; a plate picked from the textures stays, and so does a drawn one given
+        // another name by hand. While the name is cleared or one the plate can't carry, the plate keeps the last name, and
+        // follows again once a usable name is typed. No plate, or the texture named like the signal the editor gave before the
+        // plates were drawn, become the drawn one. The look, the index and the m of the plate go with it
+        std::string file;
+        std::vector<std::string> previous;
+        if (editor_includes::parse_directive(before, file, previous) && previous.size() >= 6 && m_include.values.size() >= 6)
+        {
+            auto const look{signal_plate_style(previous[5])};
+            auto const carried = [&](std::string const &Name) { return Name != "none" && signal_plate_drawn(signal_plate(Name, look)); };
+            if (previous[0] != m_include.values[0] && m_include.values[5] == previous[5] && carried(m_include.values[0])
+             && (previous[5] == signal_plate(previous[0], look) || (false == carried(previous[0]) && signal_plate_drawn(previous[5])) || signal_plate_blank(previous[0], previous[5])))
+                m_include.values[5] = signal_plate(m_include.values[0], look);
+        }
+    }
     auto const directive = editor_includes::compose_directive(m_include.target, m_include.values);
     if (directive == before)
         return;
     std::string read_before;
     std::string read_after;
-    if (false == m_include.info.signal_read.empty())
+    // a signal renamed: its indicators are named after it
+    std::string name_before;
+    glm::dvec3 standing{0.0};
+    // the signal templates known, though no signal tool looked for them yet
+    if (m_include.info.category == "signal")
+        signal_scan(true);
+    if (false == m_include.info.signal_read.empty() || signal_template_of(m_include.target) != nullptr)
     {
         std::string file;
         std::vector<std::string> previous;
         if (editor_includes::parse_directive(before, file, previous))
         {
-            read_before = editor_includes::substitute(m_include.info.signal_read, previous);
-            read_after = editor_includes::substitute(m_include.info.signal_read, m_include.values);
+            if (false == m_include.info.signal_read.empty())
+            {
+                read_before = editor_includes::substitute(m_include.info.signal_read, previous);
+                read_after = editor_includes::substitute(m_include.info.signal_read, m_include.values);
+            }
+            if (previous.size() >= 4 && false == m_include.values.empty() && previous.front() != m_include.values.front())
+            {
+                name_before = previous.front();
+                standing = scene::Layers.instance(m_instance).context.offset + glm::dvec3{std::strtod(previous[1].c_str(), nullptr), std::strtod(previous[2].c_str(), nullptr), std::strtod(previous[3].c_str(), nullptr)};
+            }
         }
     }
     if (false == m_include_gesture)
@@ -3343,6 +3713,12 @@ void editor_mode::apply_include()
     else if (read_before != read_after && false == m_history.empty())
         signal_renamed(read_before, read_after, m_history.back());
     set_include_directive(m_instance, directive);
+    if (false == name_before.empty() && false == m_history.empty())
+    {
+        std::vector<std::pair<scene::instance_handle, std::string>> carried;
+        signal_indicators_renamed(name_before, m_include.values.front(), standing, carried);
+        history_add_directives(m_history.back(), carried);
+    }
 }
 
 void editor_mode::place_include(std::string const &File, int const RotationMode, float const FixedRotation)
@@ -3449,18 +3825,11 @@ void editor_mode::terrain_brush_sync(bool const Store)
 void editor_mode::handle_terrain_brush(double Deltatime)
 {
     terrain_brush_sync();
-    // world point under the cursor (Mouse_Position is camera-relative, like the brush placement uses)
-    glm::dvec3 const offset = GfxRenderer->Mouse_Position();
-    glm::dvec3 world = Camera.Pos + offset;
-    if (m_terrain_tool == terrain_tool::holes || m_terrain_tool == terrain_tool::grass)
-    {
-        // the ground itself: the cursor may be over a hole (and what's seen through it), or over the blades of the grass
-        if (false == terrain_cursor(world))
-            return;
-    }
-    else if (glm::length(offset) < 1e-3)
+    // the ground itself along the ray through the cursor in this frame
+    glm::dvec3 world;
+    if (false == terrain_cursor(world))
         return;
-    // only when the cursor is over the terrain (avoids editing on a stale depth read)
+    // only when the cursor is over the terrain
     if (terrain_at(world.x, world.z) == nullptr)
         return;
 
@@ -3519,12 +3888,20 @@ void editor_mode::handle_terrain_brush(double Deltatime)
     }
 }
 
+bool editor_mode::cursor_on_ground(glm::dvec3 &World)
+{
+    if (m_streamer.active() && terrain_cursor(World))
+        return true;
+    // no terrain under the ray: the depth read back under the cursor, as before, where it hit anything
+    if (false == GfxRenderer->Mouse_Hit())
+        return false;
+    World = Camera.Pos + GfxRenderer->Mouse_Position();
+    return true;
+}
+
 bool editor_mode::terrain_cursor(glm::dvec3 &World) const
 {
-    // along the ray to what the depth under the cursor shows, or, with nothing there, the ray through the cursor
-    glm::dvec3 const offset = GfxRenderer->Mouse_Position();
-    if (glm::length(offset) > 1e-3)
-        return m_streamer.raycast(Camera.Pos, glm::normalize(offset), 5000.0, World);
+    // along the ray through the cursor as it is in this frame: the depth read back lags a frame behind
     ImGuiIO const &io = ImGui::GetIO();
     if (io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f)
         return false;
@@ -3538,7 +3915,11 @@ bool editor_mode::terrain_cursor(glm::dvec3 &World) const
     auto const direction = point(0.5f) - point(0.0f);
     if (glm::length(direction) < 1e-9)
         return false;
-    return m_streamer.raycast(GfxRenderer->Camera_Position() + point(0.0f), glm::normalize(direction), 5000.0, World);
+    // the top view sees from 10 km behind the plane of the camera (the near plane of its projection): the ray starts there,
+    // so the ground higher than the camera is met too
+    auto const back{Global.EditorOrtho ? 10000.0 : 0.0};
+    auto const along{glm::normalize(direction)};
+    return m_streamer.raycast(GfxRenderer->Camera_Position() + point(0.0f) - along * back, along, 5000.0 + back, World);
 }
 
 void editor_mode::render_grass_ui()
@@ -3655,7 +4036,30 @@ void editor_mode::fill_terrain_area()
     auto const filled = m_streamer.fill(outline, m_paint_feather, layer);
     m_terrain_status = filled ? format(STR_C("Area filled with %s"), chosen.material.c_str()) : std::string(STR_C("Nothing filled: no chunk under the outline, or no room for another material"));
     if (filled)
+    {
+        // the outline used up: the field picked with "Outline it again" doesn't take the next outline drawn
         m_paint_outline.clear();
+        m_patch_reoutline.clear();
+    }
+}
+
+void editor_mode::remove_selected_chunks()
+{
+    // one step of the history, as the terrain changed in a frame goes
+    std::size_t removed{0};
+    for (auto const &key : m_terrain_selection)
+        if (m_streamer.exists(key))
+        {
+            m_streamer.remove_chunk(key.first, key.second);
+            ++removed;
+        }
+    m_terrain_selection.clear();
+    if (removed > 0)
+    {
+        ground_tiles.clear();
+        forget_ground_shapes();
+    }
+    m_terrain_status = format(STR_P("%zu chunk removed, Ctrl+Z brings it back", "%zu chunks removed, Ctrl+Z brings them back", removed), removed);
 }
 
 void editor_mode::convert_selected_chunks()
@@ -3676,10 +4080,10 @@ void editor_mode::convert_selected_chunks()
 
 bool editor_mode::pick_terrain_target()
 {
-    glm::dvec3 const offset = GfxRenderer->Mouse_Position();
-    if (glm::length(offset) < 1e-3)
+    glm::dvec3 world;
+    if (false == cursor_on_ground(world))
         return false; // nothing under the cursor
-    m_terrain_target = static_cast<float>(Camera.Pos.y + offset.y);
+    m_terrain_target = static_cast<float>(world.y);
     m_terrain_status = format(STR_C("Target height: %.2f m"), m_terrain_target);
     return true;
 }
@@ -3734,18 +4138,21 @@ void editor_mode::capture_terrain()
     std::string as_text;
     model->export_as_text(as_text);
     push_snapshot(model, EditorSnapshot::Action::Delete, as_text);
-    nullify_history_pointers(model);
-    remove_from_hierarchy(model);
     m_node = nullptr;
     m_dragging = false;
     ui()->set_node(nullptr);
-    simulation::State.delete_model(model);
+    erase_model(model);
 }
 
 // the ground under a point the cursor landed on. the orthophoto laid over the ground catches the cursor like any
 // other surface, so the point can hang over the ground by as much as the orthophoto is lifted, or lie on the flat sheet
 // the orthophoto makes where it's not fitted to the ground. what's put in the scenery is to stand on the ground itself
 glm::dvec3 editor_mode::placement_on_ground(glm::dvec3 Location)
+{
+    return ground_at(Location);
+}
+
+glm::dvec3 editor_mode::ground_at(glm::dvec3 Location) const
 {
     double constexpr reach = 2.0; // the ground is asked about this far around the point
     double constexpr slack = 0.5; // a surface this far over the point still is what the cursor landed on
@@ -3855,13 +4262,21 @@ void editor_mode::read_georeference()
     std::error_code error;
     if (false == std::filesystem::exists(file, error))
     {
-        for (auto const &entry : std::filesystem::directory_iterator(Global.asCurrentSceneryPath, error))
+        for (std::filesystem::directory_iterator entry{Global.asCurrentSceneryPath, error}, end; entry != end; entry.increment(error))
         {
-            auto name{entry.path().filename().string()};
+            std::string name;
+            try
+            {
+                name = entry->path().filename().string();
+            }
+            catch (std::exception const &)
+            {
+                continue;
+            }
             std::transform(name.begin(), name.end(), name.begin(), [](unsigned char const Character) { return static_cast<char>(std::tolower(Character)); });
             if (name == Global.SceneryFile)
             {
-                file = entry.path();
+                file = entry->path();
                 break;
             }
         }
@@ -3894,57 +4309,291 @@ void editor_mode::render_map_menu()
 {
     if (false == ImGui::BeginMenu(STR_C("Map")))
         return;
+    if (ImGui::MenuItem(STR_C("Minimap"), "Ctrl+M", m_minimap.is_open()))
+        m_minimap.toggle();
+    ImGui::Separator();
     bool enabled = m_orthophoto.enabled();
     if (ImGui::MenuItem(STR_C("Orthophoto"), nullptr, enabled))
-        m_orthophoto.enabled(false == enabled);
+        choose_orthophoto(false == enabled);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("%s", STR_C("Aerial imagery of geoportal.gov.pl under the scenery, laid out by the origin of the scenery"));
-    ImGui::MenuItem(STR_C("Orthophoto settings..."), nullptr, &m_orthophoto_window);
-    ImGui::MenuItem(STR_C("Minimap"), nullptr, &m_minimap_window);
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("%s", STR_C("A map around the camera (the map layers of editor/foreign_sources.txt): drag and zoom it, a double click takes the camera there"));
+    // the settings among the base layers in the layers window
+    if (ImGui::MenuItem(STR_C("Orthophoto settings..."), nullptr, orthophoto_settings_open()))
+    {
+        ui()->show_layers();
+        m_orthophoto_window = true;
+    }
     ImGui::EndMenu();
 }
 
-void editor_mode::render_minimap_window()
+bool editor_mode::orthophoto_settings_open() const
 {
-    static bool was_open{false};
-    if (false == m_minimap_window)
-    {
-        if (was_open)
-            m_minimap.release(); // the tiles out of the video memory
-        was_open = false;
-        return;
-    }
-    was_open = true;
-    load_orthophoto_settings(); // the origin of the scenery, as the orthophoto has it
-    ImGui::SetNextWindowSize(ImVec2(420.0f, 460.0f), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin((std::string(STR_C("Minimap")) + "###minimap").c_str(), &m_minimap_window))
-    {
-        auto const &origin{m_orthophoto.settings()};
-        editor_minimap::camera const camera{origin.north, origin.east, Camera.Pos.x, Camera.Pos.z, Camera.Angle.y};
-        glm::dvec2 target;
-        if (m_minimap.ui(camera, target))
-        {
-            // the camera goes there at its height
-            Camera.Pos.x = target.x;
-            Camera.Pos.z = target.y;
-            Camera.Velocity = {};
-            m_focus_active = false;
-            Global.pCamera = Camera;
-        }
-    }
-    ImGui::End();
+    // drawn open in the layers window in this frame or in the last one
+    return ImGui::GetCurrentContext() != nullptr && ImGui::GetFrameCount() - m_orthophoto_frame <= 1;
 }
 
-void editor_mode::render_orthophoto_window()
+void editor_mode::render_base_layers()
 {
-    if (false == m_orthophoto_window)
-        return;
-    ImGui::SetNextWindowSize(ImVec2(430.0f, 0.0f), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin((std::string(STR_C("Orthophoto")) + "###orthophoto").c_str(), &m_orthophoto_window))
+    auto &stored{EditorSettings.wms_layers()};
+    bool save{false};
+    // the WMS layers of the user's, the top one first, each drawn over the ones under it
+    int moved{-1};
+    int removed{-1};
+    for (int i = 0; i < static_cast<int>(stored.size()); ++i)
+    {
+        auto &entry{stored[static_cast<std::size_t>(i)]};
+        ImGui::PushID(i + 1);
+        save |= ImGui::Checkbox("##visible", &entry.visible);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("%s", STR_C("Show or hide the layer"));
+        ImGui::SameLine();
+        if (ImGui::TreeNode("##wms", "%s", entry.title.empty() ? entry.layers.c_str() : entry.title.c_str()))
+        {
+            ImGui::PushTextWrapPos(0.0f);
+            ImGui::TextDisabled("%s", entry.url.c_str());
+            ImGui::TextDisabled(STR_C("Layers: %s"), entry.layers.c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::SetNextItemWidth(160.0f);
+            ImGui::SliderFloat(STR_C("Opacity"), &entry.opacity, 0.0f, 1.0f, "%.2f");
+            save |= ImGui::IsItemDeactivatedAfterEdit();
+            if (false == entry.terms.empty())
+            {
+                ImGui::TextUnformatted(STR_C("Terms of the service:"));
+                ImGui::PushTextWrapPos(0.0f);
+                ImGui::TextDisabled("%s", entry.terms.c_str());
+                ImGui::PopTextWrapPos();
+            }
+            if (i > 0)
+            {
+                if (ImGui::SmallButton(STR_C("Up")))
+                    moved = i - 1;
+                ImGui::SameLine();
+            }
+            if (i + 1 < static_cast<int>(stored.size()))
+            {
+                if (ImGui::SmallButton(STR_C("Down")))
+                    moved = i;
+                ImGui::SameLine();
+            }
+            if (ImGui::SmallButton(STR_C("Remove")))
+                removed = i;
+            ImGui::TreePop();
+        }
+        ImGui::PopID();
+    }
+    // a layer swapped with the one under it, or one taken away; the ones of the view go along
+    if (moved >= 0 && moved + 1 < static_cast<int>(stored.size()))
+    {
+        std::swap(stored[static_cast<std::size_t>(moved)], stored[static_cast<std::size_t>(moved) + 1]);
+        if (moved + 1 < static_cast<int>(m_wms.size()))
+            std::swap(m_wms[static_cast<std::size_t>(moved)], m_wms[static_cast<std::size_t>(moved) + 1]);
+        save = true;
+    }
+    if (removed >= 0)
+    {
+        stored.erase(stored.begin() + removed);
+        if (removed < static_cast<int>(m_wms.size()))
+        {
+            m_wms[static_cast<std::size_t>(removed)]->enabled(false);
+            m_wms[static_cast<std::size_t>(removed)]->detach_scene();
+            m_wms.erase(m_wms.begin() + removed);
+        }
+        save = true;
+    }
+    if (save)
+        EditorSettings.save();
+
+    // the orthophoto at the bottom, its settings opened here from the map menu too
+    ImGui::PushID("orthophoto");
+    bool enabled{m_orthophoto.enabled()};
+    if (ImGui::Checkbox("##visible", &enabled))
+        choose_orthophoto(enabled);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", STR_C("Aerial imagery of geoportal.gov.pl under the scenery, laid out by the origin of the scenery"));
+    ImGui::SameLine();
+    if (m_orthophoto_window)
+    {
+        ImGui::SetNextItemOpen(true);
+        m_orthophoto_window = false;
+    }
+    if (ImGui::TreeNode("##settings", "%s", STR_C("Orthophoto (geoportal.gov.pl)")))
+    {
+        m_orthophoto_frame = ImGui::GetFrameCount();
         render_orthophoto_ui();
-    ImGui::End();
+        ImGui::TreePop();
+    }
+    ImGui::PopID();
+
+    // the terrain of the model under the tracks laid, as the terrain panel has it too
+    if (ImGui::Checkbox(STR_C("Terrain of the model right away while laying"), &m_nmt_state.grow))
+    {
+        EditorSettings.terrain_while_laying(m_nmt_state.grow);
+        EditorSettings.save();
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", STR_C("Where the terrain of the scenery ends, the terrain model is made under the tracks as they're laid, around the cursor from the first point placed; "
+                                      "the chunks there are stay as they are. Off, it's made only when asked for"));
+
+    render_wms_adding();
+}
+
+void editor_mode::render_wms_adding()
+{
+    auto &adding{m_wms_adding};
+    ImGui::PushID("wmsadding");
+    if (false == ImGui::TreeNode("##add", "%s", STR_C("Add a WMS layer")))
+    {
+        ImGui::PopID();
+        return;
+    }
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", STR_C("The address of a WMS service drawing in PUWG 1992 (EPSG:2180). Its tiles are kept in memory only and asked for only around the camera; "
+                                    "what the service allows is up to you, its terms are shown below"));
+    ImGui::PopTextWrapPos();
+    ImGui::SetNextItemWidth(-1.0f);
+    auto const entered{ImGui::InputTextWithHint("##url", "https://...", adding.url.data(), adding.url.size(), ImGuiInputTextFlags_EnterReturnsTrue)};
+    std::string const url{adding.url.data()};
+    if ((ImGui::Button(STR_C("Read the layers")) || entered) && false == adding.reading.valid() && false == url.empty())
+    {
+        adding.info.reset();
+        adding.ticked.clear();
+        adding.service = url;
+        adding.reading = std::async(std::launch::async, [url]() { return editor_orthophoto::describe(url); });
+    }
+    if (adding.reading.valid())
+    {
+        if (adding.reading.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+        {
+            adding.info = adding.reading.get();
+            adding.ticked.assign(adding.info->layers.size(), 0);
+        }
+        else
+            ImGui::TextDisabled("%s", STR_C("Reading the capabilities of the service..."));
+    }
+    if (adding.info.has_value())
+    {
+        auto const &info{*adding.info};
+        ImGui::PushTextWrapPos(0.0f);
+        if (false == info.error.empty())
+            ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.4f, 1.0f), STR_C("The service can't be read: %s"), info.error.c_str());
+        if (false == info.title.empty())
+            ImGui::TextUnformatted(info.title.c_str());
+        if (false == info.terms.empty())
+        {
+            ImGui::TextUnformatted(STR_C("Terms of the service:"));
+            ImGui::TextDisabled("%s", info.terms.c_str());
+        }
+        if (false == info.puwg && false == info.layers.empty())
+            ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.2f, 1.0f), "%s", STR_C("The service doesn't draw in PUWG 1992 (EPSG:2180), the editor can't lay it out"));
+        ImGui::PopTextWrapPos();
+        if (false == info.layers.empty())
+        {
+            ImGui::SetNextItemWidth(-1.0f);
+            ImGui::InputTextWithHint("##filter", STR_C("Filter the layers"), adding.filter.data(), adding.filter.size());
+            auto const filter{ToLower(adding.filter.data())};
+            ImGui::BeginChild("##layers", ImVec2(0.0f, std::min(200.0f, ImGui::GetFrameHeightWithSpacing() * static_cast<float>(info.layers.size()) + 4.0f)), true);
+            for (std::size_t i = 0; i < info.layers.size(); ++i)
+            {
+                auto const &[name, title]{info.layers[i]};
+                auto const label{title.empty() || title == name ? name : title + " (" + name + ")"};
+                if (false == filter.empty() && ToLower(label).find(filter) == std::string::npos)
+                    continue;
+                bool ticked{adding.ticked[i] != 0};
+                ImGui::PushID(static_cast<int>(i));
+                if (ImGui::Checkbox(label.c_str(), &ticked))
+                    adding.ticked[i] = ticked ? 1 : 0;
+                ImGui::PopID();
+            }
+            ImGui::EndChild();
+            std::string layers;
+            for (std::size_t i = 0; i < info.layers.size(); ++i)
+                if (adding.ticked[i] != 0)
+                    layers += (layers.empty() ? "" : ",") + info.layers[i].first;
+            auto const ready{info.puwg && false == layers.empty()};
+            if (false == ready)
+            {
+                ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+            }
+            auto const add{ImGui::Button(STR_C("Add")) && ready};
+            if (false == ready)
+            {
+                ImGui::PopStyleVar();
+                ImGui::PopItemFlag();
+            }
+            if (add)
+            {
+                editorSettings::wms_layer entry;
+                entry.url = adding.service;
+                entry.layers = layers;
+                entry.title = info.title.empty() ? layers : info.title;
+                entry.terms = info.terms;
+                // on top of the others
+                EditorSettings.wms_layers().insert(EditorSettings.wms_layers().begin(), entry);
+                EditorSettings.save();
+                adding.info.reset();
+                adding.ticked.clear();
+                adding.url.fill('\0');
+                adding.filter.fill('\0');
+            }
+        }
+    }
+    ImGui::TreePop();
+    ImGui::PopID();
+}
+
+void editor_mode::update_wms_layers()
+{
+    auto const &stored{EditorSettings.wms_layers()};
+    // a layer added or removed: the ones of the view made again, as the settings have them
+    auto same{m_wms.size() == stored.size()};
+    for (std::size_t i = 0; same && i < stored.size(); ++i)
+        same = m_wms[i]->settings().service == stored[i].url && m_wms[i]->settings().layers == stored[i].layers;
+    if (false == same)
+    {
+        for (auto &layer : m_wms)
+        {
+            layer->enabled(false);
+            layer->detach_scene();
+        }
+        m_wms.clear();
+        for (auto const &entry : stored)
+        {
+            auto layer{std::make_unique<editor_orthophoto>()};
+            auto config{layer->settings()};
+            config.service = entry.url;
+            config.layers = entry.layers;
+            config.hires = false;
+            config.year = 0;
+            config.in_scene = false;
+            layer->settings(config);
+            ground_sources(*layer);
+            m_wms.push_back(std::move(layer));
+        }
+    }
+    // laid out by the origin of the scenery and onto the ground as the orthophoto is, around the camera as far as it
+    load_orthophoto_settings();
+    auto const &base{m_orthophoto.settings()};
+    auto const placed{base.north != 0.0 || base.east != 0.0};
+    for (std::size_t i = 0; i < m_wms.size(); ++i)
+    {
+        auto &layer{*m_wms[i]};
+        auto config{layer.settings()};
+        if (config.north != base.north || config.east != base.east || config.radius != base.radius || config.drape != base.drape || config.lift != base.lift || config.height != base.height ||
+            config.opacity != stored[i].opacity)
+        {
+            config.north = base.north;
+            config.east = base.east;
+            config.radius = base.radius;
+            config.drape = base.drape;
+            config.lift = base.lift;
+            config.height = base.height;
+            config.opacity = stored[i].opacity;
+            layer.settings(config);
+        }
+        layer.enabled(stored[i].visible && placed);
+        layer.update(Camera.Pos);
+    }
 }
 
 // View > Catenary: what the overlay of the catenary tool draws (application/editormodecatenary.cpp)
@@ -3958,18 +4607,37 @@ void editor_mode::render_view_menu()
         toggle_ortho();
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("%s", STR_C("The view straight down without perspective, as on a map; again for the camera as it was"));
-    if (ImGui::MenuItem(STR_C("Ballast in the top view"), nullptr, &Global.EditorOrthoBallast))
+    if (ImGui::BeginMenu(STR_C("Tracks in the top view")))
     {
-        EditorSettings.top_ballast(Global.EditorOrthoBallast);
-        EditorSettings.save();
+        render_top_tracks_choice(false);
+        ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu(STR_C("Track colours")))
+    {
+        char const *const names[]{"Plain", "By the radius", "By the speed", "By the grade"};
+        for (int i = 0; i < 4; ++i)
+            if (ImGui::MenuItem(STR_C(names[i]), nullptr, static_cast<int>(m_track_colouring) == i))
+                m_track_colouring = static_cast<track_colouring>(i);
+        ImGui::EndMenu();
     }
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("%s", STR_C("Off: the top view draws the rails and sleepers of the tracks without the ballast, so the ground under them shows"));
+        ImGui::SetTooltip("%s", STR_C("The tracks of the track mode coloured by their radius, speed or grade, with the legend in the corner"));
+    ImGui::MenuItem(STR_C("Track labels in the top view"), nullptr, &m_track_labels);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", STR_C("Zoomed in from above, the curves get their radius and length and the switches their name and type, as on a plan; where they'd crowd, some are left out"));
     ImGui::MenuItem(STR_C("Show lanes"), nullptr, &m_roadtool.lanes);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("%s", STR_C("The lanes of the roads drawn as the paths the vehicles take"));
-    if (ImGui::MenuItem(STR_C("Structure gauge"), nullptr, m_gauge.open))
-        m_gauge.open = !m_gauge.open;
+    if (ImGui::MenuItem(STR_C("Cursor drawn into the picture (streams)"), nullptr, m_draw_cursor))
+    {
+        m_draw_cursor = !m_draw_cursor;
+        ui_layer::draw_cursor(m_draw_cursor);
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", STR_C("The pointer drawn by the editor into the frame instead of the one of the system: seen by those watching a stream\n"
+                                      "or a recording of the window (Discord, OBS, the capture of the system), which leave the system pointer out"));
+    if (ImGui::MenuItem(STR_C("Structure gauge"), nullptr, m_gauge.is_open()))
+        m_gauge.toggle();
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("%s", STR_C("Checks which models enter the structure gauge of the tracks and the clearance over the roads (skrajnia budowli)"));
     catenary_view_menu();
@@ -4140,10 +4808,19 @@ void editor_mode::render_open_scenery_popup()
         m_openscenery_list.clear();
         m_openscenery_choice.clear();
         std::error_code error;
-        for (auto const &entry : std::filesystem::directory_iterator(Global.asCurrentSceneryPath, error))
+        for (std::filesystem::directory_iterator entry{Global.asCurrentSceneryPath, error}, end; entry != end; entry.increment(error))
         {
-            auto const name{entry.path().filename().string()};
-            if (entry.is_regular_file(error) && name.size() > 4 && lower(name.substr(name.size() - 4)) == ".scn" && name.front() != '$')
+            std::string name;
+            try
+            {
+                name = entry->path().filename().string();
+            }
+            catch (std::exception const &)
+            {
+                continue;
+            }
+            std::error_code status;
+            if (entry->is_regular_file(status) && name.size() > 4 && lower(name.substr(name.size() - 4)) == ".scn" && name.front() != '$')
                 m_openscenery_list.emplace_back(name);
         }
         std::sort(m_openscenery_list.begin(), m_openscenery_list.end(), [&](std::string const &A, std::string const &B) { return lower(A) < lower(B); });
@@ -4204,9 +4881,29 @@ void editor_mode::terrain_workspace(bool const Open)
         m_terrain_spacing = m_streamer.manifest().spacing;
 }
 
+editor_mode::texture_offer editor_mode::terrain_texture_offer(char const *None)
+{
+    return {STR_C("In the palette and on the water of this terrain:"),
+            [this]() {
+                std::vector<texture_use> list;
+                auto const add = [&](std::string const &Name, char const *Note) {
+                    if (Name.empty() || Name == "none" || std::any_of(list.begin(), list.end(), [&](texture_use const &Use) { return Use.name == Name; }))
+                        return;
+                    list.push_back({null_handle, Name, 0, Note});
+                };
+                for (auto const &layer : m_streamer.manifest().layers)
+                    add(layer.material, STR_C("In the palette of the terrain"));
+                add(m_streamer.manifest().water_material, STR_C("The default water material"));
+                for (auto const &body : m_streamer.water())
+                    add(body.material, STR_C("On a body of water"));
+                return list;
+            },
+            None, ""};
+}
+
 void editor_mode::render_terrain_tool_options()
 {
-    // the orthophoto has a window of its own, see render_orthophoto_window()
+    // the orthophoto has its settings among the base layers in the layers window, see render_base_layers()
     render_terrain_ui();
 }
 
@@ -4226,95 +4923,112 @@ void editor_mode::render_object_menu()
 
 void editor_mode::add_area_fill_point()
 {
-    // like the other placement tools, the point comes from the depth buffer under the cursor
-    // (ground geometry only), relative to the camera
-    glm::dvec3 const offset = GfxRenderer->Mouse_Position();
-    if (glm::length(offset) < 1e-3)
-        return; // no ground under the cursor (yet)
+    // the ground along the ray through the cursor in this frame
+    glm::dvec3 world;
+    if (false == cursor_on_ground(world))
+        return; // no ground under the cursor
 
     // the outline gives the fill the height to look for the ground at, and the height of what it finds no ground for
-    m_fill_points.push_back(placement_on_ground(Camera.Pos + offset));
+    m_fill_points.push_back(placement_on_ground(world));
 }
 
-void editor_mode::undo_last_area_fill()
+fill_store::area editor_mode::fill_settings() const
 {
-    // nullify_history_pointers() removes deleted nodes from m_fill_last, so work on a copy
-    auto const created = std::move(m_fill_last);
-    m_fill_last.clear();
+    fill_store::area area;
+    area.set_kind = static_cast<int>(m_fill_source.kind);
+    area.set_id = m_fill_source.id;
+    area.density = std::max(0.0f, m_fill_density);
+    area.spacing = std::max(0.0f, m_fill_min_spacing);
+    area.scale_min = std::max(0.01f, std::min(m_fill_scale_min, m_fill_scale_max));
+    area.scale_max = std::max(0.01f, std::max(m_fill_scale_min, m_fill_scale_max));
+    area.random_rotation = m_fill_random_rotation;
+    // without the random rotation the one of the Functions panel goes with the area, a fixed one or none
+    area.rotation = (false == m_fill_random_rotation && ui()->rot_mode() == functions_panel::FIXED) ? ui()->rot_val() : 0.0f;
+    area.models_as_ground = m_fill_models_as_ground;
+    if (m_fill_source.kind == model_set_ref::source::manual)
+        area.templates = m_fill_custom;
+    else
+        for (auto const *entry : ui()->nodebank().set_entries(m_fill_source))
+            area.templates.push_back(*entry);
+    area.templates.erase(std::remove_if(area.templates.begin(), area.templates.end(), [](std::string const &Template) { return Template.empty(); }), area.templates.end());
+    return area;
+}
 
-    for (TAnimModel *model : created)
+std::vector<TAnimModel *> editor_mode::fill_area_models(std::string const &Id) const
+{
+    std::vector<TAnimModel *> models;
+    if (Id.empty())
+        return models;
+    for (auto *model : simulation::Instances.sequence())
+        if (model != nullptr && fill_store::owns(Id, model->name()))
+            models.push_back(model);
+    return models;
+}
+
+std::size_t editor_mode::erase_fill_area_models(std::string const &Id)
+{
+    auto const models{fill_area_models(Id)};
+    for (auto *model : models)
     {
-        if (model == nullptr)
-            continue;
         if (m_node == model)
         {
             m_node = nullptr;
             ui()->set_node(nullptr);
         }
-        nullify_history_pointers(model);
-        remove_from_hierarchy(model);
-        simulation::State.delete_model(model);
+        erase_model(model);
     }
-    m_fill_status = format(STR_C("Removed %zu objects of the last fill"), created.size());
+    return models.size();
 }
 
-void editor_mode::run_area_fill()
+std::size_t editor_mode::place_fill_area(fill_store::area const &Area, std::size_t &Target, std::size_t &Unsupported)
 {
     // limits keeping a single click from freezing the editor for too long
     std::size_t constexpr max_objects = 20000;
+    // the models go to the layer of the area, whichever is active (on an undo, on a change): the area and its models are saved together;
+    // the active one if the area's is gone
+    auto layer{scene::Layers.resolve(Area.layer)};
+    if (false == scene::Layers.listed(layer))
+        layer = null_handle;
     // large model instances (e.g. terrain tiles) are treated as ground, smaller ones (houses, trees) are not
     float constexpr terrain_model_radius = 50.0f;
     // ground is searched up to this far above the height interpolated from the outline points,
     // so hills inside the outline are found but bridges or roofs high above it are not
     double constexpr height_tolerance = 50.0;
 
-    if (m_fill_points.size() < 3)
-    {
-        m_fill_status = STR("Outline needs at least 3 points");
-        return;
-    }
+    Target = 0;
+    Unsupported = 0;
+    auto const &outline{Area.outline};
+    if (outline.size() < 3 || Area.templates.empty())
+        return 0;
 
-    // model package
-    std::vector<std::string> package;
-    if (m_fill_source.kind == model_set_ref::source::manual)
-        package = m_fill_custom;
-    else
-        for (auto const *entry : ui()->nodebank().set_entries(m_fill_source))
-            package.push_back(*entry);
-    package.erase(std::remove_if(package.begin(), package.end(), [](std::string const &Template) { return Template.empty(); }), package.end());
-    if (package.empty())
-    {
-        m_fill_status = STR("Selected model package is empty");
-        return;
-    }
+    // every random number of the fill comes from its seed, so the area filled again with the same settings gets the same objects
+    std::mt19937 random{Area.seed}; // NOSONAR(cpp:S2245) the placement of models, not security: it must repeat from the seed
+    auto const uniform = [&](double const Low, double const High) { return std::uniform_real_distribution<double>{Low, High}(random); };
 
     // area bounds
     glm::dvec2 bmin(std::numeric_limits<double>::max());
     glm::dvec2 bmax(-std::numeric_limits<double>::max());
-    for (auto const &p : m_fill_points)
+    for (auto const &p : outline)
     {
         bmin = glm::min(bmin, glm::dvec2(p.x, p.z));
         bmax = glm::max(bmax, glm::dvec2(p.x, p.z));
     }
-    double const area = polygon_area_xz(m_fill_points);
-    auto const target = static_cast<std::size_t>(std::min<double>(std::round(area / 10000.0 * std::max(0.0f, m_fill_density)), max_objects));
-    if (target == 0)
-    {
-        m_fill_status = STR("Density too low for this area, nothing to place");
-        return;
-    }
+    double const area = polygon_area_xz(outline);
+    Target = static_cast<std::size_t>(std::min<double>(std::round(area / 10000.0 * std::max(0.0f, Area.density)), max_objects));
+    if (Target == 0)
+        return 0;
 
     // scatter points: random samples inside the outline, rejecting the ones closer than the minimal spacing
     // to an already accepted point (checked on a hashed grid with cell size == spacing)
-    double const spacing = std::max(0.0f, m_fill_min_spacing);
+    double const spacing = std::max(0.0f, Area.spacing);
     std::unordered_map<std::int64_t, std::vector<std::size_t>> occupancy;
     auto const cell_key = [](std::int64_t const X, std::int64_t const Z) { return (X << 32) ^ (Z & 0xffffffff); };
     std::vector<glm::dvec2> points;
-    points.reserve(target);
-    for (std::size_t attempt = 0; attempt < target * 30 && points.size() < target; ++attempt)
+    points.reserve(Target);
+    for (std::size_t attempt = 0; attempt < Target * 30 && points.size() < Target; ++attempt)
     {
-        glm::dvec2 const p(LocalRandom(bmin.x, bmax.x), LocalRandom(bmin.y, bmax.y));
-        if (false == point_in_polygon_xz(m_fill_points, p.x, p.y))
+        glm::dvec2 const p(uniform(bmin.x, bmax.x), uniform(bmin.y, bmax.y));
+        if (false == point_in_polygon_xz(outline, p.x, p.y))
             continue;
         if (spacing > 0.0)
         {
@@ -4343,23 +5057,22 @@ void editor_mode::run_area_fill()
 
     // ground geometry within the area
     std::vector<world_triangle> triangles;
-    gather_ground_triangles(bmin, bmax, m_fill_models_as_ground, terrain_model_radius, triangles);
+    gather_ground_triangles(bmin, bmax, Area.models_as_ground, terrain_model_radius, triangles);
     triangle_grid const ground(std::move(triangles), bmin, bmax);
     auto const terrains = active_terrains();
 
-    auto const rotation_mode = m_fill_random_rotation ? functions_panel::RANDOM : ui()->rot_mode();
-    auto const fixed_rotation_value = ui()->rot_val();
-    float const scalemin = std::max(0.01f, std::min(m_fill_scale_min, m_fill_scale_max));
-    float const scalemax = std::max(0.01f, std::max(m_fill_scale_min, m_fill_scale_max));
-
-    std::vector<TAnimModel *> created;
-    created.reserve(points.size());
-    std::size_t unsupported = 0;
+    std::size_t placed{0};
+    std::size_t number{0};
     for (auto const &p : points)
     {
+        // the random numbers of the point are drawn before anything can skip it, so the points after it get the same ones
+        auto const pick{uniform(0.0, 1.0)};
+        auto const yaw{uniform(0.0, 360.0)};
+        auto const scale{uniform(0.0, 1.0)};
+
         // reference height: the outline points, weighted by inverse squared distance
         double weights = 0.0, reference = 0.0;
-        for (auto const &v : m_fill_points)
+        for (auto const &v : outline)
         {
             double const w = 1.0 / std::max(1e-6, glm::length2(glm::dvec2(v.x, v.z) - p));
             weights += w;
@@ -4384,40 +5097,210 @@ void editor_mode::run_area_fill()
         if (!found)
         {
             y = reference;
-            ++unsupported;
+            ++Unsupported;
         }
 
         glm::dvec3 const location(p.x, y, p.y);
         if (!simulation::Region->point_inside(location))
             continue;
 
-        auto const &src = package[package.size() > 1 ? std::min(package.size() - 1, static_cast<std::size_t>(LocalRandom(0.0, static_cast<double>(package.size())))) : 0];
-        // NOTE: no names here either, same as with the brush
-        TAnimModel *cloned = simulation::State.create_model(src, std::string{}, location);
+        auto const &src = Area.templates[std::min(Area.templates.size() - 1, static_cast<std::size_t>(pick * static_cast<double>(Area.templates.size())))];
+        // named after the area, so its models are found again in a scenery loaded later
+        TAnimModel *cloned = simulation::State.create_model(src, fill_store::model_name(Area.id, number++), location, layer);
         if (!cloned)
             continue;
-        apply_rotation_for_new_node(cloned, rotation_mode, fixed_rotation_value);
-        if (scalemin != 1.0f || scalemax != 1.0f)
-            cloned->Scale(static_cast<float>(LocalRandom(scalemin, scalemax)));
-        created.push_back(cloned);
+        if (Area.random_rotation)
+            m_editor.rotate(cloned, glm::vec3{0.0f, static_cast<float>(yaw), 0.0f}, 1);
+        else if (Area.rotation != 0.0f)
+            m_editor.rotate(cloned, glm::vec3{0.0f, Area.rotation, 0.0f}, 0);
+        if (Area.scale_min != 1.0f || Area.scale_max != 1.0f)
+            cloned->Scale(static_cast<float>(Area.scale_min + (Area.scale_max - Area.scale_min) * scale));
+        ++placed;
     }
+    return placed;
+}
 
-    // a new fill replaces the "last fill" undo set; the previous objects stay in the scene
-    m_fill_last = std::move(created);
+void editor_mode::finish_area_fill()
+{
+    if (m_fill_points.size() < 3)
+    {
+        m_fill_status = STR("Outline needs at least 3 points");
+        return;
+    }
+    auto area{fill_settings()};
+    if (area.templates.empty())
+    {
+        m_fill_status = STR("Selected model package is empty");
+        return;
+    }
+    area.outline = m_fill_points;
+    if (std::round(polygon_area_xz(area.outline) / 10000.0 * area.density) < 1.0)
+    {
+        m_fill_status = STR("Density too low for this area, nothing to place");
+        return;
+    }
+    // a changed area keeps its name and the names of its models, a new one gets them
+    auto const *before{m_fill_editing.empty() ? nullptr : fill_store::find(m_fill_editing)};
+    fill_undo undo;
+    if (before != nullptr)
+    {
+        undo.what = fill_undo::kind::changed;
+        undo.before = *before;
+        area.id = before->id;
+        area.label = before->label;
+        // its own rotation, unless the rotation of the Functions panel was changed since it was picked up
+        if (false == area.random_rotation && false == before->random_rotation && static_cast<int>(ui()->rot_mode()) == m_fill_editing_panel_mode &&
+            ui()->rot_val() == m_fill_editing_panel_value)
+            area.rotation = m_fill_editing_rotation;
+        erase_fill_area_models(area.id);
+    }
+    else
+    {
+        undo.what = fill_undo::kind::added;
+        area.id = fill_store::next_id();
+        area.label = format(STR_C("Area %zu"), fill_store::areas().size() + 1);
+    }
+    undo.id = area.id;
+    area.seed = static_cast<std::uint32_t>(LocalRandom(0.0, 4294967295.0));
+    // a changed area stays in its layer, with its models; a new one goes to the active layer
+    area.layer = before != nullptr ? undo.before.layer : scene::Layers.active();
 
-    m_fill_status = format(STR_C("Placed %zu of %zu objects"), m_fill_last.size(), static_cast<std::size_t>(target));
-    if (points.size() < target)
+    std::size_t target{0};
+    std::size_t unsupported{0};
+    area.objects = place_fill_area(area, target, unsupported);
+    fill_store::put(area);
+    m_fill_undo = std::move(undo);
+    m_fill_points.clear();
+    m_fill_editing.clear();
+
+    m_fill_status = format(STR_C("%s: placed %zu of %zu objects"), area.label.c_str(), area.objects, target);
+    if (area.objects < target)
         m_fill_status += STR_C(" (limited by min. spacing)");
     if (unsupported > 0)
         m_fill_status += format(STR_C(", without ground under them (height from the outline): %zu"), unsupported);
     WriteLog("Editor: area fill - " + m_fill_status, logtype::generic);
 }
 
+void editor_mode::cancel_area_fill()
+{
+    if (false == m_fill_editing.empty())
+    {
+        if (auto const *area{fill_store::find(m_fill_editing)})
+            m_fill_status = format(STR_C("%s left as it was"), area->label.c_str());
+        m_fill_editing.clear();
+    }
+    m_fill_points.clear();
+}
+
+void editor_mode::edit_fill_area(std::string const &Id)
+{
+    auto const *area{fill_store::find(Id)};
+    if (area == nullptr)
+        return;
+    m_fill_editing = Id;
+    m_fill_points = area->outline;
+    m_fill_density = area->density;
+    m_fill_min_spacing = area->spacing;
+    m_fill_scale_min = area->scale_min;
+    m_fill_scale_max = area->scale_max;
+    m_fill_random_rotation = area->random_rotation;
+    m_fill_editing_rotation = area->rotation;
+    m_fill_editing_panel_mode = static_cast<int>(ui()->rot_mode());
+    m_fill_editing_panel_value = ui()->rot_val();
+    m_fill_models_as_ground = area->models_as_ground;
+    // the set the models came from, while it still holds the same templates; otherwise the templates of the area themselves
+    model_set_ref source;
+    source.kind = static_cast<model_set_ref::source>(std::clamp(area->set_kind, 0, 2));
+    source.id = area->set_id;
+    std::vector<std::string> entries;
+    if (source.kind != model_set_ref::source::manual)
+        for (auto const *entry : ui()->nodebank().set_entries(source))
+            if (false == entry->empty())
+                entries.push_back(*entry);
+    if (source.kind != model_set_ref::source::manual && entries == area->templates)
+        m_fill_source = source;
+    else
+    {
+        m_fill_source = model_set_ref{};
+        m_fill_custom = area->templates;
+        m_fill_custom_idx = -1;
+    }
+    m_fill_status = format(STR_C("%s picked up: change the outline or the settings, Enter fills it anew, Esc leaves it as it was"), area->label.c_str());
+}
+
+void editor_mode::remove_fill_area(std::string const &Id)
+{
+    auto const *area{fill_store::find(Id)};
+    if (area == nullptr)
+        return;
+    if (m_fill_editing == Id)
+    {
+        m_fill_editing.clear();
+        m_fill_points.clear();
+    }
+    fill_undo undo;
+    undo.what = fill_undo::kind::removed;
+    undo.id = Id;
+    undo.before = *area;
+    auto const removed{erase_fill_area_models(Id)};
+    m_fill_status = format(STR_C("%s removed with its %zu objects"), undo.before.label.c_str(), removed);
+    fill_store::forget(Id);
+    m_fill_undo = std::move(undo);
+}
+
+void editor_mode::show_fill_area(std::string const &Id)
+{
+    auto const *area{fill_store::find(Id)};
+    if (area == nullptr || area->outline.empty())
+        return;
+    glm::dvec3 low{std::numeric_limits<double>::max()};
+    glm::dvec3 high{-std::numeric_limits<double>::max()};
+    for (auto const &point : area->outline)
+    {
+        low = glm::min(low, point);
+        high = glm::max(high, point);
+    }
+    auto const centre{(low + high) * 0.5};
+    auto const extent{std::max(30.0, std::max(high.x - low.x, high.z - low.z))};
+    // from the south-east, high enough to see the whole outline
+    Camera.Pos = centre + glm::dvec3{-0.5 * extent, 0.8 * extent, 0.5 * extent};
+    auto const look{glm::normalize(centre - Camera.Pos)};
+    Camera.Angle = glm::vec3(static_cast<float>(std::asin(std::clamp(look.y, -1.0, 1.0))), static_cast<float>(std::atan2(-look.x, -look.z)), 0.0f);
+    Camera.Velocity = {};
+    Camera.m_owner = nullptr;
+    m_focus_active = false;
+    Global.pCamera = Camera;
+}
+
+void editor_mode::undo_last_area_fill()
+{
+    if (false == m_fill_undo.has_value())
+        return;
+    auto const undo{std::move(*m_fill_undo)};
+    m_fill_undo.reset();
+    if (m_fill_editing == undo.id)
+    {
+        m_fill_editing.clear();
+        m_fill_points.clear();
+    }
+    auto const removed{erase_fill_area_models(undo.id)};
+    if (undo.what == fill_undo::kind::added)
+    {
+        fill_store::forget(undo.id);
+        m_fill_status = format(STR_C("Removed %zu objects of the last fill"), removed);
+        return;
+    }
+    // changed or removed: the area as it was, filled again from its seed, which gives the same objects
+    std::size_t target{0};
+    std::size_t unsupported{0};
+    auto before{undo.before};
+    before.objects = place_fill_area(before, target, unsupported);
+    fill_store::put(before);
+    m_fill_status = format(STR_C("%s back as it was, %zu objects"), before.label.c_str(), before.objects);
+}
+
 void editor_mode::draw_area_fill_outline() const
 {
-    if (m_fill_points.empty())
-        return;
-
     // same camera-relative view and clean perspective the transform gizmo uses
     ImGuiIO const &io = ImGui::GetIO();
     glm::mat4 const view = GfxRenderer->Camera_View_Matrix();
@@ -4432,26 +5315,41 @@ void editor_mode::draw_area_fill_outline() const
     float constexpr nearw = 0.1f;
 
     ImDrawList *drawlist = ImGui::GetBackgroundDrawList(ImGui::GetMainViewport());
+    auto const draw_edges = [&](std::vector<glm::dvec3> const &Points, bool const Open, ImU32 const Color, ImU32 const Closing, float const Thickness) {
+        std::size_t const count = Points.size();
+        for (std::size_t i = 0; i < count; ++i)
+        {
+            bool const closing = (i + 1 == count);
+            if (closing && (count < 3 || (Open && Closing == 0)))
+                break;
+            glm::vec4 a = to_clip(Points[i]);
+            glm::vec4 b = to_clip(Points[(i + 1) % count]);
+            // clip the edge against the near plane, so points behind the camera don't flip across the screen
+            if (a.w < nearw && b.w < nearw)
+                continue;
+            if (a.w < nearw)
+                a = glm::mix(a, b, (nearw - a.w) / (b.w - a.w));
+            else if (b.w < nearw)
+                b = glm::mix(b, a, (nearw - b.w) / (a.w - b.w));
+            drawlist->AddLine(to_screen(a), to_screen(b), closing && Open ? Closing : Color, Thickness);
+        }
+    };
+
+    // the areas on the list, the one under the cursor in the list brighter; the one being changed is drawn as the outline
+    for (auto const &area : fill_store::areas())
+    {
+        if (area.id == m_fill_editing)
+            continue;
+        auto const hovered{area.id == m_fill_hover};
+        draw_edges(area.outline, false, hovered ? IM_COL32(120, 230, 255, 255) : IM_COL32(120, 200, 255, 110), 0, hovered ? 3.0f : 1.5f);
+    }
+
+    if (m_fill_points.empty())
+        return;
     ImU32 const edgecolor = IM_COL32(255, 200, 40, 230);
     ImU32 const closingcolor = IM_COL32(255, 200, 40, 110);
-
+    draw_edges(m_fill_points, true, edgecolor, closingcolor, 2.0f);
     std::size_t const count = m_fill_points.size();
-    for (std::size_t i = 0; i < count; ++i)
-    {
-        bool const closing = (i + 1 == count);
-        if (closing && count < 3)
-            break;
-        glm::vec4 a = to_clip(m_fill_points[i]);
-        glm::vec4 b = to_clip(m_fill_points[(i + 1) % count]);
-        // clip the edge against the near plane, so points behind the camera don't flip across the screen
-        if (a.w < nearw && b.w < nearw)
-            continue;
-        if (a.w < nearw)
-            a = glm::mix(a, b, (nearw - a.w) / (b.w - a.w));
-        else if (b.w < nearw)
-            b = glm::mix(b, a, (nearw - b.w) / (a.w - b.w));
-        drawlist->AddLine(to_screen(a), to_screen(b), closing ? closingcolor : edgecolor, 2.0f);
-    }
     for (std::size_t i = 0; i < count; ++i)
     {
         glm::vec4 const c = to_clip(m_fill_points[i]);
@@ -4463,14 +5361,18 @@ void editor_mode::draw_area_fill_outline() const
 
 void editor_mode::render_area_fill()
 {
-    ImGui::TextDisabled(STR_C("LMB: add outline point   Backspace: remove last point"));
+    ImGui::TextDisabled(STR_C("LMB: add outline point   Backspace: remove last point   Enter: fill and finish   Esc: drop the outline"));
+    if (false == m_fill_editing.empty())
+        if (auto const *editing{fill_store::find(m_fill_editing)})
+            ImGui::TextColored(ImVec4(0.47f, 0.9f, 1.0f, 1.0f), STR_C("Changing: %s"), editing->label.c_str());
     double const area = polygon_area_xz(m_fill_points);
-    ImGui::Text(STR_C("Points: %zu   Area: %.0f m² (%.2f ha)"), m_fill_points.size(), area, area / 10000.0);
+    // the square sign written as its utf-8 bytes: the game is built without /utf-8 where it has the debug symbols
+    ImGui::Text(STR_C("Points: %zu   Area: %.0f m\xC2\xB2 (%.2f ha)"), m_fill_points.size(), area, area / 10000.0);
     if (ImGui::Button(STR_C("Remove last point")) && !m_fill_points.empty())
         m_fill_points.pop_back();
     ImGui::SameLine();
     if (ImGui::Button(STR_C("Clear outline")))
-        m_fill_points.clear();
+        cancel_area_fill();
 
     ImGui::Separator();
 
@@ -4505,15 +5407,102 @@ void editor_mode::render_area_fill()
 
     ImGui::Text(STR_C("Estimated objects: %.0f"), std::round(area / 10000.0 * m_fill_density));
 
-    if (ImGui::Button(STR_C("Fill area")))
-        run_area_fill();
+    if (ImGui::Button(m_fill_editing.empty() ? STR_C("Fill area (Enter)") : STR_C("Fill again (Enter)")))
+        finish_area_fill();
     ImGui::SameLine();
-    std::string const undolabel = format(STR_C("Undo last fill (%zu)"), m_fill_last.size());
-    if (ImGui::Button(undolabel.c_str()) && !m_fill_last.empty())
-        undo_last_area_fill();
+    if (m_fill_undo.has_value())
+    {
+        if (ImGui::Button(STR_C("Undo last fill")))
+            undo_last_area_fill();
+    }
+    else
+        ImGui::TextDisabled("%s", STR_C("Undo last fill"));
 
     if (!m_fill_status.empty())
-        ImGui::TextUnformatted(m_fill_status.c_str());
+        ImGui::TextWrapped("%s", m_fill_status.c_str());
+
+    render_fill_area_list();
+}
+
+void editor_mode::render_fill_area_list()
+{
+    ImGui::Separator();
+    auto const &areas{fill_store::areas()};
+    ImGui::Text(STR_C("Filled areas: %zu"), areas.size());
+    m_fill_hover.clear();
+    if (areas.empty())
+    {
+        ImGui::TextDisabled("%s", STR_C("None yet. Enter fills the outline and puts the area here, to be changed later"));
+        return;
+    }
+    // the buttons act after the list is drawn: they change the list
+    std::string edit, remove, show;
+    if (ImGui::BeginTable("fillareas", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY, ImVec2(0.0f, std::min(10, static_cast<int>(areas.size()) + 1) * ImGui::GetFrameHeightWithSpacing())))
+    {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn(STR_C("Name"), ImGuiTableColumnFlags_WidthStretch, 3.0f);
+        ImGui::TableSetupColumn(STR_C("Objects"), ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn(STR_C("ha"), ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableHeadersRow();
+        for (auto const &area : areas)
+        {
+            ImGui::PushID(area.id.c_str());
+            ImGui::TableNextRow();
+            if (area.id == m_fill_editing)
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, IM_COL32(60, 120, 150, 120));
+            ImGui::TableNextColumn();
+            // the name, changed in place and kept with the area once the field is left
+            std::array<char, 96> name{};
+            std::snprintf(name.data(), name.size(), "%s", area.label.c_str());
+            ImGui::SetNextItemWidth(-1.0f);
+            ImGui::InputText("##name", name.data(), name.size());
+            if (ImGui::IsItemDeactivatedAfterEdit())
+            {
+                auto changed{area};
+                changed.label = name.data();
+                fill_store::put(std::move(changed));
+                ImGui::PopID();
+                break; // the list changed under the loop
+            }
+            auto hovered{ImGui::IsItemHovered()};
+            ImGui::TableNextColumn();
+            ImGui::Text("%zu", area.objects);
+            hovered = hovered || ImGui::IsItemHovered();
+            ImGui::TableNextColumn();
+            ImGui::Text("%.2f", polygon_area_xz(area.outline) / 10000.0);
+            hovered = hovered || ImGui::IsItemHovered();
+            ImGui::TableNextColumn();
+            if (ImGui::SmallButton(STR_C("Change")))
+                edit = area.id;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", STR_C("Its outline and settings back in the tool: move the points, change the models or the density, Enter fills it anew"));
+            hovered = hovered || ImGui::IsItemHovered();
+            ImGui::SameLine();
+            if (ImGui::SmallButton(STR_C("Show")))
+                show = area.id;
+            hovered = hovered || ImGui::IsItemHovered();
+            ImGui::SameLine();
+            if (ImGui::SmallButton(STR_C("Remove")))
+                remove = area.id;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", STR_C("The area and its models removed; Undo last fill brings them back"));
+            hovered = hovered || ImGui::IsItemHovered();
+            if (hovered)
+                m_fill_hover = area.id;
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+    if (false == show.empty())
+        show_fill_area(show);
+    if (false == edit.empty())
+    {
+        edit_fill_area(edit);
+        show_fill_area(edit);
+    }
+    if (false == remove.empty())
+        remove_fill_area(remove);
 }
 
 glm::vec3 editor_mode::array_size(TAnimModel const &Base)
@@ -4674,9 +5663,7 @@ void editor_mode::shape_array()
         copies.pop_back();
         if (model == nullptr)
             continue;
-        nullify_history_pointers(model);
-        remove_from_hierarchy(model);
-        simulation::State.delete_model(model);
+        erase_model(model);
     }
 
     std::string definition;
@@ -4761,9 +5748,7 @@ void editor_mode::restore_array_snapshot(EditorSnapshot Snapshot, std::vector<Ed
                 m_dragging = false;
                 ui()->set_node(nullptr);
             }
-            nullify_history_pointers(model);
-            remove_from_hierarchy(model);
-            simulation::State.delete_model(model);
+            erase_model(model);
         }
         else
         {
@@ -4937,7 +5922,7 @@ void editor_mode::render_workspaces()
 	};
 	area const areas[] = {
 	    {STR_C("Surroundings"), work_area::surroundings, editor_icons::icon::work_surroundings, STR_C("Models around the line: select, insert, brush, area fill, copy to the node bank")},
-	    {STR_C("Tracks"), work_area::tracks, editor_icons::icon::work_tracks, STR_C("Tracks and switches, signals, objects along the track, checks of the line")},
+	    {STR_C("Tracks"), work_area::tracks, editor_icons::icon::work_tracks, STR_C("Tracks and switches, signals, kilometrage and posts along the track, checks of the line")},
 	    {STR_C("Roads"), work_area::roads, editor_icons::icon::work_roads, STR_C("Roads and junctions, level crossings, the points where the traffic comes and goes")},
 	    {STR_C("Terrain"), work_area::terrain, editor_icons::icon::work_terrain, STR_C("Heightmap terrain: chunks, sculpting, painting, water, orthophoto")},
 	    {STR_C("Catenary"), work_area::catenary, editor_icons::icon::work_catenary, STR_C("The overhead catenary: poles with cantilevers, gantries, the wires of the chains")},
@@ -5056,13 +6041,19 @@ void editor_mode::render_help_menu()
 		ImGui::SetTooltip("%s", STR_C("The keys of the editor, for each field of work"));
 	ImGui::MenuItem(STR_C("Tutorial"), nullptr, &m_first_steps_open);
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("%s", STR_C("Twelve short lessons with clips and drawings: the camera, laying track, curves, correcting a curve, joining, switches, signals and posts, fixing, the grade line, terrain, older sceneries, saving and driving"));
+		ImGui::SetTooltip("%s", STR_C("Short lessons: the camera, laying track, curves, the radius at the bends, correcting a curve, joining, switches, switch templates, signals and posts, a whole line step by step, fixing, the gizmo, the grade line, terrain, older sceneries, saving and driving"));
 	ImGui::EndMenu();
 }
 
 void editor_mode::first_step_done(first_step const Step)
 {
 	m_first_steps_done[static_cast<std::size_t>(Step)] = true;
+}
+
+void editor_mode::open_kilometrage()
+{
+	choose_work_area(work_area::tracks);
+	show_track_tab(track_tab::kilometrage);
 }
 
 namespace
@@ -5131,21 +6122,90 @@ void tutorial_profile_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const Hi
 	List.Flags = flags;
 	List.AddPolyline(ground.data(), static_cast<int>(ground.size()), IM_COL32(170, 130, 80, 220), 0, 1.5f);
 	auto const lift{static_cast<float>(0.5 + 0.5 * std::sin(Time * 1.6))};
-	ImVec2 const points[]{ImVec2(x_of(0.0f), y_of(0.32f)), ImVec2(x_of(0.38f), y_of(0.42f)), ImVec2(x_of(0.66f), y_of(0.35f + 0.4f * lift)), ImVec2(x_of(1.0f), y_of(0.55f))};
-	List.AddPolyline(points, 4, IM_COL32(170, 170, 170, 160), 0, 1.0f);
-	List.AddPolyline(points, 4, IM_COL32(90, 220, 110, 255), 0, 2.5f);
-	for (int i = 0; i < 4; ++i)
+	std::array const points{ImVec2(x_of(0.0f), y_of(0.32f)), ImVec2(x_of(0.38f), y_of(0.42f)), ImVec2(x_of(0.66f), y_of(0.35f + 0.4f * lift)), ImVec2(x_of(1.0f), y_of(0.55f))};
+	List.AddPolyline(points.data(), static_cast<int>(points.size()), IM_COL32(170, 170, 170, 160), 0, 1.0f);
+	List.AddPolyline(points.data(), static_cast<int>(points.size()), IM_COL32(90, 220, 110, 255), 0, 2.5f);
+	for (std::size_t i = 0; i < points.size(); ++i)
 		List.AddCircleFilled(points[i], i == 2 ? 6.0f : 4.5f, i == 2 ? kGestureLit : IM_COL32(250, 210, 80, 255));
 	List.AddCircle(points[2], 9.0f, kGestureLit, 0, 1.5f);
-	for (int i = 0; i < 3; ++i)
+	for (std::size_t i = 0; i + 1 < points.size(); ++i)
 	{
 		auto const grade{-(points[i + 1].y - points[i].y) / (points[i + 1].x - points[i].x) * 40.0f};
-		char text[32];
-		std::snprintf(text, sizeof(text), "%+.1f", std::abs(grade) < 0.05f ? 0.0f : grade);
+		auto const text{std::format("{:+.1f}", std::abs(grade) < 0.05f ? 0.0f : grade)};
 		ImVec2 const middle{(points[i].x + points[i + 1].x) * 0.5f, (points[i].y + points[i + 1].y) * 0.5f - ImGui::GetTextLineHeight() - 2.0f};
-		List.AddText(ImVec2(middle.x - ImGui::CalcTextSize(text).x * 0.5f, middle.y), i == 0 ? IM_COL32(200, 200, 200, 255) : IM_COL32(255, 255, 255, 255), text);
+		List.AddText(ImVec2(middle.x - ImGui::CalcTextSize(text.c_str()).x * 0.5f, middle.y), i == 0 ? IM_COL32(200, 200, 200, 255) : IM_COL32(255, 255, 255, 255), text.c_str());
 	}
 	gesture_mouse(List, ImVec2(points[2].x + 12.0f, points[2].y + 10.0f), height * 0.18f, "LMB");
+}
+
+// the points of a switch clicked one after another: its start, the ends of its two tracks, the way on, the points along the diverging track
+void tutorial_template_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const High, double const Time)
+{
+	auto const width{High.x - Low.x};
+	auto const height{High.y - Low.y};
+	auto const at = [&](float const X, float const Y) { return ImVec2(Low.x + width * X, Low.y + height * Y); };
+	auto const curve = [&](float const Share) { return at(0.08f + 0.70f * Share, 0.72f - 0.42f * Share * Share); };
+	auto const shown{static_cast<int>(std::fmod(static_cast<float>(Time), 10.0f))};
+	std::vector<ImVec2> line;
+	for (int i = 0; i <= 24; ++i)
+		line.push_back(curve(static_cast<float>(i) / 24.0f));
+	List.AddLine(at(0.08f, 0.72f), at(0.78f, 0.72f), IM_COL32(150, 150, 150, 130), 3.0f);
+	List.AddPolyline(line.data(), static_cast<int>(line.size()), IM_COL32(150, 150, 150, 130), ImDrawFlags_None, 3.0f);
+	std::array<ImVec2, 8> const points{at(0.08f, 0.72f), at(0.78f, 0.72f), curve(1.0f), at(0.94f, 0.14f), curve(0.28f), curve(0.5f), curve(0.72f), curve(0.88f)};
+	if (shown >= 1)
+		List.AddLine(points[0], points[1], IM_COL32(255, 255, 255, 230), 1.5f);
+	if (shown >= 3)
+		List.AddLine(points[2], points[3], IM_COL32(90, 200, 255, 230), 1.5f);
+	for (int i = 0; i < static_cast<int>(points.size()) && i <= shown; ++i)
+	{
+		List.AddCircleFilled(points[i], 4.0f, i < 4 ? IM_COL32(255, 225, 60, 255) : IM_COL32(120, 255, 120, 255));
+		if (i < 4)
+			List.AddText(ImVec2(points[i].x + 6.0f, points[i].y - 18.0f), IM_COL32(255, 255, 255, 255), std::to_string(i + 1).c_str());
+	}
+	if (shown >= 8)
+		List.AddPolyline(line.data(), static_cast<int>(line.size()), IM_COL32(255, 90, 200, 255), ImDrawFlags_None, 2.0f);
+}
+
+// the radius of the curve at a bend: the two straights clicked stay, the curve between them grows from sharp to gentle and back
+void tutorial_corner_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const High, double const Time)
+{
+	auto const width{High.x - Low.x};
+	auto const height{High.y - Low.y};
+	glm::vec2 const from{Low.x + width * 0.04f, Low.y + height * 0.80f};
+	glm::vec2 const vertex{Low.x + width * 0.50f, Low.y + height * 0.18f};
+	glm::vec2 const to{Low.x + width * 0.96f, Low.y + height * 0.80f};
+	auto const point = [](glm::vec2 const Point) { return ImVec2(Point.x, Point.y); };
+	List.AddLine(point(from), point(vertex), IM_COL32(150, 150, 150, 130), 1.0f);
+	List.AddLine(point(vertex), point(to), IM_COL32(150, 150, 150, 130), 1.0f);
+	List.AddCircleFilled(point(vertex), 4.0f, IM_COL32(255, 255, 255, 255));
+	// there and back in 8 s, a moment at each end
+	auto const cycle{std::fmod(static_cast<float>(Time), 8.0f) / 8.0f};
+	auto const swing{std::clamp(1.3f - std::abs(cycle * 2.0f - 1.0f) * 1.6f, 0.0f, 1.0f)};
+	auto const share{swing * swing * (3.0f - 2.0f * swing)};
+	auto const in{glm::normalize(from - vertex)};
+	auto const out{glm::normalize(to - vertex)};
+	auto const tangent{glm::mix(0.12f, 0.92f, share) * glm::length(from - vertex)};
+	auto const half{std::acos(glm::dot(in, out)) * 0.5f};
+	auto const centre{vertex + glm::normalize(in + out) * (tangent / std::cos(half))};
+	auto const start{vertex + in * tangent};
+	auto const end{vertex + out * tangent};
+	auto const begin{std::atan2(start.y - centre.y, start.x - centre.x)};
+	auto sweep{std::atan2(end.y - centre.y, end.x - centre.x) - begin};
+	while (sweep > glm::pi<float>())
+		sweep -= glm::two_pi<float>();
+	while (sweep < -glm::pi<float>())
+		sweep += glm::two_pi<float>();
+	auto const radius{glm::length(start - centre)};
+	std::vector line{point(from)};
+	for (int i = 0; i <= 32; ++i)
+	{
+		auto const angle{begin + sweep * static_cast<float>(i) / 32.0f};
+		line.push_back(ImVec2(centre.x + radius * std::cos(angle), centre.y + radius * std::sin(angle)));
+	}
+	line.push_back(point(to));
+	List.AddPolyline(line.data(), static_cast<int>(line.size()), IM_COL32(230, 190, 90, 255), ImDrawFlags_None, 3.0f);
+	auto const label{format(STR_C("R %.0f m: %s"), glm::mix(300.0, 6000.0, static_cast<double>(share)), share < 0.5f ? STR_C("a sharp curve, a slow train") : STR_C("a gentle curve, a fast train"))};
+	List.AddText(ImVec2(Low.x + (width - ImGui::CalcTextSize(label.c_str()).x) * 0.5f, High.y - ImGui::GetTextLineHeight() - 4.0f), IM_COL32(235, 235, 235, 255), label.c_str());
 }
 
 // the route of the grade line picked on the map: a click lights up the whole line through the track, Shift and a box only the
@@ -5161,7 +6221,7 @@ void tutorial_route_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const High
 	auto const mix = [](ImVec2 const A, ImVec2 const B, float const T) { return ImVec2(A.x + (B.x - A.x) * T, A.y + (B.y - A.y) * T); };
 	auto const ease = [](float const T) { auto const t{std::clamp(T, 0.0f, 1.0f)}; return t * t * (3.0f - 2.0f * t); };
 	// the joints of the tracks of the line, and a siding going off it at a switch
-	ImVec2 const joints[]{at(0.04f, 0.72f), at(0.18f, 0.64f), at(0.32f, 0.54f), at(0.46f, 0.48f), at(0.60f, 0.46f), at(0.74f, 0.42f), at(0.88f, 0.32f), at(0.98f, 0.24f)};
+	std::array const joints{at(0.04f, 0.72f), at(0.18f, 0.64f), at(0.32f, 0.54f), at(0.46f, 0.48f), at(0.60f, 0.46f), at(0.74f, 0.42f), at(0.88f, 0.32f), at(0.98f, 0.24f)};
 	int constexpr tracks{7};
 	List.AddBezierQuadratic(joints[3], at(0.58f, 0.52f), at(0.80f, 0.66f), IM_COL32(130, 130, 130, 200), 2.0f);
 	auto const cycle{static_cast<float>(std::fmod(Time, 8.0))};
@@ -5200,7 +6260,7 @@ void tutorial_route_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const High
 	for (auto const &joint : joints)
 		List.AddCircleFilled(joint, 2.5f, IM_COL32(220, 220, 220, 255));
 	gesture_mouse(List, ImVec2(cursor.x + 2.0f, cursor.y + 2.0f), std::round(height * 0.16f), "LMB");
-	auto const caption{boxing ? STR_C("Shift + a box: between the outermost") : STR_C("LMB on a track: its whole line")};
+	auto const caption{boxing ? STR_C("Shift + a box: between the outermost tracks") : STR_C("LMB on a track: its whole line")};
 	List.AddText(ImVec2(Low.x + 6.0f, High.y - ImGui::GetTextLineHeight() - 4.0f), IM_COL32(230, 230, 230, 230), caption);
 }
 
@@ -5216,8 +6276,11 @@ void tutorial_signal_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const Hig
 	// the track seen from above: sleepers and the two rails
 	auto const middle{at(0.0f, 0.5f).y};
 	auto const gauge{height * 0.07f};
-	for (float x = 0.02f; x < 1.0f; x += 0.025f)
-		List.AddLine(ImVec2(at(x, 0.0f).x, middle - gauge * 1.6f), ImVec2(at(x, 0.0f).x, middle + gauge * 1.6f), IM_COL32(110, 90, 70, 255), 3.0f);
+	for (int sleeper = 0; sleeper < 40; ++sleeper)
+	{
+		auto const x{at(0.02f + 0.025f * static_cast<float>(sleeper), 0.0f).x};
+		List.AddLine(ImVec2(x, middle - gauge * 1.6f), ImVec2(x, middle + gauge * 1.6f), IM_COL32(110, 90, 70, 255), 3.0f);
+	}
 	List.AddLine(ImVec2(Low.x, middle - gauge), ImVec2(High.x, middle - gauge), IM_COL32(200, 200, 205, 255), 2.0f);
 	List.AddLine(ImVec2(Low.x, middle + gauge), ImVec2(High.x, middle + gauge), IM_COL32(200, 200, 205, 255), 2.0f);
 	auto const line{ImGui::GetTextLineHeight()};
@@ -5243,30 +6306,27 @@ void tutorial_signal_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const Hig
 			ImVec2 const head_high{foot.x + height * 0.04f, foot.y - height * 0.06f};
 			List.AddRectFilled(head_low, head_high, IM_COL32(25, 25, 25, 255), height * 0.03f);
 			List.AddRect(head_low, head_high, IM_COL32(150, 150, 150, 255), height * 0.03f);
-			for (int i = 0; i < 3; ++i)
-			{
-				ImU32 const lights[]{IM_COL32(230, 60, 50, 255), IM_COL32(70, 210, 90, 255), IM_COL32(240, 240, 240, 255)};
-				List.AddCircleFilled(ImVec2(foot.x, head_low.y + height * (0.04f + 0.065f * i)), height * 0.025f, lights[i]);
-			}
+			std::array const lights{IM_COL32(230, 60, 50, 255), IM_COL32(70, 210, 90, 255), IM_COL32(240, 240, 240, 255)};
+			for (std::size_t i = 0; i < lights.size(); ++i)
+				List.AddCircleFilled(ImVec2(foot.x, head_low.y + height * (0.04f + 0.065f * static_cast<float>(i))), height * 0.025f, lights[i]);
 			List.AddText(ImVec2(foot.x - height * 0.06f - ImGui::CalcTextSize("S1").x, foot.y - line), IM_COL32(255, 255, 255, 230), "S1");
 		}
 		gesture_mouse(List, ImVec2(cursor.x + 2.0f, cursor.y + 2.0f), std::round(height * 0.16f), "LMB");
-		List.AddText(ImVec2(Low.x + 6.0f, Low.y + 4.0f), IM_COL32(230, 230, 230, 230), STR_C("H: by the track, drag along: the way the trains run"));
+		List.AddText(ImVec2(Low.x + 6.0f, Low.y + 4.0f), IM_COL32(230, 230, 230, 230), STR_C("LMB by the track, drag along: the way the trains run"));
 		return;
 	}
 	// the hectometre posts of the line, one after the other
 	auto const shown{static_cast<int>((cycle - 4.3f) / 0.35f) + 1};
 	for (int i = 0; i < std::min(shown, 9); ++i)
 	{
-		auto const x{at(0.07f + 0.105f * i, 0.0f).x};
+		auto const x{at(0.07f + 0.105f * static_cast<float>(i), 0.0f).x};
 		auto const foot{middle - gauge * 3.2f};
 		List.AddRectFilled(ImVec2(x - 3.0f, foot - height * 0.14f), ImVec2(x + 3.0f, foot), IM_COL32(240, 240, 240, 255), 1.0f);
-		char text[16];
-		std::snprintf(text, sizeof(text), "12.%d", i + 1);
-		auto const size{ImGui::CalcTextSize(text)};
-		List.AddText(ImVec2(std::round(x - size.x * 0.5f), foot - height * 0.14f - size.y - 1.0f), IM_COL32(255, 220, 120, 255), text);
+		auto const text{std::format("12.{}", i + 1)};
+		auto const size{ImGui::CalcTextSize(text.c_str())};
+		List.AddText(ImVec2(std::round(x - size.x * 0.5f), foot - height * 0.14f - size.y - 1.0f), IM_COL32(255, 220, 120, 255), text.c_str());
 	}
-	List.AddText(ImVec2(Low.x + 6.0f, High.y - line - 4.0f), IM_COL32(230, 230, 230, 230), STR_C("B: the hectometre posts of the whole line at once"));
+	List.AddText(ImVec2(Low.x + 6.0f, High.y - line - 4.0f), IM_COL32(230, 230, 230, 230), STR_C("B: posts every 100 m along the whole line at once"));
 }
 
 // a vehicle seen from the side, drawn simply: the body with its windows on two bogies
@@ -5280,9 +6340,12 @@ void tutorial_vehicle(ImDrawList &List, ImVec2 const Low, ImVec2 const High, ImU
 	auto const windows{Locomotive ? 2 : 5};
 	for (int i = 0; i < windows; ++i)
 	{
-		auto const left{Locomotive ? (i == 0 ? Low.x + width * 0.06f : High.x - width * 0.2f) : Low.x + width * (0.08f + 0.18f * i)};
+		// a locomotive has a window at each end, a coach a row of them
+		auto window_x{Low.x + width * (0.08f + 0.18f * static_cast<float>(i))};
+		if (Locomotive)
+			window_x = (i == 0 ? Low.x + width * 0.06f : High.x - width * 0.2f);
 		auto const size{Locomotive ? width * 0.14f : width * 0.12f};
-		List.AddRectFilled(ImVec2(left, Low.y + height * 0.15f), ImVec2(left + size, Low.y + height * 0.42f), IM_COL32(30, 40, 50, 255), 2.0f);
+		List.AddRectFilled(ImVec2(window_x, Low.y + height * 0.15f), ImVec2(window_x + size, Low.y + height * 0.42f), IM_COL32(30, 40, 50, 255), 2.0f);
 	}
 	for (float const share : {0.22f, 0.78f})
 	{
@@ -5300,14 +6363,15 @@ void tutorial_trainset_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const H
 	auto const height{High.y - Low.y};
 	auto const at = [&](float const X, float const Y) { return ImVec2(Low.x + width * X, Low.y + height * Y); };
 	auto const cycle{static_cast<float>(std::fmod(Time, 9.0))};
-	ImU32 const colours[]{IM_COL32(200, 60, 50, 255), IM_COL32(60, 120, 70, 255), IM_COL32(70, 100, 160, 255)};
+	std::array const colours{IM_COL32(200, 60, 50, 255), IM_COL32(60, 120, 70, 255), IM_COL32(70, 100, 160, 255)};
 	auto const line{ImGui::GetTextLineHeight()};
 	// the list: the side view of each vehicle and its name
-	for (int i = 0; i < 3; ++i)
+	for (std::size_t i = 0; i < colours.size(); ++i)
 	{
-		auto const top{0.08f + 0.28f * i};
-		auto const clicked{cycle > 0.8f + 1.4f * i && cycle < 1.2f + 1.4f * i};
-		if (clicked)
+		auto const slot{static_cast<float>(i)};
+		auto const top{0.08f + 0.28f * slot};
+		// lit while it's double clicked
+		if (cycle > 0.8f + 1.4f * slot && cycle < 1.2f + 1.4f * slot)
 			List.AddRectFilled(at(0.02f, top - 0.02f), at(0.40f, top + 0.24f), IM_COL32(90, 175, 255, 70), 3.0f);
 		tutorial_vehicle(List, at(0.03f, top), at(0.16f, top + 0.2f), colours[i], i == 0);
 		List.AddRectFilled(at(0.19f, top + 0.03f), at(0.36f, top + 0.03f + line / height * 0.6f), IM_COL32(220, 220, 220, 200), 2.0f);
@@ -5315,7 +6379,7 @@ void tutorial_trainset_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const H
 	}
 	// the cursor goes down the list double clicking, then to the button
 	auto const row{std::min(2, static_cast<int>(std::max(0.0f, cycle - 0.4f) / 1.4f))};
-	ImVec2 cursor{at(0.30f, 0.16f + 0.28f * row)};
+	ImVec2 cursor{at(0.30f, 0.16f + 0.28f * static_cast<float>(row))};
 	auto const added{std::clamp(static_cast<int>((cycle - 0.8f) / 1.4f) + 1, 0, 3)};
 	auto const button_low{at(0.55f, 0.08f)};
 	auto const button_high{at(0.95f, 0.30f)};
@@ -5332,94 +6396,15 @@ void tutorial_trainset_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const H
 	auto const run{cycle > 5.6f ? (cycle - 5.6f) * (cycle - 5.6f) * width * 0.06f : 0.0f};
 	auto const car{width * 0.15f};
 	List.PushClipRect(ImVec2(at(0.44f, 0.0f).x, Low.y), High, true);
-	for (int i = 0; i < added; ++i)
+	for (std::size_t i = 0; i < static_cast<std::size_t>(added); ++i)
 	{
-		auto const left{at(0.46f, 0.0f).x + (car + 3.0f) * i - run};
-		tutorial_vehicle(List, ImVec2(left, rail - height * 0.24f), ImVec2(left + car, rail), colours[i], i == 0);
+		auto const front{at(0.46f, 0.0f).x + (car + 3.0f) * static_cast<float>(i) - run};
+		tutorial_vehicle(List, ImVec2(front, rail - height * 0.24f), ImVec2(front + car, rail), colours[i], i == 0);
 	}
 	List.PopClipRect();
 	gesture_mouse(List, ImVec2(cursor.x + 2.0f, cursor.y + 2.0f), std::round(height * 0.16f), "LMB");
 	if (cycle < 4.6f)
 		List.AddText(ImVec2(cursor.x + height * 0.16f, cursor.y), IM_COL32(255, 220, 120, 255), "x2");
-}
-
-// the plan of a curve over the band of its curvature: the plateau of the arc goes up and down under the mouse, the curve tightens
-// and opens with it over the plan kept faint as it was
-void tutorial_curve_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const High, double const Time)
-{
-	auto const width{High.x - Low.x};
-	auto const height{High.y - Low.y};
-	auto const lift{static_cast<float>(0.5 + 0.5 * std::sin(Time * 1.3))};
-	auto const curvature = [](float const Share, float const Peak) {
-		if (Share < 0.15f || Share > 0.85f)
-			return 0.0f;
-		if (Share < 0.35f)
-			return Peak * (Share - 0.15f) / 0.2f;
-		if (Share > 0.65f)
-			return Peak * (0.85f - Share) / 0.2f;
-		return Peak;
-	};
-	auto const colour = [](float const Share) {
-		if (Share < 0.15f || Share > 0.85f)
-			return IM_COL32(255, 255, 255, 230);
-		if (Share < 0.35f || Share > 0.65f)
-			return IM_COL32(255, 140, 30, 255);
-		return IM_COL32(60, 230, 90, 255);
-	};
-	int constexpr steps{90};
-	auto const plan_height{height * 0.5f};
-	float scale{1.0f};
-	ImVec2 start{0.0f, 0.0f};
-	auto const plan = [&](float const Peak) {
-		std::vector<ImVec2> points;
-		float heading{0.0f}, x{0.0f}, y{0.0f};
-		for (int i = 0; i <= steps; ++i)
-		{
-			points.emplace_back(start.x + x * scale, start.y + y * scale);
-			auto const share{(i + 0.5f) / steps};
-			heading += curvature(share, Peak) / steps;
-			x += std::cos(heading) / steps;
-			y -= std::sin(heading) / steps;
-		}
-		return points;
-	};
-	// the scale fits the plan of the sharpest curve, the least sharp one is the widest
-	auto const sharpest{plan(2.8f)};
-	auto const widest{plan(1.6f)};
-	scale = std::min(width * 0.85f / std::max(1e-3f, widest.back().x), plan_height / std::max(1e-3f, -sharpest.back().y));
-	start = ImVec2(Low.x + (width - widest.back().x * scale) * 0.5f, Low.y + height * 0.06f + plan_height);
-	auto const before{plan(1.6f)};
-	List.AddPolyline(before.data(), static_cast<int>(before.size()), IM_COL32(170, 170, 170, 90), 0, 1.5f);
-	auto const peak{1.6f + 1.2f * lift};
-	auto const now{plan(peak)};
-	for (int i = 0; i < steps; ++i)
-		List.AddLine(now[i], now[i + 1], colour((i + 0.5f) / steps), 3.0f);
-	// the band under the plan
-	auto const band_top{Low.y + height * 0.66f};
-	auto const band_bottom{High.y - height * 0.06f};
-	auto const left{Low.x + width * 0.06f};
-	auto const band_width{width * 0.88f};
-	List.AddRectFilled(ImVec2(left - 6.0f, band_top - 6.0f), ImVec2(left + band_width + 6.0f, band_bottom + 4.0f), ImGui::GetColorU32(ImGuiCol_FrameBg), 4.0f);
-	List.AddLine(ImVec2(left, band_bottom), ImVec2(left + band_width, band_bottom), ImGui::GetColorU32(ImGuiCol_TextDisabled));
-	auto const k_scale{(band_bottom - band_top) * 0.9f / 2.8f};
-	for (int i = 0; i < steps; ++i)
-	{
-		auto const a{static_cast<float>(i) / steps};
-		auto const b{static_cast<float>(i + 1) / steps};
-		ImVec2 const p{left + a * band_width, band_bottom - curvature(a, peak) * k_scale};
-		ImVec2 const q{left + b * band_width, band_bottom - curvature(b, peak) * k_scale};
-		auto const tint{colour((a + b) * 0.5f)};
-		auto const flags{List.Flags};
-		List.Flags &= ~ImDrawListFlags_AntiAliasedFill;
-		List.AddQuadFilled(ImVec2(p.x, band_bottom), p, q, ImVec2(q.x, band_bottom), (tint & ~IM_COL32_A_MASK) | IM_COL32(0, 0, 0, 50));
-		List.Flags = flags;
-		List.AddLine(p, q, tint, 2.0f);
-	}
-	char text[32];
-	std::snprintf(text, sizeof(text), "R %.0f", std::round(900.0f / peak / 5.0f) * 5.0f);
-	ImVec2 const plateau{left + band_width * 0.5f, band_bottom - peak * k_scale};
-	List.AddText(ImVec2(plateau.x - ImGui::CalcTextSize(text).x * 0.5f, plateau.y - ImGui::GetTextLineHeight() - 2.0f), IM_COL32(60, 230, 90, 255), text);
-	gesture_mouse(List, ImVec2(plateau.x + band_width * 0.08f, plateau.y - height * 0.06f), height * 0.16f, "LMB");
 }
 
 // the terrain model under the tracks: the track laid level sinks onto the ground along, the formation and the slopes under it
@@ -5435,7 +6420,8 @@ void tutorial_terrain_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const Hi
 	auto const x_of = [&](float const Share) { return Low.x + width * Share; };
 	auto const y_of = [&](float const Level) { return Low.y + height * (0.95f - 0.75f * Level); };
 	int constexpr steps{80};
-	std::vector<ImVec2> ground, track;
+	std::vector<ImVec2> ground;
+	std::vector<ImVec2> track;
 	for (int i = 0; i <= steps; ++i)
 	{
 		auto const share{static_cast<float>(i) / steps};
@@ -5446,15 +6432,14 @@ void tutorial_terrain_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const Hi
 	List.Flags &= ~ImDrawListFlags_AntiAliasedFill;
 	for (int i = 0; i < steps; ++i)
 	{
-		ImVec2 const quad[]{ground[i], ground[i + 1], ImVec2(ground[i + 1].x, High.y), ImVec2(ground[i].x, High.y)};
-		List.AddConvexPolyFilled(quad, 4, IM_COL32(95, 120, 70, 120));
+		std::array const quad{ground[i], ground[i + 1], ImVec2(ground[i + 1].x, High.y), ImVec2(ground[i].x, High.y)};
+		List.AddConvexPolyFilled(quad.data(), static_cast<int>(quad.size()), IM_COL32(95, 120, 70, 120));
 	}
 	if (eased > 0.99f)
 		for (int i = 0; i < steps; ++i)
 		{
 			auto const fill{track[i].y < ground[i].y};
-			ImVec2 const quad[]{track[i], track[i + 1], ground[i + 1], ground[i]};
-			List.AddQuadFilled(quad[0], quad[1], quad[2], quad[3], fill ? IM_COL32(190, 150, 90, 150) : IM_COL32(60, 45, 30, 150));
+			List.AddQuadFilled(track[i], track[i + 1], ground[i + 1], ground[i], fill ? IM_COL32(190, 150, 90, 150) : IM_COL32(60, 45, 30, 150));
 		}
 	List.Flags = flags;
 	List.AddPolyline(ground.data(), static_cast<int>(ground.size()), IM_COL32(150, 190, 110, 255), 0, 1.5f);
@@ -5465,25 +6450,11 @@ void tutorial_terrain_sketch(ImDrawList &List, ImVec2 const Low, ImVec2 const Hi
 
 } // namespace
 
-void editor_mode::render_first_steps()
+// a lesson of the tutorial: its clip or sketch, the mouse and the keys it teaches, the steps to try and the button under it
+struct editor_mode::tutorial_lesson
 {
-	if (false == m_first_steps_open)
-	{
-		if (false == m_tutorial_clip.path().empty())
-			m_tutorial_clip.close();
-		return;
-	}
-	if (ui()->mode() == nodebank_panel::TRACK)
-		first_step_done(first_step::tracks);
-	if (m_lay.active)
-		first_step_done(first_step::lay);
-	if (ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::path && selected_track() != nullptr)
-		first_step_done(first_step::select);
-	if (current_work_area() == work_area::terrain)
-		first_step_done(first_step::terrain);
-	if (ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::route && false == m_route.chain.tracks.empty())
-		first_step_done(first_step::plan);
-	enum class trial { none, top, lay, turnout, select, profile, terrain, plan, trainset, signals };
+	// what the button under a lesson does: opens the tool the lesson is about, or switches the view
+	enum class trial { reading, top, lay, turnout, select, profile, terrain, plan, trainset, signals, station };
 	struct input
 	{
 		char const *keys;
@@ -5494,139 +6465,275 @@ void editor_mode::render_first_steps()
 		first_step step;
 		char const *text;
 	};
-	struct lesson
-	{
-		char const *title;
-		char const *clip;
-		std::vector<input> inputs;
-		std::vector<goal> goals;
-		trial action;
-		void (*sketch)(ImDrawList &, ImVec2, ImVec2, double){nullptr};
-	};
-	static std::vector<lesson> const lessons{
+	char const *title;
+	char const *clip;
+	std::vector<input> inputs;
+	std::vector<goal> goals;
+	trial action;
+	void (*sketch)(ImDrawList &, ImVec2, ImVec2, double){nullptr};
+};
+
+std::vector<editor_mode::tutorial_lesson> const &editor_mode::tutorial_lessons()
+{
+	using trial = tutorial_lesson::trial;
+	static std::vector<tutorial_lesson> const lessons{
 	    {"Looking around",
 	     "camera",
-	     {{"RMB + move", "Hold the right button and move the mouse: look around"},
-	      {"RMB + W S A D", "With the right button held: fly forwards, back and to the sides; E and Q: up and down"},
-	      {"O", "The top view, and back to 3D"},
-	      {"wheel", "Zoom in and out where the cursor points"},
-	      {"MMB + move", "In the top view: hold the wheel and drag to move the map"},
-	      {"F", "Fly to what is selected"}},
-	     {{first_step::look, "Look around with the right button held"}, {first_step::top, "Switch to the top view"}},
+	     {{"RMB + move", "Hold the right mouse button and move the mouse to look around"},
+	      {"RMB + W S A D", "Keep holding the right button and press W S A D to fly around; E takes you up, Q down"},
+	      {"O", "Switches between the view from above, like a map, and the normal 3D view"},
+	      {"wheel", "Zooms in and out at the mouse pointer"},
+	      {"MMB + move", "Press the wheel down and drag to move the view, from above and in 3D"},
+	      {"Y", "Rides the camera along the track under the mouse pointer, as from a train; Y again gets off. The tools keep working on the way"},
+	      {"RMB + W S A D", "While riding: W and S drive, Shift faster; A and D jump to the next track on the left or right; Z picks the way at the next switch"},
+	      {"F", "Flies to what you have selected"}},
+	     {{first_step::look, "Look around with the right mouse button held"}, {first_step::top, "Press O: from above to 3D, or back"}, {first_step::ride, "Ride along a track with Y"}},
 	     trial::top},
 	    {"Laying track",
 	     "lay",
-	     {{"F3", "The Tracks field of work"},
-	      {"L", "The lay tool"},
-	      {"LMB", "A click on the ground: the first point; the next click: a straight up to it"},
-	      {"LMB", "Each next click lays a piece on from the end of the last one"},
-	      {"Ctrl + wheel", "The radius of the curve, while laying on from an end"},
-	      {"Shift + wheel", "The shape: arc then straight, straight then arc, arc, straight"},
-	      {"Backspace", "Takes the last piece back"},
-	      {"Esc", "Ends laying"}},
-	     {{first_step::tracks, "Open the Tracks field of work"}, {first_step::lay, "Turn the lay tool on"}, {first_step::laid, "Lay a track"}},
+	     {{"F3", "Opens Tracks, the part of the editor where track is laid"},
+	      {"L", "Turns laying on"},
+	      {"LMB", "Click the ground where the track should start, or the end of a track to carry it on"},
+	      {"LMB", "Click again wherever the track should turn; the curves are made for you. Until you press Enter it is only a line, not a track"},
+	      {"Enter", "Lays the track along the line. To carry on, click its end"},
+	      {"Backspace", "Removes the last point you clicked"},
+	      {"Esc", "Throws away the points not laid yet, but only when pressed twice within 3 seconds: the first press just warns. With no points left, Esc stops laying"}},
+	     {{first_step::tracks, "Open Tracks (F3)"}, {first_step::lay, "Turn laying on (L)"}, {first_step::laid, "Click a few points and press Enter"}},
 	     trial::lay},
 	    {"Curves",
 	     "curves",
-	     {{"Ctrl + wheel", "The radius of the curve, while laying on from an end"},
-	      {"Shift + wheel", "The shape: arc then straight, straight then arc, arc, straight"},
-	      {"Alt", "Held: the direction turns in steps of 15 degrees, or to 1:9, 1:6.6... to a straight track it starts by or crosses"},
-	      {"0 1 2 3", "Type the length of the next piece, Enter lays it"},
-	      {"wheel", "Alone it zooms, as everywhere"}},
-	     {{first_step::wheel, "Change the radius with Ctrl+wheel"}, {first_step::shape, "Change the shape with Shift+wheel"}},
+	     {{"LMB", "Every place where the line turns gets a curve, as big as fits. An orange label means the curve breaks the rules for the speed set in the panel"},
+	      {"Tab", "To copy a curve from the aerial photo: press Tab, then click points along the middle of the curve; it ends at the last one"},
+	      {"Alt", "Hold it while clicking: the direction jumps in steps of 15 degrees, or to the angle of a switch to a straight track nearby"},
+	      {"0 1 2 3", "After the first point: type a number and press Enter, and the next straight piece is that many metres long"},
+	      {"wheel", "The wheel alone zooms, as everywhere"}},
+	     {{first_step::bend, "Lay a track that turns"}, {first_step::trace, "Press Tab to copy a curve from the photo"}},
 	     trial::lay},
-	    {"Correcting a curve",
+	    {"Radius of the curves at the bends",
 	     nullptr,
-	     {{"G", "The plan tool: a click on a curve shows its design, the vertex and the radius to drag in the view"},
-	      {"LMB + move", "In the panel, the band of the curvature: drag the plateau of the arc up or down for its radius"},
-	      {"LMB + move", "Drag a ramp sideways: the transition curve gets longer or shorter"},
-	      {"wheel", "Over the band: the radius by 5%, a transition by 5 m"},
-	      {"LMB", "Apply to the scenery: the tracks are laid by the design"}},
-	     {{first_step::plan, "Open the plan of a curve"}, {first_step::plan_band, "Change the curve in the band"}, {first_step::plan_apply, "Apply it to the scenery"}},
-	     trial::plan,
-	     tutorial_curve_sketch},
+	     {{"LMB", "Where the line turns, two straight pieces meet at a corner no train could take, so the editor rounds it off with a curve"},
+	      {"R", "The radius tells how big the curve is, in metres: the bigger it is, the gentler the curve and the faster a train can go round it"},
+	      {"R", "The editor picks the biggest curve that fits between your points. A slight turn gets only a gentle easing in and out; a sharper one gets a real curve, eased in and out, with the outer rail raised, as the railway rules say"},
+	      {"LMB", "Points too close together leave little room, so the curve comes out smaller. When it no longer meets the rules, its label turns orange: click the points further apart"},
+	      {"R L h", "The label of a curve: R is the radius, L the length of the easing into it, h how much higher the outer rail is, in millimetres. A slight turn with no real curve reads 2xL"}},
+	     {{first_step::bend, "Lay a track that turns and read the label of its curve"}},
+	     trial::lay,
+	     tutorial_corner_sketch},
+	    {"Correcting a curve",
+	     "plan",
+	     {{"G", "Turns Plan on. Click a curve to see how it is built; its corner point and its size can be dragged in the view"},
+	      {"LMB + move", "The strip in the panel shows how much the track turns along the way. Drag a flat part of it up or down to change how sharp that curve is"},
+	      {"LMB + move", "Drag a sloping part sideways: the easing into the curve gets longer or shorter"},
+	      {"wheel", "Over the strip, the wheel changes it in small steps"},
+	      {"LMB", "Apply to the scenery: the tracks are laid again as the plan shows"}},
+	     {{first_step::plan, "Open the plan of a curve"}, {first_step::plan_band, "Change the curve on the strip"}, {first_step::plan_apply, "Apply the change"}},
+	     trial::plan},
 	    {"Joining tracks",
 	     "join",
-	     {{"LMB + move", "Press on a free end (a magenta ring) and drag: a new track goes out of it"},
-	      {"LMB", "Let go on another free end: a curve joins the two tracks"},
-	      {"Ctrl + wheel", "While over the other end: the radius of the joining curve"},
-	      {"Shift + wheel", "While over the other end: another way to join"}},
-	     {{first_step::join, "Join two free ends"}},
+	     {{"LMB + move", "Press on the loose end of a track (a pink ring while laying) and drag: a new track comes out of it"},
+	      {"LMB", "Let go on another loose end: a curve joins the two tracks"},
+	      {"LMB", "While laying, a click on a loose end joins your track to it exactly, with no gap"},
+	      {"Ctrl + wheel", "Over the other end: makes the joining curve bigger or smaller"},
+	      {"Shift + wheel", "Over the other end: tries another way of joining"}},
+	     {{first_step::join, "Join two loose ends"}, {first_step::wheel, "Change the size of the joining curve with Ctrl+wheel"}},
 	     trial::lay},
 	    {"Switches",
 	     "switch",
-	     {{"T", "The switch tool; at the top: what to place"},
-	      {"LMB", "Click a track: the switch goes into it"},
-	      {"LMB + move", "Press on it and drag: along the direction, sideways the side"},
-	      {"LMB + move", "Connection: drag from a straight onto the other track"},
+	     {{"T", "Turns Switch on. The tiles at the top choose what you put in: a switch, a slip switch or a crossing"},
+	      {"LMB", "Click the track the switch should go into"},
+	      {"LMB + move", "Press on it and drag: along the track sets which way the switch points, sideways which side it branches off to; let go to lay it"},
+	      {"LMB + move", "Drag from a straight track onto the track beside it: two switches joining them (a crossover). Over a crossover going the other way you get a double or a scissors one"},
+	      {"LMB + move", "Drag from a straight across several tracks running alongside and let go on the farthest: a row of switches leading onto each of them (a switch ladder)"},
 	      {"Esc", "Back to selecting"}},
 	     {{first_step::turnout, "Put a switch into a track"}},
 	     trial::turnout},
+	    {"Switch templates",
+	     nullptr,
+	     {{"T", "In Switch, the Template editor... button: ready switch shapes and your own. Point at a number to see on the drawing what it means"},
+	      {"LMB", "To copy a switch from the aerial photo: Click off the view..., then click where the switch starts, the end of its straight track, the end of its branching track and one point further along that branch"},
+	      {"LMB", "Then at least 3 points along the branching track: its shape and size follow them"},
+	      {"Backspace", "Removes the last point; Esc stops clicking"},
+	      {"O", "The view from above; the aerial photo is turned on in the Layers panel"},
+	      {"LMB", "Make the template: the new switch lies on the photo where it was clicked and changes as its numbers change"}},
+	     {{first_step::template_open, "Open the template editor"}, {first_step::template_clicked, "Make a template by clicking in the view"}},
+	     trial::turnout,
+	     tutorial_template_sketch},
 	    {"Signals and posts",
 	     nullptr,
-	     {{"H", "The signals tool: the type of the signal in the panel, from the templates of the scenery"},
-	      {"LMB", "A click by a track places the signal on that side"},
-	      {"LMB + move", "Press by the track and drag along it: the trains running that way see the signal"},
-	      {"LMB + move", "Drag a standing signal: it moves along its track"},
-	      {"B", "Objects along the track: the hectometre posts and the W17 markers of a whole line at once, and trainsets"}},
-	     {{first_step::signal, "Place a signal"}, {first_step::posts, "Place the hectometre posts of a line"}},
+	     {{"I", "Turns Signals on. Click a kind of signal in its list; it shows the signals this scenery has"},
+	      {"LMB", "Click beside a track: the signal stands on that side"},
+	      {"LMB + move", "Press beside the track and drag along it: the signal faces the trains going the way you dragged"},
+	      {"LMB + move", "Drag a signal that already stands: it slides along its track"},
+	      {"X", "Turns Kilometrage on. Click a track where you know the km, by a post or a station: the posts every 100 m and the block signals are numbered after it"},
+	      {"B", "Things beside the track: posts every 100 m along a whole line at once, the W17 signs by the switches (how far a wagon may stand) and trains. The posts take their numbers from the km set with X, or from the km you type in their panel for the place you clicked"}},
+	     {{first_step::signal, "Put up a signal"}, {first_step::posts, "Put up the posts along a line"}},
 	     trial::signals,
 	     tutorial_signal_sketch},
+	    {"A whole line, step by step",
+	     nullptr,
+	     {{"1", "Lay the tracks of the line (L), and the switches (T) where the stations are"},
+	      {"2", "Kilometrage (X): click a track where you know the km, by a post or at a station. One point is enough: the posts, the stations and the block signals count from it"},
+	      {"3", "Station (under More): click a switch of the station, then give its name, its code and the number of the line"},
+	      {"4", "Station signals (under More): Set the signals puts up the entry, exit and shunting signals of the whole station at once"},
+	      {"5", "Line block (under More): the block signals on the line out of each station, once the stations are set"},
+	      {"6", "Posts (B): click the line, then Place the posts, every 100 m along all of it"},
+	      {"7", "Save with Ctrl+S, put a train on the track and drive: the last lesson"}},
+	     {},
+	     trial::station},
 	    {"Selecting and fixing",
 	     "edit",
-	     {{"Esc", "The select tool"},
-	      {"LMB", "Click a track: it is selected, with its points"},
-	      {"LMB + move", "Drag a point: the end or the curve follows"},
-	      {"Q W E", "Move, turn or scale with the gizmo"},
-	      {"Gizmo", "Tool options, Gizmo, Off: the track won't move by chance"},
-	      {"RMB", "A click on a track: what can be done with it"},
-	      {"Del", "Deletes the selected"},
-	      {"Ctrl + Z", "Takes the last change back; Ctrl+Y brings it back again"}},
-	     {{first_step::select, "Select a track"}, {first_step::undo, "Take a change back"}},
+	     {{"Esc", "Turns selecting on"},
+	      {"LMB", "Click a track to select it; its ends show"},
+	      {"LMB + move", "Drag an end: where tracks meet, the ones beside follow; a loose end pulls out a new track, or with Ctrl moves by itself"},
+	      {"RMB", "Click a track: a menu of what can be done with it"},
+	      {"Del", "Deletes what is selected"},
+	      {"Ctrl + Z", "Undoes the last change; Ctrl+Y brings it back"},
+	      {"Q W E", "Handles on the track to move, turn, lengthen or bend it: the next lesson"}},
+	     {{first_step::select, "Select a track"}, {first_step::undo, "Undo a change"}},
+	     trial::select},
+	    {"Editing with the gizmo",
+	     "gizmo",
+	     {{"Q", "Shows arrows on the selected track: drag one to move the track"},
+	      {"W", "Shows rings: drag one to turn the track, to tilt it up or down, or to raise one rail; the tracks joined to it follow"},
+	      {"E", "Shows handles that make the track longer at its loose end; a curve stays as sharp as it was"},
+	      {"LMB + move", "With the handles out there are also points that bend the track: drag one and the track bends after it"},
+	      {"LMB", "Click a point of the track to put the handles there: Q then moves that point only, W turns the whole track around it"},
+	      {"Ctrl", "Hold it while dragging to move in even steps"},
+	      {"Esc", "Lets go of the point; the arrow button above the view hides the handles again"}},
+	     {{first_step::gizmo, "Show the handles with Q, W or E"}, {first_step::vector, "Bend a track by one of its points, or move it with the handles"}},
 	     trial::select},
 	    {"The grade line",
 	     nullptr,
-	     {{"P", "The profile tool: a click on a track opens the grade line of its whole line in the strip below"},
-	      {"Shift + LMB", "A click adds a track, a box from the empty ground takes the tracks in it: the route runs between the outermost of them"},
-	      {"LMB + move", "Drag a point of the grade line: the grades on both sides of it follow"},
-	      {"LMB LMB", "A double click on the line adds a point"},
+	     {{"P", "Turns Profile on. Click a track: below the view you see how its whole line goes up and down"},
+	      {"Shift + LMB", "A click adds another track; a box drawn from empty ground takes the tracks inside it. The route runs between the outermost of them, through the switches"},
+	      {"LMB + move", "Drag a point of the line: the slopes on both sides of it change with it"},
+	      {"LMB LMB", "Double-click the line to add a point"},
 	      {"Del", "Removes the chosen point"},
-	      {"Ctrl + wheel", "Over the plot: the heights stretched, the grades seen better"},
-	      {"RMB + move", "Over the plot: the view moves along the line"}},
-	     {{first_step::profile, "Open the grade line of a track"}, {first_step::profile_point, "Move or add a point"}, {first_step::profile_apply, "Apply it: the tracks take its heights"}},
+	      {"LMB", "Tracks running side by side share one line: change it, press Apply to the scenery, and the tracks beside it (blue) change too"},
+	      {"LMB", "To give the route open in Profile a line of its own, press Take off the common grade line"},
+	      {"Ctrl + wheel", "Over the chart: stretches it up and down, so the slopes are easier to see"},
+	      {"RMB + move", "Over the chart: moves along the line"}},
+	     {{first_step::profile, "Open the profile of a track"}, {first_step::profile_point, "Move or add a point"}, {first_step::profile_apply, "Apply it: the tracks take the new heights"}},
 	     trial::profile,
 	     tutorial_route_sketch},
 	    {"Terrain from the terrain model",
 	     nullptr,
-	     {{"F5", "The Terrain field of work: the terrain model (NMT) is in its tool options"},
-	      {"1", "Location: where the scenery lies in PUWG 1992; a scenery begun from nothing asks for it with its first track"},
-	      {"2", "What gives way: the tracks go onto the terrain, or the terrain is drawn to the tracks"},
-	      {"3", "Load: the model comes from geoportal.gov.pl, the terrain is made along the tracks with the formation and the slopes"},
-	      {"Ctrl + Z", "Takes the changes of the tracks back"}},
-	     {{first_step::terrain, "Open the Terrain field of work"}, {first_step::nmt, "Load terrain from the model"}},
+	     {{"L", "In a new, empty scenery the first L asks whether you want the real ground of the place or a flat plane"},
+	      {"F5", "Opens Terrain; the real ground (the terrain model) is in its panel"},
+	      {"LMB", "Step 1, Location: show where the scenery is, with a click on the map or by typing the place"},
+	      {"LMB", "Step 2, before there are tracks: Load around the camera brings the ground of that spot from geoportal.gov.pl"},
+	      {"LMB", "Step 2, once there are tracks: Tracks onto the terrain puts the tracks not fitted yet onto the real ground; Terrain under the tracks brings the ground up or down to them; The terrain of the model only loads the ground along them and leaves the tracks alone"},
+	      {"F3", "The terrain to some of the tracks only: select them (F3), Terrain in the inspector"},
+	      {"LMB", "A new track partly under the ground: the message above the view has Fit the ground to the track; one click builds the bank or the cutting along it"},
+	      {"", "A line you shaped by hand in Profile stays as it is, even when all the tracks are fitted anew, unless you tick that the ones edited by hand go too"},
+	      {"", "Tracks close side by side (under 5.1 m apart) get one common line of heights; a track crossing others where the ground is low on both sides goes under them"},
+	      {"Ctrl + Z", "Takes the changes back"}},
+	     {{first_step::terrain, "Open Terrain (F5)"}, {first_step::nmt, "Load the real ground"}},
 	     trial::terrain,
 	     tutorial_terrain_sketch},
 	    {"Sceneries made before",
 	     nullptr,
-	     {{"LMB", "A track of an include or of a file that isn't saved: the inspector says why it can't be changed"},
-	      {"T", "Switches laid before keep their shape; Replace the geometry with the template, under More settings of the switch, gives them the one of the catalogue"},
-	      {"P", "Grade lines kept by an older editor are read as they were kept"},
-	      {"Ctrl + S", "Only what changed is written: the other lines stay as they were, the comment lines of other tools too"}},
+	     {{"LMB", "Some tracks can't be changed, for example ones put in from a ready .inc file or lying on a locked layer: the Inspector says why"},
+	      {"T", "Switches laid earlier keep their shape; a template picked for one in the Inspector gives it the ready shape"},
+	      {"P", "Heights saved by an older editor are read as they were saved"},
+	      {"Ctrl + S", "Saving writes only what was changed; the rest of the files stays as it was"}},
 	     {},
-	     trial::none},
+	     trial::reading},
 	    {"Saving and driving",
 	     nullptr,
 	     {{"Ctrl + S", "Saves the scenery"},
-	      {"LMB", "Trainset tool: a click on the track where the train stands"},
-	      {"LMB LMB", "A double click on a vehicle of the list puts it into the train; a click on a vehicle of the train moves it, turns it or takes it out"},
-	      {"LMB", "Place and drive: the train goes onto the track and the cab is yours"}},
+	      {"LMB", "The trainset tool (the button below): click the track where the train should stand"},
+	      {"LMB LMB", "Double-click a vehicle in the list to add it to the train; click a vehicle in the train to move it, turn it round or take it out"},
+	      {"LMB", "Place and drive: the train stands on the track and you sit in the cab"}},
 	     {{first_step::save, "Save the scenery"}, {first_step::drive, "Drive on the new track"}},
 	     trial::trainset,
 	     tutorial_trainset_sketch},
 	};
-	auto const done = [&](lesson const &Lesson) {
-		return false == Lesson.goals.empty() && std::all_of(Lesson.goals.begin(), Lesson.goals.end(), [&](goal const &Goal) { return m_first_steps_done[static_cast<std::size_t>(Goal.step)]; });
+	return lessons;
+}
+
+bool editor_mode::tutorial_done(tutorial_lesson const &Lesson) const
+{
+	return false == Lesson.goals.empty() && std::ranges::all_of(Lesson.goals, [this](tutorial_lesson::goal const &Goal) { return m_first_steps_done[static_cast<std::size_t>(Goal.step)]; });
+}
+
+void editor_mode::note_first_steps()
+{
+	if (ui()->mode() == nodebank_panel::TRACK)
+		first_step_done(first_step::tracks);
+	if (m_lay.active)
+		first_step_done(first_step::lay);
+	if (ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::path && selected_track() != nullptr)
+		first_step_done(first_step::select);
+	if (current_work_area() == work_area::terrain)
+		first_step_done(first_step::terrain);
+	if (ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::route && false == m_route.chain.tracks.empty())
+		first_step_done(first_step::plan);
+	if (ui()->mode() == nodebank_panel::TRACK && m_track_gizmo_on)
+		first_step_done(first_step::gizmo);
+	if (m_track_gizmo_using || (m_point_drag.moved && m_track_point.valid() && false == editor_track::is_end(m_track_point.kind)))
+		first_step_done(first_step::vector);
+	if (m_ride.active())
+		first_step_done(first_step::ride);
+}
+
+char const *editor_mode::tutorial_of_tool()
+{
+	auto const &lessons{tutorial_lessons()};
+	// the first of the lessons named whose steps aren't all reached yet
+	auto const undone = [&](std::initializer_list<char const *> const Titles) {
+		for (auto const *title : Titles)
+			if (auto const found{std::ranges::find_if(lessons, [title](tutorial_lesson const &Lesson) { return std::string_view{title} == Lesson.title; })};
+			    found != lessons.end() && false == tutorial_done(*found))
+				return title;
+		return "";
 	};
+	if (m_lay.active)
+		return undone({"Laying track", "Radius of the curves at the bends", "Curves", "Joining tracks"});
+	if (current_work_area() == work_area::terrain)
+		return undone({"Terrain from the terrain model"});
+	if (ui()->mode() != nodebank_panel::TRACK)
+		return "";
+	switch (m_track_tab)
+	{
+	case track_tab::turnout:
+		return undone({m_switch_designer.open ? "Switch templates" : "Switches"});
+	case track_tab::profile:
+		return undone({"The grade line"});
+	case track_tab::route:
+	case track_tab::straights:
+		return undone({"Correcting a curve"});
+	case track_tab::signals:
+	case track_tab::kilometrage:
+		return undone({"Signals and posts"});
+	case track_tab::station:
+	case track_tab::station_signals:
+	case track_tab::line_block:
+		return undone({"A whole line, step by step"});
+	default:
+		return "";
+	}
+}
+
+void editor_mode::follow_tutorial()
+{
+	auto const &lessons{tutorial_lessons()};
+	auto const open_lesson = [&](std::string_view const Title) {
+		if (auto const found{std::ranges::find_if(lessons, [Title](tutorial_lesson const &Lesson) { return Title == Lesson.title; })}; found != lessons.end())
+			m_tutorial_page = static_cast<int>(found - lessons.begin());
+	};
+	// the lesson of what's being done now, the next one once its steps are reached; opened when that changes, so a page turned by
+	// hand stays
+	if (auto const *followed{tutorial_of_tool()}; m_tutorial_followed != followed)
+	{
+		m_tutorial_followed = followed;
+		open_lesson(followed);
+	}
+	if (m_tutorial_goto != nullptr)
+	{
+		open_lesson(m_tutorial_goto);
+		m_tutorial_goto = nullptr;
+	}
 	m_tutorial_page = std::clamp(m_tutorial_page, 0, static_cast<int>(lessons.size()) - 1);
 	auto const &lesson{lessons[m_tutorial_page]};
 	if (lesson.clip == nullptr)
@@ -5636,181 +6743,206 @@ void editor_mode::render_first_steps()
 		m_tutorial_clip.open(path);
 		m_tutorial_since = ImGui::GetTime();
 	}
+}
+
+void editor_mode::render_first_steps()
+{
+	if (false == m_first_steps_open)
+	{
+		if (false == m_tutorial_clip.path().empty())
+			m_tutorial_clip.close();
+		return;
+	}
+	note_first_steps();
+	follow_tutorial();
+	auto const &lessons{tutorial_lessons()};
+	auto const &lesson{lessons[m_tutorial_page]};
 	auto const scale{Global.ui_scale};
-	auto const width{520.0f * scale};
 	ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
 	ImGui::SetNextWindowBgAlpha(1.0f);
 	ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f), ImVec2(FLT_MAX, ImGui::GetIO().DisplaySize.y - 60.0f));
 	keep_on_screen("###tutorial");
 	if (ImGui::Begin((std::string(STR_C("Tutorial")) + "###tutorial").c_str(), &m_first_steps_open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize))
 	{
+		// floating it's as wide as the clips; docked it takes the width of its dock, the texts wrapped to it
+		auto const width{ImGui::IsWindowDocked() ? std::max(160.0f * scale, ImGui::GetContentRegionAvail().x) : 520.0f * scale};
 		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + width);
 		ImGui::TextDisabled(STR_C("Lesson %d of %d"), m_tutorial_page + 1, static_cast<int>(lessons.size()));
 		ImGui::SameLine();
 		ImGui::TextColored(ImVec4(0.55f, 0.8f, 1.0f, 1.0f), "%s", STR_C(lesson.title));
-		if (lesson.clip != nullptr && false == m_tutorial_clip.missing())
-		{
-			auto const height{width * 320.0f / 520.0f};
-			if (auto const texture{m_tutorial_clip.texture(ImGui::GetTime() - m_tutorial_since)}; texture != 0)
-			{
-				ImGui::Image(static_cast<ImTextureID>(texture), ImVec2(width, width * m_tutorial_clip.height() / std::max(1, m_tutorial_clip.width())));
-				if (ImGui::IsItemClicked())
-					m_tutorial_since = ImGui::GetTime();
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s", STR_C("Click: play it from the start"));
-			}
-			else
-			{
-				auto const at{ImGui::GetCursorScreenPos()};
-				ImGui::GetWindowDrawList()->AddRectFilled(at, ImVec2(at.x + width, at.y + height), ImGui::GetColorU32(ImGuiCol_FrameBg));
-				ImGui::Dummy(ImVec2(width, height));
-			}
-		}
-		if (lesson.sketch != nullptr)
-		{
-			auto const at{ImGui::GetCursorScreenPos()};
-			ImVec2 const end{at.x + width, at.y + std::round(width * 0.36f)};
-			auto *list{ImGui::GetWindowDrawList()};
-			list->AddRectFilled(at, end, ImGui::GetColorU32(ImGuiCol_FrameBg), 4.0f);
-			list->PushClipRect(at, end, true);
-			lesson.sketch(*list, at, end, ImGui::GetTime());
-			list->PopClipRect();
-			ImGui::Dummy(ImVec2(width, end.y - at.y));
-		}
-		ImGui::SeparatorText(STR_C("Mouse and keys"));
-		for (auto const &entry : lesson.inputs)
-			tutorial_input(entry.keys, entry.text, 150.0f * scale);
-		if (false == lesson.goals.empty())
-			ImGui::SeparatorText(STR_C("Try it"));
-		for (auto const &entry : lesson.goals)
-		{
-			bool const reached{m_first_steps_done[static_cast<std::size_t>(entry.step)]};
-			ImGui::TextColored(reached ? ImVec4(0.4f, 0.9f, 0.4f, 1.0f) : ImGui::GetStyleColorVec4(ImGuiCol_Text), "%s", reached ? "[x]" : "[ ]");
-			ImGui::SameLine();
-			if (reached)
-				ImGui::TextDisabled("%s", STR_C(entry.text));
-			else
-				ImGui::TextWrapped("%s", STR_C(entry.text));
-		}
-		if (m_tutorial_page == 1 && ui()->mode() == nodebank_panel::TRACK && false == GfxRenderer->Mouse_Hit())
-			ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.2f, 1.0f), "%s", STR_C("No ground under the cursor: track goes onto the level 0 plane, drawn as a grid. Terrain: F5"));
-		switch (lesson.action)
-		{
-		case trial::top:
-			if (ImGui::Button(Global.EditorOrtho ? STR_C("3D view (O)") : STR_C("Top view, orthographic (O)")))
-				toggle_ortho();
-			break;
-		case trial::profile:
-		{
-			auto const on{ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::profile};
-			ImGui::BeginDisabled(on);
-			if (ImGui::Button(STR_C("The profile tool (P)")))
-			{
-				choose_work_area(work_area::tracks);
-				show_track_tab(track_tab::profile);
-			}
-			ImGui::EndDisabled();
-			break;
-		}
-		case trial::signals:
-		{
-			ImGui::BeginDisabled(ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::signals);
-			if (ImGui::Button(STR_C("The signals tool (H)")))
-			{
-				choose_work_area(work_area::tracks);
-				show_track_tab(track_tab::signals);
-			}
-			ImGui::EndDisabled();
-			break;
-		}
-		case trial::trainset:
-		{
-			ImGui::BeginDisabled(ui()->mode() == nodebank_panel::TRACK && m_track_tab == track_tab::lineside && m_vehicle.open);
-			if (ImGui::Button(STR_C("The trainset tool")))
-			{
-				choose_work_area(work_area::tracks);
-				show_track_tab(track_tab::lineside);
-				m_vehicle.expand = true;
-			}
-			ImGui::EndDisabled();
-			break;
-		}
-		case trial::plan:
-		{
-			ImGui::BeginDisabled(ui()->mode() == nodebank_panel::TRACK && (m_track_tab == track_tab::route || m_track_tab == track_tab::straights));
-			if (ImGui::Button(STR_C("The plan tool (G)")))
-			{
-				choose_work_area(work_area::tracks);
-				show_track_tab(track_tab::straights);
-			}
-			ImGui::EndDisabled();
-			break;
-		}
-		case trial::terrain:
-		{
-			ImGui::BeginDisabled(current_work_area() == work_area::terrain);
-			if (ImGui::Button(STR_C("Terrain (F5)")))
-				choose_work_area(work_area::terrain);
-			ImGui::EndDisabled();
-			break;
-		}
-		case trial::lay:
-		case trial::turnout:
-		case trial::select:
-		{
-			auto const tab{lesson.action == trial::lay ? track_tab::lay : lesson.action == trial::turnout ? track_tab::turnout : track_tab::path};
-			auto const on{ui()->mode() == nodebank_panel::TRACK && m_track_tab == tab};
-			ImGui::BeginDisabled(on);
-			if (ImGui::Button(lesson.action == trial::lay ? STR_C("Lay track (L)") : lesson.action == trial::turnout ? STR_C("The switch tool (T)") : STR_C("The select tool (Esc)")))
-			{
-				choose_work_area(work_area::tracks);
-				show_track_tab(tab);
-			}
-			ImGui::EndDisabled();
-			break;
-		}
-		default: break;
-		}
+		render_tutorial_media(lesson, width);
+		render_tutorial_goals(lesson);
+		render_tutorial_trial(lesson);
 		ImGui::PopTextWrapPos();
 		ImGui::Separator();
-		ImGui::BeginDisabled(m_tutorial_page == 0);
-		if (ImGui::Button(STR_C("< Back")))
-			--m_tutorial_page;
-		ImGui::EndDisabled();
-		ImGui::SameLine();
-		auto const dot{ImGui::GetFrameHeight()};
-		for (int index = 0; index < static_cast<int>(lessons.size()); ++index)
-		{
-			ImGui::PushID(index);
-			auto const at{ImGui::GetCursorScreenPos()};
-			if (ImGui::InvisibleButton("##lesson", ImVec2(dot * 0.8f, dot)))
-				m_tutorial_page = index;
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("%s", STR_C(lessons[index].title));
-			ImVec2 const centre{at.x + dot * 0.4f, at.y + dot * 0.5f};
-			auto const colour{done(lessons[index]) ? IM_COL32(100, 230, 100, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled)};
-			if (index == m_tutorial_page)
-				ImGui::GetWindowDrawList()->AddCircle(centre, dot * 0.3f, kGestureLit, 0, 2.0f);
-			ImGui::GetWindowDrawList()->AddCircleFilled(centre, dot * 0.17f, colour);
-			ImGui::PopID();
-			ImGui::SameLine(0.0f, 0.0f);
-		}
-		ImGui::SameLine();
-		if (m_tutorial_page + 1 < static_cast<int>(lessons.size()))
-		{
-			if (ImGui::Button(STR_C("Next >")))
-				++m_tutorial_page;
-		}
-		else if (ImGui::Button(STR_C("Close")))
-			m_first_steps_open = false;
-		bool show{EditorSettings.first_steps()};
-		if (ImGui::Checkbox(STR_C("Show when the editor opens"), &show))
-		{
-			EditorSettings.first_steps(show);
-			EditorSettings.save();
-		}
+		render_tutorial_pages();
 	}
 	ImGui::End();
+}
+
+void editor_mode::render_tutorial_media(tutorial_lesson const &Lesson, float const Width)
+{
+	if (Lesson.clip != nullptr && false == m_tutorial_clip.missing())
+	{
+		// the room of a clip still loading, as the clips are recorded: 520 x 325
+		auto const height{Width * 325.0f / 520.0f};
+		if (auto const texture{m_tutorial_clip.texture(ImGui::GetTime() - m_tutorial_since)}; texture != 0)
+		{
+			auto const shown{Width * static_cast<float>(m_tutorial_clip.height()) / static_cast<float>(std::max(1, m_tutorial_clip.width()))};
+			ImGui::Image(static_cast<ImTextureID>(texture), ImVec2(Width, shown));
+			if (ImGui::IsItemClicked())
+				m_tutorial_since = ImGui::GetTime();
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("Click: play it from the start"));
+		}
+		else
+		{
+			auto const at{ImGui::GetCursorScreenPos()};
+			ImGui::GetWindowDrawList()->AddRectFilled(at, ImVec2(at.x + Width, at.y + height), ImGui::GetColorU32(ImGuiCol_FrameBg));
+			ImGui::Dummy(ImVec2(Width, height));
+		}
+	}
+	if (Lesson.sketch != nullptr)
+	{
+		auto const at{ImGui::GetCursorScreenPos()};
+		ImVec2 const end{at.x + Width, at.y + std::round(Width * 0.36f)};
+		auto *list{ImGui::GetWindowDrawList()};
+		list->AddRectFilled(at, end, ImGui::GetColorU32(ImGuiCol_FrameBg), 4.0f);
+		list->PushClipRect(at, end, true);
+		Lesson.sketch(*list, at, end, ImGui::GetTime());
+		list->PopClipRect();
+		ImGui::Dummy(ImVec2(Width, end.y - at.y));
+	}
+}
+
+void editor_mode::render_tutorial_goals(tutorial_lesson const &Lesson)
+{
+	ImGui::SeparatorText(STR_C("Mouse and keys"));
+	for (auto const &entry : Lesson.inputs)
+		tutorial_input(entry.keys, entry.text, 150.0f * Global.ui_scale);
+	if (false == Lesson.goals.empty())
+		ImGui::SeparatorText(STR_C("Try it"));
+	for (auto const &entry : Lesson.goals)
+	{
+		bool const reached{m_first_steps_done[static_cast<std::size_t>(entry.step)]};
+		ImGui::TextColored(reached ? ImVec4(0.4f, 0.9f, 0.4f, 1.0f) : ImGui::GetStyleColorVec4(ImGuiCol_Text), "%s", reached ? "[x]" : "[ ]");
+		ImGui::SameLine();
+		if (reached)
+			ImGui::TextDisabled("%s", STR_C(entry.text));
+		else
+			ImGui::TextWrapped("%s", STR_C(entry.text));
+	}
+	if (Lesson.action == tutorial_lesson::trial::lay && ui()->mode() == nodebank_panel::TRACK && false == GfxRenderer->Mouse_Hit())
+		ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.2f, 1.0f), "%s", STR_C("There is no ground under the mouse: the track will lie flat at height 0. Real ground: F5"));
+}
+
+void editor_mode::render_tutorial_trial(tutorial_lesson const &Lesson)
+{
+	using trial = tutorial_lesson::trial;
+	if (Lesson.action == trial::top)
+	{
+		if (ImGui::Button(Global.EditorOrtho ? STR_C("3D view (O)") : STR_C("Top view, orthographic (O)")))
+			toggle_ortho();
+		return;
+	}
+	if (Lesson.action == trial::terrain)
+	{
+		ImGui::BeginDisabled(current_work_area() == work_area::terrain);
+		if (ImGui::Button(STR_C("Terrain (F5)")))
+			choose_work_area(work_area::terrain);
+		ImGui::EndDisabled();
+		return;
+	}
+	// a tool of Tracks: the tab its button opens, and the one beside it which counts as that tool open as well
+	struct tool_button
+	{
+		char const *label;
+		track_tab tab;
+		track_tab also;
+	};
+	tool_button button{};
+	switch (Lesson.action)
+	{
+	case trial::lay:
+		button = {STR_C("Lay track (L)"), track_tab::lay, track_tab::lay};
+		break;
+	case trial::turnout:
+		button = {STR_C("The switch tool (T)"), track_tab::turnout, track_tab::turnout};
+		break;
+	case trial::select:
+		button = {STR_C("The select tool (Esc)"), track_tab::path, track_tab::path};
+		break;
+	case trial::profile:
+		button = {STR_C("The profile tool (P)"), track_tab::profile, track_tab::profile};
+		break;
+	case trial::signals:
+		button = {STR_C("The signals tool (I)"), track_tab::signals, track_tab::signals};
+		break;
+	case trial::station:
+		button = {STR_C("The station tool"), track_tab::station, track_tab::station_signals};
+		break;
+	case trial::plan:
+		button = {STR_C("The plan tool (G)"), track_tab::straights, track_tab::route};
+		break;
+	case trial::trainset:
+		button = {STR_C("The trainset tool"), track_tab::lineside, track_tab::lineside};
+		break;
+	default:
+		return;
+	}
+	// the trainset tool is open only with its part of the tab expanded
+	auto const in_use{ui()->mode() == nodebank_panel::TRACK && (m_track_tab == button.tab || m_track_tab == button.also) && (Lesson.action != trial::trainset || m_vehicle.tab().open)};
+	ImGui::BeginDisabled(in_use);
+	if (ImGui::Button(button.label))
+	{
+		choose_work_area(work_area::tracks);
+		show_track_tab(button.tab);
+		if (Lesson.action == trial::trainset)
+			m_vehicle.tab().expand = true;
+	}
+	ImGui::EndDisabled();
+}
+
+void editor_mode::render_tutorial_pages()
+{
+	auto const &lessons{tutorial_lessons()};
+	auto const count{static_cast<int>(lessons.size())};
+	ImGui::BeginDisabled(m_tutorial_page == 0);
+	if (ImGui::Button(STR_C("< Back")))
+		--m_tutorial_page;
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	auto const dot{ImGui::GetFrameHeight()};
+	for (int index = 0; index < count; ++index)
+	{
+		ImGui::PushID(index);
+		auto const at{ImGui::GetCursorScreenPos()};
+		if (ImGui::InvisibleButton("##lesson", ImVec2(dot * 0.8f, dot)))
+			m_tutorial_page = index;
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C(lessons[index].title));
+		ImVec2 const centre{at.x + dot * 0.4f, at.y + dot * 0.5f};
+		auto const colour{tutorial_done(lessons[index]) ? IM_COL32(100, 230, 100, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled)};
+		if (index == m_tutorial_page)
+			ImGui::GetWindowDrawList()->AddCircle(centre, dot * 0.3f, kGestureLit, 0, 2.0f);
+		ImGui::GetWindowDrawList()->AddCircleFilled(centre, dot * 0.17f, colour);
+		ImGui::PopID();
+		ImGui::SameLine(0.0f, 0.0f);
+	}
+	ImGui::SameLine();
+	if (m_tutorial_page + 1 < count)
+	{
+		if (ImGui::Button(STR_C("Next >")))
+			++m_tutorial_page;
+	}
+	else if (ImGui::Button(STR_C("Close")))
+		m_first_steps_open = false;
+	bool show{EditorSettings.first_steps()};
+	if (ImGui::Checkbox(STR_C("Show when the editor opens"), &show))
+	{
+		EditorSettings.first_steps(show);
+		EditorSettings.save();
+	}
 }
 
 void editor_mode::render_shortcuts_window()
@@ -5846,11 +6978,18 @@ void editor_mode::render_shortcuts_window()
 	      {"F", "Fly to the selected"},
 	      {"O", "Top view, orthographic"},
 	      {"F7", "Wireframe on / off"}}},
+	    {"Ride along the track",
+	     {{"Y", "Ride along the track under the cursor, the tools working on; Y again leaves"},
+	      {"RMB held, W / S", "Drive; Shift faster, Ctrl+W / Ctrl+Down much faster"},
+	      {"RMB held, A / D", "Next track on the left / right"},
+	      {"Z", "The way at the next switch (it isn't thrown)"},
+	      {"RMB held, E / Q; wheel", "Higher / lower"},
+	      {"Ctrl+M", "Minimap, stations by their W4"}}},
 	    {"Gizmo",
-	     {{"Q / W / E", "Translate / rotate / scale"},
+	     {{"Q / W / E", "Translate / rotate / scale; in the tracks they bring the hidden gizmo out"},
 	      {"R", "Local space"},
 	      {"Ctrl held while dragging", "Snap to the step set in the gizmo settings"},
-	      {"Tool options, Gizmo, Off", "Hides the gizmo, so nothing moves by chance"}}},
+	      {"Tool options, Gizmo, Off", "Hides the gizmo, so nothing moves by chance; in the tracks it is hidden until Q, W or E"}}},
 	    {"Surroundings",
 	     {{"1 2 3 4 5", "Select, insert, brush, area fill, copy to bank"},
 	      {"LMB", "Select a model, or place one in the insert and brush modes"},
@@ -5865,22 +7004,25 @@ void editor_mode::render_shortcuts_window()
 	    {"Tracks",
 	     {{"Esc", "Select tool; cancels what's going on first"},
 	      {"L / T / U", "Lay track / switch / turntable"},
+	      {"H", "Throw the selected switch over to its other path, in the editor only"},
 	      {"G (C)", "Plan: a straight, its ends and the middle; a curve, its vertex and radius"},
-	      {"H / B", "Signals / objects along the track"},
+	      {"I / X / B", "Signals / kilometrage / posts along the track"},
 	      {"P / V / J", "Profile / speed / joints"},
 	      {"Ctrl+F", "Find a track by its name"},
 	      {"Shift+LMB", "Add a track to the selection, drag: a box"},
 	      {"RMB on a track", "What can be done with it"},
-	      {"K", "Split the selected track at the cursor"},
-	      {"L, LMB, LMB...", "Lay track: each click lays a piece and goes on from its end"},
-	      {"Drag from a free end", "Lead a track out of it; onto another free end: join the two"},
-	      {"Ctrl+wheel", "Laying: radius"},
-	      {"Shift+wheel", "Laying: arc then straight, straight then arc, arc, straight; at a free end: another way to join"},
-	      {"0-9 while laying", "Type the length (or the radius) of the next piece, Enter lays it"},
+	      {"K", "Split the selected track at the cursor, a break of the grade at the height of the ground"},
+	      {"L, LMB, LMB...", "Lay track: each click a bend of the straights, eased with a large curve; Enter lays them; a click on a free end goes on from it"},
+	      {"Tab while laying", "The points clicked next go along the middle of a curve seen on the photo, which ends at the last one; Tab again: back to the bends"},
+	      {"Drag from a free end", "Lead a track out of it: a straight, an arc and a straight where a curve is traced (Tab); onto another free end: join the two"},
+	      {"Ctrl+wheel", "Dragging from a free end: radius"},
+	      {"Shift+wheel", "Dragging over another free end: another way to join"},
+	      {"0-9 while laying", "Type the length of the next straight, Enter puts the point"},
 	      {"Alt held while laying", "The direction in steps of 15 degrees, or 1:9, 1:6.6... to a straight track; the first click with Alt goes onto the axis of the track"},
 	      {"N", "Parallel track: LMB on a track, then the side and the spacing"},
 	      {"Shift+LMB on a track in L", "The Parallel tool (N) with it"},
-	      {"Enter / Backspace", "Laying track: lay up to the cursor / take the last piece back"},
+	      {"Enter / Backspace", "Laying track: lay the points clicked / take back the last point"},
+	      {"Esc twice while laying", "Drop the points clicked and not laid yet"},
 	      {"Del", "Delete the selected tracks"}}},
 	    {"Plan of a curve",
 	     {{"G, LMB on a curve", "Its design: the vertex and the radius to drag in the view, the curvature in the panel"},
@@ -5938,7 +7080,7 @@ void editor_mode::render_shortcuts_window()
 			if (false == ImGui::BeginTable(entry.title, 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
 				continue;
 			ImGui::TableSetupColumn("##keys", ImGuiTableColumnFlags_WidthFixed, 250.0f * Global.ui_scale);
-			ImGui::TableSetupColumn("##action", ImGuiTableColumnFlags_WidthStretch);
+			ImGui::TableSetupColumn("##action", ImGuiTableColumnFlags_WidthStretch, 1.0f);
 			for (auto const &item : entry.shortcuts)
 			{
 				if (false == matches(item))
@@ -5968,6 +7110,11 @@ void editor_mode::render_shortcuts_window()
 	ImGui::End();
 }
 
+bool editor_mode::gizmo_shown() const
+{
+	return ui()->mode() == nodebank_panel::TRACK ? m_track_gizmo_on : m_gizmo_enabled;
+}
+
 void editor_mode::render_gizmo_options()
 {
     if (ImGui::Button(Global.EditorOrtho ? STR_C("3D view (O)") : STR_C("Top view, orthographic (O)")))
@@ -5982,29 +7129,24 @@ void editor_mode::render_gizmo_options()
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", STR_C("Wheel zooms. Hold the wheel and drag to pan."));
         ImGui::SameLine();
-        if (ImGui::Checkbox(STR_C("Ballast"), &Global.EditorOrthoBallast))
-        {
-            EditorSettings.top_ballast(Global.EditorOrthoBallast);
-            EditorSettings.save();
-        }
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("%s", STR_C("Off: the top view draws the rails and sleepers of the tracks without the ballast, so the ground under them shows"));
+        render_top_tracks_choice(true);
     }
     if (ui()->mode() == nodebank_panel::TRACK && m_track_tab != track_tab::path && m_track_tab != track_tab::turnout && m_track_tab != track_tab::turntable && m_track_tab != track_tab::signals &&
         m_track_tab != track_tab::lineside)
         return;
-    int op{m_gizmo_enabled ? static_cast<int>(m_gizmo_op) : -1};
+    auto &enabled{ui()->mode() == nodebank_panel::TRACK ? m_track_gizmo_on : m_gizmo_enabled};
+    int op{enabled ? static_cast<int>(m_gizmo_op) : -1};
     if (segmented("gizmo", op,
                   {{-1, STR_C("Off"), "The gizmo hidden: the selected things won't move by chance"},
                    {static_cast<int>(gizmo_operation::translate), STR_C("Translate (Q)"), "Arrows which move the selected thing"},
                    {static_cast<int>(gizmo_operation::rotate), STR_C("Rotate (W)"), "Rings which turn the selected thing"},
                    {static_cast<int>(gizmo_operation::scale), STR_C("Scale (E)"), "Handles which scale the selected thing; a track is lengthened"}}))
     {
-        m_gizmo_enabled = op >= 0;
-        if (m_gizmo_enabled)
+        enabled = op >= 0;
+        if (enabled)
             m_gizmo_op = static_cast<gizmo_operation>(op);
     }
-    if (!m_gizmo_enabled)
+    if (!enabled)
         return;
     if (terrain_brush() || terrain_clicking())
     {
@@ -6048,9 +7190,10 @@ void editor_mode::render_gizmo()
     }
 
     // the transform gizmo is suppressed while editing terrain, so the brush/chunk tool owns the mouse
-    if (!m_gizmo_enabled || terrain_brush() || terrain_clicking())
+    if (!gizmo_shown() || terrain_brush() || terrain_clicking())
     {
         m_gizmo_using = false;
+        m_track_gizmo_using = false;
         return;
     }
 
@@ -6138,8 +7281,12 @@ void editor_mode::render_gizmo()
         snapvalue = glm::vec3(0.1f);
     float const *snap = Global.ctrlState && snapvalue.x > 0.0f ? glm::value_ptr(snapvalue) : nullptr;
 
+    // the change of this frame alone: a turn is taken from it, not from the angles the whole matrix decomposes into,
+    // which can't tell a turn of more than 90 degrees about the vertical axis (it comes out as 180 - angle with the
+    // other two axes flipped, and the model turned back and forth while dragged one way)
+    glm::mat4 delta(1.0f);
     ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(projection),
-                         operation, mode, glm::value_ptr(matrix), nullptr, snap);
+                         operation, mode, glm::value_ptr(matrix), glm::value_ptr(delta), snap);
 
     if (ImGuizmo::IsUsing())
     {
@@ -6156,9 +7303,11 @@ void editor_mode::render_gizmo()
 
         if (operation == ImGuizmo::ROTATE && model)
         {
-            // apply the rotation delta relative to the model's current orientation
-            glm::vec3 const newangles(newrotation[0], newrotation[1], newrotation[2]);
-            auto const turned{newangles - model->Angles()};
+            // the turn of this frame, small, so its angles decompose with no ambiguity
+            float deltatranslation[3], deltarotation[3], deltascale[3];
+            ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(delta), deltatranslation, deltarotation, deltascale);
+            auto const wrapped = [](float Angle) { return Angle - 360.0f * std::floor((Angle + 180.0f) / 360.0f); };
+            glm::vec3 const turned{wrapped(deltarotation[0]), wrapped(deltarotation[1]), wrapped(deltarotation[2])};
             m_editor.rotate(model, turned, 0.0f);
             selection_follow(glm::dvec3(0.0), turned, model->location());
         }
@@ -6215,11 +7364,16 @@ void editor_mode::render_include_gizmo(glm::mat4 const &View, glm::mat4 const &P
     if (positions == 0)
         return; // nothing tells where the include is
 
-    // only the axes the template has parameters for can be manipulated
+    // only the axes the template has parameters for can be manipulated. a signal stands on the ground by its track: it is moved in
+    // the plan, at the height it has
+    // not waited for: a scan started again while a signal is selected would stop the editor for its whole length
+    if (m_include.info.category == "signal")
+        signal_scan(false);
+    auto const signal{signal_template_of(m_include.target) != nullptr};
     auto operation = 0;
     for (auto axis = 0; axis < 3; ++axis)
     {
-        if (m_gizmo_op == gizmo_operation::translate && position[axis] >= 0)
+        if (m_gizmo_op == gizmo_operation::translate && position[axis] >= 0 && false == (signal && axis == 1))
             operation |= (ImGuizmo::TRANSLATE_X << axis);
         else if (m_gizmo_op == gizmo_operation::rotate && rotation[axis] >= 0)
             operation |= (ImGuizmo::ROTATE_X << axis);
@@ -6250,8 +7404,12 @@ void editor_mode::render_include_gizmo(glm::mat4 const &View, glm::mat4 const &P
     ImGuizmo::Enable(true);
 
     if (false == ImGuizmo::IsUsing())
+    {
+        signal_gizmo_end();
         return;
+    }
     m_gizmo_using = true;
+    signal_gizmo_begin();
 
     float newtranslation[3], newrotation[3], newscale[3];
     ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(matrix), newtranslation, newrotation, newscale);
@@ -6281,6 +7439,7 @@ void editor_mode::render_include_gizmo(glm::mat4 const &View, glm::mat4 const &P
         }
     }
     apply_include();
+    signal_gizmo_step();
 }
 
 glm::mat4 editor_mode::projection_matrix(float const Aspect)
@@ -6295,10 +7454,13 @@ glm::mat4 editor_mode::projection_matrix(float const Aspect)
 
 void editor_mode::toggle_ortho()
 {
+    // the view from above isn't one from the track, the ride ends
+    m_ride.leave();
     Global.EditorOrtho = !Global.EditorOrtho;
+    // either way: a scenery made in the wizard opens seen from above already
+    first_step_done(first_step::top);
     if (Global.EditorOrtho)
     {
-        first_step_done(first_step::top);
         m_ortho_pitch = Camera.Angle.x;
         Camera.Angle.x = -M_PI_2;
         Camera.Angle.z = 0.0;
@@ -6307,6 +7469,7 @@ void editor_mode::toggle_ortho()
     {
         Camera.Angle.x = m_ortho_pitch;
         ortho_pan_stop();
+        camera_above_ground();
     }
 }
 
@@ -6318,8 +7481,11 @@ void editor_mode::ortho_pan_to(double const Horizontal, double const Vertical)
     auto const dx{Horizontal - m_ortho_pan_cursor.x};
     auto const dy{Vertical - m_ortho_pan_cursor.y};
     m_ortho_pan_cursor = {Horizontal, Vertical};
-    auto const scale{2.0 * static_cast<double>(Global.EditorOrthoExtent) / static_cast<double>(io.DisplaySize.y)};
-    auto const world{RotateY(glm::dvec3{dx * scale, 0.0, dy * scale}, static_cast<double>(Camera.Angle.y))};
+    auto const scale{Global.EditorOrtho ? 2.0 * static_cast<double>(Global.EditorOrthoExtent) / static_cast<double>(io.DisplaySize.y) : m_pan_metres};
+    // looked at from the side, a pixel up the screen is more of the ground than one across
+    auto const along{Global.EditorOrtho ? 1.0 : 1.0 / std::max(0.25, std::abs(std::sin(static_cast<double>(Camera.Angle.x))))};
+    auto const world{RotateY(glm::dvec3{dx * scale, 0.0, dy * scale * along}, static_cast<double>(Camera.Angle.y))};
+    m_ride.leave();
     Camera.Pos.x -= world.x;
     Camera.Pos.z -= world.z;
     Camera.Velocity = {};
@@ -6336,6 +7502,13 @@ void editor_mode::on_scroll(double const Xoffset, double const Yoffset)
 {
     if (false == ImGui::GetIO().WantCaptureMouse && track_wheel(Yoffset != 0.0 ? Yoffset : Xoffset))
         return;
+    // riding along the track the wheel the tools left raises and lowers the camera over the rails
+    if (m_ride.active())
+    {
+        if (false == ImGui::GetIO().WantCaptureMouse && Yoffset != 0.0)
+            m_ride.wheel(std::clamp(Yoffset, -2.0, 2.0));
+        return;
+    }
     // a swipe on a touchpad goes on after the cursor left the window, with no place for the ray under it
     if (ImGui::GetIO().WantCaptureMouse || Yoffset == 0.0 || false == ImGui::IsMousePosValid())
         return;
@@ -6363,6 +7536,9 @@ void editor_mode::on_scroll(double const Xoffset, double const Yoffset)
         // no nearer than 2 m to the point, not through it
         if (notches > 0.0)
             step = std::max(0.0, std::min(step, distance - 2.0));
+        // a point under the cursor which isn't a number, as one on a broken path, moves the camera nowhere
+        if (false == std::isfinite(step) || glm::any(glm::isnan(direction)) || glm::any(glm::isinf(direction)))
+            return;
         Camera.Pos += direction * step;
         Global.pCamera = Camera;
         return;
@@ -6387,6 +7563,12 @@ void editor_mode::update_camera(double const Deltatime)
     {
         Camera.Angle.x = -M_PI_2;
         Camera.Angle.z = 0.0;
+    }
+    // riding along the track the camera goes where the track takes it, a framing doesn't fly it off
+    if (m_ride.active())
+    {
+        m_focus_active = false;
+        m_ride.advance(Camera, Deltatime, m_input.mouse.button(GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
     }
 
     // focus animation runs after Camera.Update() so it overrides any residual velocity/rotation;
@@ -6419,8 +7601,52 @@ void editor_mode::update_camera(double const Deltatime)
     // reset window state (will be set again if UI requires it)
     Global.CabWindowOpen = false;
 
+    // a camera at no finite place, as a zoom or a framing aimed at a broken path could put it, draws nothing sane and can
+    // stall the graphics card: it goes back to where it last was
+    auto const number = [](auto const &Vector) { return false == glm::any(glm::isnan(Vector)) && false == glm::any(glm::isinf(Vector)); };
+    if (number(Camera.Pos) && number(Camera.Angle))
+    {
+        m_camera_finite_pos = Camera.Pos;
+        m_camera_finite_angle = Camera.Angle;
+        m_camera_finite = true;
+    }
+    else if (m_camera_finite)
+    {
+        WriteLog("Editor: the camera went to no finite place, back where it was", logtype::generic);
+        Camera.Pos = m_camera_finite_pos;
+        Camera.Angle = m_camera_finite_angle;
+        Camera.Velocity = glm::dvec3(0.0);
+        m_focus_active = false;
+    }
+
     // publish camera back to global copy
     Global.pCamera = Camera;
+}
+
+glm::dvec3 editor_mode::camera_look() const
+{
+    return {-std::sin(Camera.Angle.y), 0.0, -std::cos(Camera.Angle.y)};
+}
+
+void editor_mode::ride_enter()
+{
+    // the track under the cursor, else the one nearest the ground under it, else the one nearest the camera
+    auto under{track_under_cursor(nullptr, 30.0f)};
+    auto *track{under.track};
+    auto path{under.path};
+    auto point{under.point};
+    if (track == nullptr && ImGui::IsMousePosValid())
+    {
+        point = std::as_const(*this).cursor_ground();
+        track = kilometrage::track_near(point, 30.0, path);
+    }
+    if (track == nullptr)
+    {
+        point = Camera.Pos;
+        track = kilometrage::track_near(point, 200.0, path);
+    }
+    if (false == m_ride.enter(track, path, point, camera_look(), true))
+        ui()->set_status(STR_C("No track nearby"), true);
 }
 
 void editor_mode::enter()
@@ -6428,6 +7654,10 @@ void editor_mode::enter()
     m_statebackup = {Global.pCamera, FreeFlyModeFlag, Global.ControlPicking};
     // the editor changes the tracks, their sleepers are worked out as they're needed
     track_sleepers::lay_in_background(false);
+    // the editor may remove the tracks and the vehicles the recording refers to: it ends here
+    simulation::Blackbox.close();
+    // the cursor drawn into the picture is the editor's: back on when it comes back, if it was chosen
+    ui_layer::draw_cursor(m_draw_cursor);
 
     if (simulation::Region != nullptr)
     {
@@ -6497,7 +7727,8 @@ void editor_mode::enter()
             std::vector<char> found;
             auto const ground{ground_heights({glm::dvec3{0.0, 5000.0, 0.0}}, true, &found).front()};
             Camera.Pos = glm::dvec3{0.0, (found.front() != 0 ? ground : 0.0) + 60.0, 0.0};
-            Camera.Angle = glm::vec3(glm::radians(-45.0f), 0.0f, 0.0f);
+            // facing north, the top view with the north up as on a map: the yaw 0 looks along -z, to the south
+            Camera.Angle = glm::vec3(glm::radians(-45.0f), glm::pi<float>(), 0.0f);
             Camera.m_owner = nullptr;
             FreeFlyModeFlag = true;
             if (false == Global.EditorOrtho)
@@ -6516,13 +7747,18 @@ void editor_mode::enter()
     EditorModeFlag = true;
 
     load_orthophoto_settings();
+    m_orthophoto.area_paused(m_area_paused);
+    m_nmt.prefetch_paused(m_area_paused);
 
     Application.set_cursor(GLFW_CURSOR_NORMAL);
 }
 
 void editor_mode::exit()
 {
+    m_ride.leave();
     track_sleepers::lay_in_background(true);
+    // the driver's view has no menu to switch the drawn cursor off: the system one there
+    ui_layer::draw_cursor(false);
     Global.editor_tracks = false;
     EditorModeFlag = false;
     Global.ControlPicking = m_statebackup.picking;
@@ -6542,9 +7778,18 @@ void editor_mode::exit()
 
     g_redo.clear();
     m_history.clear();
-    m_fill_last.clear();
+    m_orphans.clear();
+    m_fill_undo.reset();
     m_orthophoto.cancel_pending();
     m_orthophoto.detach_scene(); // the layer is an editor aid, keep it out of the other modes
+    for (auto &layer : m_wms)
+    {
+        layer->cancel_pending();
+        layer->detach_scene();
+    }
+    // the download of the area held while the scenery is driven, it goes on once the editor is back
+    m_orthophoto.area_paused(true);
+    m_nmt.prefetch_paused(true);
     scene::Layers.show_all(); // likewise for hidden scenery layers, the other modes get the scenery as it was defined
 
     // drop selection so a stale/dangling node pointer isn't used on the next editor session
@@ -6573,15 +7818,17 @@ void editor_mode::delete_model(TAnimModel *model, bool const Joined)
         m_history.back().joined = Joined;
     WriteLog(debug, logtype::generic);
 
-    // clear history pointers referencing this model before actually deleting it
+    erase_model(model);
+}
+
+void editor_mode::erase_model(TAnimModel *model)
+{
     nullify_history_pointers(model);
     remove_from_hierarchy(model);
-
     if (m_node == model)
     {
         m_node = nullptr;
         m_dragging = false;
-        ui()->set_node(nullptr);
     }
     simulation::State.delete_model(model);
 }
@@ -6657,6 +7904,27 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
     if (!anyModifier && m_userinterface->on_key(Key, Action))
         return;
 
+    // riding along the track the keys drive the camera; Y starts the ride on the track under the cursor
+    if (false == ImGui::GetIO().WantTextInput)
+    {
+        std::string status;
+        auto const taken{m_ride.key(Key, Action, Mods, camera_look(), m_input.mouse.button(GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS, status)};
+        if (false == status.empty())
+            ui()->set_status(status, m_ride.active());
+        if (taken)
+        {
+            // the right button held to drive isn't a click for the menu of the track under the cursor
+            m_track_context.armed = false;
+            return;
+        }
+        // not with a button held: a drag going on would lose its release to the ride
+        if (Key == GLFW_KEY_Y && Action == GLFW_PRESS && false == anyModifier && false == m_ride.active() && m_input.mouse.button(GLFW_MOUSE_BUTTON_RIGHT) != GLFW_PRESS && m_input.mouse.button(GLFW_MOUSE_BUTTON_LEFT) != GLFW_PRESS)
+        {
+            ride_enter();
+            return;
+        }
+    }
+
     if (ui()->mode() == nodebank_panel::TRACK && is_press(Action) && (Mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0 && typed_key(Key))
         return;
 
@@ -6692,9 +7960,10 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
         switch (Key)
         {
         case GLFW_KEY_O: toggle_ortho(); break;
-        case GLFW_KEY_Q: m_gizmo_op = gizmo_operation::translate; break;
-        case GLFW_KEY_W: m_gizmo_op = gizmo_operation::rotate; break;
-        case GLFW_KEY_E: m_gizmo_op = gizmo_operation::scale; break;
+        // in the tracks they also bring the gizmo out, hidden until then
+        case GLFW_KEY_Q: m_gizmo_op = gizmo_operation::translate; m_track_gizmo_on |= ui()->mode() == nodebank_panel::TRACK; break;
+        case GLFW_KEY_W: m_gizmo_op = gizmo_operation::rotate; m_track_gizmo_on |= ui()->mode() == nodebank_panel::TRACK; break;
+        case GLFW_KEY_E: m_gizmo_op = gizmo_operation::scale; m_track_gizmo_on |= ui()->mode() == nodebank_panel::TRACK; break;
         case GLFW_KEY_R: m_gizmo_local = !m_gizmo_local; break;
         case GLFW_KEY_B: handled = ui()->mode() != nodebank_panel::TRACK && bend_shortcut(); break;
         case GLFW_KEY_F1: m_shortcuts_open = !m_shortcuts_open; break;
@@ -6716,6 +7985,14 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
         }
         if (handled)
             return;
+    }
+
+    // the minimap with the stations
+    if (Global.ctrlState && false == Global.shiftState && Key == GLFW_KEY_M)
+    {
+        if (is_press(Action))
+            m_minimap.toggle();
+        return;
     }
 
     // all docks unpinned and hidden at the edges, for the most of the view, or pinned back
@@ -6756,12 +8033,12 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
                 if (from != nullptr)
                     copy_track_style(*from);
                 else
-                    ui()->set_status(STR_C("Select one track, or point at one, to copy its properties"), true);
+                    ui()->set_status(STR_C("Select one track, or point at one, to take its properties"), true);
             }
             else if (m_track_style.values.empty())
-                ui()->set_status(STR_C("Copy the properties of a track first: Ctrl+Shift+C"), true);
+                ui()->set_status(STR_C("Take the properties of a track first: Ctrl+Shift+C"), true);
             else if (tracks.empty())
-                ui()->set_status(STR_C("Select the tracks to paste the properties on"), true);
+                ui()->set_status(STR_C("Select the tracks to set the properties on"), true);
             else
                 paste_track_style(tracks);
         }
@@ -6794,7 +8071,7 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
         return;
 
     // shortcuts: undo/redo. not in the middle of a drag, it would go on from the state which was undone
-    if (Global.ctrlState && (Key == GLFW_KEY_Z || Key == GLFW_KEY_Y) && is_press(Action) && (m_track_gizmo_using || m_track_set_using || m_straights.dragging || m_extend.active || m_switch.placing || m_point_drag.active || m_handle_drag.active))
+    if (Global.ctrlState && (Key == GLFW_KEY_Z || Key == GLFW_KEY_Y) && is_press(Action) && (m_track_gizmo_using || m_track_set_using || m_straights.dragging || m_extend.active || m_switch.placing || m_point_drag.active || m_handle_drag.active || m_roadtool.lifting))
         return;
     if (Global.ctrlState && Key == GLFW_KEY_Z && is_press(Action))
     {
@@ -6835,7 +8112,10 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
         break;
 
     case GLFW_KEY_DELETE:
-        if (is_press(Action))
+        // the chunks of the terrain selected, where the terrain is the field of work; else what's selected in the scenery
+        if (is_press(Action) && m_terrain_open && false == m_terrain_selection.empty())
+            remove_selected_chunks();
+        else if (is_press(Action))
             delete_selected();
         break;
 
@@ -6843,6 +8123,24 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
         // an open list or menu takes this Esc for itself, the selection behind it stays
         if (ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
             break;
+        // the switch being clicked off the view given up
+        if (is_press(Action) && m_switch_designer.open && m_switch_designer.picking)
+        {
+            m_switch_designer.picking = false;
+            break;
+        }
+        // the download area being drawn given up, the one before stays
+        if (is_press(Action) && m_area_drawing.active)
+        {
+            area_finish(false);
+            break;
+        }
+        // area fill: the outline dropped, an area picked up for a change left as it was
+        if (is_press(Action) && ui()->mode() == nodebank_panel::FILL && false == ImGui::GetIO().WantTextInput && (false == m_fill_points.empty() || false == m_fill_editing.empty()))
+        {
+            cancel_area_fill();
+            break;
+        }
         if (is_press(Action))
         {
             road_cancel();
@@ -6850,15 +8148,25 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
         // the first Esc drops what is going on in the track mode, the next one goes back to the selection
         if (is_press(Action) && ui()->mode() == nodebank_panel::TRACK)
         {
-            if (m_lay.active && false == m_lay.points.empty())
-                lay_cancel();
+            if (m_tape.active)
+                m_tape = {};
+            else if (m_route.trace.active && route_active())
+                route_trace_end(false);
+            else if (m_lay.active && false == m_lay.points.empty())
+                lay_escape();
             else if (m_track_style.picking)
                 m_track_style.picking = false;
+            else if (m_profile.picking)
+                m_profile.picking = false;
             else if (track_busy())
             {
                 cancel_track_tools();
                 m_straights.tool = 0;
             }
+            else if (m_track_tab == track_tab::signals && m_signal.picking_read)
+                m_signal.picking_read = false;
+            else if (m_track_tab == track_tab::signals && m_signal.armed)
+                m_signal.armed = false;
             else if (m_track_tab == track_tab::path && m_track_set.size() >= 2)
                 select_tracks({});
             else if (m_track_tab != track_tab::path)
@@ -6872,18 +8180,67 @@ void editor_mode::on_key(int const Key, int const Scancode, int const Action, in
         }
         break;
 
+    case GLFW_KEY_TAB:
+        // a switch dragged from a free end and bent: its diverging track the other way than the main one, or the same way
+        if (is_press(Action) && false == anyModifier && m_switch.placing && m_switch.free && false == ImGui::GetIO().WantTextInput)
+        {
+            m_switch.one_sided = false == m_switch.one_sided;
+            break;
+        }
+        // laying: the bends of straights or a curve traced, for the points clicked from now on
+        if (is_press(Action) && false == anyModifier && ui()->mode() == nodebank_panel::TRACK && m_lay.active && false == ImGui::GetIO().WantTextInput)
+            lay_switch_mode();
+        break;
+
     case GLFW_KEY_BACKSPACE:
+        // the switch being clicked off the view: the last point taken back
+        if (m_switch_designer.open && m_switch_designer.picking)
+        {
+            if (is_press(Action) && false == m_switch_designer.clicks.empty())
+            {
+                m_switch_designer.clicks.pop_back();
+                switch_designer_measure();
+            }
+            break;
+        }
+        // the download area: the last point taken back
+        if (is_press(Action) && m_area_drawing.active)
+        {
+            if (false == m_area_drawing.points.empty())
+                m_area_drawing.points.pop_back();
+            break;
+        }
         // area fill: remove the last outline point
         if (is_press(Action) && ui()->mode() == nodebank_panel::FILL && !m_fill_points.empty())
             m_fill_points.pop_back();
         if (is_press(Action) && ui()->mode() == nodebank_panel::TRACK && m_lay.active && !m_lay.points.empty())
             lay_back();
+        if (is_press(Action) && m_route.trace.active && route_active() && !m_route.trace.points.empty())
+        {
+            m_route.trace.points.pop_back();
+            route_trace_fit();
+        }
         break;
 
     case GLFW_KEY_ENTER:
     case GLFW_KEY_KP_ENTER:
+        // the download area closed, from three points on
+        if (is_press(Action) && m_area_drawing.active)
+        {
+            if (m_area_drawing.points.size() >= 3)
+                area_finish(true);
+            break;
+        }
+        // area fill: the outline filled and put on the list, the next one can be started
+        if (is_press(Action) && ui()->mode() == nodebank_panel::FILL && false == ImGui::GetIO().WantTextInput && false == m_fill_points.empty())
+        {
+            finish_area_fill();
+            break;
+        }
         if (is_press(Action) && ui()->mode() == nodebank_panel::TRACK && m_lay.active)
             lay_enter();
+        if (is_press(Action) && m_route.trace.active && route_active())
+            route_trace_end(true);
         break;
 
     case GLFW_KEY_K:
@@ -6940,6 +8297,27 @@ void editor_mode::on_mouse_button(int const Button, int const Action, int const 
         return;
     }
 
+    // a switch being clicked off the view for the template editor takes the left button
+    if (m_switch_designer.open && m_switch_designer.picking && Button == GLFW_MOUSE_BUTTON_LEFT)
+    {
+        // on the terrain under the cursor, then on the level of the first point: no track or ballast in the view catches the point
+        if (is_press(Action))
+            switch_designer_click(m_switch_designer.clicks.empty() ? cursor_terrain(std::as_const(*this).cursor_ground().y) : cursor_level(m_switch_designer.clicks.front().y));
+        m_input.mouse.button(Button, Action);
+        return;
+    }
+
+    // the download area drawn on the map takes the left button while it's drawn
+    if (m_area_drawing.active && Button == GLFW_MOUSE_BUTTON_LEFT)
+    {
+        if (is_press(Action))
+            area_click(Global.shiftState);
+        else
+            m_area_drawing.dragged = -1;
+        m_input.mouse.button(Button, Action);
+        return;
+    }
+
     // the chunk, spacing and water tools of the terrain work on a click (Shift: the other way round)
     if (terrain_clicking() && Button == GLFW_MOUSE_BUTTON_LEFT)
     {
@@ -6969,6 +8347,18 @@ void editor_mode::on_mouse_button(int const Button, int const Action, int const 
     // with the road window open the left button works its tools, whichever edit mode is on but the track one
     if (m_roadtool.window && Button == GLFW_MOUSE_BUTTON_LEFT && ui()->mode() != nodebank_panel::TRACK)
     {
+        // Alt+LMB on a point: its height (and the other selected ones') dragged up or down
+        if (is_press(Action) && Global.altState && false == ImGui::GetIO().WantCaptureMouse && road_lift_start())
+        {
+            m_input.mouse.button(Button, Action);
+            return;
+        }
+        if (false == is_press(Action) && m_roadtool.lifting)
+        {
+            road_lift_finish();
+            m_input.mouse.button(Button, Action);
+            return;
+        }
         if (is_press(Action))
         {
             // NOTE: the pick is resolved a few frames later, by then it's known whether the press was meant for the UI
@@ -7045,6 +8435,7 @@ void editor_mode::on_mouse_button(int const Button, int const Action, int const 
                     auto *const previous{m_node};
                     m_node = nullptr;
                     select_include(0);
+                    ui()->set_node(additive ? previous : nullptr);
 
                     // in a scenery opened for editing selection has its limits. nodes of locked layers are off limits.
                     // nodes defined by a scenery template can't be rewritten one by one on save, so a click on one
@@ -7068,7 +8459,7 @@ void editor_mode::on_mouse_button(int const Button, int const Action, int const 
                         }
                         else if (node->from_template() || false == scene::Layers.editable(node, &reason))
                         {
-                            ui()->set_status(format(STR_C("\"%s\" can't be edited: %s"), (node->name().empty() ? std::string{STR_C("(no name)")} : node->name()).c_str(), reason.c_str()), true);
+                            ui()->set_status(format(STR_C("\"%s\" can't be edited: %s"), name_of(*node).c_str(), reason.c_str()), true);
                             node = nullptr;
                         }
                     }
@@ -7150,7 +8541,22 @@ void editor_mode::on_mouse_button(int const Button, int const Action, int const 
                 if (m_extend.active)
                     finish_extend();
                 if (m_switch.placing)
-                    finish_switch_placement();
+                {
+                    // a press let go with no drag places no switch: the track it took is only selected, the ground with no track there
+                    // selects nothing
+                    auto const &io{ImGui::GetIO()};
+                    if (glm::length(glm::vec2{io.MousePos.x, io.MousePos.y} - m_switch.pressed_at) <= 10.0f)
+                    {
+                        m_switch.placing = false;
+                        if (m_switch.free)
+                        {
+                            m_switch.free = false;
+                            track_click_select(nullptr);
+                        }
+                    }
+                    else
+                        finish_switch_placement();
+                }
                 if (m_turntable.placing)
                     turntable_finish_placement();
                 if (m_signal.placing || m_signal.moving)
@@ -7193,7 +8599,7 @@ void editor_mode::on_mouse_button(int const Button, int const Action, int const 
         // game-engine style look: hide & grab the cursor while flying, restore it on release
         Application.set_cursor(is_press(Action) ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
     }
-    else if (Button == GLFW_MOUSE_BUTTON_MIDDLE && Global.EditorOrtho)
+    else if (Button == GLFW_MOUSE_BUTTON_MIDDLE)
     {
         if (is_press(Action))
         {
@@ -7201,6 +8607,17 @@ void editor_mode::on_mouse_button(int const Button, int const Action, int const 
             m_ortho_pan_cursor = m_input.mouse.position();
             m_focus_active = false;
             Camera.Velocity = {};
+            // in the perspective view the ground under the cursor goes along with it: metres of it to a pixel there, as far as it is
+            m_pan_metres = 0.0;
+            if (false == Global.EditorOrtho)
+            {
+                auto const &io{ImGui::GetIO()};
+                auto const distance{glm::length(GfxRenderer->Mouse_Position())};
+                if (GfxRenderer->Mouse_Hit() && io.DisplaySize.y > 0.0f && distance > 0.5 && distance < 20000.0)
+                    m_pan_metres = 2.0 * distance * std::tan(glm::radians(Global.FieldOfView / Global.ZoomFactor) * 0.5) / static_cast<double>(io.DisplaySize.y);
+                else
+                    m_ortho_pan = false; // nothing under the cursor to hold
+            }
         }
         else if (is_release(Action))
             ortho_pan_stop();
@@ -7216,7 +8633,7 @@ void editor_mode::render_change_history(){
     int maxsize = m_max_history_size;
     if (ImGui::InputInt(STR_C("Max history size"), &maxsize))
     {
-        m_max_history_size = std::max(0, maxsize);
+        m_max_history_size = std::max(1, maxsize);
         if ((int)m_history.size() > m_max_history_size && m_max_history_size >= 0)
         {
             auto remove_count = (int)m_history.size() - m_max_history_size;
@@ -7251,7 +8668,8 @@ void editor_mode::render_change_history(){
                         s.action == EditorSnapshot::Action::TrackEdit ? "TRK" :
                         s.action == EditorSnapshot::Action::RoadEdit ? "ROAD" :
                         s.action == EditorSnapshot::Action::Array ? "ARR" :
-                        s.action == EditorSnapshot::Action::Terrain ? "TER" : "OTH",
+                        s.action == EditorSnapshot::Action::Terrain ? "TER" :
+                        s.action == EditorSnapshot::Action::Kilometrage ? "KM" : "OTH",
                         s.node_name.empty() ? STR_C("(no name)") : s.node_name.c_str(),
                         s.position.x, s.position.y, s.position.z);
 
@@ -7295,7 +8713,9 @@ void editor_mode::on_event_poll()
     bool const flying = m_input.mouse.button(GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
     if (flying)
     {
-        m_input.poll();
+        // riding along the track the camera only looks around, the keys drive the ride
+        if (false == m_ride.active())
+            m_input.poll();
         first_step_done(first_step::look);
     }
     else if (m_camera_flying)
@@ -7350,4 +8770,52 @@ void editor_mode::starter_trainset(std::vector<std::string> &Trailing)
         WriteLog("Editor: the scenery has no trainset, a WMB10 is put on " + track->name() + " to drive");
         return;
     }
+}
+
+void editor_mode::render_top_tracks_choice(bool const Combo)
+{
+    static char const *const labels[]{"Whole", "Without ballast", "Rails only"};
+    static char const *const tooltips[]{"The tracks as in the 3D view", "The rails and the sleepers, the ground under them shows", "The rails alone, without the sleepers and the timbers of the switches, as on a plan"};
+    auto chosen{std::clamp(Global.EditorOrthoTracks, 0, 2)};
+    auto const pick = [&](int const Choice) {
+        Global.EditorOrthoTracks = Choice;
+        EditorSettings.top_tracks(Choice);
+        EditorSettings.save();
+    };
+    if (false == Combo)
+    {
+        for (int choice = 0; choice < 3; ++choice)
+        {
+            if (ImGui::MenuItem(STR_C(labels[choice]), nullptr, chosen == choice))
+                pick(choice);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", STR_C(tooltips[choice]));
+        }
+        return;
+    }
+    ImGui::SetNextItemWidth(130.0f);
+    if (ImGui::BeginCombo(STR_C("Tracks"), STR_C(labels[chosen])))
+    {
+        for (int choice = 0; choice < 3; ++choice)
+        {
+            if (ImGui::Selectable(STR_C(labels[choice]), chosen == choice))
+                pick(choice);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", STR_C(tooltips[choice]));
+        }
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", STR_C("How the top view draws the tracks"));
+    if (chosen < 2)
+        return;
+    ImGui::SameLine();
+    auto colour{ImGui::ColorConvertU32ToFloat4(EditorSettings.top_rails())};
+    if (ImGui::ColorEdit3("##toprails", &colour.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel))
+    {
+        EditorSettings.top_rails(ImGui::ColorConvertFloat4ToU32(ImVec4(colour.x, colour.y, colour.z, 1.0f)));
+        EditorSettings.save();
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", STR_C("The colour of the rails, to stand out on the imagery and the map"));
 }

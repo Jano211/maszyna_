@@ -73,6 +73,14 @@ void global_settings::FinalizeConfig()
     python_enabled = false;
 #endif
 
+#ifndef WITH_WASM
+    wasm_enabled = false;
+#endif
+
+#ifndef WITH_LUA
+    luascreens_enabled = false;
+#endif
+
 #ifdef _WIN32
     Console::ModeSet(iFeedbackMode, iFeedbackPort);
 #endif
@@ -341,6 +349,8 @@ bool global_settings::ConfigParseGraphics(cParser& Parser, const std::string& to
     if (token == "gfxrenderer")
     {
         ParseOne(Parser, GfxRenderer);
+        // read in any case, as the starter does: "Legacy" written by hand is the legacy renderer
+        GfxRenderer = ToLower(GfxRenderer);
 
         // "default": the opengl 4.6 renderer, "vulkan": the vulkan 1.4 one (opengl when it can't run on the machine)
         if ((GfxRenderer == "full") || (GfxRenderer == "opengl") || (GfxRenderer == "gl46"))
@@ -488,6 +498,66 @@ bool global_settings::ConfigParseInput(cParser& Parser, const std::string& token
     return false;
 }
 
+bool global_settings::ConfigParseTest(cParser& Parser, std::string_view const Token)
+{
+    // integration test limits, usually given in the config block of a test scenery
+    if (Token == "test.timeout")
+    {
+        double value{ test.timeout };
+        ParseOne(Parser, value);
+        if (false == test.timeout_from_command_line)
+            test.timeout = std::max(0.0, value);
+        return true;
+    }
+
+    if (Token == "test.wall_timeout")
+    {
+        double value{ 0.0 };
+        ParseOne(Parser, value);
+        if (false == test.wall_timeout_from_command_line)
+            test.wall_timeout = std::max(0.0, value);
+        return true;
+    }
+
+    if (Token == "test.vehicle")
+    {
+        // a vehicle of a train under test, by its name in the scenery; the pass and the standstill wait for its
+        // consist only, not for other trains (eu07/maszyna#541). given more than once, for each of them
+        std::string name;
+        ParseOne(Parser, name, 1, true);
+        if (false == name.empty() && std::ranges::find(test.vehicles, name) == test.vehicles.end())
+            test.vehicles.emplace_back(name);
+        return true;
+    }
+
+    if (Token == "test.standstill")
+    {
+        ParseOne(Parser, test.standstill);
+        test.standstill = std::max(0.0, test.standstill);
+        return true;
+    }
+
+    if (Token == "test.pass_on_standstill")
+    {
+        ParseOne(Parser, test.pass_on_standstill);
+        return true;
+    }
+
+    if (Token == "test.fail_if_stop_overran")
+    {
+        ParseOne(Parser, test.fail_if_stop_overran);
+        return true;
+    }
+
+    if (Token == "test.no_movement_before_pass")
+    {
+        ParseOne(Parser, test.no_movement_before_pass);
+        return true;
+    }
+
+    return false;
+}
+
 bool global_settings::ConfigParseSimulation(cParser& Parser, const std::string& token)
 {
     if (token == "async.trainThreads")
@@ -499,6 +569,21 @@ bool global_settings::ConfigParseSimulation(cParser& Parser, const std::string& 
     if (token == "physicslog")
     {
         ParseOne(Parser, WriteLogFlag);
+        return true;
+    }
+
+    // the physics logs of the trains only, of the drivers of rail vehicles; "physicslog yes" writes them all anyway
+    if (token == "physicslog.trains")
+    {
+        ParseOne(Parser, WriteTrainLogFlag);
+        return true;
+    }
+
+    if (token == "blackbox")
+    {
+        bool blackbox{false};
+        ParseOne(Parser, blackbox);
+        BlackBox = blackbox;
         return true;
     }
 
@@ -699,6 +784,13 @@ bool global_settings::ConfigParseSimulation(cParser& Parser, const std::string& 
         return true;
     }
 
+    if (token == "frogs")
+    {
+        // yes: the rails of the plain tracks and of the switches with the key frogs cut where they cross other rails
+        ParseOne(Parser, Frogs);
+        return true;
+    }
+
     if (token == "timespeed")
     {
         ParseOne(Parser, default_timespeed, 1, false);
@@ -803,6 +895,12 @@ bool global_settings::ConfigParseSimulation(cParser& Parser, const std::string& 
         return true;
     }
 
+    if (token == "ai.brakesetting.cw1")
+    {
+        ParseOne(Parser, AIBrakeSettingCw1, 1, false);
+        return true;
+    }
+
     if (token == "pause")
     {
         std::string value;
@@ -852,6 +950,22 @@ bool global_settings::ConfigParseSimulation(cParser& Parser, const std::string& 
     if (token == "crashdamage")
     {
         ParseOne(Parser, crash_damage, 1);
+        return true;
+    }
+
+    if (token == "couplerphysics")
+    {
+        // yes: the player's train and the trains it closes in on, all: every train
+        std::string scope;
+        ParseOne(Parser, scope, 1);
+        coupler_physics_all = scope == "all";
+        coupler_physics = coupler_physics_all || scope == "yes" || scope == "true" || scope == "1";
+        return true;
+    }
+
+    if (token == "controlcoupling.enginecheck")
+    {
+        ParseOne(Parser, control_coupling_engine_check, 1);
         return true;
     }
 
@@ -909,6 +1023,42 @@ bool global_settings::ConfigParseUI(cParser& Parser, const std::string& token)
     if (token == "gui.trainingdefault")
     {
         ParseOne(Parser, gui_trainingdefault, 1);
+        return true;
+    }
+
+    return false;
+}
+
+bool global_settings::ConfigParseScriptScreens(cParser& Parser, std::string_view const token)
+{
+    if (token == "luascreens.enabled")
+    {
+        ParseOne(Parser, luascreens_enabled, 1);
+        return true;
+    }
+
+    if (token == "wasm.enabled")
+    {
+        ParseOne(Parser, wasm_enabled, 1);
+        return true;
+    }
+
+    // wasm.cabframes and wasm.externalframes: the first names of the keys, from before the Lua screens
+    if (token == "screens.cabframes" || token == "wasm.cabframes")
+    {
+        ParseOneClamped(Parser, screens_cabframes, 1, 1000);
+        return true;
+    }
+
+    if (token == "screens.externalframes" || token == "wasm.externalframes")
+    {
+        ParseOneClamped(Parser, screens_externalframes, 1, 1000);
+        return true;
+    }
+
+    if (token == "screens.gpupost")
+    {
+        ParseOne(Parser, screens_gpupost, 1);
         return true;
     }
 
@@ -1220,6 +1370,12 @@ bool global_settings::ConfigParseDebug(cParser& Parser, const std::string& token
         return true;
     }
 
+    if (token == "crashdump.full")
+    {
+        ParseOne(Parser, crashdump_full);
+        return true;
+    }
+
     if (token == "showsystemconsole")
     {
         ParseOne(Parser, ShowSystemConsole);
@@ -1422,6 +1578,9 @@ void global_settings::ConfigParse(cParser& Parser)
         if (ConfigParse_gfx(Parser, token))
             continue;
 
+        if (ConfigParse_gfx_lamps(Parser, token))
+            continue;
+
         if (ConfigParseGeneral(Parser, token))
             continue;
 
@@ -1443,6 +1602,9 @@ void global_settings::ConfigParse(cParser& Parser)
         if (ConfigParsePython(Parser, token))
             continue;
 
+        if (ConfigParseScriptScreens(Parser, token))
+            continue;
+
         if (ConfigParseNetwork(Parser, token))
             continue;
 
@@ -1450,6 +1612,9 @@ void global_settings::ConfigParse(cParser& Parser)
             continue;
 
         if (ConfigParseDebug(Parser, token))
+            continue;
+
+        if (ConfigParseTest(Parser, token))
             continue;
 
         // WriteLog(std::format("Unknown config token: {}", token), logtype::warning, false);
@@ -1985,6 +2150,7 @@ global_settings::ConfigParse_gfx_sky( cParser &Parser, std::string_view const To
     else if( Token == "gfx.cabprobe.reflections" ) { readswitch( gfx_cabprobe_reflections ); }
     else if( Token == "gfx.cabprobe.sun" ) { readvalue( gfx_cabprobe_sun, 0.f, 4.f ); }
     else if( Token == "gfx.interior.bounce" ) { readvalue( gfx_interior_bounce, 0.f, 1.f ); }
+    else if( Token == "gfx.water.realistic" ) { readswitch( gfx_water_realistic ); }
     else if( Token == "gfx.skyvisibility" ) {
         // no/low/medium/high, or the number of the level
         Parser.getTokens( 1 );
@@ -2121,6 +2287,8 @@ global_settings::ConfigParse_gfx_sky( cParser &Parser, std::string_view const To
     else if( Token == "gfx.fog.shadows" ) { readswitch( gfx_fog_shadows ); }
     else if( Token == "gfx.fog.temporal" ) { readswitch( gfx_fog_temporal ); }
     else if( Token == "gfx.fog.temporal.share" ) { readvalue( gfx_fog_temporal_share, 0.02f, 1.f ); }
+    else if( Token == "gfx.weather.occlusion" ) { readswitch( gfx_weather_occlusion ); }
+    else if( Token == "gfx.clouds.interleave" ) { readswitch( gfx_clouds_interleave ); }
     else if( Token == "gfx.clouds" ) {
         // no, or the quality: low, medium (yes), high, ultra
         Parser.getTokens( 1 );
@@ -2144,6 +2312,32 @@ global_settings::ConfigParse_gfx_sky( cParser &Parser, std::string_view const To
     else if( Token == "gfx.sun.disc" ) { readvalue( gfx_sun_disc, 0.f, 4.f ); }
     else if( Token == "gfx.moon.disc" ) { readvalue( gfx_moon_disc, 0.f, 16.f ); }
     else if( Token == "gfx.moonlight" ) { readvalue( gfx_moonlight, 0.f, 10.f ); }
+    else { return false; }
+
+    return true;
+}
+
+bool
+global_settings::ConfigParse_gfx_lamps( cParser &Parser, std::string_view const Token ) {
+
+    // a list of names separated with |, or "no" for none
+    auto const readlist = [&Parser]( std::string &Value ) {
+        Parser.getTokens( 1 );
+        Parser >> Value;
+        if( Value == "no" ) { Value.clear(); } };
+    auto const readvalue = [&Parser]( float &Value, float const Min, float const Max ) {
+        Parser.getTokens( 1 );
+        Parser >> Value;
+        Value = std::clamp( Value, Min, Max ); };
+
+    if( Token == "gfx.lights.points.near" ) {
+        Parser.getTokens( 1 );
+        Parser >> gfx_lights_points_near; }
+    else if( Token == "gfx.lights.stars" ) { readlist( gfx_lights_stars ); }
+    else if( Token == "gfx.lights.freespot.mincone" ) { readvalue( gfx_lights_freespot_mincone, 0.f, 89.f ); }
+    else if( Token == "gfx.lights.lamps.gain" ) { readvalue( gfx_lights_lamps_gain, 0.1f, 10.f ); }
+    else if( Token == "gfx.lights.lamps.range" ) { readvalue( gfx_lights_lamps_range, 0.f, 10000.f ); }
+    else if( Token == "gfx.lights.hideglow" ) { readlist( gfx_lights_hideglow ); }
     else { return false; }
 
     return true;
@@ -2188,6 +2382,10 @@ global_settings::export_as_text( std::ostream &Output ) const {
     export_as_text( Output, "fmradio.cleansound", fmradio_cleansound );
     export_as_text( Output, "fmradio.stations", fmradio_stations );
     export_as_text( Output, "physicslog", WriteLogFlag );
+    export_as_text( Output, "physicslog.trains", WriteTrainLogFlag );
+    if( BlackBox ) {
+        export_as_text( Output, "blackbox", *BlackBox );
+    }
     export_as_text( Output, "fullphysics", FullPhysics );
     export_as_text( Output, "physics.sleepheld", physics_sleepheld );
     export_as_text( Output, "physics.roadlod", physics_roadlod );
@@ -2196,6 +2394,7 @@ global_settings::export_as_text( std::ostream &Output ) const {
     export_as_text( Output, "debug.memorystats", debug_memorystats );
     export_as_text( Output, "debuglog", iWriteLogEnabled );
     export_as_text( Output, "multiplelogs", MultipleLogs );
+    export_as_text( Output, "crashdump.full", crashdump_full );
     export_as_text( Output, "showsystemconsole", ShowSystemConsole );
     export_as_text( Output, "logs.filter", DisabledLogTypes );
     Output
@@ -2226,6 +2425,13 @@ global_settings::export_as_text( std::ostream &Output ) const {
     export_as_text( Output, "scenario.time.current", ScenarioTimeCurrent );
     export_as_text( Output, "scenario.weather.temperature", AirTemperature );
     export_as_text( Output, "ai.trainman", AITrainman );
+    export_as_text( Output, "controlcoupling.enginecheck", control_coupling_engine_check );
+    std::string couplerphysics { coupler_physics ? "yes" : "no" };
+    if( coupler_physics_all ) {
+        couplerphysics = "all";
+    }
+    export_as_text( Output, "couplerphysics", couplerphysics );
+    export_as_text( Output, "ai.brakesetting.cw1", AIBrakeSettingCw1 );
     export_as_text( Output, "scalespeculars", ScaleSpecularValues );
     export_as_text( Output, "gfxrenderer", GfxRenderer );
     export_as_text( Output, "shadows", RenderShadows );
@@ -2248,6 +2454,7 @@ global_settings::export_as_text( std::ostream &Output ) const {
     Output << "sleepers3dplain " << ( Sleepers3DPlain.empty() ? std::string{ "none" } : Sleepers3DPlain ) << ' ' << ( Sleepers3DPlainSkin.empty() ? std::string{ "none" } : Sleepers3DPlainSkin ) << ' ' << Sleepers3DPlainSeat << '\n';
     export_as_text( Output, "rendercab", render_cab );
     export_as_text( Output, "createswitchtrackbeds", CreateSwitchTrackbeds );
+    export_as_text( Output, "frogs", Frogs );
     export_as_text( Output, "gfx.resource.sweep", ResourceSweep );
     export_as_text( Output, "gfx.resource.move", ResourceMove );
     export_as_text( Output, "gfx.textures.streaming", gfx_texture_streaming );
@@ -2389,6 +2596,17 @@ global_settings::export_as_text( std::ostream &Output ) const {
     export_as_text( Output, "gfx.shadowmap.enabled", gfx_shadowmap_enabled );
     // TODO: export fpslimit
     export_as_text( Output, "randomseed", Global.random_seed );
+    export_as_text( Output, "test.timeout", test.timeout );
+    if( test.wall_timeout.has_value() ) {
+        export_as_text( Output, "test.wall_timeout", *test.wall_timeout );
+    }
+    export_as_text( Output, "test.standstill", test.standstill );
+    export_as_text( Output, "test.pass_on_standstill", test.pass_on_standstill );
+    export_as_text( Output, "test.fail_if_stop_overran", test.fail_if_stop_overran );
+    export_as_text( Output, "test.no_movement_before_pass", test.no_movement_before_pass );
+    for( auto const &vehicle : test.vehicles ) {
+        export_as_text( Output, "test.vehicle", vehicle );
+    }
     export_as_text( Output, "gfx.envmap.enabled", gfx_envmap_enabled );
     export_as_text( Output, "gfx.lights.clustered", gfx_lights_clustered );
     export_as_text( Output, "gfx.lights.clusterheatmap", gfx_lights_clusterheatmap );
@@ -2485,12 +2703,19 @@ global_settings::export_as_text( std::ostream &Output ) const {
     export_as_text( Output, "gfx.lights.compartment.intensity", gfx_lights_compartment_intensity );
     export_as_text( Output, "gfx.lights.cab.intensity", gfx_lights_cab_intensity );
     export_as_text( Output, "gfx.lights.cab.bounce", gfx_lights_cab_bounce );
+    export_as_text( Output, "gfx.lights.points.near", gfx_lights_points_near );
+    export_as_text( Output, "gfx.lights.stars", gfx_lights_stars.empty() ? std::string{ "no" } : gfx_lights_stars );
+    export_as_text( Output, "gfx.lights.freespot.mincone", gfx_lights_freespot_mincone );
+    export_as_text( Output, "gfx.lights.lamps.gain", gfx_lights_lamps_gain );
+    export_as_text( Output, "gfx.lights.lamps.range", gfx_lights_lamps_range );
+    export_as_text( Output, "gfx.lights.hideglow", gfx_lights_hideglow.empty() ? std::string{ "no" } : gfx_lights_hideglow );
     export_as_text( Output, "gfx.cabprobe", std::string{ gfx_cabprobe == 3 ? "high" : gfx_cabprobe == 2 ? "medium" : gfx_cabprobe == 1 ? "low" : "no" } );
     export_as_text( Output, "gfx.cabprobe.interval", gfx_cabprobe_interval );
     export_as_text( Output, "gfx.cabprobe.bounce", gfx_cabprobe_bounce );
     export_as_text( Output, "gfx.cabprobe.reflections", gfx_cabprobe_reflections );
     export_as_text( Output, "gfx.cabprobe.sun", gfx_cabprobe_sun );
     export_as_text( Output, "gfx.interior.bounce", gfx_interior_bounce );
+    export_as_text( Output, "gfx.water.realistic", gfx_water_realistic );
     export_as_text( Output, "gfx.skyvisibility", std::string{ gfx_skyvisibility == 3 ? "high" : gfx_skyvisibility == 2 ? "medium" : gfx_skyvisibility == 1 ? "low" : "no" } );
     export_as_text( Output, "gfx.skyvisibility.sun", gfx_skyvisibility_sun );
     export_as_text( Output, "gfx.skyvisibility.fog", gfx_skyvisibility_fog );
@@ -2520,6 +2745,8 @@ global_settings::export_as_text( std::ostream &Output ) const {
     export_as_text( Output, "gfx.fog.shadows", gfx_fog_shadows );
     export_as_text( Output, "gfx.fog.temporal", gfx_fog_temporal );
     export_as_text( Output, "gfx.fog.temporal.share", gfx_fog_temporal_share );
+    export_as_text( Output, "gfx.weather.occlusion", gfx_weather_occlusion );
+    export_as_text( Output, "gfx.clouds.interleave", gfx_clouds_interleave );
     export_as_text( Output, "gfx.clouds", std::string{ gfx_clouds == 1 ? "low" : gfx_clouds == 2 ? "medium" : gfx_clouds == 3 ? "high" : gfx_clouds == 4 ? "ultra" : "no" } );
     export_as_text( Output, "gfx.clouds.distance", gfx_clouds_distance );
     export_as_text( Output, "gfx.clouds.shadows", gfx_clouds_shadows );
@@ -2534,6 +2761,11 @@ global_settings::export_as_text( std::ostream &Output ) const {
     export_as_text( Output, "python.threadedupload", python_threadedupload );
     export_as_text( Output, "python.uploadmain", python_uploadmain );
     export_as_text( Output, "python.mipmaps", python_mipmaps );
+    export_as_text( Output, "luascreens.enabled", luascreens_enabled );
+    export_as_text( Output, "wasm.enabled", wasm_enabled );
+    export_as_text( Output, "screens.cabframes", screens_cabframes );
+    export_as_text( Output, "screens.externalframes", screens_externalframes );
+    export_as_text( Output, "screens.gpupost", screens_gpupost );
     export_as_text( Output, "async.trainThreads", trainThreads );
     for( auto const &server : network_servers ) {
         Output

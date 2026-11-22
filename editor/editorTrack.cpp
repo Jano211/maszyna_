@@ -74,6 +74,65 @@ void add_unique(std::vector<TTrack *> &Tracks, TTrack *Track)
 		Tracks.emplace_back(Track);
 }
 
+// how much longer than a third of the chord a first control vector is made to keep the bend of the second one, past the 2 cm the
+// simulator takes for a straight
+double const kBentOff{0.025};
+
+// whether the simulator draws the path bent: it takes one with its first control vector within 2 cm of a third of the chord for a
+// straight
+bool drawn_bent(segment_data const &Path)
+{
+	auto const &control1{Path.points[segment_data::point::control1]};
+	auto const &control2{Path.points[segment_data::point::control2]};
+	return (control1 != glm::dvec3{} || control2 != glm::dvec3{}) && false == TTrack::straightened(Path.points[segment_data::point::start], control1, Path.points[segment_data::point::end]);
+}
+
+// how far a second control vector stands off the chord of the path, sideways and in height; off by this much it bends the path
+double off_chord(segment_data const &Path, glm::dvec3 const &Control2)
+{
+	auto const chord{Path.points[segment_data::point::end] - Path.points[segment_data::point::start]};
+	auto const length{glm::length(chord)};
+	if (length < 1e-6)
+		return 0.0;
+	auto const axis{chord / length};
+	return glm::length(Control2 - axis * glm::dot(Control2, axis));
+}
+double const kOffChord{0.02};
+
+// whether an edit at the end of a path, which set its second vector, is what took that vector off the chord: a path drawn straight is
+// kept bent only then, one whose second vector was off the chord already is left to the simulator as it is
+bool took_off_chord(double const Before, segment_data const &Path)
+{
+	return Before < kOffChord && off_chord(Path, Path.points[segment_data::point::control2]) >= kOffChord;
+}
+
+// a path the simulator would draw straight, its first control vector lying along the chord, though the second one is off it: the
+// first one made longer by just past the tolerance, so the bend is drawn, saved and read back as one. Its direction is kept, so is
+// the tangent at the start and the joint there; the path moves along itself by under a centimetre. Called where an edit sets the
+// second vector, or keeps a path drawn bent so. Undo: the second one back along the chord, a first one made longer here goes back to
+// a third of the chord, its direction kept too
+void keep_bent(TTrack const &Track, segment_data &Path, bool const Undo)
+{
+	if (Track.eType == tt_Cross)
+		return;
+	auto const &start{Path.points[segment_data::point::start]};
+	auto const &end{Path.points[segment_data::point::end]};
+	auto &control1{Path.points[segment_data::point::control1]};
+	auto const &control2{Path.points[segment_data::point::control2]};
+	auto const length{glm::distance(start, end)};
+	if (length < 1e-6 || control1 == glm::dvec3{} || control2 == glm::dvec3{})
+		return;
+	if (off_chord(Path, control2) < kOffChord)
+	{
+		auto const third{glm::normalize(control1) * (length / 3.0)};
+		if (Undo && std::abs(glm::length(control1) - (length / 3.0 + kBentOff)) < 0.005 && TTrack::straightened(start, third, end))
+			control1 = third;
+		return;
+	}
+	if (TTrack::straightened(start, control1, end))
+		control1 = glm::normalize(control1) * (length / 3.0 + kBentOff);
+}
+
 glm::dvec3 path_tangent(segment_data const &Path, bool const Atend)
 {
 	auto const &start{Path.points[segment_data::point::start]};
@@ -89,15 +148,11 @@ double path_radius(segment_data const &Path, double const T)
 {
 	if (Path.points[segment_data::point::control1] == glm::dvec3{} && Path.points[segment_data::point::control2] == glm::dvec3{})
 		return 0.0;
-	bezier const curve{Path};
-	auto const first{curve.first(T)};
-	auto const second{curve.second(T)};
-	auto const speed{std::hypot(first.x, first.z)};
-	auto const curvature{std::abs(first.x * second.z - first.z * second.x) / (speed * speed * speed)};
+	auto const curvature{std::abs(bezier{Path}.plan_curvature(T))};
 	return curvature > 1e-7 ? 1.0 / curvature : 0.0;
 }
 
-bool adjoining_direction(TTrack const *Neighbour, glm::dvec3 const &Joint, bool const Leaving, glm::dvec3 &Direction, double &Radius)
+bool adjoining_direction(TTrack const *Neighbour, glm::dvec3 const &Joint, bool const Leaving, glm::dvec3 &Direction, double &Radius, int &Turn)
 {
 	if (Neighbour == nullptr)
 		return false;
@@ -108,13 +163,116 @@ bool adjoining_direction(TTrack const *Neighbour, glm::dvec3 const &Joint, bool 
 			auto const &point{path.points[atend ? segment_data::point::end : segment_data::point::start]};
 			if (glm::distance(point, Joint) > kSamePoint)
 				continue;
-			auto const tangent{glm::normalize(path_tangent(path, atend))};
-			Direction = (Leaving != atend) ? tangent : -tangent;
-			Radius = path_radius(path, atend ? 1.0 : 0.0);
+			// measured on the piece at the end where the path has them: the path only approximates them, its curvature off at its ends,
+			// R 300.9 at the end of the diverging track of a switch of R 300
+			auto const &end{path.pieces.empty() ? path : atend ? path.pieces.back() : path.pieces.front()};
+			auto const tangent{glm::normalize(path_tangent(end, atend))};
+			auto const along{Leaving != atend};
+			Direction = along ? tangent : -tangent;
+			Radius = path_radius(end, atend ? 1.0 : 0.0);
+			// the side it turns to as the chain runs, the path gone against its points turning the other way
+			Turn = 0;
+			if (Radius > 0.0)
+				Turn = (bezier{end}.plan_curvature(atend ? 1.0 : 0.0) > 0.0) == along ? 1 : -1;
 			return true;
 		}
 	}
 	return false;
+}
+
+// the element of a stored design a regular track lies along from end to end: its curvature as designed rather than as the path
+// approximates it, an arc of its radius however short it is, or a transition. None where the track lies along no design, or across
+// the joint of two of its elements
+std::optional<alignment::element> designed_element(TTrack const &Track)
+{
+	if (Track.eType != tt_Normal || Track.m_paths.empty())
+		return std::nullopt;
+	auto const found{alignment_store::on_track(Track)};
+	if (false == found.has_value())
+		return std::nullopt;
+	bezier const curve{Track.m_paths.front()};
+	for (auto const t : {0.1, 0.9})
+		if (auto const at{alignment_store::on_record(found->record, curve.point(t), 0.05)}; false == at.has_value() || at->element != found->element)
+			return std::nullopt;
+	auto const &elements{alignment_store::records()[static_cast<std::size_t>(found->record)].result.elements};
+	if (found->element < 0 || found->element >= static_cast<int>(elements.size()))
+		return std::nullopt;
+	return elements[static_cast<std::size_t>(found->element)];
+}
+
+// a stretch of a curve along the run of its paths: its length, its curvature at its start and at its end, unsigned
+struct curve_piece
+{
+	double length{0.0};
+	double from{0.0};
+	double to{0.0};
+};
+
+// the curvature of an element of a design at its start and at its end, unsigned
+std::pair<double, double> element_curvatures(alignment::element const &Element)
+{
+	auto const [start, end]{alignment::end_curvatures(Element)};
+	return {std::abs(start), std::abs(end)};
+}
+
+// the pieces of a curve along the run of its paths: of the elements of the stored design a path lies along, of the path itself where
+// it lies along none, its curvature as at its middle where it barely changes along it. False where no path lies along a design
+bool designed_pieces(std::vector<std::pair<TTrack *, bool>> const &Run, std::vector<curve_piece> &Pieces)
+{
+	Pieces.clear();
+	auto designed{false};
+	for (auto const &[track, forward] : Run)
+	{
+		auto const &path{track->m_paths.front()};
+		auto const length{track->eType == tt_Switch ? bezier{path}.plan_length() : track->Length()};
+		auto const &begin{path.points[forward ? segment_data::point::start : segment_data::point::end]};
+		auto const &finish{path.points[forward ? segment_data::point::end : segment_data::point::start]};
+		std::optional<alignment_store::hit> first;
+		std::optional<alignment_store::hit> last;
+		if (auto const found{track->eType == tt_Normal ? alignment_store::on_track(*track) : std::nullopt})
+		{
+			first = alignment_store::on_record(found->record, begin, 0.05);
+			last = alignment_store::on_record(found->record, finish, 0.05);
+		}
+		if (false == first.has_value() || false == last.has_value() || first->record != last->record || std::abs(last->chainage - first->chainage) < 1e-3)
+		{
+			auto const curvature_at = [&](double const T) {
+				auto const radius{path_radius(path, forward ? T : 1.0 - T)};
+				return radius > 0.0 ? 1.0 / radius : 0.0;
+			};
+			auto const start{curvature_at(0.0)};
+			auto const end{curvature_at(1.0)};
+			if (std::abs(start - end) <= 0.1 * std::max(start, end))
+				Pieces.push_back({length, curvature_at(0.5), curvature_at(0.5)});
+			else
+				Pieces.push_back({length, start, end});
+			continue;
+		}
+		designed = true;
+		auto const &elements{alignment_store::records()[static_cast<std::size_t>(first->record)].result.elements};
+		auto const low{std::min(first->chainage, last->chainage)};
+		auto const high{std::max(first->chainage, last->chainage)};
+		std::vector<curve_piece> own;
+		for (auto const &element : elements)
+		{
+			auto const from{std::max(low, element.chainage)};
+			auto const to{std::min(high, element.chainage + element.length)};
+			if (to - from < 1e-6)
+				continue;
+			auto const [start, end]{element_curvatures(element)};
+			auto const at = [&](double const Chainage) { return element.length > 1e-9 ? start + (end - start) * (Chainage - element.chainage) / element.length : start; };
+			own.push_back({to - from, at(from), at(to)});
+		}
+		// the design running against the run
+		if (last->chainage < first->chainage)
+		{
+			std::reverse(own.begin(), own.end());
+			for (auto &piece : own)
+				std::swap(piece.from, piece.to);
+		}
+		Pieces.insert(Pieces.end(), own.begin(), own.end());
+	}
+	return designed;
 }
 
 }
@@ -149,6 +307,7 @@ editor_track::state editor_track::capture(TTrack const &Track)
 	for (auto const *isolated : Track.Isolated)
 		result.isolated.push_back(isolated->asName);
 	result.overhead = Track.fOverhead;
+	result.uneven = Track.m_uneven;
 	result.sleepers = Track.m_sleeper_enabled;
 	result.sleeper_frequency = Track.m_sleeper_frequency;
 	result.sleeper_model = Track.m_sleeper_model_name;
@@ -216,6 +375,7 @@ void editor_track::isolated(TTrack &Track, std::vector<std::string> const &Names
 			isolated->AssignEvents();
 		Track.Isolated.push_back(isolated);
 	}
+	Track.mark_dirty();
 }
 
 void editor_track::overhead(TTrack &Track, float const Overhead)
@@ -255,6 +415,7 @@ void editor_track::apply(TTrack &Track, state const &State)
 	Track.fTexSlope = State.texslope;
 	isolated(Track, State.isolated);
 	overhead(Track, State.overhead);
+	Track.m_uneven = State.uneven;
 	Track.m_sleeper_enabled = State.sleepers;
 	Track.m_sleeper_frequency = State.sleeper_frequency;
 	Track.m_sleeper_model_name = State.sleeper_model;
@@ -369,7 +530,7 @@ editor_track::name_uses editor_track::uses_of_name(TTrack const &Track)
 	return result;
 }
 
-void editor_track::rename(TTrack &Track, std::string const &Name)
+void editor_track::rename(TTrack &Track, std::string const &Name, std::vector<scene::instance_handle> const &Kept)
 {
 	auto const old{Track.name()};
 	if (old == Name)
@@ -383,6 +544,8 @@ void editor_track::rename(TTrack &Track, std::string const &Name)
 			cell->asTrackName = Name;
 			cell->mark_dirty();
 		}
+	if (s_observer != nullptr)
+		s_observer->track_renamed(Track, old);
 	if (old.empty() || old == "none")
 		return;
 	for (scene::instance_handle handle = 1; handle <= scene::Layers.instance_count(); ++handle)
@@ -390,7 +553,7 @@ void editor_track::rename(TTrack &Track, std::string const &Name)
 		std::string file;
 		std::vector<std::string> values;
 		auto const index{track_parameter(handle, file, values)};
-		if (index < 0 || lower_name(values[index]) != old)
+		if (index < 0 || lower_name(values[index]) != old || std::find(Kept.begin(), Kept.end(), handle) != Kept.end())
 			continue;
 		values[index] = Name;
 		scene::Layers.modify(handle, editor_includes::compose_directive(file, values));
@@ -428,7 +591,7 @@ bool editor_track::can_edit_geometry(TTrack const &Track, std::string &Reason)
 	return true;
 }
 
-void editor_track::commit(std::vector<TTrack *> const &Tracks)
+void editor_track::commit(std::vector<TTrack *> const &Tracks, bool const Dragging)
 {
 	if (Tracks.empty())
 		return;
@@ -464,13 +627,18 @@ void editor_track::commit(std::vector<TTrack *> const &Tracks)
 			add_unique(affected, neighbour);
 	for (auto *track : affected)
 		update_transition(*track);
+	if (false == Dragging)
+		add_followers(affected);
 	for (auto *track : affected)
 		rebuild_geometry(*track);
 	for (auto *track : Tracks)
 		track->mark_dirty();
 	for (auto *track : affected)
-		for (auto *vehicle : track->Dynamics)
+	{
+		auto const vehicles{track->Dynamics};
+		for (auto *vehicle : vehicles)
 			vehicle->Move(0.000001);
+	}
 	if (s_observer != nullptr)
 		s_observer->tracks_committed(Tracks);
 }
@@ -485,6 +653,7 @@ void editor_track::commit_parameters(TTrack &Track)
 		add_unique(affected, neighbour);
 	for (auto *track : affected)
 		update_transition(*track);
+	add_followers(affected);
 	for (auto *track : affected)
 		rebuild_geometry(*track);
 	Track.mark_dirty();
@@ -528,6 +697,11 @@ void editor_track::move_point(TTrack &Track, point_ref const &Point, glm::dvec3 
 	case point_kind::start:
 	case point_kind::end:
 	{
+		// the paths drawn bent are kept so, a new chord can bring a first control vector back within the tolerance; the ones drawn
+		// straight are left to the simulator as they are
+		std::vector<bool> bent;
+		for (auto const &each : Track.m_paths)
+			bent.push_back(drawn_bent(each));
 		auto &point{path.points[point_index(Point.kind)]};
 		auto const oldposition{point};
 		point = Position;
@@ -539,18 +713,23 @@ void editor_track::move_point(TTrack &Track, point_ref const &Point, glm::dvec3 
 				if (glm::distance(otherpath.points[index], oldposition) < kSamePoint)
 					otherpath.points[index] = Position;
 		}
+		for (std::size_t index = 0; index < Track.m_paths.size(); ++index)
+			if (bent[index])
+				keep_bent(Track, Track.m_paths[index], false);
 		break;
 	}
 	case point_kind::control1:
 	{
 		auto control{Position - path.points[segment_data::point::start]};
 		path.points[segment_data::point::control1] = (glm::length(control) < 0.01 ? glm::dvec3{} : control);
+		keep_bent(Track, path, false);
 		break;
 	}
 	case point_kind::control2:
 	{
 		auto control{Position - path.points[segment_data::point::end]};
 		path.points[segment_data::point::control2] = (glm::length(control) < 0.01 ? glm::dvec3{} : control);
+		keep_bent(Track, path, true);
 		break;
 	}
 	}
@@ -611,20 +790,14 @@ std::vector<std::pair<TTrack *, editor_track::point_ref>> editor_track::connecte
 	return result;
 }
 
-namespace
+glm::dvec2 editor_track::end_direction(segment_data const &Path, point_kind const Kind)
 {
-
-// direction of the path at the end, into the path
-glm::dvec2 end_direction(segment_data const &Path, editor_track::point_kind const Kind)
-{
-	bool const start{Kind == editor_track::point_kind::start};
+	bool const start{Kind == point_kind::start};
 	auto const &point{Path.points[start ? segment_data::point::start : segment_data::point::end]};
 	auto const &control{Path.points[start ? segment_data::point::control1 : segment_data::point::control2]};
 	auto const direction{plan_of(control != glm::dvec3{} ? control : Path.points[start ? segment_data::point::end : segment_data::point::start] - point)};
 	return glm::length(direction) > 1e-9 ? glm::normalize(direction) : glm::dvec2{0.0, 1.0};
 }
-
-} // namespace
 
 std::vector<editor_track::joint> editor_track::joints(TTrack const &Track)
 {
@@ -663,6 +836,8 @@ void editor_track::follow(TTrack const &Track, std::vector<joint> const &Joints)
 		auto &path{joint.other->m_paths[joint.theirs.path]};
 		auto &control{path.points[joint.theirs.kind == point_kind::start ? segment_data::point::control1 : segment_data::point::control2]};
 		bool const straight{path.points[segment_data::point::control1] == glm::dvec3{} && path.points[segment_data::point::control2] == glm::dvec3{}};
+		bool const bent{drawn_bent(path)};
+		auto const wasoff{off_chord(path, path.points[segment_data::point::control2])};
 		auto const fixed{path.points[joint.theirs.kind == point_kind::start ? segment_data::point::end : segment_data::point::start]};
 		auto const before{plan_of(path.points[point_index(joint.theirs.kind)] - fixed)};
 		auto const target{point_position(Track, joint.own)};
@@ -677,6 +852,10 @@ void editor_track::follow(TTrack const &Track, std::vector<joint> const &Joints)
 		}
 		auto const moved{turned(plan_of(joint.control), angle)};
 		control = {moved.x, joint.control.y, moved.y};
+		// a path drawn bent is kept bent, and so is one drawn straight whose second vector the turn took off the chord; a neighbour
+		// whose second vector was off the chord already is left as the simulator draws it
+		if (bent || (joint.theirs.kind == point_kind::end && took_off_chord(wasoff, path)))
+			keep_bent(*joint.other, path, false);
 	}
 }
 
@@ -688,8 +867,14 @@ void editor_track::follow_grade(TTrack const &Track, std::vector<joint> const &J
 			continue;
 		geometry::bezier const own{Track.m_paths[joint.own.path]};
 		auto const outward{joint.own.kind == point_kind::start ? -own.first(0.0) : own.first(1.0)};
-		auto &control{joint.other->m_paths[joint.theirs.path].points[joint.theirs.kind == point_kind::start ? segment_data::point::control1 : segment_data::point::control2]};
+		auto &path{joint.other->m_paths[joint.theirs.path]};
+		bool const bent{drawn_bent(path)};
+		auto &control{path.points[joint.theirs.kind == point_kind::start ? segment_data::point::control1 : segment_data::point::control2]};
+		auto const wasoff{off_chord(path, path.points[segment_data::point::control2])};
 		control.y = geometry::grade_of(outward) * glm::length(geometry::plan_of(control));
+		// as in follow: a path drawn straight only where the grade took its second vector off the chord
+		if (bent || (joint.theirs.kind == point_kind::end && took_off_chord(wasoff, path)))
+			keep_bent(*joint.other, path, false);
 	}
 }
 
@@ -901,7 +1086,10 @@ void editor_track::align_controls(TTrack const &Track, point_ref const &Control,
 		auto &control{path.points[start ? segment_data::point::control1 : segment_data::point::control2]};
 		auto const length{control != glm::dvec3{} ? glm::length(control) : glm::distance(path.points[segment_data::point::start], path.points[segment_data::point::end]) / 3.0};
 		auto const same{partner.first == &Track && partner.second.kind == end_of(Control).kind};
+		bool const bent{drawn_bent(path)};
 		control = (same ? direction : -direction) * length;
+		if (bent || false == start)
+			keep_bent(*partner.first, path, false);
 	}
 }
 
@@ -983,9 +1171,10 @@ std::vector<editor_track::snap_target> editor_track::free_ends(TTrack const *Sel
 
 void editor_track::snap_point(TTrack &Track, point_ref const &Point, snap_target const &Target, bool const Aligntangent)
 {
-	if (Target.track == nullptr || false == editor_track::is_end(Point.kind))
+	if (Target.track == nullptr || false == editor_track::is_end(Point.kind) || Point.path < 0 || Point.path >= static_cast<int>(Track.m_paths.size()))
 		return;
 
+	bool const bent{drawn_bent(Track.m_paths[Point.path])};
 	move_point(Track, Point, Target.position);
 	if (false == Aligntangent)
 		return;
@@ -996,6 +1185,9 @@ void editor_track::snap_point(TTrack &Track, point_ref const &Point, snap_target
 	auto &control{path.points[Point.kind == point_kind::start ? segment_data::point::control1 : segment_data::point::control2]};
 	auto const length{control != glm::dvec3{} ? glm::length(control) : glm::distance(start, end) / 3.0};
 	control = -Target.direction * length;
+	// the end turned to the neighbour's tangent, or a path drawn bent: kept bent
+	if (bent || Point.kind == point_kind::end)
+		keep_bent(Track, path, false);
 }
 
 std::string editor_track::material_name(material_handle const Material)
@@ -1126,6 +1318,8 @@ void editor_track::join(TTrack &Track)
 					join(*other);
 			}
 		}
+		// and a switch right after another one
+		Track.join_switches();
 		break;
 	}
 	default:
@@ -1328,14 +1522,14 @@ bool editor_track::complete_chain(chain &Chain, std::string &Error)
 	auto const firstforward{Chain.forward.front()};
 	Chain.start = first.points[firstforward ? segment_data::point::start : segment_data::point::end];
 	Chain.start_direction = firstforward ? path_tangent(first, false) : -path_tangent(first, true);
-	adjoining_direction(firstforward ? from->trPrev : from->trNext, Chain.start, false, Chain.start_direction, Chain.start_radius);
+	adjoining_direction(firstforward ? from->trPrev : from->trNext, Chain.start, false, Chain.start_direction, Chain.start_radius, Chain.start_turn);
 	Chain.start_direction = glm::normalize(Chain.start_direction);
 
 	auto const &last{to->m_paths.front()};
 	auto const lastforward{Chain.forward.back()};
 	Chain.end = last.points[lastforward ? segment_data::point::end : segment_data::point::start];
 	Chain.end_direction = lastforward ? path_tangent(last, true) : -path_tangent(last, false);
-	adjoining_direction(lastforward ? to->trNext : to->trPrev, Chain.end, true, Chain.end_direction, Chain.end_radius);
+	adjoining_direction(lastforward ? to->trNext : to->trPrev, Chain.end, true, Chain.end_direction, Chain.end_radius, Chain.end_turn);
 	Chain.end_direction = glm::normalize(Chain.end_direction);
 
 	Error.clear();
@@ -1606,7 +1800,14 @@ std::vector<editor_track::straight> editor_track::find_straights(double const Mi
 bool editor_track::find_curve(TTrack &Track, straight_tolerance const &Tolerance, double const Gauge, curve &Curve)
 {
 	Curve = {};
-	auto const curved = [&](TTrack const *Other) { return Other != nullptr && Other->eType == tt_Normal && is_supported(*Other) && false == Other->m_editorremoved && false == is_straight(*Other, Tolerance); };
+	// a track too short to tell its bend from a straight is a part of the curve where it lies along an arc or a transition of a design
+	auto const designed_bend = [](TTrack const &Other) {
+		auto const element{designed_element(Other)};
+		return element.has_value() && element->kind != alignment::element_kind::straight;
+	};
+	auto const curved = [&](TTrack const *Other) {
+		return Other != nullptr && Other->eType == tt_Normal && is_supported(*Other) && false == Other->m_editorremoved && (false == is_straight(*Other, Tolerance) || designed_bend(*Other));
+	};
 	if (false == curved(&Track))
 		return false;
 
@@ -1793,6 +1994,48 @@ bool editor_track::analyse_curve(std::vector<std::pair<TTrack *, bool>> const &R
 			Curve.compound = true;
 			Curve.radius = arcs.front().radius;
 			Curve.arcs = arcs;
+		}
+	}
+	// along the stored designs the curve is read from their elements, as it was laid, the paths along none by their own curvature: the
+	// curve of two lines laid one after another made of the arcs and the transitions of both, however short they are
+	if (std::vector<curve_piece> pieces; Curve.reversals == 0 && designed_pieces(run, pieces))
+	{
+		std::vector<curve::arc_part> designedarcs;
+		double in{0.0};
+		double between{0.0};
+		auto inside{false}; // a straight between two arcs: no curve of one vertex
+		auto straight{false};
+		for (auto const &piece : pieces)
+		{
+			auto const even{std::abs(piece.from - piece.to) <= 0.02 * std::max(piece.from, piece.to)};
+			if (even && piece.from < 1e-6)
+			{
+				straight = false == designedarcs.empty();
+				continue;
+			}
+			if (false == even)
+			{
+				(designedarcs.empty() ? in : between) += piece.length;
+				continue;
+			}
+			inside = inside || straight;
+			auto const radius{2.0 / (piece.from + piece.to)};
+			if (false == designedarcs.empty() && between < 1e-6 && std::abs(designedarcs.back().radius - radius) <= 0.02 * radius)
+				designedarcs.back().turn += piece.length / radius;
+			else
+				designedarcs.push_back({radius, piece.length / radius, designedarcs.empty() ? 0.0 : between});
+			between = 0.0;
+		}
+		if (false == designedarcs.empty() && false == inside)
+		{
+			Curve.laid = true;
+			Curve.transition_in = in;
+			Curve.transition_out = between;
+			Curve.radius = designedarcs.front().radius;
+			Curve.compound = designedarcs.size() > 1;
+			Curve.arcs.clear();
+			if (Curve.compound)
+				Curve.arcs = designedarcs;
 		}
 	}
 	if (Curve.reversals == 0)
@@ -2181,11 +2424,101 @@ bool editor_track::find_route(TTrack *From, TTrack *To, route &Route, std::strin
 	return true;
 }
 
-editor_track::route editor_track::run_route(TTrack &Track, double const Maximum)
+bool editor_track::find_route_along(TTrack *From, TTrack *To, double const Length, glm::dvec3 const &Middle, route &Route)
+{
+	Route = {};
+	if (From == nullptr || To == nullptr || From == To || false == is_supported(*From) || false == is_supported(*To))
+		return false;
+	// depth first, a way given up as it gets longer than the route, or passes the half of it away from the middle; a line of some
+	// thousand paths is walked without the depth of calls
+	double constexpr kSlack{1.0}; // m
+	double constexpr kMiddle{2.0}; // m, the length along a path being measured on its curve only roughly
+	std::size_t constexpr kMost{200000}; // paths walked
+	std::size_t walked{0};
+	auto const half{Length * 0.5};
+	// how long the way is past the path, below 0 when the way can't go on along it
+	auto const along = [&](route_node const &Node, double const Before) {
+		bezier const curve{std::get<0>(Node)->m_paths[std::get<1>(Node)]};
+		auto const own{curve.plan_length(16)};
+		auto const after{Before + own};
+		if (after > Length + kSlack)
+			return -1.0;
+		if (Before <= half && after >= half && own > 1e-6)
+		{
+			auto const share{(half - Before) / own};
+			if (geometry::plan_distance(curve.point(std::get<2>(Node) ? share : 1.0 - share), Middle) > kMiddle + own * 0.02)
+				return -1.0;
+		}
+		return after;
+	};
+	struct step
+	{
+		route_node node;
+		double after;
+		std::vector<route_node> next;
+		std::size_t index{0};
+	};
+	for (int i = 0; i < static_cast<int>(From->m_paths.size()); ++i)
+		for (auto const forward : {true, false})
+		{
+			route_node const first{From, i, forward};
+			auto const length{along(first, 0.0)};
+			if (length < 0.0)
+				continue;
+			std::vector<step> way{{first, length, route_next(first)}};
+			std::unordered_set<TTrack const *> on_way{From};
+			while (false == way.empty() && walked < kMost)
+			{
+				auto &top{way.back()};
+				if (top.index >= top.next.size())
+				{
+					on_way.erase(std::get<0>(top.node));
+					way.pop_back();
+					continue;
+				}
+				auto const node{top.next[top.index++]};
+				auto *track{std::get<0>(node)};
+				if (on_way.contains(track))
+					continue;
+				++walked;
+				auto const after{along(node, top.after)};
+				if (after < 0.0)
+					continue;
+				if (track == To)
+				{
+					if (std::abs(after - Length) > kSlack)
+						continue;
+					for (auto const &done : way)
+						Route.spans.push_back({std::get<0>(done.node), std::get<1>(done.node), std::get<2>(done.node)});
+					Route.spans.push_back({track, std::get<1>(node), std::get<2>(node)});
+					return true;
+				}
+				on_way.insert(track);
+				way.push_back({node, after, route_next(node)});
+			}
+		}
+	return false;
+}
+
+editor_track::route editor_track::run_route(TTrack &Track, double const Maximum, int const Path)
 {
 	route result;
 	if (false == is_supported(Track))
 		return result;
+	// through a switch the run goes along its first path, the main one; but where that one bends and the other runs straight,
+	// as in the quarters of a double slip, straight on
+	auto const bends = [](TTrack const &Of, int const Path) {
+		bezier const curve{Of.m_paths[Path]};
+		auto const from{plan_of(curve.first(0.0))};
+		auto const to{plan_of(curve.first(1.0))};
+		return glm::length(from) > 1e-9 && glm::length(to) > 1e-9 && std::abs(std::atan2(from.x * to.y - from.y * to.x, glm::dot(from, to))) > 0.002;
+	};
+	auto const main_of = [&](TTrack const &Of) {
+		for (int i = 1; i < static_cast<int>(Of.m_paths.size()); ++i)
+			if (bends(Of, 0) && false == bends(Of, i))
+				return i;
+		return 0;
+	};
 	auto const walk = [&](route_node Node) {
 		std::vector<route_node> nodes;
 		double length{0.0};
@@ -2196,7 +2529,7 @@ editor_track::route editor_track::run_route(TTrack &Track, double const Maximum)
 				break;
 			auto chosen{candidates.front()};
 			for (auto const &candidate : candidates)
-				if (std::get<1>(candidate) == 0)
+				if (std::get<1>(candidate) == main_of(*std::get<0>(candidate)))
 					chosen = candidate;
 			auto *track{std::get<0>(chosen)};
 			if (track == &Track || std::any_of(nodes.begin(), nodes.end(), [&](route_node const &Other) { return std::get<0>(Other) == track; }))
@@ -2207,12 +2540,13 @@ editor_track::route editor_track::run_route(TTrack &Track, double const Maximum)
 		}
 		return nodes;
 	};
-	auto const ahead{walk({&Track, 0, true})};
-	auto const behind{walk({&Track, 0, false})};
+	auto const own{Path >= 0 && Path < static_cast<int>(Track.m_paths.size()) ? Path : main_of(Track)};
+	auto const ahead{walk({&Track, own, true})};
+	auto const behind{walk({&Track, own, false})};
 	for (auto node = behind.rbegin(); node != behind.rend(); ++node)
 		if (std::none_of(ahead.begin(), ahead.end(), [&](route_node const &Other) { return std::get<0>(Other) == std::get<0>(*node); }))
 			result.spans.push_back({std::get<0>(*node), std::get<1>(*node), false == std::get<2>(*node)});
-	result.spans.push_back({&Track, 0, true});
+	result.spans.push_back({&Track, own, true});
 	for (auto const &node : ahead)
 		result.spans.push_back({std::get<0>(node), std::get<1>(node), std::get<2>(node)});
 	return result;
@@ -2224,6 +2558,24 @@ editor_track::route editor_track::route_of(chain const &Chain)
 	for (std::size_t i = 0; i < Chain.tracks.size(); ++i)
 		result.spans.push_back({Chain.tracks[i], 0, Chain.forward[i]});
 	return result;
+}
+
+double editor_track::route_speed(route const &Route)
+{
+	std::vector<std::pair<double, double>> speeds;
+	auto total{0.0};
+	for (auto const &span : Route.spans)
+		if (auto const speed{velocity(*span.track)}; speed > 0.0)
+		{
+			speeds.emplace_back(speed, std::abs(span.to - span.from));
+			total += speeds.back().second;
+		}
+	std::sort(speeds.begin(), speeds.end());
+	auto passed{0.0};
+	for (auto const &[speed, length] : speeds)
+		if ((passed += length) >= total * 0.5)
+			return speed;
+	return 100.0;
 }
 
 std::vector<editor_track::route_sample> editor_track::sample_route(route &Route, double const Step)
@@ -2442,6 +2794,20 @@ bool editor_track::adjoining_grade(route const &Route, bool const Atend, double 
 	return true;
 }
 
+std::vector<editor_track::continuation> editor_track::continuations(route_span const &Span)
+{
+	std::vector<continuation> result;
+	for (auto const &[track, path, forward] : route_next({Span.track, Span.path, Span.forward}))
+	{
+		auto const tangent{path_tangent(track->m_paths[path], false == forward)};
+		auto const plan{std::hypot(tangent.x, tangent.z)};
+		if (plan < 1e-9)
+			continue;
+		result.push_back({{track, path, forward}, (forward ? 1.0 : -1.0) * tangent.y / plan});
+	}
+	return result;
+}
+
 std::vector<editor_track::height_gap> editor_track::apply_profile(route &Route, std::function<double(double)> const &Elevation, std::function<double(double)> const &Grade, std::vector<double> const &Breaks, std::vector<std::pair<TTrack *, state>> &States, std::vector<TTrack *> &Created)
 {
 	double constexpr margin{0.25};
@@ -2553,7 +2919,9 @@ std::vector<editor_track::height_gap> editor_track::apply_profile(route &Route, 
 		auto const endchainage{span.forward ? span.to : span.from};
 		auto const sign{span.forward ? 1.0 : -1.0};
 		auto &path{span.track->m_paths[span.path]};
-		set_heights(path, Elevation(startchainage), Elevation(endchainage), Grade(startchainage) * sign, Grade(endchainage) * sign);
+		// at a break of the grade without a curve each path takes the grade on its own side of it
+		auto const inward = [&](double const Chainage, double const Other) { return Grade(Chainage + std::min(1e-3, std::abs(Other - Chainage) * 0.5) * (Other > Chainage ? 1.0 : -1.0)); };
+		set_heights(path, Elevation(startchainage), Elevation(endchainage), inward(startchainage, endchainage) * sign, inward(endchainage, startchainage) * sign);
 		// the pieces of a path made of several curves follow the grade line along them, else the path would part from them and lose them
 		std::vector<double> lengths;
 		double total{0.0};
@@ -2570,7 +2938,7 @@ std::vector<editor_track::height_gap> editor_track::apply_profile(route &Route, 
 			{
 				auto const first{at(along)};
 				auto const last{at(along + lengths[k])};
-				set_heights(path.pieces[k], Elevation(first), Elevation(last), Grade(first) * sign, Grade(last) * sign);
+				set_heights(path.pieces[k], Elevation(first), Elevation(last), inward(first, last) * sign, inward(last, first) * sign);
 				along += lengths[k];
 			}
 		}
@@ -2785,6 +3153,8 @@ std::optional<editor_track::switch_template> editor_track::template_of(switch_de
 	entry.movable = Design.movable;
 	entry.heel = Design.heel;
 	entry.bladethrow = Design.bladethrow;
+	if (false == Design.parts.empty() && Design.parts.back().radius1 <= 0.0 && Design.parts.back().radius2 <= 0.0)
+		entry.frog_straight = Design.parts.back().length;
 	entry.local = {shape.paths[0], shape.paths[1]};
 	entry.local[1].radius = static_cast<float>(shape.radius);
 	if (shape.paths.size() >= 5)
@@ -2954,7 +3324,7 @@ std::vector<editor_track::switch_template> editor_track::standard_switch_templat
 		slip.rail = std::string{entry.name}.substr(0, std::string{entry.name}.find('-'));
 		slip.label = std::string{entry.type} + ' ' + entry.name + format("  a %.3f", entry.half) + (slip.type == "Rkp" ? " single slip" : " double slip") +
 		             (entry.middle < 0.0 ? ", the blades outside of the diamond" : "") +
-		             (slip.type == "Rkp" ? " (click at a crossing of two straights, on the side of the joined tracks)" : " (click at a crossing of two straights)");
+		             (slip.type == "Rkp" ? " (click at a crossing of two straights, on the side of the joined tracks, or drag it out on a straight)" : " (click at a crossing of two straights, or drag it out on a straight)");
 		result.push_back(slip);
 	}
 	struct crossing
@@ -2992,7 +3362,7 @@ std::vector<editor_track::switch_template> editor_track::standard_switch_templat
 		plain.a = entry.half;
 		plain.ratio = ratio_of(entry.name);
 		plain.rail = std::string{entry.name}.substr(0, std::string{entry.name}.find('-'));
-		plain.label = std::string{"Skrz "} + entry.name + format("  a %.3f", entry.half) + " crossing (click at a crossing of two straights)";
+		plain.label = std::string{"Skrz "} + entry.name + format("  a %.3f", entry.half) + " crossing (click at a crossing of two straights, or drag it out on a straight)";
 		result.push_back(plain);
 	}
 	return result;
@@ -3022,10 +3392,11 @@ void write_points(std::ostream &Text, segment_data const &Path)
 	Text << start.x << ' ' << start.y << ' ' << start.z << ' ' << Path.rolls[0] << ' ' << control1.x << ' ' << control1.y << ' ' << control1.z << ' ' << control2.x << ' ' << control2.y << ' ' << control2.z << ' ' << end.x << ' ' << end.y << ' ' << end.z << ' ' << Path.rolls[1] << ' ' << Path.radius << ' ';
 }
 
-void write_ending(std::ostream &Text, TTrack const &Style)
+void write_ending(std::ostream &Text, TTrack const &Style, bool const Switch)
 {
 	if ((Style.iCategoryFlag & 15) == 1 && false == Style.m_profile1.first.empty())
 		Text << "railprofile " << Style.m_profile1.first << ' ';
+	Text << track_uneven::write_attribute(Style.m_uneven, Switch);
 	// a piece of the track made from another one stays in its track circuit and under the same overhead line
 	for (auto const *isolated : Style.Isolated)
 		Text << "isolated " << isolated->asName << ' ';
@@ -3087,9 +3458,36 @@ TTrack *editor_track::create_switch(switch_template const &Template, std::vector
 		write_points(text, Paths[1]);
 		if (auto const trackbed{ballast_of(Style)}; trackbed != null_handle)
 			text << "trackbed " << material_name(trackbed) << ' ';
-		write_ending(text, Style);
+		write_ending(text, Style, true);
 		track = load_path(text.str(), Style, Name);
 	}
+	track->SwitchExtension->m_frogs = true;
+	track->SwitchExtension->m_movablenose = Template.movable;
+	track->SwitchExtension->m_bladeheel = Template.heel;
+	track->SwitchExtension->m_bladethrow = Template.bladethrow;
+	track->m_paths.assign(Paths.begin(), Paths.begin() + 2);
+	return track;
+}
+
+TTrack *editor_track::create_switch(switch_template const &Template, std::vector<segment_data> const &Paths, path_style const &Style, std::string const &Name)
+{
+	if (Paths.size() < 2)
+		return nullptr;
+	if (Template.source != nullptr)
+		return create_switch(Template, Paths, *Template.source, Name);
+	std::ostringstream text;
+	text.precision(std::numeric_limits<double>::digits10);
+	// the rails of the style on both paths, its ballast under the switch
+	text << "switch " << Template.length << " 1.435 0.15 10 20 0 flat vis " << Style.rail << " 6 " << Style.rail << " 0.2 0.5 1.1 ";
+	write_points(text, Paths[0]);
+	write_points(text, Paths[1]);
+	text << "trackbed " << Style.ballast << ' ';
+	if (Style.velocity > 0.0)
+		text << "velocity " << Style.velocity << ' ';
+	if (false == Style.rail_profile.empty())
+		text << "railprofile " << Style.rail_profile << ' ';
+	text << "endtrack\n";
+	auto *track{load_text(text.str(), nullptr, Name)};
 	track->SwitchExtension->m_frogs = true;
 	track->SwitchExtension->m_movablenose = Template.movable;
 	track->SwitchExtension->m_bladeheel = Template.heel;
@@ -3298,18 +3696,22 @@ void editor_track::move_straight(straight const &Line, glm::dvec3 const &Start, 
 	}
 }
 
-std::vector<TTrack *> editor_track::relay(chain const &Chain, std::vector<segment_data> const &Pieces, TTrack **Last)
+std::vector<TTrack *> editor_track::relay(chain const &Chain, std::vector<segment_data> const &Pieces, TTrack **Last, std::vector<std::size_t> const *Intervals)
 {
 	std::vector<TTrack *> created;
 	auto const count{Chain.tracks.size()};
 	if (count == 0 || Pieces.size() < count)
 		return created;
 
+	// each path of the chain keeps the stretch of the ground it had, where the pieces were cut at its joints: its events and its
+	// track circuit stay where they were, not handed on along the line
+	auto const along{Intervals != nullptr && Intervals->size() == Pieces.size() && Intervals->front() == 0 && Intervals->back() + 1 == count &&
+	                 std::adjacent_find(Intervals->begin(), Intervals->end(), [](std::size_t const A, std::size_t const B) { return B < A || B > A + 1; }) == Intervals->end()};
 	std::vector<TTrack *> tracks;
 	std::size_t previous{count};
 	for (std::size_t i = 0; i < Pieces.size(); ++i)
 	{
-		auto const index{i * count / Pieces.size()};
+		auto const index{along ? (*Intervals)[i] : i * count / Pieces.size()};
 		TTrack *track;
 		bool forward;
 		if (index != previous)
@@ -3334,6 +3736,18 @@ std::vector<TTrack *> editor_track::relay(chain const &Chain, std::vector<segmen
 	return created;
 }
 
+std::vector<glm::dvec2> editor_track::chain_joints(chain const &Chain)
+{
+	std::vector<glm::dvec2> joints;
+	for (std::size_t i = 0; i + 1 < Chain.tracks.size() && i < Chain.forward.size(); ++i)
+	{
+		auto const &path{Chain.tracks[i]->m_paths.front()};
+		auto const &end{path.points[Chain.forward[i] ? segment_data::point::end : segment_data::point::start]};
+		joints.emplace_back(end.x, end.z);
+	}
+	return joints;
+}
+
 TTrack *editor_track::clone(TTrack const &Template, std::string const &Name)
 {
 	std::ostringstream text;
@@ -3356,7 +3770,7 @@ TTrack *editor_track::create_path(TTrack const &Style, segment_data const &Path,
 	write_points(text, Path);
 	if (auto const speed{velocity(Style)}; speed > 0.0)
 		text << "velocity " << speed << ' ';
-	write_ending(text, Style);
+	write_ending(text, Style, false);
 	auto *track{load_path(text.str(), Style, Name)};
 	track->m_paths = {Path};
 	return track;
@@ -3453,6 +3867,38 @@ TTrack *editor_track::split_path(TTrack &Track, double const T, std::string cons
 				events(*created, index).push_back(event);
 		own.erase(std::remove_if(own.begin(), own.end(), [](auto const &Event) { return false == Event.first.empty(); }), own.end());
 	}
+	// a read the trains scan for (a passive event: a signal, a stop, a speed) in event1 or event2 goes to the piece by the point it
+	// is read at: a train measures the way to that point along a few paths only, so the read has to stay by it.
+	// one read far off the path, at the station building or nowhere, keeps the piece of its list; the trains don't scan the eventall lists
+	double constexpr reach{50.0};
+	auto const gap = [](TTrack const &Piece, glm::dvec3 const &Point) { return geometry::plan_distance(point_at(Piece, nearest_parameter(Piece, Point)), Point); };
+	auto const scanned = [](std::pair<std::string, basic_event *> const &Event) {
+		return false == Event.first.empty() && Event.second != nullptr && Event.second->m_passive && false == Event.second->m_ignored;
+	};
+	// the piece nearer to the point the event reads, when it reads one by the path: 0 the original, 1 the new one, -1 neither
+	auto const nearer = [&](std::pair<std::string, basic_event *> const &Event) {
+		if (false == scanned(Event))
+			return -1;
+		auto const point{Event.second->input_location()};
+		auto const first{gap(Track, point)};
+		auto const second{gap(*created, point)};
+		if (std::min(first, second) > reach)
+			return -1;
+		return second < first ? 1 : 0;
+	};
+	for (auto const index : {1, 2})
+	{
+		auto &own{events(Track, index)};
+		auto &theirs{events(*created, index)};
+		std::vector<std::pair<std::string, basic_event *>> kept;
+		std::vector<std::pair<std::string, basic_event *>> given;
+		for (auto const &event : own)
+			(nearer(event) == 1 ? given : kept).push_back(event);
+		for (auto const &event : theirs)
+			(nearer(event) == 0 ? kept : given).push_back(event);
+		own = std::move(kept);
+		theirs = std::move(given);
+	}
 	std::string missing;
 	bind_events(Track, missing);
 	bind_events(*created, missing);
@@ -3514,13 +3960,16 @@ void editor_track::retire(TTrack &Track)
 	disconnect(Track);
 	simulation::Region->erase_and_unregister(&Track);
 	Track.m_editorremoved = true;
+	if (s_observer != nullptr)
+		s_observer->track_retired(Track);
 	// the name is free for the path laid in its place, as the switches of a crossover laid again keep theirs
 	simulation::Paths.rename(&Track, std::string{});
 	for (auto *neighbour : adjoining)
-	{
 		update_transition(*neighbour);
-		rebuild_geometry(*neighbour);
-	}
+	auto affected{adjoining};
+	add_followers(affected);
+	for (auto *track : affected)
+		rebuild_geometry(*track);
 	auto crossings{Track.m_crossings};
 	for (auto *crossing : Track.m_crossings)
 		for (auto *neighbour : neighbours(*crossing))
@@ -3529,8 +3978,6 @@ void editor_track::retire(TTrack &Track)
 	for (auto *crossing : crossings)
 		if (crossing != &Track && false == crossing->m_editorremoved)
 			rebuild_geometry(*crossing);
-	if (s_observer != nullptr)
-		s_observer->track_retired(Track);
 }
 
 void editor_track::revive(TTrack &Track)
@@ -3538,6 +3985,16 @@ void editor_track::revive(TTrack &Track)
 	Track.m_editorremoved = false;
 	if (false == simulation::Paths.rename(&Track, Track.name()))
 		WriteLog("Editor: the path " + Track.name() + " came back, but another one has its name now", logtype::generic);
+}
+
+void editor_track::add_followers(std::vector<TTrack *> &Tracks)
+{
+	++TTrack::s_layoutstamp;
+	for (auto *track : TTrack::switch_followers(Tracks))
+		add_unique(Tracks, track);
+	for (auto *track : simulation::Paths.sequence())
+		if (false == track->m_editorremoved && track->rail_joints_moved())
+			add_unique(Tracks, track);
 }
 
 void editor_track::rebuild_geometry(TTrack &Track)

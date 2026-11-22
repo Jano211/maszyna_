@@ -47,6 +47,7 @@ http://mozilla.org/MPL/2.0/.
 #include "rendering/opengl46/opengl46skyocclusion.h"
 #include "rendering/opengl46/opengl46instancecull.h"
 #include "rendering/opengl46/opengl46hiz.h"
+#include "rendering/opengl46/opengl46timbers.h"
 #include "rendering/opengl46/opengl46shadowfit.h"
 #include "rendering/common/scenewalk.h"
 #include "rendering/common/temporalaa.h"
@@ -89,6 +90,7 @@ class opengl46_renderer : public gfx_renderer, public gfx::scene_walk {
 	bool Replace_Indexed(gfx::index_array &Indices, gfx::vertex_array &Vertices, gfx::userdata_array &Userdata, gfx::geometry_handle const &Geometry) override;
     // adds supplied vertex data at the end of specified chunk
 	bool Append(gfx::vertex_array &Vertices, gfx::userdata_array &Userdata, gfx::geometry_handle const &Geometry, int const Type) override;
+	void Erase( gfx::geometry_handle const &Geometry ) override;
     // provides direct access to index data of specfied chunk
     gfx::index_array const &
         Indices( gfx::geometry_handle const &Geometry ) const override;
@@ -100,6 +102,8 @@ class opengl46_renderer : public gfx_renderer, public gfx::scene_walk {
 		UserData( gfx::geometry_handle const &Geometry ) const override;
 	int
 		Primitive( gfx::geometry_handle const &Geometry ) const override;
+	bool
+		Draws_Timbers() const override { return true; }
     // material methods
     material_handle
         Fetch_Material( std::string const &Filename, bool const Loadnow = true ) override;
@@ -136,6 +140,8 @@ class opengl46_renderer : public gfx_renderer, public gfx::scene_walk {
         Texture( texture_handle const Texture ) override;
     ITexture const &
         Texture( texture_handle const Texture ) const override;
+    void
+        Unload_Texture( texture_handle const Texture ) override;
     // utility methods
     void
         Pick_Control_Callback( std::function<void( TSubModel const *, const glm::vec2 )> Callback ) override;
@@ -145,8 +151,10 @@ class opengl46_renderer : public gfx_renderer, public gfx::scene_walk {
         Pick_Control() const override { return m_pickcontrolitem; }
     scene::basic_node const *
         Pick_Node() const override { return m_picksceneryitem; }
+    void
+        Forget_Node( scene::basic_node const *Node ) override;
     glm::dvec3
-        Mouse_Position() const override { return m_worldmousecoordinates; }
+        Mouse_Position() const override { return m_mouseknown ? m_worldmouseposition - m_colorpass.pass_camera.position() : glm::dvec3 { 0.0 }; }
     bool
         Mouse_Hit() const override { return m_mousehit; }
     glm::mat4
@@ -214,7 +222,14 @@ class opengl46_renderer : public gfx_renderer, public gfx::scene_walk {
 	void walk_draw(gfx::geometry_handle const &Geometry) override;
 	void walk_draw(std::vector<gfx::geometrybank_handle>::iterator First, std::vector<gfx::geometrybank_handle>::iterator Last) override;
 	std::uint32_t walk_instances(glm::mat4 const *Modelviews, std::size_t const Count) override;
+	// the instances of the sleepers and timbers of the tracks on the gpu (m_timbers)
+	bool walk_timbers_gpu() const override;
+	bool walk_timbers_place(std::vector<TTrack *> const &Tracks, bool const Restart) override;
+	std::uint32_t walk_timbers_first(TTrack const &Track) const override;
+	std::uint32_t walk_instances_reserve(std::size_t const Count) override;
+	void walk_timbers_expand(std::vector<glm::mat4> const &Origins, std::vector<gl::timber_range> const &Ranges) override;
 	void walk_cull_face(bool const Enabled) override;
+	void walk_decal(bool const Enabled) override;
 	void walk_glare(bool const Enabled) override;
 	void walk_glare_draw(TSubModel *Submodel, gfx::geometry_handle const &Geometry) override;
 	void walk_light_query(TSubModel *Submodel, bool const Begin) override;
@@ -345,6 +360,8 @@ class opengl46_renderer : public gfx_renderer, public gfx::scene_walk {
 	bool Render(world_environment *Environment);
 	// places supplied modelview matrices in the instance buffer of the frame. returns: base instance of the first of them
 	std::uint32_t Upload_Instance_Modelviews( glm::mat4 const *Modelviews, std::size_t const Count );
+	// the room for Count modelviews in the instance buffer of the frame, for the gpu to write. returns: base instance of the first
+	std::uint32_t Reserve_Instance_Modelviews( std::size_t const Count );
 	// binds the instance buffer of the frame for the vertex shaders (INSTANCE_SSBO_BINDING)
 	void Bind_Instance_Stream() const;
 	// draws the instances queued in the pass from the result of the gpu culling (Global.gfx_gpucull 1): makes the depth
@@ -599,6 +616,7 @@ class opengl46_renderer : public gfx_renderer, public gfx::scene_walk {
 	int m_shadowcascade { -1 }; // the region is drawn for this cascade of the sun shadows
 	// depth pyramid for the occlusion test of the gpu culling
 	opengl46_hiz m_hiz;
+	opengl46_timbers m_timbers; // the instances of the sleepers and timbers of the tracks on the gpu
 	// the cascades of the sun shadows fitted to the depth of the main view (Global.gfx_shadow_sdsm)
 	opengl46_shadow_fit m_shadowfit;
 	// with a cascade fitted: the corners of the area its map is to cover, for setup_pass()
@@ -737,8 +755,20 @@ class opengl46_renderer : public gfx_renderer, public gfx::scene_walk {
 	std::array<renderpass_config, 3> m_shadowpass; // parametrs of most recent shadowmap pass for each of csm stages
 	TSubModel const *m_pickcontrolitem{nullptr};
     scene::basic_node *m_picksceneryitem{nullptr};
-    glm::vec3 m_worldmousecoordinates { 0.f };
+    // the point of the scene under the cursor of the editor, in world space (Update_Mouse_Position())
+    glm::dvec3 m_worldmouseposition { 0.0 };
+    bool m_mouseknown { false }; // whether the cursor hit anything yet
     bool m_mousehit { false };
+    // the depths around the cursor asked of the gpu: where they lie in the image, whether they come from the depth pass of the
+    // scene (drawn a little farther than it lies), and the view they were drawn in
+    glm::ivec2 m_cursorposition { 0 };
+    glm::ivec2 m_cursorblockcorner { 0 };
+    glm::ivec2 m_cursorblocksize { 0 };
+    bool m_cursorbiased { false };
+    glm::mat4 m_cursorview { 1.f };
+    glm::mat4 m_cursorprojection { 1.f };
+    glm::dvec3 m_cursorcamera { 0.0 };
+    glm::vec4 m_cursorviewport { 0.f };
 #ifdef EU07_USE_DEBUG_CAMERA
 	renderpass_config m_worldcamera; // debug item
 #endif

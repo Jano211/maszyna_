@@ -11159,7 +11159,7 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 		return true;
 	}
 	// the step of the next span: at the cursor, the recommended one, the own one
-	if (Key == GLFW_KEY_M && tool.page == 0 && tool.selected < 0)
+	if (Key == GLFW_KEY_M && Mods == 0 && tool.page == 0 && tool.selected < 0)
 	{
 		tool.span_step = (tool.span_step + 1) % 3;
 		char const *const steps[] = {"The next pole where the cursor is", "The next pole at the recommended span from the last one", "The next pole at the span set in the panel"};

@@ -1531,8 +1531,8 @@ void vulkan14_renderer::render_viewport(std::size_t const Index)
 	scene_ubs.contact_shadow_lamps = glm::vec4{0.f};
 	scene_ubs.shadow_fit = glm::vec4{0.f};
 	// the reflections: the ground below the horizon of the environment map, and the screen space ones set up for the colour pass of
-	// the main view only
-	scene_ubs.env_params = glm::vec4{Global.gfx_ambient_groundalbedo, (m_rtfoliage ? 0.f : 1.f), Global.gfx_interior_bounce, 0.f};
+	// the main view only. and how the water of the scenery is drawn (gfx.water.realistic, water_surface.glsl)
+	scene_ubs.env_params = glm::vec4{Global.gfx_ambient_groundalbedo, (m_rtfoliage ? 0.f : 1.f), Global.gfx_interior_bounce, (Global.gfx_water_realistic ? 1.f : 0.f)};
 	gfx::screen_reflections::clear(scene_ubs);
 
 	if (vp.main)
@@ -1683,7 +1683,8 @@ void vulkan14_renderer::render_viewport(std::size_t const Index)
 	auto const reflections{m_ssrframe && (false == Global.bWireFrame)};
 	// and the ambient occlusion in the light of the surfaces
 	auto const aolighting{ao_lighting_wanted(vp)};
-	if ((Global.gfx_depthprepass_scene || contactshadows || reflections || aolighting) && vp.main && (false == Global.bWireFrame))
+	auto const scenedepth{(Global.gfx_depthprepass_scene || contactshadows || reflections || aolighting) && vp.main && (false == Global.bWireFrame)};
+	if (scenedepth)
 	{
 		render_scene_depth(Index, future);
 		if (contactshadows)
@@ -1700,8 +1701,9 @@ void vulkan14_renderer::render_viewport(std::size_t const Index)
 		}
 	}
 
-	// opaque parts...
+	// opaque parts... what the prepass drew with the alpha test keeps its depth (draw_state::keepdepth)
 	ctx.passes.begin_pass("colour, opaque");
+	m_draw->keepdepth = scenedepth && m_keepprepassdepth && (false == m_prepassincomplete);
 	walk_blending(false);
 	// without rain/snow we can render the cab early to limit the overdraw
 	if (!FreeFlyModeFlag && Global.Overcast <= 1.0f && Global.render_cab && simulation::Train)
@@ -1719,6 +1721,8 @@ void vulkan14_renderer::render_viewport(std::size_t const Index)
 	model_ubs.future = future;
 	walk_region(simulation::Region, false);
 	m_indirectcolourpending = false;
+	m_draw->keepdepth = false;
+	m_draw->prepassed = false;
 
 	// the grass of the terrain, opaque, over the ground drawn
 	if (vp.main && (false == Global.bWireFrame))
@@ -1863,6 +1867,9 @@ void vulkan14_renderer::render_scene_depth(std::size_t const Index, glm::mat4 co
 	draw.weather_offset = offsets[3];
 	draw.depthpass = true;
 	draw.depthskip = true;
+	// what the prepass of this frame leaves out (keepdepth)
+	m_prepassincomplete = false;
+	m_prepassunready.clear();
 	commands->set_depth_bias_enable(VK_TRUE);
 	commands->set_depth_bias(-1.f, 0.f, -1.f);
 	auto const colourstats{m_renderpass.draw_stats};
@@ -2231,14 +2238,21 @@ void vulkan14_renderer::begin_colour_rendering(std::size_t const Index, bool con
 	remember_rendering(rendering, colour_target_uses(targets));
 }
 
-// the depth of the ground under the cursor of the editor: the rendering is ended (which resolves the depth), the depth under the
-// cursor copied, and the rendering begun again where it was
+// the depth of the ground under the cursor of the editor: the rendering is ended (which resolves the depth), the depths around the
+// cursor copied, and the rendering it was in begun again where it was. it's the colour pass, or the depth pass of the scene drawn
+// before the colour (render_scene_depth()), whichever walks the ground first; the depth read before is taken first, once the gpu is
+// done with it (opengl46_renderer::walk_editor_cursor())
 void vulkan14_renderer::walk_editor_cursor()
 {
 	auto &ctx{*m_context};
 	auto &scene{ctx.scene};
 	auto &draw{*m_draw};
-	if ((m_current_viewport == nullptr) || (false == m_current_viewport->main) || (false == draw.rendering) || scene.cursor.pending || scene.targets.empty())
+	if ((m_main != nullptr) || (m_current_viewport == nullptr) || (false == m_current_viewport->main) || (false == draw.rendering) || scene.targets.empty())
+	{
+		return;
+	}
+	Update_Mouse_Position();
+	if (scene.cursor.pending || (false == draw.resume.valid))
 	{
 		return;
 	}
@@ -2247,52 +2261,43 @@ void vulkan14_renderer::walk_editor_cursor()
 	glm::vec2 mousepos = Global.cursor_pos;
 	// cursor coordinates are flipped compared to opengl, whose rows the images keep
 	mousepos.y = Global.window_size.y - mousepos.y;
-	auto bufferpos{glm::ivec2(mousepos * glm::vec2(targets.extent.width, targets.extent.height) / glm::max(glm::vec2(Global.window_size), glm::vec2(1.f)))};
-	bufferpos = glm::clamp(bufferpos, glm::ivec2(0, 0), glm::ivec2(targets.extent.width - 1, targets.extent.height - 1));
+	glm::ivec2 const extent{static_cast<int>(targets.extent.width), static_cast<int>(targets.extent.height)};
+	auto bufferpos{glm::ivec2(mousepos * glm::vec2(extent) / glm::max(glm::vec2(Global.window_size), glm::vec2(1.f)))};
+	bufferpos = glm::clamp(bufferpos, glm::ivec2(0, 0), extent - 1);
+	// the pixels around the one under the cursor too, for the slope of the depth there (Update_Mouse_Position())
+	auto const blocksize{glm::min(glm::ivec2(3), extent)};
+	auto const blockcorner{glm::clamp(bufferpos - 1, glm::ivec2(0), extent - blocksize)};
 
-	commands->end_rendering();
 	auto readback{std::make_shared<vk14::buffer>()};
-	if (readback->create(ctx.memory, sizeof(float), VK_BUFFER_USAGE_TRANSFER_DST_BIT, vk14::memory_kind::readback, "cursor depth"))
+	if (false == readback->create(ctx.memory, sizeof(float) * blocksize.x * blocksize.y, VK_BUFFER_USAGE_TRANSFER_DST_BIT, vk14::memory_kind::readback, "cursor depth"))
 	{
-		vk14::barriers(commands, {vk14::use_of(*targets.depth, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT)});
-		VkBufferImageCopy2 region{};
-		region.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
-		region.imageSubresource = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0, 1};
-		region.imageOffset = {bufferpos.x, bufferpos.y, 0};
-		region.imageExtent = {1, 1, 1};
-		VkCopyImageToBufferInfo2 copy{};
-		copy.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_TO_BUFFER_INFO_2;
-		copy.srcImage = targets.depth->handle();
-		copy.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		copy.dstBuffer = readback->handle();
-		copy.regionCount = 1;
-		copy.pRegions = &region;
-		commands->copy_image_to_buffer2(&copy);
-		host_read_barrier(commands);
-		scene.cursor.data = readback;
-		scene.cursor.value = ctx.timelinevalue + 1;
-		scene.cursor.pending = true;
-		scene.cursor.position = bufferpos;
-		vk14::barriers(commands, {vk14::use_of(*targets.depth, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, resolve_depth_stage, resolve_depth_access)});
+		return;
 	}
-	// what the rendering stored before is loaded again
-	vk14::barriers(commands, colour_target_uses(targets));
-	begin_colour_rendering(0, false);
-	// the dynamic state starts anew with the rendering
-	auto const set{draw.set};
-	auto const scene_offset{draw.scene_offset};
-	auto const light_offset{draw.light_offset};
-	auto const cluster_offset{draw.cluster_offset};
-	auto const blending{draw.blending};
-	auto *program{draw.program};
-	auto const textures{draw.textures};
-	start_draws(targets.formats, static_cast<int>(targets.extent.width), static_cast<int>(targets.extent.height), set, false);
-	draw.scene_offset = scene_offset;
-	draw.light_offset = light_offset;
-	draw.cluster_offset = cluster_offset;
-	draw.blending = blending;
-	draw.program = program;
-	draw.textures = textures;
+	suspend_rendering();
+	vk14::barriers(commands, {vk14::use_of(*targets.depth, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT)});
+	VkBufferImageCopy2 region{};
+	region.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
+	region.imageSubresource = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0, 1};
+	region.imageOffset = {blockcorner.x, blockcorner.y, 0};
+	region.imageExtent = {static_cast<std::uint32_t>(blocksize.x), static_cast<std::uint32_t>(blocksize.y), 1};
+	VkCopyImageToBufferInfo2 copy{};
+	copy.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_TO_BUFFER_INFO_2;
+	copy.srcImage = targets.depth->handle();
+	copy.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	copy.dstBuffer = readback->handle();
+	copy.regionCount = 1;
+	copy.pRegions = &region;
+	commands->copy_image_to_buffer2(&copy);
+	host_read_barrier(commands);
+	scene.cursor.data = readback;
+	scene.cursor.value = ctx.timelinevalue + 1;
+	scene.cursor.pending = true;
+	scene.cursor.position = bufferpos;
+	m_cursorblockcorner = blockcorner;
+	m_cursorblocksize = blocksize;
+	m_cursorbiased = draw.depthpass;
+	// the rendering the walk was in (the colour or the depth of the scene) goes on, its images brought back from the copy
+	resume_rendering();
 }
 
 // the cascades of the sun shadows
@@ -2385,6 +2390,11 @@ bool vulkan14_renderer::render_reflections(viewport_config &Viewport)
 	auto &ctx{*m_context};
 	auto &scene{ctx.scene};
 	if (Global.reflectiontune.update_interval == 0)
+	{
+		return false;
+	}
+	// the top view of the editor shows nothing the reflections would be seen on: the cube map stays as it was
+	if (EditorModeFlag && Global.EditorOrtho)
 	{
 		return false;
 	}
@@ -2812,10 +2822,6 @@ void vulkan14_renderer::render_grass(glm::mat4 const &Future)
 	auto const cullface{draw.cullface};
 	draw.cullface = false;
 	apply_draw_state();
-	if (draw.set_dirty)
-	{
-		bind_pass_set();
-	}
 	glm::mat4 const view{OpenGLMatrices.data(GL_MODELVIEW)};
 	auto const &frame{grass.frame()};
 	auto const &tiles{grass.tile_draws()};
@@ -2832,6 +2838,12 @@ void vulkan14_renderer::render_grass(glm::mat4 const &Future)
 		if (block == ~0u)
 		{
 			break;
+		}
+		// the block may have opened a new window of the blocks, which the pass set is bound with: without binding it again the
+		// chunk (and those after it) would read the blocks of other draws, and the grass would flicker
+		if (draw.set_dirty)
+		{
+			bind_pass_set();
 		}
 		std::array<VkDescriptorImageInfo, gl::MAX_TEXTURES> descriptors;
 		for (std::size_t unit = 0; unit < gl::MAX_TEXTURES; ++unit)
@@ -4294,6 +4306,15 @@ scene::basic_node const *vulkan14_renderer::Pick_Node() const
 	return m_picksceneryitem;
 }
 
+void vulkan14_renderer::Forget_Node(scene::basic_node const *Node)
+{
+	if (m_picksceneryitem == Node)
+	{
+		m_picksceneryitem = nullptr;
+	}
+	std::replace_if(m_picksceneryitems.begin(), m_picksceneryitems.end(), [Node](scene::basic_node const *Item) { return Item == Node; }, nullptr);
+}
+
 glm::dvec3 vulkan14_renderer::Mouse_Position() const
 {
 	return m_worldmousecoordinates;
@@ -4329,10 +4350,42 @@ glm::dvec3 vulkan14_renderer::Update_Mouse_Position()
 		if (cursor.pending && (ctx.completed() >= cursor.value) && (false == ctx.scene.targets.empty()))
 		{
 			cursor.pending = false;
-			float pointdepth{0.f};
-			cursor.data->invalidate(0, sizeof(float));
-			std::memcpy(&pointdepth, cursor.data->mapped(), sizeof(float));
+			std::array<float, 9> depths{};
+			auto const count{static_cast<std::size_t>(std::clamp(m_cursorblocksize.x * m_cursorblocksize.y, 0, static_cast<int>(depths.size())))};
+			cursor.data->invalidate(0, sizeof(float) * count);
+			std::memcpy(depths.data(), cursor.data->mapped(), sizeof(float) * count);
 			cursor.data.reset();
+			auto const centre{cursor.position - m_cursorblockcorner};
+			auto const depth_at = [&](glm::ivec2 const Pixel) {
+				if ((Pixel.x < 0) || (Pixel.y < 0) || (Pixel.x >= m_cursorblocksize.x) || (Pixel.y >= m_cursorblocksize.y))
+				{
+					return 0.f;
+				}
+				return depths[static_cast<std::size_t>(Pixel.y * m_cursorblocksize.x + Pixel.x)];
+			};
+			float pointdepth{depth_at(centre)};
+			if (m_cursorbiased && (pointdepth > 0.f))
+			{
+				// the depth pass of the scene draws everything a little farther than it lies (depth bias -1, slope -1), so the colour
+				// pass passes on the same surface. the slope of the depth grows towards the horizon, and the ground seen at a grazing
+				// angle came out much farther than it lies, or not at all. the slope is taken back: the pixels next to it on the same
+				// triangle are moved by the same bias, so their difference is the slope; of the two sides the smaller, which is less
+				// likely to lie on another surface. the larger slope of the two axes, the one implementations use for m
+				auto const slope = [&](glm::ivec2 const Step) {
+					auto result{-1.f};
+					for (auto const side : {-1, 1})
+					{
+						auto const other{depth_at(centre + Step * side)};
+						if (other > 0.f)
+						{
+							auto const difference{std::abs(other - pointdepth)};
+							result = (result < 0.f ? difference : std::min(result, difference));
+						}
+					}
+					return std::max(result, 0.f);
+				};
+				pointdepth += std::max(slope({1, 0}), slope({0, 1})) + std::ldexp(1.f, std::ilogb(pointdepth) - 23);
+			}
 			auto const extent{ctx.scene.targets.front().extent};
 			m_mousehit = pointdepth > 0.0f;
 			if (pointdepth > 0.0f)

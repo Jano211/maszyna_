@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <array>
 #include <utility>
+#include <span>
 
 #define UBS_PAD(x) uint8_t PAD[x]
 
@@ -30,6 +31,8 @@ namespace gl
         void bind_uniform();
 
         void update(const uint8_t *data, int offset, GLsizeiptr size);
+        // the bytes given, put from the offset on
+        void update(std::span<std::byte const> Data, int Offset);
         template <typename T> void update(const T &data, size_t offset = 0)
         {
             update(reinterpret_cast<const uint8_t*>(&data), static_cast<int>(offset), sizeof(data));
@@ -146,7 +149,8 @@ namespace gl
         // the reflection of the surroundings the screen space reflections and the ray tracing don't find, for every pass: x: albedo
         // of the ground below the horizon of the environment map (gfx.ambient.groundalbedo), y used by the vulkan renderer (the
         // foliage traced), z: the share of the light of the sun the low poly interiors (and the cab without its probe) get as the light
-        // which comes in through their windows and bounces around them (gfx.interior.bounce), w unused
+        // which comes in through their windows and bounces around them (gfx.interior.bounce), w: 1 when the water of the scenery is drawn
+        // as realistic (gfx.water.realistic, water_surface.glsl), 0 as before
         glm::vec4 env_params;
         // the water on the windscreens (mat_rain_windscreen): xyz the velocity of the air against the vehicle of the camera (the
         // share of the wind the particles of the rain drift with, less the velocity of the vehicle), world space, m/s; w unused
@@ -639,6 +643,24 @@ namespace gl
     const GLuint PARTICLE_OWNER_SSBO_BINDING = 11; // the source of every place of the particles
     const GLuint PARTICLE_OUTPUT_SSBO_BINDING = 12; // what the draw reads, a particle_draw per particle drawn
     const GLuint PARTICLE_COMMAND_SSBO_BINDING = 13; // the indirect draw command, whose instances the passes count
+
+    // the instances of the timbers of the tracks (opengl46_timbers, timber_instances.comp): work group of the pass and the binding
+    // points of its buffers, ones of the instance culling, which binds its buffers before every use; the pass binds its own
+    const GLuint TIMBER_GROUP_SIZE = 64;
+    const GLuint TIMBER_LOCAL_SSBO_BINDING = 9; // the transforms of the instances of the tracks, relative to the origins of the tracks
+    const GLuint TIMBER_RANGE_SSBO_BINDING = 11; // the runs of them drawn, a timber_range each
+    const GLuint TIMBER_OUTPUT_SSBO_BINDING = 12; // the instance buffer of the frame, their modelviews written there
+    const GLuint TIMBER_ORIGIN_SSBO_BINDING = 13; // the modelviews of the origins of the cells of the runs
+
+    // layout std430: GLSL timber_range. a run of instances: count of them from source in the transforms, to target in the output,
+    // turned by the modelview of origin
+    struct timber_range
+    {
+        uint32_t source;
+        uint32_t count;
+        uint32_t target;
+        uint32_t origin;
+    };
 
     // layout std430: GLSL smoke_particle_s
     struct particle_smoke

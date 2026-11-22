@@ -9,12 +9,16 @@ http://mozilla.org/MPL/2.0/.
 
 #pragma once
 
+#include <array>
+#include <optional>
+#include <utility>
+
 #include "utilities/Classes.h"
 #include "rendering/geometrybank.h"
+#include "world/TrackUneven.h"
 #include <glm/glm.hpp>
 #include <memory>
 #include <vector>
-#include <optional>
 #include "world/Knots.h"
 
 struct map_colored_paths {
@@ -26,6 +30,16 @@ struct map_colored_paths {
 
 struct loft_end {
     double bend { 0.0 };
+};
+
+// a rail profile made over below its head into a lower section, as the wing rails of a frog of the section of the blades: its web, its
+// foot inwards and outwards as many times as thick and wide, the top of the edges of its foot and the root of its web as many times as high
+struct loft_low {
+    double web { 1.0 };
+    double inward { 1.0 };
+    double outward { 1.0 };
+    double edge { 1.0 };
+    double root { 1.0 };
 };
 
 struct loft_span {
@@ -47,6 +61,10 @@ struct loft_span {
     loft_end toend;
     knots::line drops;
     glm::dvec2 head { 0.0 };
+    double rise { 0.0 }; // how far the foot of the profile is raised, the web below the head (head.x) shortened by as much
+    knots::line rises; // along the span, in place of rise where given
+    knots::line lows; // along the span, how much of the low section the profile is made over into below its head, 0 to 1
+    loft_low low; // what the profile is made over into along lows
 };
 
 struct segment_data {
@@ -87,6 +105,15 @@ class TSegment
     glm::dvec3 Point2;
     float fRoll1 { 0.f };
     float fRoll2 { 0.f }; // przechyłka na końcach
+    // how the path sits among the others
+    struct setting {
+        std::array<float, 2> designrolls { 0.f, 0.f }; // as entered; fRoll1 and fRoll2 can differ at a joint
+        bool uneven { false }; // see TrackUneven.h
+        int path { 0 }; // which path of a switch
+        // where the path meets the next one: the middle of their ends and their common vector across
+        std::array<std::optional<std::pair<glm::dvec3, glm::dvec3>>, 2> joints;
+    };
+    setting m_setting;
     double fLength { -1.0 }; // długość policzona
     std::vector<double> fTsBuffer; // wartości parametru krzywej t dla równych odcinków s
     std::vector<double> fTsSlope; // nachylenie dt/du (= dt/ds * fStep) w tych samych punktach
@@ -100,8 +127,10 @@ class TSegment
     TTrack *pOwner = nullptr; // wskaźnik na właściciela
     std::vector<std::shared_ptr<TSegment>> m_pieces; // parts of a path made of several curves, parametrized by distance
     std::vector<double> m_starts; // distance from Point1 to the start of each part
-    std::optional<std::pair<glm::dvec3, glm::dvec3>> m_joints[ 2 ];
     double m_dense { 0.0 };
+    // a switch makes the profiles of its rails and its bed at the mean of the rolls of its paths: lofted along a path, they're turned
+    // from it to the roll of the path there, so a switch on a cant ramp follows it; none for the other paths
+    std::optional<float> m_baked_roll;
 
     glm::dvec3 GetFirstDerivative(double const fTime) const;
 	double RombergIntegral(double const fA, double const fB) const;
@@ -111,6 +140,13 @@ class TSegment
 	glm::dvec3 RaInterpolate(double const t) const;
 	glm::dvec3 RaInterpolate0(double const t) const;
     std::size_t piece_at(double const s) const;
+    // the vertex of a profile lofted at the point and across the path there, turned from the baked roll to the one of the path at the distance
+    void roll_vertex( gfx::basic_vertex &Vertex, glm::vec3 const &Position, glm::vec3 const &Parallel, double const Distance ) const;
+
+    // moves a lofted vertex with the unevenness of the track
+    void settle_vertex( gfx::basic_vertex &Vertex, glm::dvec3 const &Origin, glm::vec3 const &Position, glm::vec3 const &Parallel, double const Distance ) const;
+    // displacement of a point by the unevenness, at a distance along the path
+    glm::dvec3 stray( glm::dvec3 const &Point, track_uneven::amounts const &Amount, double const Distance ) const;
 
 public:
     bool bCurve = false;
@@ -160,6 +196,24 @@ public:
 	/// <param name="position">Calculated position</param>
 	/// <param name="rotation">Calculated rotation</param>
 	void RaPositionGet(double const fDistance, glm::dvec3 &position, glm::vec3 &rotation) const;
+    // call before Init, it sets the density of the geometry
+    void
+        set_uneven( bool const Uneven, int const Path = 0 ) {
+            m_setting.uneven = Uneven;
+            m_setting.path = Path; }
+    // a point of the path and the unit vector across it in the plan, towards the right rail profile; zero for a path never made
+    void
+        plan_frame( double const Distance, glm::dvec3 &Point, glm::dvec3 &Across ) const;
+    float
+        design_roll( int const End ) const {
+            return m_setting.designrolls[ End ]; }
+    void
+        set_joint( int const End, std::optional<std::pair<glm::dvec3, glm::dvec3>> const &Joint, float const Roll ) {
+            m_setting.joints[ End ] = Joint;
+            ( End == 0 ? fRoll1 : fRoll2 ) = Roll; }
+    // second derivative of the displacement along the path; times speed squared: acceleration of an axle
+    glm::dvec3
+        uneven_bend( double const Distance ) const;
 	glm::dvec3 FastGetPoint(double const t) const;
     inline
     glm::dvec3
@@ -200,15 +254,12 @@ public:
     // the profile lofted from distance From to To, moved outwards by Offsets and cut on its outer side to Extents beyond the gauge line, both as (distance, value) knots
     bool
         RenderLoftSpan( gfx::vertex_array &Output, glm::dvec3 const &Origin, gfx::vertex_array const &ShapePoints, loft_span const &Span ) const;
-    // point of the path and the unit vector across it towards the right rail profile, at a distance from Point1
-    void
-        plan_frame( double const Distance, glm::dvec3 &Point, glm::dvec3 &Across ) const;
-    void
-        set_joint( int const End, std::optional<std::pair<glm::dvec3, glm::dvec3>> const &Joint ) {
-            m_joints[ End ] = Joint; }
     void
         set_dense( double const Distance ) {
             m_dense = Distance; }
+    void
+        set_baked_roll( std::optional<float> const Roll ) {
+            m_baked_roll = Roll; }
 /*
     void
         Render();
