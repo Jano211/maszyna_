@@ -2,6 +2,22 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-22 16:40 – łącznik 0640 przepisany (w exe NIESPRAWDZONE)
+
+- Użytkownik: łączniki w zwartych przęsłach naprężenia nie trafiały w druty, nie zależały od liczby przewodów, czasem zacisk w osi
+  słupa (przy mocowaniach). Przyczyny: przewód/lina liczone prostą między punktami przęsła, jedno „S” do jednego przewodu, a lina
+  drugiego łańcucha rzutowana na JEGO wspólne przęsło z przycięciem do końców (poza nim -> koniec przęsła = oś słupa).
+- Teraz (`overlap_connector`): liny i przewody obu łańcuchów z `catenary_span_point` (górna/dolna lina, każdy przewód), przęsło
+  drugiego łańcucha szukane po miejscu (każde jego przęsło, które obejmuje punkt). Kształt wg karty 33-0640 (katalog 2 s. 5):
+  3/4/26/30 lina A–łuk–lina B–„S” do obu przewodów B (6601-1, mały łuk między nimi); 10 przewód A–lina A–łuk–lina B–przewód B;
+  20 łącznik 9861-1 + po 3 linki na linę z każdej strony, 2 z nich do przewodów (6601-2); 32/35 łącznik 9861-1, łuk przez obie
+  liny obu łańcuchów, „S” do przewodów jednego. Kody bez karty (0, 1, 2, 5, 11, 14, 36, 37) wg budowy: 1 przewód jak 10, 2 liny
+  jak 32, inaczej jak 3 – ZAŁOŻENIE, do potwierdzenia. „S” schodzi do łańcucha z niższym przewodem (pracujący) – ZAŁOŻENIE.
+  Nowa funkcja `catenary_span_code` (catenary_span.h). Na karcie „przy każdym słupie krzyżowym” tylko dla 3/4/26/30/32/35 –
+  dla 10 i 20 też przy każdym (jak dotąd) – do potwierdzenia.
+- Przęsło izolowane: izolatory 7150 w linie i przewodach do kotwienia 2 m od słupa krzyżowego (karta 0060 „izolacja” przy K1,
+  odległość na oko) – bez zmian; łączników brak.
+
 ## START TUTAJ – 2026-11-22 14:50 – odgromnik 7310 wg katalogu 2 (grupy 0600 i 0800)
 
 - Karty w „z- KATALOG 2 -z.pdf” (s. 25–27 pdf): **0681 → 7310-1 słupy ceownikowe** (szkic przekroju: słup z ceowników jak 161x),

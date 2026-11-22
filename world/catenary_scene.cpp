@@ -2854,19 +2854,91 @@ assemble_middle( scene_chain &Chain ) {
     }
 }
 
-// łącznik międzysekcyjny 33-0640 (Kolprojekt 2010 s. 55) w przęśle naprężenia zwartym (ten sam zasilacz obu łańcuchów), przy każdym
-// słupie krzyżowym: linka 9815-9 łukiem między linami nośnymi obu łańcuchów (zaciski 6605) i wydłużone "S" z liny w dół do przewodu
-// jezdnego (zaciski 6601). Linki proceduralne, zaciski bryłami zastępczymi. Rysuje go łańcuch o wyższym numerze, w przęśle za słupem
-// krzyżowym (w kierunku łańcucha). ZAŁOŻENIA (do potwierdzenia): 1,5 m od słupa krzyżowego, "S" do przewodu łańcucha, który rysuje
+// łącznik międzysekcyjny 33-0640 (katalog 2 s. 5, Kolprojekt 2010 s. 55) w przęśle naprężenia zwartym (ten sam zasilacz obu łańcuchów),
+// przy każdym słupie krzyżowym, 1,5 m od niego po stronie części wspólnej (ZAŁOŻENIE). Kształt wg typu sieci z karty:
+//   sieć 3, 4, 26, 30 (jedna lina, dwa przewody): linka z liny łańcucha A łukiem na linę B, z niej "S" w dół do obu przewodów B
+//     (zaciski 6601-1, między nimi mały łuk);
+//   sieć 10 (jeden przewód): z przewodu A "S" w górę przez linę A, łuk na linę B, "S" w dół do przewodu B;
+//   sieć 20 (YC120-2C150): trzy linki z łącznika 9861-1 nad osią: po każdej stronie trzy zaciski na linie, dwie z linek dalej "S"
+//     w dół do obu przewodów tej strony (6601-2);
+//   sieć 32, 35 (dwie liny, dwa przewody): z łącznika 9861-1 łuk na obie liny obu łańcuchów, z lin jednego łańcucha "S" w dół
+//     do jego obu przewodów.
+// Inne kody (bez karty) wg budowy: jeden przewód - jak 10, dwie liny - jak 32, inaczej jak 3 (ZAŁOŻENIE). "S" schodzi do łańcucha,
+// którego przewód jest w tym miejscu niżej (pracujący). Linie i przewody z przęseł policzonych wg typu sieci (catenary_span_point) -
+// przęsło drugiego łańcucha szukane po miejscu, nie tylko wspólne; bez typu sieci - przybliżenie z punktów przęsła.
+// Linki proceduralne, zaciski bryłami zastępczymi.
 double constexpr kConnectorFromPole { 1.5 };
 double constexpr kConnectorRadius { 0.0063 };   // linka 9815-9, ok. 95 mm²
+
+namespace {
+
+// przekrój łańcucha w miejscu (w planie) Point: liny (górna, dolna) i przewody jezdne, współrzędne scenerii
+struct connector_cut {
+    std::vector<glm::dvec3> ropes;
+    std::vector<glm::dvec3> wires;
+    glm::dvec3 along { 1.0, 0.0, 0.0 };     // kierunek przęsła
+    bool valid() const { return false == ropes.empty() && false == wires.empty(); }
+};
+
+// przekrój przęsła Span w miejscu Point (rzut w planie na przęsło); pusty, gdy miejsce leży poza przęsłem
+connector_cut
+connector_cut_of( TTraction &Span, glm::dvec3 const &Point ) {
+    connector_cut cut;
+    auto const dx { Span.pPoint2.x - Span.pPoint1.x }, dz { Span.pPoint2.z - Span.pPoint1.z };
+    auto const plan { std::hypot( dx, dz ) };
+    if( plan < 1e-6 ) { return cut; }
+    auto const along { ( ( Point.x - Span.pPoint1.x ) * dx + ( Point.z - Span.pPoint1.z ) * dz ) / plan };
+    if( along < -1e-6 || along > plan + 1e-6 ) { return cut; }
+    cut.along = glm::normalize( glm::dvec3 { dx, 0.0, dz } );
+    glm::dvec3 point;
+    for( int index = 0; index < 2 && catenary_span_point( Span, along, true, point, index ); ++index ) { cut.ropes.push_back( point ); }
+    for( int index = 0; index < 4 && catenary_span_point( Span, along, false, point, index ); ++index ) { cut.wires.push_back( point ); }
+    if( cut.valid() ) { return cut; }
+    // przęsło bez typu sieci: lina i przewód po prostej między punktami przęsła
+    cut.ropes.assign( 1, Span.pPoint3 + ( Span.pPoint4 - Span.pPoint3 ) * ( along / plan ) );
+    cut.wires.assign( 1, Span.pPoint1 + ( Span.pPoint2 - Span.pPoint1 ) * ( along / plan ) );
+    return cut;
+}
+
+// łuk między dwoma punktami, wygięty o Bulge (w górę dodatnie)
+std::vector<glm::dvec3>
+connector_arc( glm::dvec3 const &From, glm::dvec3 const &To, double const Bulge ) {
+    std::vector<glm::dvec3> arc;
+    for( int step = 0; step <= 12; ++step ) {
+        auto const s { step / 12.0 };
+        arc.push_back( From + ( To - From ) * s + glm::dvec3 { 0.0, Bulge * 4.0 * s * ( 1.0 - s ), 0.0 } );
+    }
+    return arc;
+}
+
+// wydłużone "S" z punktu na linie w dół do przewodu: wychylenie w bok o 0,15 m w jedną i drugą stronę
+std::vector<glm::dvec3>
+connector_drop( glm::dvec3 const &From, glm::dvec3 const &To, glm::dvec3 const &Across ) {
+    std::vector<glm::dvec3> drop;
+    for( int step = 0; step <= 16; ++step ) {
+        auto const s { step / 16.0 };
+        drop.push_back( From + ( To - From ) * s + Across * ( 0.15 * std::sin( s * 2.0 * 3.14159265358979323846 ) ) );
+    }
+    return drop;
+}
+
+// punkt liny w osi przewodu: lina nad przewodem (ta z lin, która jest najbliżej w planie)
+glm::dvec3
+connector_rope_over( connector_cut const &Cut, glm::dvec3 const &Wire ) {
+    auto best { Cut.ropes.front() };
+    for( auto const &rope : Cut.ropes ) {
+        if( std::hypot( rope.x - Wire.x, rope.z - Wire.z ) < std::hypot( best.x - Wire.x, best.z - Wire.z ) ) { best = rope; }
+    }
+    return best;
+}
+
+} // namespace
 
 void
 overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
     auto const index { static_cast<std::size_t>( &Chain - Chains.data() ) };
-    auto const lerp = []( glm::dvec3 const &A, glm::dvec3 const &B, double const T ) { return A + ( B - A ) * T; };
     auto const points { chain_points( Chain ) };
-    if( index >= Chains.size() || Span + 1 >= points ) { return; }
+    if( index >= Chains.size() || Span + 1 >= points || Span >= Chain.spans.size() || Chain.spans[ Span ] == nullptr ) { return; }
     double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ];
     bool anchoreda, anchoredb;
     if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) ) { return; }
@@ -2897,34 +2969,106 @@ overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector
     };
     auto const crossstart { Span == 0 || false == shared( Span - 1 ) };
     auto const crossend { false == shared( Span + 1 ) };
+    auto &mine { *Chain.spans[ Span ] };
+    auto const code { catenary_span_code( mine ) };
     auto const draw = [ & ]( double const T ) {
-        glm::dvec3 const rope { lerp( glm::dvec3 { ra[ 0 ], ra[ 1 ], ra[ 2 ] }, glm::dvec3 { rb[ 0 ], rb[ 1 ], rb[ 2 ] }, T ) };
-        glm::dvec3 const wire { lerp( a, b, T ) };
-        // lina nośna drugiego łańcucha w tym miejscu: rzut na jego linę (końce pPoint3, pPoint4)
-        auto const along { other->pPoint4 - other->pPoint3 };
-        auto const u { std::clamp( glm::dot( rope - other->pPoint3, along ) / std::max( glm::dot( along, along ), 1e-9 ), 0.0, 1.0 ) };
-        auto const otherrope { other->pPoint3 + along * u };
-        // linka łukiem w dół między linami (luz), potem "S" z liny tego łańcucha w dół do jego przewodu
-        std::vector<glm::dvec3> arc;
-        auto const sag { 0.25 };
-        for( int step = 0; step <= 12; ++step ) {
-            auto const s { step / 12.0 };
-            arc.push_back( lerp( rope, otherrope, s ) - glm::dvec3 { 0.0, sag * 4.0 * s * ( 1.0 - s ), 0.0 } );
+        auto const place { a + ( b - a ) * T };
+        auto const here { connector_cut_of( mine, place ) };
+        // drugi łańcuch: jego przęsło, które obejmuje to miejsce (wspólne albo sąsiednie - nie przycinane do końców wspólnego)
+        connector_cut there;
+        for( auto *span : Chains[ otherchain ].spans ) {
+            if( span == nullptr ) { continue; }
+            there = connector_cut_of( *span, place );
+            if( there.valid() ) { break; }
         }
-        add_tube( Solid, arc, kConnectorRadius );
-        auto const across { glm::length( glm::dvec3 { otherrope.x - rope.x, 0.0, otherrope.z - rope.z } ) > 1e-3 ? glm::normalize( glm::dvec3 { otherrope.x - rope.x, 0.0, otherrope.z - rope.z } ) : glm::dvec3 { 1.0, 0.0, 0.0 } };
-        std::vector<glm::dvec3> drop;
-        for( int step = 0; step <= 16; ++step ) {
-            auto const s { step / 16.0 };
-            // wydłużone S: wychylenie w bok o 0,15 m w jedną i drugą stronę
-            auto const swing { 0.15 * std::sin( s * 2.0 * 3.14159265358979323846 ) };
-            drop.push_back( lerp( rope, wire, s ) + across * swing );
+        if( false == here.valid() || false == there.valid() ) { return; }
+        // "S" schodzi do łańcucha, którego przewód jest tu niżej (pracujący); drugi tylko na linie
+        auto const lowest = []( connector_cut const &Cut ) {
+            auto low { Cut.wires.front().y };
+            for( auto const &wire : Cut.wires ) { low = std::min( low, wire.y ); }
+            return low;
+        };
+        auto const &drop { lowest( here ) <= lowest( there ) ? here : there };
+        auto const &up { &drop == &here ? there : here };
+        auto const singlewire { here.wires.size() < 2 && there.wires.size() < 2 };
+        auto const tworopes { here.ropes.size() > 1 || there.ropes.size() > 1 };
+        auto const kind { code == 10 || ( code != 3 && code != 4 && code != 20 && code != 26 && code != 30 && code != 32 && code != 35 && singlewire ) ? 10
+                        : code == 20 ? 20
+                        : code == 32 || code == 35 || ( code != 3 && code != 4 && code != 26 && code != 30 && tworopes ) ? 32
+                        : 3 };
+        auto const across = [ & ]( glm::dvec3 const &From, glm::dvec3 const &To ) {
+            glm::dvec3 const flat { To.x - From.x, 0.0, To.z - From.z };
+            return glm::length( flat ) > 1e-3 ? glm::normalize( flat ) : glm::cross( drop.along, glm::dvec3 { 0.0, 1.0, 0.0 } );
+        };
+        auto const clamp_rope = [ & ]( glm::dvec3 const &At ) { add_box( Solid, At, drop.along, 0.08, 0.04 ); };     // 6605
+        auto const clamp_wire = [ & ]( glm::dvec3 const &At ) { add_box( Solid, At, drop.along, 0.08, 0.035 ); };    // 6601
+        // linka z liny w dół do przewodów łańcucha Cut: do pierwszego "S", do kolejnego mały łuk po przewodach
+        auto const down = [ & ]( connector_cut const &Cut, glm::dvec3 const &From, glm::dvec3 const &Away ) {
+            auto const &first { Cut.wires.front() };
+            add_tube( Solid, connector_drop( From, first, Away ), kConnectorRadius );
+            clamp_wire( first );
+            for( std::size_t wire = 1; wire < Cut.wires.size(); ++wire ) {
+                add_tube( Solid, connector_arc( Cut.wires[ wire - 1 ], Cut.wires[ wire ], 0.06 ), kConnectorRadius );
+                clamp_wire( Cut.wires[ wire ] );
+            }
+        };
+        if( kind == 10 ) {
+            // przewód A - lina A - łuk - lina B - przewód B
+            auto const ropeup { connector_rope_over( up, up.wires.front() ) }, ropedrop { connector_rope_over( drop, drop.wires.front() ) };
+            add_tube( Solid, connector_drop( up.wires.front(), ropeup, across( ropedrop, ropeup ) ), kConnectorRadius );
+            clamp_wire( up.wires.front() );
+            add_tube( Solid, connector_arc( ropeup, ropedrop, 0.45 ), kConnectorRadius );
+            clamp_rope( ropeup );
+            clamp_rope( ropedrop );
+            add_tube( Solid, connector_drop( ropedrop, drop.wires.front(), across( ropeup, ropedrop ) ), kConnectorRadius );
+            clamp_wire( drop.wires.front() );
+            return;
         }
-        add_tube( Solid, drop, kConnectorRadius );
-        auto const alongspan { b - a };
-        add_box( Solid, rope, alongspan, 0.08, 0.04 );          // zaciski 6605 na linach
-        add_box( Solid, otherrope, alongspan, 0.08, 0.04 );
-        add_box( Solid, wire, alongspan, 0.08, 0.035 );         // zacisk 6601 na przewodzie
+        if( kind == 3 ) {
+            // lina A - łuk - lina B - "S" do przewodów B
+            auto const ropeup { up.ropes.front() }, ropedrop { drop.ropes.front() };
+            add_tube( Solid, connector_arc( ropeup, ropedrop, 0.45 ), kConnectorRadius );
+            clamp_rope( ropeup );
+            clamp_rope( ropedrop );
+            down( drop, ropedrop, across( ropeup, ropedrop ) );
+            return;
+        }
+        // 20 i 32: łącznik 9861-1 nad środkiem między łańcuchami, z niego linki na liny (i dalej do przewodów)
+        auto const middle { ( up.ropes.front() + drop.ropes.front() ) * 0.5 };
+        auto top { middle };
+        for( auto const *cut : { &up, &drop } ) { for( auto const &rope : cut->ropes ) { top.y = std::max( top.y, rope.y ); } }
+        top.y += 0.5;
+        add_box( Solid, top, drop.along, 0.06, 0.05 );
+        if( kind == 20 ) {
+            // po każdej stronie trzy linki z łącznika na linę (zaciski obok siebie wzdłuż liny), dwie z nich dalej do przewodów
+            for( auto const *cut : { &up, &drop } ) {
+                auto const rope { cut->ropes.front() };
+                for( int cable = 0; cable < 3; ++cable ) {
+                    auto const at { rope + cut->along * ( 0.12 * ( cable - 1 ) ) };
+                    add_tube( Solid, connector_arc( top, at, 0.15 ), kConnectorRadius );
+                    clamp_rope( at );
+                    if( cable < 2 && static_cast<std::size_t>( cable ) < cut->wires.size() ) {
+                        auto const &wire { cut->wires[ cable ] };
+                        add_tube( Solid, connector_drop( at, wire, across( middle, rope ) ), kConnectorRadius );
+                        clamp_wire( wire );
+                    }
+                }
+            }
+            return;
+        }
+        // 32, 35: z łącznika łuk przez obie liny każdego łańcucha (zaciski na każdej), z lin łańcucha pracującego "S" do jego przewodów
+        for( auto const *cut : { &up, &drop } ) {
+            auto ropes { cut->ropes };
+            // najpierw lina bliższa środka
+            std::sort( ropes.begin(), ropes.end(), [ & ]( glm::dvec3 const &L, glm::dvec3 const &R ) {
+                return std::hypot( L.x - middle.x, L.z - middle.z ) < std::hypot( R.x - middle.x, R.z - middle.z ); } );
+            add_tube( Solid, connector_arc( top, ropes.front(), 0.15 ), kConnectorRadius );
+            for( std::size_t rope = 0; rope < ropes.size(); ++rope ) {
+                clamp_rope( ropes[ rope ] );
+                if( rope > 0 ) { add_tube( Solid, connector_arc( ropes[ rope - 1 ], ropes[ rope ], 0.05 ), kConnectorRadius ); }
+            }
+            if( cut == &drop ) { down( drop, ropes.back(), across( middle, ropes.back() ) ); }
+        }
     };
     if( crossstart ) { draw( kConnectorFromPole / length ); }
     if( crossend ) { draw( 1.0 - kConnectorFromPole / length ); }
