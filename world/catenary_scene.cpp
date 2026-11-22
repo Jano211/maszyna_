@@ -2937,6 +2937,35 @@ connector_rope_over( connector_cut const &Cut, glm::dvec3 const &Wire ) {
 
 } // namespace
 
+// kształt łącznika 0640 wg typu sieci (karta 33-0640 ESN i 2010; sieci 1, 2 - stara 13-0601 wyk. 1); sieci bez karty wg przewodów i lin
+int
+connector_kind( int const Code, bool const Singlewire, bool const Tworopes ) {
+    switch( Code ) {
+    case 1:
+    case 2:
+        return 1;
+    case 3:
+    case 4:
+    case 26:
+    case 30:
+        return 3;
+    case 10:
+        return 10;
+    case 20:
+        return 20;
+    case 32:
+    case 35:
+        return 32;
+    case 36:
+    case 37:
+        return 36;
+    default:
+        break;
+    }
+    if( Singlewire ) { return 10; }
+    return Tworopes ? 32 : 3;
+}
+
 void
 overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
     auto const index { static_cast<std::size_t>( &Chain - Chains.data() ) };
@@ -2995,10 +3024,7 @@ overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector
         auto const &up { &drop == &here ? there : here };
         auto const singlewire { here.wires.size() < 2 && there.wires.size() < 2 };
         auto const tworopes { here.ropes.size() > 1 || there.ropes.size() > 1 };
-        auto const kind { code == 10 || ( code != 3 && code != 4 && code != 20 && code != 26 && code != 30 && code != 32 && code != 35 && singlewire ) ? 10
-                        : code == 20 ? 20
-                        : code == 32 || code == 35 || ( code != 3 && code != 4 && code != 26 && code != 30 && tworopes ) ? 32
-                        : 3 };
+        auto const kind { connector_kind( code, singlewire, tworopes ) };
         auto const across = [ & ]( glm::dvec3 const &From, glm::dvec3 const &To ) {
             glm::dvec3 const flat { To.x - From.x, 0.0, To.z - From.z };
             return glm::length( flat ) > 1e-3 ? glm::normalize( flat ) : glm::cross( drop.along, glm::dvec3 { 0.0, 1.0, 0.0 } );
@@ -3027,6 +3053,24 @@ overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector
             clamp_wire( drop.wires.front() );
             return;
         }
+        if( kind == 1 ) {
+            // stara karta 13-0601 wyk. 1 (sieci 1, 2): dwa łączniki obok siebie, każdy jak w sieci 10 - przewód A, lina A, łuk,
+            // lina B, przewód B - po jednym przewodzie każdego łańcucha
+            auto const count { std::min( up.wires.size(), drop.wires.size() ) };
+            for( std::size_t wire = 0; wire < count; ++wire ) {
+                auto const shift { drop.along * ( 0.4 * static_cast<double>( wire ) ) };
+                auto const wireup { up.wires[ wire ] + shift }, wiredrop { drop.wires[ wire ] + shift };
+                auto const ropeup { connector_rope_over( up, wireup ) }, ropedrop { connector_rope_over( drop, wiredrop ) };
+                add_tube( Solid, connector_drop( wireup, ropeup, across( ropedrop, ropeup ) ), kConnectorRadius );
+                clamp_wire( wireup );
+                add_tube( Solid, connector_arc( ropeup, ropedrop, 0.45 ), kConnectorRadius );
+                clamp_rope( ropeup );
+                clamp_rope( ropedrop );
+                add_tube( Solid, connector_drop( ropedrop, wiredrop, across( ropeup, ropedrop ) ), kConnectorRadius );
+                clamp_wire( wiredrop );
+            }
+            return;
+        }
         if( kind == 3 ) {
             // lina A - łuk - lina B - "S" do przewodów B
             auto const ropeup { up.ropes.front() }, ropedrop { drop.ropes.front() };
@@ -3042,15 +3086,17 @@ overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector
         for( auto const *cut : { &up, &drop } ) { for( auto const &rope : cut->ropes ) { top.y = std::max( top.y, rope.y ); } }
         top.y += 0.5;
         add_box( Solid, top, drop.along, 0.06, 0.05 );
-        if( kind == 20 ) {
-            // po każdej stronie trzy linki z łącznika na linę (zaciski obok siebie wzdłuż liny), dwie z nich dalej do przewodów
+        if( kind == 20 || kind == 36 ) {
+            // 20: po każdej stronie trzy linki z łącznika na linę (zaciski obok siebie wzdłuż liny), dwie z nich dalej do przewodów;
+            // 36, 37 (karta 33-0640 z 2010): po każdej stronie dwie linki na linę, "S" do przewodów tylko po stronie pracującej
+            auto const cables { kind == 20 ? 3 : 2 };
             for( auto const *cut : { &up, &drop } ) {
                 auto const rope { cut->ropes.front() };
-                for( int cable = 0; cable < 3; ++cable ) {
-                    auto const at { rope + cut->along * ( 0.12 * ( cable - 1 ) ) };
+                for( int cable = 0; cable < cables; ++cable ) {
+                    auto const at { rope + cut->along * ( 0.12 * ( cable - 0.5 * ( cables - 1 ) ) ) };
                     add_tube( Solid, connector_arc( top, at, 0.15 ), kConnectorRadius );
                     clamp_rope( at );
-                    if( cable < 2 && static_cast<std::size_t>( cable ) < cut->wires.size() ) {
+                    if( ( kind == 20 || cut == &drop ) && cable < 2 && static_cast<std::size_t>( cable ) < cut->wires.size() ) {
                         auto const &wire { cut->wires[ cable ] };
                         add_tube( Solid, connector_drop( at, wire, across( middle, rope ) ), kConnectorRadius );
                         clamp_wire( wire );
