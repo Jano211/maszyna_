@@ -97,6 +97,20 @@ pull_end( TTraction const &Traction, int const End ) {
     return ( End == 0 ? pull[ 0 ] > 0.01 : pull[ 0 ] + length < pull[ 1 ] - 0.01 );
 }
 
+// przerwa na izolator sekcyjny (przewody albo lina) bliżej podwieszenia na końcu End niż Reach (w planie)
+bool
+gap_within( TTraction const &Traction, int const End, double const Reach ) {
+    if( false == static_cast<bool>( Traction.m_catenaryspan ) ) { return false; }
+    auto const &span { *Traction.m_catenaryspan };
+    auto const length { std::hypot( Traction.pPoint2.x - Traction.pPoint1.x, Traction.pPoint2.z - Traction.pPoint1.z ) };
+    for( int which = 0; which < 2; ++which ) {
+        if( false == span.gapped[ which ] ) { continue; }
+        auto const near { End == 0 ? span.gap[ which ][ 0 ] : length - span.gap[ which ][ 1 ] };
+        if( near < Reach ) { return true; }
+    }
+    return false;
+}
+
 // czy przy podwieszeniu od strony wskazanego końca (0: Point1, 1: Point2) jest linka Y wspólna z sąsiednim przęsłem.
 // linka Y to jedno cięgno na dwa przęsła, więc jest tylko wtedy, gdy oba przęsła ją przewidują, w tej samej długości
 // i z tych samych przewodów, a ich liny nośne schodzą się w jednym punkcie
@@ -122,6 +136,9 @@ y_at( TTraction const &Traction, int const End ) {
      || type.messenger_count != neighbourtype.messenger_count ) {
         return false;
     }
+    // izolator sekcyjny (albo izolatory przęsła izolowanego) bliżej podwieszenia niż sięga Y, po którejkolwiek stronie: Y przy tym
+    // podwieszeniu nie ma - linka zwierałaby izolator (użytkownik 2026-11-22: „tak jest na gruncie”)
+    if( gap_within( Traction, End, 0.5 * ylength ) || gap_within( *neighbour, neighbourend, 0.5 * ylength ) ) { return false; }
     auto const &rope { End == 0 ? Traction.pPoint3 : Traction.pPoint4 };
     auto const &neighbourrope { neighbourend == 0 ? neighbour->pPoint3 : neighbour->pPoint4 };
     return ( glm::length( rope - neighbourrope ) < 0.05 );

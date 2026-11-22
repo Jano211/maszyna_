@@ -4470,9 +4470,12 @@ attach_span_solids( scene_chain &Chain, std::size_t const Span ) {
     catenary_span_attach( *Chain.spans[ Span ], rope, copper );
 }
 
-void
-rebuild_span_only( scene_chain &Chain, std::size_t const Span ) {
-    if( Span >= Chain.spans.size() ) { return; }
+void span_extras( scene_chain &Chain, std::size_t const Span );
+
+// samo przęsło (wpis node traction) od nowa, bez części przy nim; false - przęsła nie ma
+bool
+make_span( scene_chain &Chain, std::size_t const Span ) {
+    if( Span >= Chain.spans.size() ) { return false; }
     if( Chain.span_parts.size() < Chain.spans.size() ) { Chain.span_parts.resize( Chain.spans.size() ); }
     for( auto *part : Chain.span_parts[ Span ] ) { catenary_part_delete( part ); }
     Chain.span_parts[ Span ].clear();
@@ -4486,9 +4489,25 @@ rebuild_span_only( scene_chain &Chain, std::size_t const Span ) {
             catenary_span_delete( Chain.spans[ Span ] );
             Chain.spans[ Span ] = nullptr;
         }
-        if( body.empty() ) { return; }
+        if( body.empty() ) { return false; }
         Chain.spans[ Span ] = catenary_span_create( span_name( Chain, Span ), Chain.data.range_max, Chain.data.range_min, body, Initialized );
     }
+    return Chain.spans[ Span ] != nullptr;
+}
+
+void
+rebuild_span_only( scene_chain &Chain, std::size_t const Span ) {
+    if( make_span( Chain, Span ) ) { span_extras( Chain, Span ); }
+}
+
+// części i bryły przy przęśle (liny kotwień, kotwienie środkowe, łączniki, izolatory, uszynienie): stawiane od nowa na przęśle, które
+// już stoi - części liczone z kształtu liny zależą od przęseł sąsiednich, więc stawiane, gdy te już są
+void
+span_extras( scene_chain &Chain, std::size_t const Span ) {
+    if( Span >= Chain.spans.size() ) { return; }
+    if( Chain.span_parts.size() < Chain.spans.size() ) { Chain.span_parts.resize( Chain.spans.size() ); }
+    for( auto *part : Chain.span_parts[ Span ] ) { catenary_part_delete( part ); }
+    Chain.span_parts[ Span ].clear();
     // przęsło do kotwienia rysuje z bliska jego linę (bryła proceduralna urządzenia naprężającego)
     if( auto *span { Chain.spans[ Span ] }; span != nullptr ) {
         std::vector<catenary::solid_vertex> rope;
@@ -4505,17 +4524,51 @@ rebuild_span_only( scene_chain &Chain, std::size_t const Span ) {
             auto const &solid { Chain.middle_solid[ Span == Chain.middle_span ? 0 : 1 ] };
             rope.insert( rope.end(), solid.begin(), solid.end() );
         }
-        // przęsło naprężenia zwarte: łącznik 33-0640 za słupem krzyżowym
-        overlap_connector( Chain, Span, rope );
-        // izolator sekcyjny (modele; części przęsła stawiane od nowa razem z nim)
-        section_insulator( Chain, Span, rope );
-        // izolowane przęsło naprężenia: izolatory w przewodzie i linie schodzących do kotwienia, przy słupie krzyżowym
-        overlap_insulators( Chain, Span, rope );
+        // części liczone z kształtu liny: dopiero gdy przęsła są połączone z sąsiadami (linka Y); przy wczytaniu scenerii stawia je
+        // catenary_scene_resolve po InitTraction
+        if( Initialized ) {
+            // przęsło naprężenia zwarte: łącznik 33-0640 za słupem krzyżowym
+            overlap_connector( Chain, Span, rope );
+            // izolator sekcyjny (modele; części przęsła stawiane od nowa razem z nim)
+            section_insulator( Chain, Span, rope );
+            // izolowane przęsło naprężenia: izolatory w przewodzie i linie schodzących do kotwienia, przy słupie krzyżowym
+            overlap_insulators( Chain, Span, rope );
+        }
         // lina uszynienia grupowego między słupami przęsła
         earthing_rope( Chain, Span, rope );
         if( Chain.span_rope.size() < Chain.spans.size() ) { Chain.span_rope.resize( Chain.spans.size() ); }
         Chain.span_rope[ Span ] = rope;
         attach_span_solids( Chain, Span );
+    }
+}
+
+// części przęsła liczone z kształtu liny i przewodów (izolator sekcyjny, izolatory przęsła izolowanego, łącznik 0640): kształt
+// zależy od przęseł sąsiednich (linka Y wspólna z sąsiadem), więc gdy przęsło powstało przed sąsiadem albo przed połączeniem sieci
+// (InitTraction), części stoją pod liną policzoną bez Y - tu stawiane jeszcze raz (użytkownik 2026-11-22: góra izolatora sekcyjnego
+// mijała linę nośną w YC120-2C150)
+bool
+span_fitted_parts( scene_chain const &Chain, std::size_t const Span ) {
+    if( Span >= Chain.spans.size() || Chain.spans[ Span ] == nullptr ) { return false; }
+    auto const offset { Chain.data.anchor_start.empty() ? 0u : 1u };
+    for( auto const &insulator : Chain.data.insulators ) {
+        auto const found { std::find( Chain.data.suspensions.begin(), Chain.data.suspensions.end(), insulator.after ) };
+        if( found != Chain.data.suspensions.end() && static_cast<std::size_t>( found - Chain.data.suspensions.begin() ) + offset == Span ) { return true; }
+    }
+    double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ];
+    bool anchoreda, anchoredb;
+    if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) ) { return false; }
+    double along { 0.0 };
+    if( overlap_insulator_at( Chain, Span, wa, wb, along ) ) { return true; }
+    auto const index { static_cast<std::size_t>( &Chain - Chains.data() ) };
+    return ( false == anchoreda && false == anchoredb && false == Chain.data.power.empty()
+          && overlap_span( glm::dvec3 { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, glm::dvec3 { wb[ 0 ], wb[ 1 ], wb[ 2 ] }, index ) != nullptr );
+}
+
+void
+refit_span_parts( scene_chain &Chain ) {
+    if( Chain.removed ) { return; }
+    for( std::size_t span = 0; span < Chain.spans.size(); ++span ) {
+        if( span_fitted_parts( Chain, span ) ) { span_extras( Chain, span ); }
     }
 }
 
@@ -4535,7 +4588,11 @@ rebuild_chain( scene_chain &Chain ) {
     // odciągi sieci: lina nośna w ich miejscu z całej rozpiętości, odciągi złożone od nowa
     // (przed powiązaniem scenerii tylko lina - odciągi złoży catenary_scene_resolve, inaczej części stałyby dwa razy)
     if( false == Chain.removed ) { for( auto const index : pulloff_ropes( Chain ) ) { if( Initialized ) { reassemble( index ); } } }
-    for( std::size_t span = 0; span < Chain.spans.size(); ++span ) { rebuild_span_only( Chain, span ); }
+    // najpierw wszystkie przęsła, potem części przy nich: po scenerii (edytor) przęsła łączą się z sąsiadami przy tworzeniu, więc
+    // części liczone z kształtu liny (linka Y wspólna z następnym przęsłem) stają pod liną taką, jak się rysuje (przed InitTraction
+    // części liczone z kształtu stawia od nowa catenary_scene_resolve)
+    for( std::size_t span = 0; span < Chain.spans.size(); ++span ) { make_span( Chain, span ); }
+    for( std::size_t span = 0; span < Chain.spans.size(); ++span ) { span_extras( Chain, span ); }
 }
 
 // uszynienia, które idą przez słup podwieszenia: uchwyty od nowa (słup przesunięty w edytorze)
@@ -4905,6 +4962,7 @@ catenary_scene_resolve() {
     // wpisy ze scenerii bez wywołania catenary_scene_loaded() przed InitTraction
     if( false == Initialized && false == Pending.empty() ) { catenary_scene_loaded(); }
     else if( false == Initialized ) { link_overlaps(); }
+    auto const firstresolve { false == Initialized };
     Initialized = true;
     if( Resolved >= Suspensions.size() ) { return; }
 
@@ -5006,6 +5064,11 @@ catenary_scene_resolve() {
                 }
             }
         }
+    }
+    // części przęseł liczone z kształtu liny (izolatory sekcyjne, przęsła izolowane, łączniki 0640): przęsła powstały przy wczytaniu,
+    // przed połączeniem z sąsiadami (InitTraction), więc z liną bez linek Y - od nowa, raz po pierwszym powiązaniu scenerii
+    if( firstresolve ) {
+        for( auto &chain : Chains ) { refit_span_parts( chain ); }
     }
     // linki proceduralne wysięgników: podwieszenia złożone dopiero tutaj, przęsła powstały przy wczytaniu
     for( auto &chain : Chains ) {
