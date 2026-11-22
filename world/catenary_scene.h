@@ -258,6 +258,8 @@ void catenary_scene_temperature();
 double catenary_scene_swing( std::size_t Index );
 // trójkąty łączników 33-0640, które rysuje łańcuch (przęsła naprężenia zwarte; do testów)
 std::size_t catenary_chain_connectors( std::size_t Index );
+// trójkąty połączeń 0642/0648 łańcucha (testy)
+std::size_t catenary_chain_connections( std::size_t Index );
 
 // ---- bramki (wpisy "gantry" w pliku sieci): słupy i dźwigar; zwisy z wysięgnikami to zwykłe podwieszenia -----------------
 std::size_t catenary_gantry_size();

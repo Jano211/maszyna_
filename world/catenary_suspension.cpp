@@ -126,6 +126,14 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                     std::string listed;
                     if( one( listed ) ) { line.second_net.push_back( listed ); }
                 }
+                else if( key == "connection" ) {
+                    chain::connection connection;
+                    if( one( connection.after ) && one( connection.card ) && one( connection.other ) ) {
+                        if( connection.card != "0642" && connection.card != "0648" ) { report( line.name, "connection card \"" + connection.card + "\" isn't 0642 or 0648" ); good = false; }
+                        if( index < count && Tokens[ index ] == "at" ) { ++index; number( connection.at ); }
+                        line.connections.push_back( connection );
+                    }
+                }
                 else if( key == "messenger_from" ) {
                     std::string listed, holder;
                     if( one( listed ) && one( holder ) ) { line.messenger_from.emplace_back( listed, holder ); }
@@ -591,6 +599,10 @@ std::string write_chain( chain const &Entry ) {
     for( auto const &insulator : Entry.insulators ) {
         text += " insulator " + insulator.after + " " + insulator.kind + " " + ( insulator.power.empty() ? std::string( "-" ) : insulator.power );
         if( insulator.at >= 0.0 ) { text += " at " + number( std::round( insulator.at * 100.0 ) / 100.0 ); }
+    }
+    for( auto const &connection : Entry.connections ) {
+        text += " connection " + connection.after + " " + connection.card + " " + connection.other;
+        if( connection.at >= 0.0 ) { text += " at " + number( std::round( connection.at * 100.0 ) / 100.0 ); }
     }
     text += " suspensions";
     for( auto const &name : Entry.suspensions ) { text += " " + name; }

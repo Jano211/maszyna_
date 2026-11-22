@@ -149,6 +149,17 @@ struct chain {
     // (przęsło od kotwienia początkowego), on = zawsze, off = nigdy; bez wpisu - wykrywane samo. Wpis "shared <nazwa|start> on|off",
     // przed "suspensions"
     std::vector<std::pair<std::string, bool>> shared;
+    // połączenia elektryczne bezpośrednie z innym łańcuchem tego pliku (karty 33-0642 równoległe i 33-0648 rozjazdowe; użytkownik
+    // 2026-11-22: „przy rozjazdach też są takie łączki”): w przęśle za podwieszeniem "after", "at" m od niego wzdłuż przęsła (ujemne -
+    // 1,5 m), linka z przewodu tego łańcucha przez jego linę łukiem na linę drugiego i "S" do jego przewodu. Wpis
+    // "connection <podwieszenie> 0642|0648 <łańcuch> [at <m>]", przed "suspensions"
+    struct connection {
+        std::string after;
+        std::string card { "0648" };
+        std::string other;
+        double at { -1.0 };
+    };
+    std::vector<connection> connections;
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
 };
 

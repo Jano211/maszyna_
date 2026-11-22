@@ -3123,6 +3123,58 @@ overlap_connector( scene_chain const &Chain, std::size_t const Span, std::vector
     if( crossend ) { draw( 1.0 - kConnectorFromPole / length ); }
 }
 
+// połączenia bezpośrednie z innym łańcuchem (33-0642 równoległe, 33-0648 rozjazdowe): przewód tego łańcucha - "S" w górę na jego
+// linę - łuk - lina drugiego - "S" w dół do jego przewodu (zacisk na pierwszym przewodzie jezdnym, karta: 6601 po jednym z każdej
+// strony); 0642 z łącznikiem 9861-1 w szczycie łuku. Drugi łańcuch: jego przęsło nad tym miejscem
+void
+chain_connections( scene_chain const &Chain, std::size_t const Span, std::vector<catenary::solid_vertex> &Solid ) {
+    auto const &data { Chain.data };
+    if( data.connections.empty() || Span >= Chain.spans.size() || Chain.spans[ Span ] == nullptr ) { return; }
+    double wa[ 3 ], wb[ 3 ], ra[ 3 ], rb[ 3 ];
+    bool anchoreda, anchoredb;
+    if( false == chain_point( Chain, Span, wa, ra, anchoreda ) || false == chain_point( Chain, Span + 1, wb, rb, anchoredb ) ) { return; }
+    glm::dvec3 const a { wa[ 0 ], wa[ 1 ], wa[ 2 ] }, b { wb[ 0 ], wb[ 1 ], wb[ 2 ] };
+    auto const plan { std::hypot( b.x - a.x, b.z - a.z ) };
+    if( plan < 1e-3 ) { return; }
+    auto const offset { data.anchor_start.empty() ? 0u : 1u };
+    for( auto const &connection : data.connections ) {
+        auto const found { std::find( data.suspensions.begin(), data.suspensions.end(), connection.after ) };
+        if( found == data.suspensions.end() || static_cast<std::size_t>( found - data.suspensions.begin() ) + offset != Span ) { continue; }
+        auto const t { std::clamp( ( connection.at < 0.0 ? kConnectorFromPole : connection.at ) / plan, 0.0, 1.0 ) };
+        auto const place { a + ( b - a ) * t };
+        auto const here { connector_cut_of( *Chain.spans[ Span ], place ) };
+        connector_cut there;
+        for( auto const &other : Chains ) {
+            if( other.removed || other.file != Chain.file || other.data.name != connection.other || &other == &Chain ) { continue; }
+            for( auto *span : other.spans ) {
+                if( span == nullptr ) { continue; }
+                there = connector_cut_of( *span, place );
+                if( there.valid() ) { break; }
+            }
+            break;
+        }
+        if( false == here.valid() || false == there.valid() ) { continue; }
+        auto const across = [ &here ]( glm::dvec3 const &From, glm::dvec3 const &To ) {
+            glm::dvec3 const flat { To.x - From.x, 0.0, To.z - From.z };
+            return glm::length( flat ) > 1e-3 ? glm::normalize( flat ) : glm::cross( here.along, glm::dvec3 { 0.0, 1.0, 0.0 } );
+        };
+        auto const wirehere { here.wires.front() }, wirethere { there.wires.front() };
+        auto const ropehere { connector_rope_over( here, wirehere ) }, ropethere { connector_rope_over( there, wirethere ) };
+        add_tube( Solid, connector_drop( wirehere, ropehere, across( ropethere, ropehere ) ), kConnectorRadius );
+        add_tube( Solid, connector_arc( ropehere, ropethere, 0.45 ), kConnectorRadius );
+        add_tube( Solid, connector_drop( ropethere, wirethere, across( ropehere, ropethere ) ), kConnectorRadius );
+        for( auto const &rope : { ropehere, ropethere } ) { add_box( Solid, rope, here.along, 0.08, 0.04 ); }        // 6605
+        for( auto const &wire : { wirehere, wirethere } ) { add_box( Solid, wire, here.along, 0.08, 0.035 ); }       // 6601
+        if( connection.card == "0642" ) {
+            // łącznik 9861-1 w szczycie łuku (tam, gdzie łuk connector_arc ma najwyższy punkt)
+            auto const arc { connector_arc( ropehere, ropethere, 0.45 ) };
+            auto top { arc.front() };
+            for( auto const &point : arc ) { if( point.y > top.y ) { top = point; } }
+            add_box( Solid, top, here.along, 0.06, 0.05 );
+        }
+    }
+}
+
 // uszynienie grupowe: uchwyt 6120 (karta 0805) na górze słupa podwieszenia, przodem do toru (X wzdłuż toru, słup w +Y, zero na
 // płaszczyźnie przylegania jak w mocowaniach), w połowie marginesu 0,15 m nad najwyższym mocowaniem (ZAŁOŻENIE: 0,075 m nad mount_max,
 // bez wychodzenia nad słup); lina przez punkt "wire" uchwytu (Jan 2026-10-25: X 0,0099, Y -0,0497, Z 0,1042)
@@ -4650,6 +4702,8 @@ span_extras( scene_chain &Chain, std::size_t const Span ) {
         if( Initialized ) {
             // przęsło naprężenia zwarte: łącznik 33-0640 za słupem krzyżowym
             overlap_connector( Chain, Span, rope );
+            // połączenia 0642 / 0648 z innym łańcuchem
+            chain_connections( Chain, Span, rope );
             // izolator sekcyjny (modele; części przęsła stawiane od nowa razem z nim)
             section_insulator( Chain, Span, rope );
             // izolowane przęsło naprężenia: izolatory w przewodzie i linie schodzących do kotwienia, przy słupie krzyżowym
@@ -6778,6 +6832,14 @@ catenary_chain_connectors( std::size_t const Index ) {
     if( Index >= Chains.size() ) { return 0; }
     std::vector<catenary::solid_vertex> solid;
     for( std::size_t span = 0; span < Chains[ Index ].spans.size(); ++span ) { overlap_connector( Chains[ Index ], span, solid ); }
+    return solid.size() / 3;
+}
+
+std::size_t
+catenary_chain_connections( std::size_t const Index ) {
+    if( Index >= Chains.size() ) { return 0; }
+    std::vector<catenary::solid_vertex> solid;
+    for( std::size_t span = 0; span < Chains[ Index ].spans.size(); ++span ) { chain_connections( Chains[ Index ], span, solid ); }
     return solid.size() / 3;
 }
 

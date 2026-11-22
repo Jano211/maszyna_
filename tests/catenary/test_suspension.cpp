@@ -125,5 +125,31 @@ int main() {
         if( false == good ) { for( auto const &e : errors ) { std::printf( "  %s\n", e.c_str() ); } }
         failed = failed || !good;
     }
+    {
+        // połączenie 0642/0648 z innym łańcuchem (2026-11-22): "connection <podwieszenie> <karta> <łańcuch> [at <m>]"
+        catenary::suspension_file file; std::vector<std::string> errors;
+        catenary::parse_suspensions( words(
+            "node 1000 0 a suspension scheme 1113 1 at 0 5.6 0 attach -2 0 0 endsuspension node 1000 0 b suspension scheme 1113 1 at 0 5.6 60 attach -2 0 60 endsuspension "
+            "node 1000 0 l1 chain power z connection a 0648 l2 at 2.4 connection b 0642 l3 suspensions a b endchain" ), "pol.scm", file, errors );
+        auto good { errors.empty() && file.chains.size() == 1 && file.chains[ 0 ].connections.size() == 2
+            && file.chains[ 0 ].connections[ 0 ].card == "0648" && file.chains[ 0 ].connections[ 0 ].other == "l2" && std::abs( file.chains[ 0 ].connections[ 0 ].at - 2.4 ) < 1e-9
+            && file.chains[ 0 ].connections[ 1 ].card == "0642" && file.chains[ 0 ].connections[ 1 ].at < 0.0 };
+        auto const written { good ? catenary::write_chain( file.chains[ 0 ] ) : std::string() };
+        catenary::suspension_file again; std::vector<std::string> none;
+        if( good ) {
+            catenary::parse_suspensions( words( catenary::write_suspension( file.entries[ 0 ] ) + " " + catenary::write_suspension( file.entries[ 1 ] ) + " " + written ), "pol2.scm", again, none );
+            good = none.empty() && again.chains.size() == 1 && written.find( " connection a 0648 l2 at 2.4 connection b 0642 l3" ) != std::string::npos
+                && again.chains[ 0 ].connections.size() == 2;
+        }
+        // zła karta - komunikat
+        catenary::suspension_file bad; std::vector<std::string> badnews;
+        catenary::parse_suspensions( words(
+            "node 1000 0 a suspension scheme 1113 1 at 0 5.6 0 attach -2 0 0 endsuspension node 1000 0 b suspension scheme 1113 1 at 0 5.6 60 attach -2 0 60 endsuspension "
+            "node 1000 0 l1 chain power z connection a 0640 l2 suspensions a b endchain" ), "pol3.scm", bad, badnews );
+        good = good && false == badnews.empty();
+        std::printf( "polaczenia 0642/0648: zapis i odczyt, zla karta  %s\n", good ? "OK" : "BLAD" );
+        if( false == good ) { for( auto const &e : errors ) { std::printf( "  %s\n", e.c_str() ); } }
+        failed = failed || !good;
+    }
     return failed ? 1 : 0;
 }

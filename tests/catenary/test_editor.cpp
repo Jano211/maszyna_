@@ -611,6 +611,21 @@ int main( int, char *argv[] ) {
         auto const twospans { catenary_chain_overlaps( 1 ) };
         if( false == twospans.empty() ) { std::printf( "  dwa wspolne: przesel %zu, krzyzowe %zu, zwarte %d\n", twospans.front().spans.size(), twospans.front().crossing.size(), twospans.front().connected ? 1 : 0 ); }
         good = good && twospans.size() == 1 && twospans.front().spans.size() == 2 && twospans.front().crossing.size() == 1 && twospans.front().connected && errors.empty();
+        // połączenie 0648 łańcucha na z łańcuchem nb (2026-11-22): w przęśle na, nad którym idzie nb
+        {
+            auto joined { *catenary_chain_get( 0 ) };
+            for( auto const &name : joined.suspensions ) {
+                catenary::chain::connection connection;
+                connection.after = name; connection.card = "0648"; connection.other = catenary_chain_get( 1 )->name; connection.at = 3.0;
+                joined.connections.push_back( connection );
+            }
+            catenary_chain_update( 0, joined );
+            auto const triangles { catenary_chain_connections( 0 ) };
+            std::printf( "  polaczenie 0648 z drugim lancuchem: %zu trojkatow\n", triangles );
+            good = good && triangles > 0;
+            joined.connections.clear();
+            catenary_chain_update( 0, joined );
+        }
         std::remove( "tests/catenary/td_naprezenie_test.scm" );
         check( good, "przeslo naprezenia: wspolne przeslo wykryte, biezna wspolna po wczytaniu i w edytorze, izolowane / zwarte wg zasilacza, slup krzyzowy" );
     }

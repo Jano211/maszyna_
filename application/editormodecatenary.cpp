@@ -497,6 +497,18 @@ float mouse_to_segment(screen_projection const &Projection, glm::dvec3 const &A,
 	return dx * dx + dy * dy;
 }
 
+// where the cursor is along A-B on the screen: 0 at A, 1 at B
+float mouse_along_segment(screen_projection const &Projection, glm::dvec3 const &A, glm::dvec3 const &B)
+{
+	ImVec2 a, b;
+	if (false == Projection.project(A, a) || false == Projection.project(B, b))
+		return 0.5f;
+	auto const &mouse{ImGui::GetIO().MousePos};
+	ImVec2 const span{b.x - a.x, b.y - a.y};
+	auto const length2{span.x * span.x + span.y * span.y};
+	return length2 > 1e-6f ? std::clamp(((mouse.x - a.x) * span.x + (mouse.y - a.y) * span.y) / length2, 0.0f, 1.0f) : 0.5f;
+}
+
 char const *const kExecutions[] = {"1 - two contact wires, light arms, hk 1.70", "2 - two contact wires, heavy arms, hk 1.70", "3 - one contact wire, heavy arms, hk 1.70",
                                    "4 - one contact wire, heavy arms, hk 1.30", "5 - one contact wire, light arms, hk 1.70"};
 char const *const kMaterials[] = {"cu", "al"};
@@ -4793,6 +4805,12 @@ void catenary_editor::catenary_press(track_intent const &Intent)
 		tool.anchor_selected = -1;
 		std::size_t span{0};
 		auto const hit{catenary_span_hit(&span)};
+		if (tool.connection_pick && tool.chain_selected >= 0 && hit == Intent.index && Intent.index != tool.chain_selected)
+		{
+			// a connection 0642/0648: the selected chain stays selected
+			catenary_connection_make(Intent.index, span);
+			return;
+		}
 		catenary_chain_show(Intent.index);
 		tool.span_selected = hit == Intent.index ? static_cast<int>(span) : -1;
 		return;
@@ -6159,6 +6177,145 @@ void catenary_editor::render_catenary_power_ui()
 	}
 }
 
+// a connection 0642/0648 of the selected chain with the chain Other at the cursor on its span Span: in the span of the selected chain
+// that passes that place (in the plan), the distance from its first pole along it
+bool catenary_editor::catenary_connection_make(int const Other, std::size_t const Span)
+{
+	auto &tool{m_catenary};
+	auto const index{static_cast<std::size_t>(tool.chain_selected)};
+	auto const *chain{catenary_chain_get(index)};
+	auto const *other{catenary_chain_get(static_cast<std::size_t>(Other))};
+	if (chain == nullptr || other == nullptr)
+		return false;
+	if (catenary_chain_file(index) != catenary_chain_file(static_cast<std::size_t>(Other)))
+	{
+		tool.status = STR("The connection joins chains of one catenary file");
+		return false;
+	}
+	auto const others{catenary_chain_members(static_cast<std::size_t>(Other))};
+	if (Span + 1 >= others.size())
+		return false;
+	auto const *oa{catenary_scene_get(others[Span])};
+	auto const *ob{catenary_scene_get(others[Span + 1])};
+	if (oa == nullptr || ob == nullptr)
+		return false;
+	screen_projection const projection;
+	auto const t{static_cast<double>(mouse_along_segment(projection, wire_of(*oa), wire_of(*ob)))};
+	auto const place{wire_of(*oa) + (wire_of(*ob) - wire_of(*oa)) * t};
+	// the span of the selected chain over that place: the nearest one in the plan whose stretch has it between its poles
+	auto const members{catenary_chain_members(index)};
+	auto best{std::numeric_limits<double>::max()};
+	std::string after;
+	double at{0.0};
+	for (std::size_t k = 0; k + 1 < members.size(); ++k)
+	{
+		auto const *a{catenary_scene_get(members[k])};
+		auto const *b{catenary_scene_get(members[k + 1])};
+		if (a == nullptr || b == nullptr || a->name.empty())
+			continue;
+		auto const from{plan_of(wire_of(*a))};
+		auto const step{plan_of(wire_of(*b)) - from};
+		auto const length{glm::length(step)};
+		if (length < 1e-3)
+			continue;
+		auto const along{glm::dot(plan_of(place) - from, step) / length};
+		if (along < 0.0 || along > length)
+			continue;
+		auto const aside{glm::length(plan_of(place) - (from + step * (along / length)))};
+		if (aside < best)
+		{
+			best = aside;
+			after = a->name;
+			at = along;
+		}
+	}
+	if (after.empty() || best > 6.0)
+	{
+		tool.status = format(STR_C("Chain %s doesn't go by this place: the connection goes where both chains are"), chain->name.c_str());
+		return false;
+	}
+	auto changed{*chain};
+	catenary::chain::connection connection;
+	connection.after = after;
+	connection.card = tool.connection_card == 0 ? "0642" : "0648";
+	connection.other = other->name;
+	connection.at = std::round(at * 100.0) / 100.0;
+	changed.connections.push_back(connection);
+	tool.undo.push_back({++tool.group, true, index, std::nullopt, *chain, false});
+	catenary_chain_update(index, changed);
+	tool.status = format(STR_C("Connection %s with chain %s, %.2f m past %s (Ctrl+Z takes it back)"), connection.card.c_str(), other->name.c_str(), connection.at, after.c_str());
+	return true;
+}
+
+void catenary_editor::render_catenary_connections_ui()
+{
+	auto &tool{m_catenary};
+	auto const index{static_cast<std::size_t>(tool.chain_selected)};
+	auto const *chain{catenary_chain_get(index)};
+	if (chain == nullptr)
+		return;
+	if (false == ImGui::TreeNode(format(STR_C("Electrical connections with other chains (%zu)###connections"), chain->connections.size()).c_str()))
+		return;
+	char const *const cards[] = {"0642", "0648"};
+	auto const card_label{[](std::string const &Card) { return Card == "0642" ? 0 : 1; }};
+	std::optional<std::size_t> removed;
+	std::optional<catenary::chain> changed;
+	for (std::size_t k = 0; k < chain->connections.size(); ++k)
+	{
+		auto const &connection{chain->connections[k]};
+		ImGui::PushID(static_cast<int>(k));
+		ImGui::TextUnformatted(format(STR_C("%s with %s, past %s"), connection.card.c_str(), connection.other.c_str(), connection.after.c_str()).c_str());
+		auto card{card_label(connection.card)};
+		ImGui::SetNextItemWidth(70.0f);
+		if (ImGui::Combo("##card", &card, cards, 2))
+		{
+			changed = *chain;
+			changed->connections[k].card = cards[card];
+		}
+		ImGui::SameLine();
+		auto at{static_cast<float>(connection.at < 0.0 ? 1.5 : connection.at)};
+		ImGui::SetNextItemWidth(110.0f);
+		if (ImGui::DragFloat("m##at", &at, 0.05f, 0.0f, 80.0f, "%.2f m"))
+		{
+			changed = *chain;
+			changed->connections[k].at = std::round(static_cast<double>(at) * 100.0) / 100.0;
+		}
+		ImGui::SameLine();
+		if (ImGui::SmallButton(STR_C("Remove")))
+			removed = k;
+		ImGui::PopID();
+	}
+	if (removed.has_value())
+	{
+		changed = *chain;
+		changed->connections.erase(changed->connections.begin() + static_cast<std::ptrdiff_t>(*removed));
+	}
+	if (changed.has_value())
+	{
+		auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
+		if (removed.has_value() || tool.undo.empty() || false == last.chain || last.index != index || false == last.chain_before.has_value())
+			tool.undo.push_back({++tool.group, true, index, std::nullopt, *chain, false});
+		catenary_chain_update(index, *changed);
+	}
+	ImGui::SetNextItemWidth(220.0f);
+	char const *const names[] = {STR_C("0642 parallel (track with station)"), STR_C("0648 at a switch")};
+	ImGui::Combo(STR_C("Card of a new one"), &tool.connection_card, names, 2);
+	if (tool.connection_pick)
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.3f, 1.0f), "%s", STR_C("LMB the span of the other chain where the connection goes (Esc gives up)"));
+		if (ImGui::Button(STR_C("Give up (Esc)##connection")))
+			tool.connection_pick = false;
+	}
+	else if (ImGui::Button(STR_C("Add a connection: LMB the other chain")))
+	{
+		tool.connection_pick = true;
+		tool.status = STR("LMB the span of the other chain where the connection goes (Esc gives up)");
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", STR_C("Cards 33-0642 and 33-0648: the cable from the contact wire of this chain up to its messenger, an arc over to the messenger of the other chain and down to its contact wire; 0642 with the joint 9861-1 at the top. It goes where the click on the other chain is, in the span of this chain passing that place"));
+	ImGui::TreePop();
+}
+
 void catenary_editor::render_catenary_chain_ui()
 {
 	auto &tool{m_catenary};
@@ -6261,6 +6418,7 @@ void catenary_editor::render_catenary_chain_ui()
 		}
 		render_catenary_chain_report(static_cast<std::size_t>(tool.chain_selected));
 		render_catenary_overlaps(static_cast<std::size_t>(tool.chain_selected));
+		render_catenary_connections_ui();
 		if (ImGui::SmallButton(STR_C("Poles of the chain leaning a little (random 0.1-0.5 deg)")))
 		{
 			// each pole its own lean towards the track, the same every time for the same pole (by its name)
@@ -11062,7 +11220,7 @@ bool catenary_editor::catenary_intent(track_intent &Intent)
 	if (auto const hit{catenary_span_hit()}; hit >= 0)
 	{
 		Intent.index = hit;
-		Intent.action = STR("Click: select the chain of this span");
+		Intent.action = m_catenary.connection_pick && m_catenary.chain_selected >= 0 && hit != m_catenary.chain_selected ? STR("Click: the electrical connection with this chain here") : STR("Click: select the chain of this span");
 		Intent.what = kind::catenary;
 		Intent.detail = static_cast<int>(intent_detail::chain);
 		return true;
@@ -11267,6 +11425,12 @@ bool catenary_editor::catenary_on_key(int const Key, int const Action, int const
 		if (tool.zigzag_flip)
 		{
 			tool.zigzag_flip = false;
+			tool.status.clear();
+			return true;
+		}
+		if (tool.connection_pick)
+		{
+			tool.connection_pick = false;
 			tool.status.clear();
 			return true;
 		}
