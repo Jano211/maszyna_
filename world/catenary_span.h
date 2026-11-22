@@ -49,6 +49,8 @@ bool catenary_span_contact_gap( TTraction const &Traction, double &From, double 
 bool catenary_span_point( TTraction &Traction, double Along, bool Messenger, glm::dvec3 &Point, int Index = -1 );
 // symbol typu sieci przypisany przęsłu; pusty gdy brak
 std::string catenary_span_symbol( TTraction const &Traction );
+// kod typu sieci (traction_code, karta 0002) przęsła policzonego wg typu sieci; -1 gdy przęsło nie ma typu
+int catenary_span_code( TTraction const &Traction );
 // odcinki przęsła policzone wg typu sieci, dopisywane do Vertices; false gdy przęsło ma być narysowane po staremu
 bool catenary_span_lines( TTraction &Traction, gfx::vertex_array &Vertices );
 // bryły przęsła do oglądania z bliska: przewody i liny w prawdziwej grubości oraz osprzęt (bryły zastępcze w miejscach połączeń).

@@ -442,6 +442,12 @@ catenary_span_symbol( TTraction const &Traction ) {
     return ( Traction.m_catenaryspan ? Traction.m_catenaryspan->symbol : std::string() );
 }
 
+int
+catenary_span_code( TTraction const &Traction ) {
+    auto const *type { definition( Traction ) };
+    return ( type != nullptr ? type->type.code : -1 );
+}
+
 // odcinki przęsła policzone wg typu sieci; false gdy przęsło ma być narysowane po staremu
 bool
 catenary_span_lines( TTraction &Traction, gfx::vertex_array &Vertices ) {
