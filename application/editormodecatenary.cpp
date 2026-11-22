@@ -295,6 +295,7 @@ void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data
 	Data.lean = Current.lean;             // and so does the lean of the pole
 	Data.arrester = Current.arrester;     // and the lightning arrester on it
 	Data.arrester_drop = Current.arrester_drop;
+	Data.arrester_away = Current.arrester_away;
 	Data.stay_gap = Current.stay_gap;     // and the corrections from the ground (the user 2026-11-18)
 	Data.arms_spread = Current.arms_spread;
 	Data.rope_shift = Current.rope_shift;
@@ -9039,6 +9040,17 @@ void catenary_editor::render_catenary_cantilever_ui()
 							tool.probed = false;
 						}
 						ImGui::PopItemWidth();
+						// the other side of the pole (away from the track), as the earthing arm "away"
+						if (ImGui::Button(data->arrester_away ? STR_C("Arrester to the track side") : STR_C("Arrester to the other side of the pole")))
+						{
+							auto changed{*data};
+							changed.arrester_away = false == data->arrester_away;
+							tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+							catenary_scene_update(index, changed);
+							tool.probed = false;
+						}
+						if (ImGui::IsItemHovered())
+							ImGui::SetTooltip("%s", STR_C("The arrester with its lead turned round the axis of the pole: on the back wall, away from the track (or back to the track)"));
 					}
 				}
 			}
