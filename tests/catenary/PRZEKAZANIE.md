@@ -2,6 +2,19 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-22 17:15 – izolator sekcyjny: lina z Y sąsiada, Y wyłączane przy izolatorze (w exe NIESPRAWDZONE)
+
+- Użytkownik: w YC120-2C150 góra izolatora sekcyjnego mija linę nośną. Przyczyna: kształt liny w sieciach z Y zależy od sąsiada
+  (`solve_joined` / `join_y` przez hvNext), a części izolatora stawiane były zaraz po utworzeniu przęsła – przy wczytaniu przed
+  InitTraction (bez połączeń), w edytorze przed utworzeniem następnego przęsła. Test na prawdziwych przęsłach: 4 m od podwieszenia
+  lina bez sąsiada 5 cm wyżej. Teraz: `rebuild_span_only` = `make_span` + `span_extras`; `rebuild_chain` najpierw wszystkie przęsła,
+  potem części; przed Initialized części z kształtu liny (izolatory, łączniki) nie są stawiane – stawia je `refit_span_parts`
+  w pierwszym `catenary_scene_resolve` (po InitTraction) dla przęseł z `span_fitted_parts`.
+- Użytkownik: izolator sekcyjny bliżej wysięgnika niż sięga Y – Y przy tym podwieszeniu ma nie być („tak jest na gruncie”).
+  `y_at` (catenary_span.cpp): przerwa (gap przewodów albo liny) w tym przęśle albo w sąsiednim bliżej podwieszenia niż 0,5·Ly →
+  bez Y po obu stronach podwieszenia (Y to jedna linka na dwa przęsła). Dotyczy też izolatorów przęsła izolowanego (też „gap”).
+  Test tymczasowy: izolator 4,5 m od podwieszenia w YC120-2C150 – Y znika, w środku przęsła – zostaje.
+
 ## START TUTAJ – 2026-11-22 16:40 – łącznik 0640 przepisany (w exe NIESPRAWDZONE)
 
 - Użytkownik: łączniki w zwartych przęsłach naprężenia nie trafiały w druty, nie zależały od liczby przewodów, czasem zacisk w osi
