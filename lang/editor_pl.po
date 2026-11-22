@@ -16696,6 +16696,18 @@ msgstr "Wszystkie słupy karty w jej odległościach wzdłuż toru, wysięgniki 
 msgid "insulated overlap"
 msgstr "przęsło izolowane"
 
+msgid "Insulators of %s from the crossing pole (m)"
+msgstr "Izolatory %s od słupa krzyżowego (m)"
+
+msgid "Where the insulators of this chain are, from the crossing pole along the span to the anchor (at least 0.5 m from its ends). Ctrl+click types a value"
+msgstr "Gdzie są izolatory tego łańcucha: od słupa krzyżowego wzdłuż przęsła do kotwienia (co najmniej 0,5 m od jego końców). Ctrl+klik wpisuje wartość"
+
+msgid "2 m"
+msgstr "2 m"
+
+msgid "Back to the default: 2 m from the crossing pole"
+msgstr "Z powrotem domyślnie: 2 m od słupa krzyżowego"
+
 msgid "Insulators in the wires and the messenger leaving to the anchors by the crossing poles (placeholder shapes), the outgoing chain from another power source; off: connected, one power source and connectors 33-0640"
 msgstr "Izolatory w przewodach i linie schodzących do kotwień przy słupach krzyżowych (bryły zastępcze), łańcuch wychodzący z innego zasilacza; wyłączone: zwarte, jeden zasilacz i łączniki 33-0640"
 

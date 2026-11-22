@@ -4369,8 +4369,10 @@ overlap_insulator_at( scene_chain const &Chain, std::size_t const Span, double c
         if( anchor.empty() || points < 2 || Span != ( end == 0 ? 0 : points - 2 ) ) { continue; }
         auto const plan { std::hypot( WireB[ 0 ] - WireA[ 0 ], WireB[ 2 ] - WireA[ 2 ] ) };
         auto const length { std::max( std::hypot( plan, WireB[ 1 ] - WireA[ 1 ] ), 1e-3 ) };
-        // od słupa krzyżowego (koniec przęsła przy podwieszeniu: przy początku łańcucha drugi koniec przęsła, przy końcu - pierwszy)
-        auto const t { std::min( kOverlapInsulatorFromPole / length, 0.5 ) };
+        // od słupa krzyżowego (koniec przęsła przy podwieszeniu: przy początku łańcucha drugi koniec przęsła, przy końcu - pierwszy);
+        // odległość z wpisu ("isolated ... at <m>"), w przęśle co najmniej 0,5 m od obu końców
+        auto const from { data.isolated_at[ end ] >= 0.0 ? data.isolated_at[ end ] : kOverlapInsulatorFromPole };
+        auto const t { std::clamp( from / length, std::min( 0.5, 0.5 / length ), std::max( 0.5, 1.0 - 0.5 / length ) ) };
         Along = ( end == 0 ? 1.0 - t : t ) * plan;
         return true;
     }

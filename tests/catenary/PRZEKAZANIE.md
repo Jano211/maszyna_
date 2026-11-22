@@ -15,8 +15,12 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
   jak 32, inaczej jak 3 – ZAŁOŻENIE, do potwierdzenia. „S” schodzi do łańcucha z niższym przewodem (pracujący) – ZAŁOŻENIE.
   Nowa funkcja `catenary_span_code` (catenary_span.h). Na karcie „przy każdym słupie krzyżowym” tylko dla 3/4/26/30/32/35 –
   dla 10 i 20 też przy każdym (jak dotąd) – do potwierdzenia.
-- Przęsło izolowane: izolatory 7150 w linie i przewodach do kotwienia 2 m od słupa krzyżowego (karta 0060 „izolacja” przy K1,
-  odległość na oko) – bez zmian; łączników brak.
+- Przęsło izolowane: izolatory 7150 w linie i przewodach do kotwienia, domyślnie 2 m od słupa krzyżowego (karta 0060 „izolacja”
+  przy K1, odległość na oko); łączników brak. 16:45: przesuwane jak izolator sekcyjny – wpis `isolated start|end [at <m>]`
+  (`chain::isolated_at`, ujemne = 2 m), w przęśle co najmniej 0,5 m od końców; w panelu przęsła naprężenia przy „przęsło
+  izolowane” suwak dla każdego z dwóch łańcuchów + przycisk „2 m”. Test ts (zapis/odczyt) OK.
+- G: lang\editor_pl.po: dopisane na końcu 1395 haseł z repo, których tam brakowało (nic istniejącego nie zmienione; 185 haseł
+  tylko z G: i 10 różnych tłumaczeń zostało jak było). md5 po zapisie w logu sesji.
 
 ## START TUTAJ – 2026-11-22 14:50 – odgromnik 7310 wg katalogu 2 (grupy 0600 i 0800)
 

@@ -106,5 +106,24 @@ int main() {
         if( false == good ) { for( auto const &e : errors ) { std::printf( "  %s\n", e.c_str() ); } }
         failed = failed || !good;
     }
+    {
+        // przęsło izolowane z odległością izolatorów od słupa krzyżowego (2026-11-22): "isolated end at <m>", bez "at" - domyślna
+        catenary::suspension_file file; std::vector<std::string> errors;
+        catenary::parse_suspensions( words(
+            "node 1000 0 a suspension scheme 1113 1 at 0 5.6 0 attach -2 0 0 endsuspension node 1000 0 b suspension scheme 1113 1 at 0 5.6 60 attach -2 0 60 endsuspension "
+            "node 1000 0 l1 chain power z isolated start isolated end at 3.25 suspensions a b endchain" ), "izol.scm", file, errors );
+        auto good { errors.empty() && file.chains.size() == 1 && file.chains[ 0 ].isolated[ 0 ] && file.chains[ 0 ].isolated[ 1 ]
+            && file.chains[ 0 ].isolated_at[ 0 ] < 0.0 && std::abs( file.chains[ 0 ].isolated_at[ 1 ] - 3.25 ) < 1e-9 };
+        auto const written { good ? catenary::write_chain( file.chains[ 0 ] ) : std::string() };
+        catenary::suspension_file again; std::vector<std::string> none;
+        if( good ) {
+            catenary::parse_suspensions( words( catenary::write_suspension( file.entries[ 0 ] ) + " " + catenary::write_suspension( file.entries[ 1 ] ) + " " + written ), "izol2.scm", again, none );
+            good = none.empty() && again.chains.size() == 1 && written.find( " isolated start isolated end at 3.25" ) != std::string::npos
+                && again.chains[ 0 ].isolated_at[ 0 ] < 0.0 && std::abs( again.chains[ 0 ].isolated_at[ 1 ] - 3.25 ) < 1e-9;
+        }
+        std::printf( "przeslo izolowane: odleglosc izolatorow, zapis i odczyt  %s\n", good ? "OK" : "BLAD" );
+        if( false == good ) { for( auto const &e : errors ) { std::printf( "  %s\n", e.c_str() ); } }
+        failed = failed || !good;
+    }
     return failed ? 1 : 0;
 }
