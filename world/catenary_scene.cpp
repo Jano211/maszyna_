@@ -11,6 +11,7 @@ http://mozilla.org/MPL/2.0/.
 #include "world/catenary_scene.h"
 #include <cstring>
 #include <cstdint>
+#include <array>
 
 #include "world/catenary_suspension.h"
 #include "world/catenary_cantilever.h"
@@ -46,6 +47,10 @@ void catenary_part_detach( TAnimModel *Model );
 void catenary_part_delete( TAnimModel *Model );
 // wysokość główki szyny przy słupie części (zero słupa) - pod pył shaderów (catenary_dust.h)
 void catenary_part_rail( TAnimModel *Model, double Rail );
+// część przestawiona w miejscu (kołysanie luźnego wysięgnika): położenie i kąty jak w dopisku "angles" wpisu node model
+void catenary_part_place( TAnimModel *Model, glm::dvec3 const &Location, glm::dvec3 const &Angles );
+// skrzypienie zawiasu luźnego wysięgnika (Slot 0..1 - jeden z dwóch kołyszących się), w miejscu Where scenerii, głośność 0..1
+void catenary_part_creak( int Slot, glm::dvec3 const &Where, float Gain );
 // przęsła łańcuchów (tamże): Body to treść wpisu node traction od nazwy zasilacza do endtraction włącznie.
 // Link: od razu połączyć z sąsiednimi przęsłami i zasilaczem (po inicjalizacji scenerii; wcześniej robi to InitTraction)
 TTraction *catenary_span_create( std::string const &Name, double RangeMax, double RangeMin, std::string const &Body, bool Link );
@@ -93,6 +98,21 @@ struct scene_suspension {
     // uchwyt przewodów i lina nośna (współrzędne scenerii) - końce przęseł idą za nimi
     double swing { 0.0 };
     double swing_wire[ 3 ] { 0.0, 0.0, 0.0 }, swing_rope[ 3 ] { 0.0, 0.0, 0.0 };
+    // rozebrana sieć: wysięgnik przechylny luźny na zawiasach (użytkownik 2026-11-23: kołysze się na wietrze) - jego części z położeniem
+    // w układzie wysięgnika przed obrotem, oś zawiasu (x, y układu wysięgnika), obrót spoczynkowy [stopnie] i bieżące wychylenie od niego
+    struct loose_part {
+        TAnimModel *model { nullptr };
+        catenary::cantilever_placement placement;
+    };
+    std::vector<loose_part> loose_parts;
+    double loose_hinge[ 2 ] { 0.0, 0.0 };
+    double loose_angle { 0.0 };
+    double loose_heading { 0.0 };
+    glm::dvec3 loose_wire { 0.0 };
+    double sway { 0.0 };            // wychylenie od spoczynku [stopnie]
+    double sway_strength { 0.0 };   // siła kołysania 0..1, narasta i opada łagodnie za wiatrem
+    double sway_previous { 0.0 };   // wychylenie krok wcześniej (zmiana kierunku ruchu - skrzypnięcie)
+    bool swaying { false };
     // rozstaw przewodów jezdnych w uchwytach wysięgnika, inny niż w typie sieci (ramiona 6207/6208: 0,10 m); 0 = jak w typie
     double contact_spread { 0.0 };
     // odciąg wielotorowy z "pull_from": początek górnej liny (podwójny) od odciągu z sąsiedniego toru, współrzędne scenerii
@@ -101,6 +121,10 @@ struct scene_suspension {
 };
 
 std::vector<scene_suspension> Suspensions;
+// kołysanie luźnych wysięgników rozebranej sieci (catenary_scene_sway): ile naraz, czas kołysania, które teraz
+std::size_t constexpr kSwayCount { 2 };
+double SwayTime { 0.0 };
+std::array<std::size_t, kSwayCount> SwaySlots { static_cast<std::size_t>( -1 ), static_cast<std::size_t>( -1 ) };
 
 // plik sieci znany scenerii
 struct scene_file {
@@ -479,6 +503,13 @@ rope_direction( scene_suspension const &Suspension, glm::dvec2 &Direction ) {
     return false;
 }
 
+// część, która zostaje przy obrocie wysięgnika na zawiasach (słup, fundament, mocowania z tyłami, konsole, pręty odciągu)
+bool
+swing_fixed( std::string const &Role ) {
+    auto const ends = [ &Role ]( char const *Tail ) { auto const n { std::strlen( Tail ) }; return Role.size() >= n && Role.compare( Role.size() - n, n, Tail ) == 0; };
+    return Role == "pole" || Role == "foundation" || ends( "_mount" ) || ends( "_back" ) || ends( "_console" ) || ends( "_rod" );
+}
+
 // ---- rozbiórka sieci (użytkownik 2026-11-23: linie z rozebraną siecią) ---------------------------------------------------------
 // stan słupa: jego wyjątek albo najdalej posunięty stan łańcuchów, w których jest (0 - kompletny ... 3 - sam słup)
 int
@@ -817,6 +848,10 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         OutY = swing[ 3 ] + swing[ 0 ] * dx + swing[ 1 ] * dy;
     };
     if( Probe == nullptr ) {
+        Suspension.loose_parts.clear();
+        Suspension.sway = 0.0;
+        Suspension.sway_strength = 0.0;
+        Suspension.swaying = false;
         Suspension.swing = 0.0;
         std::fill( std::begin( Suspension.swing_wire ), std::end( Suspension.swing_wire ), 0.0 );
         std::fill( std::begin( Suspension.swing_rope ), std::end( Suspension.swing_rope ), 0.0 );
@@ -827,6 +862,9 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     glm::dvec3 shift;
     auto const *hinge { solved && pole != nullptr ? result.find( "strut_hinge" ) : nullptr };
     auto const bytemperature { hinge != nullptr && dismantled == 0 && swing_shift( Suspension, shift ) && glm::length( shift ) > 1e-4 };
+    // wysięgnik luźny: położenie części przed obrotem, do kołysania (te same części, które obraca zawias)
+    std::vector<catenary::cantilever_placement> unswung;
+    if( hinge != nullptr && loose != 0.0 && Probe == nullptr ) { unswung = result.parts; }
     if( hinge != nullptr && ( bytemperature || data.turn_by_hand != 0.0 || loose != 0.0 ) ) {
         // oś X wysięgnika w scenerii (wzdłuż toru)
         catenary::cantilever_placement unit;
@@ -842,12 +880,15 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             swing[ 1 ] = std::cos( angle );
             swing[ 2 ] = hinge->position[ 0 ];
             swing[ 3 ] = hinge->position[ 1 ];
-            auto const fixed = []( std::string const &Role ) {
-                auto const ends = [ & ]( char const *Tail ) { auto const n { std::strlen( Tail ) }; return Role.size() >= n && Role.compare( Role.size() - n, n, Tail ) == 0; };
-                return Role == "pole" || Role == "foundation" || ends( "_mount" ) || ends( "_back" ) || ends( "_console" ) || ends( "_rod" );
-            };
+            if( false == unswung.empty() ) {
+                Suspension.loose_hinge[ 0 ] = swing[ 2 ];
+                Suspension.loose_hinge[ 1 ] = swing[ 3 ];
+                Suspension.loose_angle = data.turn_by_hand + loose;
+                Suspension.loose_heading = heading;
+                Suspension.loose_wire = glm::dvec3 { Wire.x, Wire.y, Wire.z };
+            }
             for( auto &placement : result.parts ) {
-                if( fixed( placement.role ) ) { continue; }
+                if( swing_fixed( placement.role ) ) { continue; }
                 swung( placement.position[ 0 ], placement.position[ 1 ], placement.position[ 0 ], placement.position[ 1 ] );
                 double rotated[ 9 ];
                 auto const &r { placement.rotation };
@@ -1091,6 +1132,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         }
     }
     for( auto const &placement : result.parts ) {
+        auto const index { static_cast<std::size_t>( &placement - result.parts.data() ) };
         auto const *catalogued { inchain ? Catalog.part( placement.part ) : nullptr };
         if( catalogued != nullptr && catalogued->solid > 0.0 ) {
             // oś rozciągnięcia: skala różna od dwóch pozostałych (Y albo Z części), długość modelu z katalogu
@@ -1131,6 +1173,8 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             if( data.has_pole && false == hanging ) { catenary_part_rail( model, data.pole[ 1 ] ); }
             else { part_rail_near( model, Suspension.file, position ); }
             Suspension.parts.push_back( model );
+            // część luźnego wysięgnika: kołysze się razem z nim
+            if( index < unswung.size() && false == swing_fixed( placement.role ) ) { Suspension.loose_parts.push_back( { model, unswung[ index ] } ); }
             ++count;
         }
     }
@@ -5697,6 +5741,7 @@ catenary_scene_data( std::string const &Directory ) {
 void
 catenary_scene_clear() {
 
+    SwaySlots.fill( static_cast<std::size_t>( -1 ) );
     Suspensions.clear();
     Chains.clear();
     Gantries.clear();
@@ -7288,6 +7333,105 @@ catenary_chain_connectors( std::size_t const Index ) {
     std::vector<catenary::solid_vertex> solid;
     for( std::size_t span = 0; span < Chains[ Index ].spans.size(); ++span ) { overlap_connector( Chains[ Index ], span, solid ); }
     return solid.size() / 3;
+}
+
+// ---- kołysanie luźnych wysięgników rozebranej sieci na wietrze (użytkownik 2026-11-23) ----------------------------------------
+// tylko najbliższe kamery (najwyżej 2, do 100 m), dopiero od silniejszego wiatru (wysięgnik waży ok. 100 kg - letni wietrzyk go nie
+// ruszy): od 8 m/s narasta, pełne wychylenie ±10° przy 16 m/s; przy zmianie kierunku ruchu skrzypi zawias
+namespace {
+double constexpr kSwayRange { 100.0 };
+double constexpr kSwayCalm { 8.0 };
+double constexpr kSwayFull { 16.0 };
+double constexpr kSwayAmplitude { 10.0 };
+
+// części wysięgnika w położeniu obróconym o Angle [stopnie] wokół zawiasu
+void
+place_loose( scene_suspension const &Suspension, double const Angle ) {
+    auto const radians { Angle * 3.14159265358979323846 / 180.0 };
+    auto const c { std::cos( radians ) }, s { std::sin( radians ) };
+    auto const hx { Suspension.loose_hinge[ 0 ] }, hy { Suspension.loose_hinge[ 1 ] };
+    for( auto const &loose : Suspension.loose_parts ) {
+        auto placement { loose.placement };
+        auto const dx { placement.position[ 0 ] - hx }, dy { placement.position[ 1 ] - hy };
+        placement.position[ 0 ] = hx + c * dx - s * dy;
+        placement.position[ 1 ] = hy + s * dx + c * dy;
+        auto const &r { loose.placement.rotation };
+        for( int column = 0; column < 3; ++column ) {
+            placement.rotation[ 0 + column ] = c * r[ 0 + column ] - s * r[ 3 + column ];
+            placement.rotation[ 3 + column ] = s * r[ 0 + column ] + c * r[ 3 + column ];
+        }
+        auto const part { catenary::cantilever_to_scene( placement, Suspension.loose_heading ) };
+        auto const &wire { Suspension.loose_wire };
+        catenary_part_place( loose.model, glm::dvec3 { wire.x + part.offset[ 0 ], wire.y + part.offset[ 1 ], wire.z + part.offset[ 2 ] },
+                             glm::dvec3 { part.angles[ 0 ], part.angles[ 1 ], part.angles[ 2 ] } );
+    }
+}
+
+// wysięgniki do kołysania: najbliższe kamery w zasięgu
+std::array<std::size_t, kSwayCount>
+sway_nearest( glm::dvec3 const &Camera ) {
+    std::array<std::size_t, kSwayCount> chosen;
+    chosen.fill( static_cast<std::size_t>( -1 ) );
+    std::array<double, kSwayCount> distances;
+    distances.fill( kSwayRange );
+    for( std::size_t index = 0; index < Suspensions.size(); ++index ) {
+        auto const &suspension { Suspensions[ index ] };
+        if( suspension.removed || suspension.loose_parts.empty() ) { continue; }
+        auto distance { glm::length( suspension.loose_wire - Camera ) };
+        if( distance >= distances.back() ) { continue; }
+        auto candidate { index };
+        for( std::size_t slot = 0; slot < kSwayCount; ++slot ) {
+            if( distance < distances[ slot ] ) {
+                std::swap( distance, distances[ slot ] );
+                std::swap( candidate, chosen[ slot ] );
+            }
+        }
+    }
+    return chosen;
+}
+} // namespace
+
+std::size_t
+catenary_scene_sway( double const Dt, glm::dvec3 const &Camera, glm::dvec3 const &Wind ) {
+    SwayTime += Dt;
+    auto const speed { std::hypot( Wind.x, Wind.z ) };
+    auto const strength { std::clamp( ( speed - kSwayCalm ) / ( kSwayFull - kSwayCalm ), 0.0, 1.0 ) };
+    auto const chosen { sway_nearest( Camera ) };
+    // te, które przestały się kołysać (poza zasięgiem): z powrotem w spoczynku
+    for( auto const index : SwaySlots ) {
+        if( index >= Suspensions.size() || std::find( chosen.begin(), chosen.end(), index ) != chosen.end() ) { continue; }
+        auto &suspension { Suspensions[ index ] };
+        if( suspension.swaying ) { place_loose( suspension, suspension.loose_angle ); }
+        suspension.swaying = false;
+        suspension.sway = 0.0;
+        suspension.sway_strength = 0.0;
+    }
+    SwaySlots = chosen;
+    std::size_t moving { 0 };
+    for( std::size_t slot = 0; slot < kSwayCount; ++slot ) {
+        auto const index { chosen[ slot ] };
+        if( index >= Suspensions.size() ) { continue; }
+        auto &suspension { Suspensions[ index ] };
+        // siła za wiatrem łagodnie (kilka sekund), żeby podmuch nie szarpał
+        suspension.sway_strength += ( strength - suspension.sway_strength ) * std::min( 1.0, Dt * 0.5 );
+        if( suspension.sway_strength < 1e-3 && false == suspension.swaying ) { continue; }
+        auto const &name { suspension.data.name };
+        auto const omega { 0.6 + 0.4 * dismantle_random( name, 4 ) };
+        auto const phase { dismantle_random( name, 5 ) * 6.283185307179586 };
+        auto const sway { suspension.sway_strength * kSwayAmplitude * ( 0.75 * std::sin( omega * SwayTime + phase ) + 0.25 * std::sin( 2.7 * omega * SwayTime + 2.0 * phase ) ) };
+        // zmiana kierunku ruchu przy wyraźnym wychyleniu: skrzypnięcie zawiasu
+        auto const before { suspension.sway };
+        if( suspension.swaying && std::abs( sway ) > 2.0 && ( sway - before ) * ( before - suspension.sway_previous ) < 0.0 ) {
+            auto const &wire { suspension.loose_wire };
+            catenary_part_creak( static_cast<int>( slot ), glm::dvec3 { wire.x, wire.y, wire.z }, static_cast<float>( suspension.sway_strength ) );
+        }
+        suspension.sway_previous = before;
+        suspension.sway = sway;
+        suspension.swaying = suspension.sway_strength >= 1e-3;
+        place_loose( suspension, suspension.loose_angle + ( suspension.swaying ? sway : 0.0 ) );
+        if( suspension.swaying ) { ++moving; }
+    }
+    return moving;
 }
 
 std::size_t

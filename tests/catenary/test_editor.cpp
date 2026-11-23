@@ -25,6 +25,8 @@ void ErrorLog( std::string const &Message ) { errors.push_back( Message ); }
 void WriteLog( const char *Message ) { logs.emplace_back( Message ); }
 extern int mock_deleted_parts;
 extern int mock_deleted_spans;
+extern int mock_placed_parts;
+extern int mock_creaks;
 extern int mock_reloaded_spans;
 extern std::vector<std::string> mock_span_bodies, mock_span_names;
 
@@ -174,6 +176,22 @@ int main( int, char *argv[] ) {
             && has( wires, "strut" ) && has( wires, "stay" ) && vertical && turned && onlypole && false == has( poles, "strut" )
             && text.find( " dismantled wires" ) != std::string::npos && trouble.empty() && again.entries.size() == 1 && again.entries.front().dismantled == 1,
             "rozbiorka: wysiegnik bez uchwytow drutow, odciag pomocniczy zwisa, obrot na zawiasach, sam slup; zapis i odczyt" );
+        // kołysanie na wietrze: wysięgnik postawiony w scenie, kamera obok; słaby wiatr - nic, silny - kołysze się i skrzypi, daleko - nic
+        auto swinging { stripped };
+        swinging.name = "rb2";
+        swinging.at[ 2 ] = swinging.rope[ 2 ] = swinging.pole[ 2 ] = 400.0;
+        auto const loose { catenary_scene_add( "td_edytor_test.scm", swinging ) };
+        glm::dvec3 const camera { 0.0, 5.0, 410.0 };
+        mock_placed_parts = 0;
+        std::size_t calm { 0 };
+        for( int step = 0; step < 50; ++step ) { calm = std::max( calm, catenary_scene_sway( 0.1, camera, glm::dvec3 { 3.0, 0.0, 0.0 } ) ); }
+        std::size_t windy { 0 };
+        for( int step = 0; step < 300; ++step ) { windy = std::max( windy, catenary_scene_sway( 0.1, camera, glm::dvec3 { 18.0, 0.0, 6.0 } ) ); }
+        auto const placed { mock_placed_parts };
+        auto const distant { catenary_scene_sway( 0.1, glm::dvec3 { 0.0, 5.0, 2000.0 }, glm::dvec3 { 18.0, 0.0, 6.0 } ) };
+        std::printf( "  kolysanie: slaby wiatr %zu, silny %zu (przestawien czesci %d, skrzypniec %d), kamera daleko %zu\n", calm, windy, placed, mock_creaks, distant );
+        check( calm == 0 && windy == 1 && placed > 0 && mock_creaks > 0 && distant == 0, "rozbiorka: luzny wysiegnik kolysze sie dopiero przy silnym wietrze, przy kamerze, skrzypi" );
+        catenary_scene_remove( loose );
     }
     auto moved { entry };
     moved.pole[ 0 ] = -2.613; moved.card = 1125;   // słup 0,3 m dalej: A o 0,3 m większe, następna karta
