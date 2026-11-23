@@ -693,10 +693,16 @@ int main( int, char *argv[] ) {
         {
             auto stripped { *catenary_chain_get( 1 ) };
             stripped.dismantled = 2;
-            mock_span_names.clear();
+            mock_span_names.clear(); mock_span_bodies.clear();
             catenary_chain_update( 1, stripped );
             auto const written { catenary::write_chain( stripped ) };
-            auto const none { std::none_of( mock_span_names.begin(), mock_span_names.end(), [ & ]( std::string const &N ) { return N.rfind( stripped.name + "_", 0 ) == 0; } ) };
+            // przęsła tylko jako nosiciele lin uszynienia: bez zasilacza, przewody i lina w przerwie na całej długości
+            auto none { true };
+            for( std::size_t k = 0; k < mock_span_names.size(); ++k ) {
+                if( mock_span_names[ k ].rfind( stripped.name + "_", 0 ) != 0 ) { continue; }
+                auto const &body { mock_span_bodies[ k ] };
+                if( body.rfind( "none 0 0", 0 ) != 0 || body.find( "gap contact -1" ) == std::string::npos || body.find( "gap messenger -1" ) == std::string::npos ) { none = false; }
+            }
             stripped.dismantled = 0;
             mock_span_names.clear();
             catenary_chain_update( 1, stripped );
@@ -942,6 +948,18 @@ int main( int, char *argv[] ) {
             && catenary_earthing_holder_text( 0, "f2" ) == "4910-02 + 6130-00 + 0301-05";
         // przewód w przęsłach (lina rysowana z przęsłami łańcucha) - przęsło f2-f3 istnieje
         good = good && std::find( mock_span_names.begin(), mock_span_names.end(), std::string( "nf_1" ) ) != mock_span_names.end();
+        // sieć rozebrana (2026-11-23): przewód wzmacniający zostaje na słupach, jego lina dalej się rysuje (przęsła - nosiciele)
+        {
+            auto const before { catenary_chain_span_solids( 0 ) };
+            auto stripped { *catenary_chain_get( 0 ) };
+            stripped.dismantled = 2;
+            catenary_chain_update( 0, stripped );
+            auto const after { catenary_chain_span_solids( 0 ) };
+            stripped.dismantled = 0;
+            catenary_chain_update( 0, stripped );
+            std::printf( "  przewod wzmacniajacy na rozkradzionej sieci: bryly przesel %zu -> %zu\n", before, after );
+            good = good && before > 0 && after > 0;
+        }
         // przewód jako rozdzielczy 3 kV (karta 0639, 2026-11-22): połączenie 0650 łańcucha nf z nim i odłącznik 0651 od łańcucha do niego
         {
             auto joined { *catenary_chain_get( 0 ) };

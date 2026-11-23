@@ -260,6 +260,8 @@ double catenary_scene_swing( std::size_t Index );
 std::size_t catenary_chain_connectors( std::size_t Index );
 // trójkąty połączeń 0642/0648 łańcucha (testy)
 std::size_t catenary_chain_connections( std::size_t Index );
+// trójkąty brył dołączonych do przęseł łańcucha (liny kotwień, uszynienia, łączniki; testy)
+std::size_t catenary_chain_span_solids( std::size_t Index );
 // trójkąty zaślepki odłącznika z kartą i jego linek (testy)
 std::size_t catenary_disconnector_solid_size( std::size_t Index );
 

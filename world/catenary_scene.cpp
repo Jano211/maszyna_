@@ -2565,7 +2565,7 @@ std::vector<TTraction *>
 crossing_candidates( TTraction const &Span ) {
     std::vector<TTraction *> result;
     for( auto const &chain : Chains ) {
-        if( chain.removed || std::find( chain.spans.begin(), chain.spans.end(), &Span ) != chain.spans.end() ) { continue; }
+        if( chain.removed || chain.data.dismantled > 0 || std::find( chain.spans.begin(), chain.spans.end(), &Span ) != chain.spans.end() ) { continue; }
         for( auto *other : chain.spans ) {
             if( other == nullptr ) { continue; }
             if( crossing_ends( Span.pPoint1, Span.pPoint2, other->pPoint1, other->pPoint2 ) ) { result.push_back( other ); }
@@ -2582,7 +2582,7 @@ TTraction *
 overlap_span( glm::dvec3 const &A, glm::dvec3 const &B, std::size_t const Except, bool const Crossing = false ) {
     TTraction *crossing { nullptr };
     for( std::size_t chain = 0; chain < Chains.size(); ++chain ) {
-        if( chain == Except || Chains[ chain ].removed ) { continue; }
+        if( chain == Except || Chains[ chain ].removed || Chains[ chain ].data.dismantled > 0 ) { continue; }
         for( std::size_t index = 0; index < Chains[ chain ].spans.size(); ++index ) {
             auto *span { Chains[ chain ].spans[ index ] };
             if( span == nullptr || ( Crossing && span_shared( Chains[ chain ], index ) == 0 ) ) { continue; }
@@ -3314,7 +3314,7 @@ chain_connections( scene_chain const &Chain, std::size_t const Span, std::vector
         }
         connector_cut there;
         for( auto const &other : Chains ) {
-            if( other.removed || other.file != Chain.file || other.data.name != connection.other || &other == &Chain ) { continue; }
+            if( other.removed || other.data.dismantled > 0 || other.file != Chain.file || other.data.name != connection.other || &other == &Chain ) { continue; }
             for( auto *span : other.spans ) {
                 if( span == nullptr ) { continue; }
                 there = connector_cut_of( *span, place );
@@ -3454,6 +3454,7 @@ disconnector_cable( scene_disconnector const &Item, disconnector_frame const &Fr
     }
     scene_chain const *chain { nullptr };
     for( auto const &item : Chains ) { if( false == item.removed && item.file == Item.file && item.data.name == Chain ) { chain = &item; break; } }
+    if( chain != nullptr && chain->data.dismantled > 0 ) { return; }   // rozebrana sieć: linki nie ma do czego
     if( chain == nullptr ) {
         // przewód rozdzielczy (0651 pośrednie, 0653 końcowe, 0656 z kablem): linka z zacisku łukiem do przewodu najbliżej słupa
         glm::dvec3 line;
@@ -5029,14 +5030,35 @@ attach_span_solids( scene_chain &Chain, std::size_t const Span ) {
 void span_extras( scene_chain &Chain, std::size_t const Span );
 
 // samo przęsło (wpis node traction) od nowa, bez części przy nim; false - przęsła nie ma
+// rozebrana sieć (użytkownik 2026-11-23: uszynienia i przewody wzmacniające zostają na słupach): przęsło tylko jako nosiciel ich lin
+// (bryły dołączone do przęsła). Leży 10 m pod przewodem, czyli pod szynami - pantograf szuka drutu nad sobą, więc go nie złapie; przewody
+// i lina w całości w przerwie (nie rysują się), bez zasilacza. Puste - łańcuch bez typu sieci (bez brył) albo bez punktów
+double constexpr kCarrierDrop { 10.0 };
+
+std::string
+carrier_body( scene_chain const &Chain, std::size_t const Span ) {
+    auto const &data { Chain.data };
+    if( data.type.empty() || Span + 1 >= chain_points( Chain ) ) { return {}; }
+    double wirea[ 3 ], wireb[ 3 ], ropea[ 3 ], ropeb[ 3 ];
+    bool anchoreda, anchoredb;
+    if( false == chain_point( Chain, Span, wirea, ropea, anchoreda ) || false == chain_point( Chain, Span + 1, wireb, ropeb, anchoredb ) ) { return {}; }
+    for( auto *point : { wirea, wireb, ropea, ropeb } ) { point[ 1 ] -= kCarrierDrop; }
+    auto const plan { std::hypot( wireb[ 0 ] - wirea[ 0 ], wireb[ 2 ] - wirea[ 2 ] ) + 1.0 };
+    std::string body { "none 0 0 " + text_number( data.resistivity, 4 ) + " " + data.material + " " + text_number( data.thickness, 2 ) + " " + std::to_string( data.state ) + "\n" };
+    body += point_text( wirea ) + "\n" + point_text( wireb ) + "\n" + point_text( ropea ) + "\n" + point_text( ropeb ) + "\n";
+    body += text_number( data.hangers[ 0 ], 3 ) + " 0 " + std::to_string( static_cast<int>( data.hangers[ 2 ] ) ) + " " + text_number( data.hangers[ 3 ], 3 ) + " vis type " + data.type;
+    body += " gap contact -1 " + text_number( plan, 3 ) + " gap messenger -1 " + text_number( plan, 3 );
+    return body;
+}
+
 bool
 make_span( scene_chain &Chain, std::size_t const Span ) {
     if( Span >= Chain.spans.size() ) { return false; }
     if( Chain.span_parts.size() < Chain.spans.size() ) { Chain.span_parts.resize( Chain.spans.size() ); }
     for( auto *part : Chain.span_parts[ Span ] ) { catenary_part_delete( part ); }
     Chain.span_parts[ Span ].clear();
-    // rozebrana sieć: bez przęsła (ani drutów, ani styku, ani prądu)
-    auto const body { Chain.data.dismantled > 0 ? std::string() : span_body( Chain, Span ) };
+    // rozebrana sieć: zamiast przęsła sam nosiciel lin uszynienia i przewodu wzmacniającego (bez drutów, styku i prądu)
+    auto const body { Chain.data.dismantled > 0 ? carrier_body( Chain, Span ) : span_body( Chain, Span ) };
     // przęsło już stoi (edytor): wczytane od nowa w miejscu, bez nowego fragmentu w banku geometrii sekcji
     // (to w GL 4.6 przesyłało całą sekcję na kartę co klatkę przy przeciąganiu suwaka - Jan 2026-11-06)
     auto const reloaded { Initialized && false == body.empty() && Chain.spans[ Span ] != nullptr
@@ -5082,8 +5104,8 @@ span_extras( scene_chain &Chain, std::size_t const Span ) {
             rope.insert( rope.end(), solid.begin(), solid.end() );
         }
         // części liczone z kształtu liny: dopiero gdy przęsła są połączone z sąsiadami (linka Y); przy wczytaniu scenerii stawia je
-        // catenary_scene_resolve po InitTraction
-        if( Initialized ) {
+        // catenary_scene_resolve po InitTraction. Rozebrana sieć: nic z tego (zostaje sama lina uszynienia)
+        if( Initialized && Chain.data.dismantled <= 0 ) {
             // przęsło naprężenia zwarte: łącznik 33-0640 za słupem krzyżowym
             overlap_connector( Chain, Span, rope );
             // połączenia 0642 / 0648 z innym łańcuchem
@@ -7274,6 +7296,14 @@ catenary_disconnector_solid_size( std::size_t const Index ) {
     std::vector<catenary::solid_vertex> solid;
     disconnector_solid( Disconnectors[ Index ], solid );
     return solid.size() / 3;
+}
+
+std::size_t
+catenary_chain_span_solids( std::size_t const Index ) {
+    if( Index >= Chains.size() ) { return 0; }
+    std::size_t triangles { 0 };
+    for( auto const &rope : Chains[ Index ].span_rope ) { triangles += rope.size() / 3; }
+    return triangles;
 }
 
 std::size_t
