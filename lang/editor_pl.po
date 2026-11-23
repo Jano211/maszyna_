@@ -17538,3 +17538,39 @@ msgstr "Linia z rozebraną siecią. Bez drutów: bez przęseł (bez drutów, sty
 
 msgid "This pole otherwise than its chain: e.g. one cantilever left on a looted line, or one pole stripped. The wires go by the chain"
 msgstr "Ten słup inaczej niż jego łańcuch: np. jeden ocalały wysięgnik na rozkradzionej linii albo jeden ogołocony słup. Druty idą wg łańcucha"
+
+msgid "as it comes"
+msgstr "jak wypadnie"
+
+msgid "hangs down"
+msgstr "zwisa"
+
+msgid "taken off"
+msgstr "zdjęty"
+
+msgid "Steady arm"
+msgstr "Odciąg pomocniczy"
+
+msgid "As it comes: it hangs down, on a looted line it's gone here and there"
+msgstr "Jak wypadnie: zwisa, a na rozkradzionej linii miejscami go nie ma"
+
+msgid "of the strut"
+msgstr "ukośnika"
+
+msgid "of the stay"
+msgstr "odciągu"
+
+msgid "Insulators left on the mounts"
+msgstr "Izolatory na mocowaniach"
+
+msgid "Where the cantilever is gone (the poles only, or a looted pole without it): the insulator of the strut hangs down from the hinge, the one of the stay from its shackle"
+msgstr "Tam, gdzie wysięgnika nie ma (same słupy albo rozkradziony słup bez niego): izolator ukośnika zwisa z zawiasu, izolator odciągu ze strzemienia"
+
+msgid "Turn by hand"
+msgstr "Obrót ręcznie"
+
+msgid "A swinging cantilever without the wire stands turned loose on its hinges; without this - by chance, each pole otherwise"
+msgstr "Wysięgnik przechylny bez drutu stoi obrócony luźno na zawiasach; bez tego - losowo, każdy słup inaczej"
+
+msgid "Turn on the hinges"
+msgstr "Obrót na zawiasach"
