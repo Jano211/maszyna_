@@ -95,6 +95,14 @@ struct suspension {
     // rozbiórka sieci na tym słupie (użytkownik 2026-11-23): -1 - jak łańcuch, 0 - kompletny, 1 - bez drutów, 2 - rozkradziony,
     // 3 - sam słup. Wpis "dismantled intact|wires|looted|poles"; bez wpisu - jak łańcuch
     int    dismantled { -1 };
+    // ustawienia rozbiórki na tym słupie (użytkownik 2026-11-24): odciąg pomocniczy -1 - jak wypadnie (rozkradziona - losowo), 0 - zwisa,
+    // 1 - zdjęty ("dismantled_steady hang|off"); izolatory zwisające z mocowań, gdy wysięgnik zdjęty: 0 - żadne, 1 - ukośnika, 2 - odciągu,
+    // 3 - oba ("dismantled_insulators strut|stay|both"); obrót luźnego wysięgnika na zawiasach w stopniach, ±75 ("dismantled_turn <st>");
+    // bez wpisu - losowy
+    int    dismantled_steady { -1 };
+    int    dismantled_insulators { 0 };
+    bool   has_dismantled_turn { false };
+    double dismantled_turn { 0.0 };
 };
 
 // rozbiórka: nazwy stanów w pliku (0..3) i odczyt; -1 - nie ma takiej nazwy

@@ -568,15 +568,17 @@ wire_fitting( std::string const &Role ) {
         || role_starts( Role, "contact" ) || role_starts( Role, "link" ) || role_starts( Role, "registration" ) || role_starts( Role, "wire" );
 }
 
-// odciąg pomocniczy bez przewodu: wisi pionowo w dół na uchwycie (obrót wokół osi wzdłuż toru, przez zaczep), kierunek rury - od zaczepu
-// do ramion (koniec odciągu)
+// część zwisająca pionowo w dół ze swojego zaczepu (zero modelu): obrót wokół osi wzdłuż toru, kierunek części - od jej zera do części
+// Toward (początek roli; odciąg pomocniczy -> ramiona na jego końcu, izolator ukośnika -> ukośnik, izolator odciągu -> odciąg)
 void
-hang_steady( catenary::cantilever_result &Result ) {
+hang_part( catenary::cantilever_result &Result, std::string const &Role, char const *Toward, char const *With = nullptr ) {
     auto *steady { static_cast<catenary::cantilever_placement *>( nullptr ) };
+    auto *head { static_cast<catenary::cantilever_placement *>( nullptr ) };
     catenary::cantilever_placement const *end { nullptr };
     for( auto &placement : Result.parts ) {
-        if( placement.role == "steady" ) { steady = &placement; }
-        else if( end == nullptr && role_starts( placement.role, "arms" ) ) { end = &placement; }
+        if( placement.role == Role ) { steady = &placement; }
+        else if( With != nullptr && placement.role == With ) { head = &placement; }
+        else if( end == nullptr && placement.role == Toward ) { end = &placement; }
     }
     if( steady == nullptr || end == nullptr ) { return; }
     auto const dy { end->position[ 1 ] - steady->position[ 1 ] }, dz { end->position[ 2 ] - steady->position[ 2 ] };
@@ -592,34 +594,57 @@ hang_steady( catenary::cantilever_result &Result ) {
     auto const sign { bestdot < 0.0 ? -1.0 : 1.0 };
     auto const angle { -0.5 * 3.14159265358979323846 - std::atan2( sign * rotation[ 6 + best ], sign * rotation[ 3 + best ] ) };
     auto const c { std::cos( angle ) }, s { std::sin( angle ) };
-    auto &r { steady->rotation };
-    for( int column = 0; column < 3; ++column ) {
-        auto const y { r[ 3 + column ] }, z { r[ 6 + column ] };
-        r[ 3 + column ] = c * y - s * z;
-        r[ 6 + column ] = s * y + c * z;
+    // obrót wokół osi wzdłuż toru przez Pivot: zaczep części, a z głowicą (teowniki: odciąg pomocniczy na głowicy 4350-01 przypiętej do
+    // opaski 4350-02 na ukośniku; użytkownik 2026-11-24) - zero głowicy, która obraca się razem z nim
+    auto const pivoty { head != nullptr ? head->position[ 1 ] : steady->position[ 1 ] };
+    auto const pivotz { head != nullptr ? head->position[ 2 ] : steady->position[ 2 ] };
+    for( auto *placement : { steady, head } ) {
+        if( placement == nullptr ) { continue; }
+        auto &r { placement->rotation };
+        for( int column = 0; column < 3; ++column ) {
+            auto const y { r[ 3 + column ] }, z { r[ 6 + column ] };
+            r[ 3 + column ] = c * y - s * z;
+            r[ 6 + column ] = s * y + c * z;
+        }
+        auto const y { placement->position[ 1 ] - pivoty }, z { placement->position[ 2 ] - pivotz };
+        placement->position[ 1 ] = pivoty + c * y - s * z;
+        placement->position[ 2 ] = pivotz + s * y + c * z;
     }
 }
 
 // wysięgnik po rozbiórce: bez uchwytów drutów, odciąg pomocniczy zwisa; rozkradziony - losowo bez odciągu pomocniczego (60%) albo bez
-// całego wysięgnika (30%) i bez odgromnika; sam słup - tylko słup z mocowaniami. Zwraca obrót na zawiasach (stopnie, losowy, gdy wysięgnik
-// przechylny zostaje) - kołysze się luźno
+// całego wysięgnika (30%) i bez odgromnika; sam słup - tylko słup z mocowaniami. Ustawienia słupa (użytkownik 2026-11-24): odciąg
+// pomocniczy zwisa / zdjęty, izolatory zwisające z mocowań przy zdjętym wysięgniku, obrót ręczny. Key: nazwa słupa z położeniem (losowanie
+// różne także dla słupów bez nazwy). Zwraca obrót na zawiasach (stopnie, gdy wysięgnik przechylny zostaje - kołysze się luźno), NaN - wysięgnik
+// nie jest luźny (sieć jest, wysięgnik zdjęty albo nieprzechylny)
 double
-dismantle( catenary::cantilever_result &Result, std::string const &Name, int const State, bool const Swinging ) {
-    if( State <= 0 ) { return 0.0; }
+dismantle( catenary::cantilever_result &Result, catenary::suspension const &Data, std::string const &Key, int const State ) {
+    auto const none { std::numeric_limits<double>::quiet_NaN() };
+    if( State <= 0 ) { return none; }
     auto bare { State >= 3 };
     auto nosteady { false };
     if( State == 2 ) {
-        bare = dismantle_random( Name, 1 ) < 0.30;
-        nosteady = dismantle_random( Name, 2 ) < 0.60;
+        bare = dismantle_random( Key, 1 ) < 0.30;
+        nosteady = dismantle_random( Key, 2 ) < 0.60;
     }
-    if( false == bare && false == nosteady ) { hang_steady( Result ); }
+    if( Data.dismantled_steady >= 0 ) { nosteady = Data.dismantled_steady == 1; }
+    auto const strut { bare && ( Data.dismantled_insulators & 1 ) != 0 };
+    auto const stay { bare && ( Data.dismantled_insulators & 2 ) != 0 };
+    if( false == bare && false == nosteady ) { hang_part( Result, "steady", "arms", "steady_head" ); }
+    if( strut ) { hang_part( Result, "strut_insulator", "strut" ); }
+    if( stay ) { hang_part( Result, "stay_insulator", "stay" ); }
     std::erase_if( Result.parts, [ & ]( catenary::cantilever_placement const &Placement ) {
         auto const &role { Placement.role };
-        if( bare ) { return false == pole_fitting( role ); }
+        if( bare ) {
+            if( strut && role == "strut_insulator" ) { return false; }
+            if( stay && ( role == "stay_insulator" || role == "stay_shackle" ) ) { return false; }
+            return false == pole_fitting( role );
+        }
         if( State >= 2 && role == "arrester" ) { return true; }
-        if( nosteady && ( role == "steady" || role == "steady_clamp" ) ) { return true; }
+        if( nosteady && ( role == "steady" || role == "steady_clamp" || role == "steady_head" ) ) { return true; }
         return wire_fitting( role ); } );
-    return bare || false == Swinging ? 0.0 : ( dismantle_random( Name, 3 ) * 2.0 - 1.0 ) * 75.0;
+    if( bare || Data.card / 100 == 12 ) { return none; }
+    return Data.has_dismantled_turn ? Data.dismantled_turn : ( dismantle_random( Key, 3 ) * 2.0 - 1.0 ) * 75.0;
 }
 
 // Probe: tylko złożenie bez wstawiania części, wynik solvera trafia tam (zwraca 1, gdy się złożył)
@@ -869,14 +894,16 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     }
     // rozbiórka: części zdjęte, wysięgnik przechylny obrócony luźno na zawiasach (bez drutu nic go nie trzyma)
     auto const dismantled { solved ? suspension_dismantled( Suspension ) : 0 };
-    auto const loose { solved ? dismantle( result, data.name, dismantled, data.card / 100 != 12 ) : 0.0 };
+    auto const turned { solved ? dismantle( result, data, data.name + "@" + text_number( data.pole[ 0 ], 1 ) + " " + text_number( data.pole[ 2 ], 1 ), dismantled ) : std::numeric_limits<double>::quiet_NaN() };
+    auto const isloose { false == std::isnan( turned ) };
+    auto const loose { isloose ? turned : 0.0 };
     glm::dvec3 shift;
     auto const *hinge { solved && pole != nullptr ? result.find( "strut_hinge" ) : nullptr };
     auto const bytemperature { hinge != nullptr && dismantled == 0 && swing_shift( Suspension, shift ) && glm::length( shift ) > 1e-4 };
     // wysięgnik luźny: położenie części przed obrotem, do kołysania (te same części, które obraca zawias)
     std::vector<catenary::cantilever_placement> unswung;
-    if( hinge != nullptr && loose != 0.0 && Probe == nullptr ) { unswung = result.parts; }
-    if( hinge != nullptr && ( bytemperature || data.turn_by_hand != 0.0 || loose != 0.0 ) ) {
+    if( hinge != nullptr && isloose && Probe == nullptr ) { unswung = result.parts; }
+    if( hinge != nullptr && ( bytemperature || data.turn_by_hand != 0.0 || isloose ) ) {
         // oś X wysięgnika w scenerii (wzdłuż toru)
         catenary::cantilever_placement unit;
         unit.position[ 0 ] = 1.0;
@@ -7451,6 +7478,11 @@ catenary_disconnector_solid_size( std::size_t const Index ) {
     std::vector<catenary::solid_vertex> solid;
     disconnector_solid( Disconnectors[ Index ], solid );
     return solid.size() / 3;
+}
+
+int
+catenary_scene_dismantled( std::size_t const Index ) {
+    return ( Index < Suspensions.size() && false == Suspensions[ Index ].removed ? suspension_dismantled( Suspensions[ Index ] ) : 0 );
 }
 
 std::string

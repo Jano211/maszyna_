@@ -297,6 +297,10 @@ void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data
 	Data.arrester_drop = Current.arrester_drop;
 	Data.arrester_away = Current.arrester_away;
 	Data.dismantled = Current.dismantled; // and the dismantling of the pole
+	Data.dismantled_steady = Current.dismantled_steady;
+	Data.dismantled_insulators = Current.dismantled_insulators;
+	Data.has_dismantled_turn = Current.has_dismantled_turn;
+	Data.dismantled_turn = Current.dismantled_turn;
 	Data.stay_gap = Current.stay_gap;     // and the corrections from the ground (the user 2026-11-18)
 	Data.arms_spread = Current.arms_spread;
 	Data.rope_shift = Current.rope_shift;
@@ -6459,6 +6463,74 @@ void catenary_editor::render_catenary_connections_ui()
 	ImGui::TreePop();
 }
 
+// the settings of a dismantled pole: one change at a time, each with its undo
+void catenary_editor::render_catenary_dismantled_ui(std::size_t const Index, catenary::suspension const &Data)
+{
+	auto &tool{m_catenary};
+	auto const apply = [this, Index, &Data](catenary::suspension const &Changed) {
+		m_catenary.undo.push_back({++m_catenary.group, false, Index, Data, std::nullopt, false});
+		catenary_scene_update(Index, Changed);
+		m_catenary.probed = false;
+	};
+	ImGui::Indent();
+	ImGui::PushItemWidth(160.0f);
+	{
+		std::string const names[] = {STR("as it comes"), STR("hangs down"), STR("taken off")};
+		char const *const items[] = {names[0].c_str(), names[1].c_str(), names[2].c_str()};
+		auto choice{std::clamp(Data.dismantled_steady, -1, 1) + 1};
+		if (ImGui::Combo(STR_C("Steady arm"), &choice, items, 3))
+		{
+			auto changed{Data};
+			changed.dismantled_steady = choice - 1;
+			apply(changed);
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("As it comes: it hangs down, on a looted line it's gone here and there"));
+	}
+	{
+		std::string const names[] = {STR("none"), STR("of the strut"), STR("of the stay"), STR("both")};
+		char const *const items[] = {names[0].c_str(), names[1].c_str(), names[2].c_str(), names[3].c_str()};
+		auto choice{std::clamp(Data.dismantled_insulators, 0, 3)};
+		if (ImGui::Combo(STR_C("Insulators left on the mounts"), &choice, items, 4))
+		{
+			auto changed{Data};
+			changed.dismantled_insulators = choice;
+			apply(changed);
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("Where the cantilever is gone (the poles only, or a looted pole without it): the insulator of the strut hangs down from the hinge, the one of the stay from its shackle"));
+	}
+	{
+		auto byhand{Data.has_dismantled_turn};
+		if (ImGui::Checkbox(STR_C("Turn by hand"), &byhand))
+		{
+			auto changed{Data};
+			changed.has_dismantled_turn = byhand;
+			apply(changed);
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("A swinging cantilever without the wire stands turned loose on its hinges; without this - by chance, each pole otherwise"));
+		if (Data.has_dismantled_turn)
+		{
+			auto turn{static_cast<float>(Data.dismantled_turn)};
+			if (ImGui::SliderFloat(STR_C("Turn on the hinges"), &turn, -75.0f, 75.0f, "%.0f deg"))
+			{
+				auto changed{Data};
+				changed.dismantled_turn = std::round(static_cast<double>(turn));
+				if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != Index || tool.undo.back().chain)
+				{
+					tool.shift_group = ++tool.group;
+					tool.undo.push_back({tool.shift_group, false, Index, Data, std::nullopt, false});
+				}
+				catenary_scene_update(Index, changed);
+				tool.probed = false;
+			}
+		}
+	}
+	ImGui::PopItemWidth();
+	ImGui::Unindent();
+}
+
 void catenary_editor::render_catenary_chain_ui()
 {
 	auto &tool{m_catenary};
@@ -9036,6 +9108,9 @@ void catenary_editor::render_catenary_cantilever_ui()
 				ImGui::PopItemWidth();
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("%s", STR_C("This pole otherwise than its chain: e.g. one cantilever left on a looted line, or one pole stripped. The wires go by the chain"));
+				// what's left on a dismantled pole (the user 2026-11-24): the steady arm, the insulators on the mounts, the turn on the hinges
+				if (catenary_scene_dismantled(index) > 0)
+					render_catenary_dismantled_ui(index, *data);
 			}
 			// the lightning arrester 7310 (cards 0681/0683/0684, the user 2026-11-21): at the top of the pole towards the track, the lead 9812-6
 			// to the messenger; no effect on the current

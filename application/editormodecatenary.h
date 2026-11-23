@@ -458,6 +458,7 @@ struct catenary_editor
 	bool catenary_connection_make(int Other, std::size_t Span);
 	bool catenary_connection_to_line();
 	void render_catenary_connections_ui();
+	void render_catenary_dismantled_ui(std::size_t Index, catenary::suspension const &Data);
 	void render_catenary_messenger_from(std::size_t Chain);
 	void catenary_connect(std::size_t const To);
 	int catenary_gantry_hit() const;
