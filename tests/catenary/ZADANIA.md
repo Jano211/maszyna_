@@ -312,8 +312,8 @@ ZACZYNAMY DOPIERO, GDY UŻYTKOWNIK DOSTARCZY MODELE (nadstawki, ew. słupy górn
 ## Do zrobienia – wysięgniki teowe: regulacje jak w rurowych (2026-11-24, niepilne)
 
 - [ ] Zastrzały na teownikach (Jan 2026-11-24: „zastrzały na teownikach też są”; to chyba jedyny jeszcze niewykorzystany element) – karta, części i miejsce mocowania do ustalenia z katalogu (stary Kolprojekt, dział 0100), potem jak 6506 w rurowych (`link` w overrides, przełącznik w panelu)
-- [ ] „Poprawki z gruntu” dla teowników: ukośnik 6101 i odciągi 4310 / 4320 z innego wykonania (dziś lista rodzin ma tylko 6001/6002/6003/6007/6011/6111) – najpierw sprawdzić, czy solver teowników przyjmuje wymuszoną część
-- [ ] Przesunięte mocowanie górne / dolne (`stay_shift` / `strut_shift`) na teownikach: edytor ich nie pokazuje (karty 7/10/11/12xx), solver teowników je ignoruje (121-3 przy ±0,3 m składa się identycznie). Do ustalenia z Janem: czy po przesunięciu dobiera się inny teownik z rodziny, przestawia siodło / opaskę na ukośniku, czy jedno i drugie
+- [x] „Poprawki z gruntu” dla teowników: ukośnik 6101 i pręty górne 4310 / 4320 z innego wykonania – 2026-11-24 (solver przyjmuje; sam ukośnik albo sam pręt - przechyla ukośnik do pręta z uwagą, w parze bez uwag)
+- [ ] Przesunięte mocowanie górne / dolne (`stay_shift` / `strut_shift`) na teownikach: edytor ich nie pokazuje (karty 7/10/11/12xx), solver teowników je ignoruje (121-3 przy ±0,3 m składa się identycznie). Do ustalenia: czy po przesunięciu dobiera się inny teownik z rodziny, przestawia siodło / opaskę na ukośniku, czy jedno i drugie (Jan 2026-11-24: „chuj wie” - czeka na źródło)
 
 ## Odłożone i na później
 

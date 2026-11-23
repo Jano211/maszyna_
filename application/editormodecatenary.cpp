@@ -8882,7 +8882,9 @@ void catenary_editor::render_catenary_cantilever_ui()
 				// tubes: the parts of the card in the families the user named, any execution of the same family
 				if (scheme != nullptr)
 				{
-					static char const *const families[]{"6001", "6002", "6003", "6007", "6011", "6111"};
+					// the tees too (the user 2026-11-24): the strut 6101 and the top bars 4310 (swinging) / 4320 - the solver tilts the strut to meet
+					// the bar when only one of them is changed
+					static char const *const families[]{"6001", "6002", "6003", "6007", "6011", "6111", "6101", "4310", "4320"};
 					for (auto const &[role, card] : scheme->roles)
 					{
 						if (card.size() < 4 || std::find_if(std::begin(families), std::end(families), [&](char const *F) { return card.compare(0, 4, F) == 0; }) == std::end(families))

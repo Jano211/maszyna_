@@ -227,6 +227,21 @@ int main( int, char *argv[] ) {
         check( calm == 0 && windy == 1 && placed > 0 && mock_creaks > 0 && distant == 0, "rozbiorka: luzny wysiegnik kolysze sie dopiero przy silnym wietrze, przy kamerze, skrzypi" );
         catenary_scene_remove( loose );
     }
+    // teownik z innego wykonania (2026-11-24, „Poprawki z gruntu”): ukośnik 6101 i pręt 4320 wymuszone w parze - składa się bez uwag,
+    // sam ukośnik - przechylony do pręta, z uwagą
+    {
+        auto tee { entry };
+        tee.card = 121; tee.execution = 3;
+        catenary::cantilever_result pair, single;
+        tee.overrides = { { "strut", "6101-04" }, { "stay", "4320-04" } };
+        auto const a1 { catenary_scene_probe( tee, pair ) };
+        tee.overrides = { { "strut", "6101-04" } };
+        auto const a2 { catenary_scene_probe( tee, single ) };
+        auto const *strut { pair.find( "strut" ) }, *stay { pair.find( "stay" ) };
+        std::printf( "  teownik 6101-04 + 4320-04: uwag %zu; sam 6101-04: uwag %zu\n", pair.warnings.size(), single.warnings.size() );
+        check( a1 && a2 && strut != nullptr && strut->part == "6101-04" && stay != nullptr && stay->part == "4320-04" && pair.warnings.empty() && false == single.warnings.empty(),
+            "teownik: ukosnik i pret gorny z innego wykonania wymuszone" );
+    }
     auto moved { entry };
     moved.pole[ 0 ] = -2.613; moved.card = 1125;   // słup 0,3 m dalej: A o 0,3 m większe, następna karta
     mock_deleted_parts = 0;
