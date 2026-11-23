@@ -10,6 +10,7 @@ http://mozilla.org/MPL/2.0/.
 #include "stdafx.h"
 #include "world/catenary_scene.h"
 #include <cstring>
+#include <cstdint>
 
 #include "world/catenary_suspension.h"
 #include "world/catenary_cantilever.h"
@@ -478,6 +479,107 @@ rope_direction( scene_suspension const &Suspension, glm::dvec2 &Direction ) {
     return false;
 }
 
+// ---- rozbiórka sieci (użytkownik 2026-11-23: linie z rozebraną siecią) ---------------------------------------------------------
+// stan słupa: jego wyjątek albo najdalej posunięty stan łańcuchów, w których jest (0 - kompletny ... 3 - sam słup)
+int
+suspension_dismantled( scene_suspension const &Suspension ) {
+    if( Suspension.data.dismantled >= 0 ) { return Suspension.data.dismantled; }
+    auto state { 0 };
+    if( Suspension.data.name.empty() ) { return state; }
+    for( auto const &chain : Chains ) {
+        if( chain.removed || chain.file != Suspension.file ) { continue; }
+        if( std::find( chain.data.suspensions.begin(), chain.data.suspensions.end(), Suspension.data.name ) != chain.data.suspensions.end() ) { state = std::max( state, chain.data.dismantled ); }
+    }
+    return state;
+}
+
+// liczba z [0, 1) stała dla nazwy słupa (FNV-1a), Salt - osobne losowanie
+double
+dismantle_random( std::string const &Name, std::uint32_t const Salt ) {
+    std::uint32_t hash { 2166136261u ^ Salt };
+    for( unsigned char const letter : Name ) { hash = ( hash ^ letter ) * 16777619u; }
+    return static_cast<double>( hash & 0xffffffu ) / static_cast<double>( 0x1000000u );
+}
+
+bool
+role_ends( std::string const &Role, char const *Tail ) {
+    auto const length { std::strlen( Tail ) };
+    return Role.size() >= length && Role.compare( Role.size() - length, length, Tail ) == 0;
+}
+
+bool
+role_starts( std::string const &Role, char const *Head ) {
+    return Role.compare( 0, std::strlen( Head ), Head ) == 0;
+}
+
+// część, która zostaje na gołym słupie: słup, fundament, mocowania z tyłami, prętami, zawiasami i konsolami (stal przykręcona do słupa)
+bool
+pole_fitting( std::string const &Role ) {
+    return Role == "pole" || Role == "foundation" || role_ends( Role, "_mount" ) || role_ends( Role, "_back" ) || role_ends( Role, "_rod" )
+        || role_ends( Role, "_hinge" ) || role_ends( Role, "_console" );
+}
+
+// uchwyty liny nośnej i przewodów (mosiądz, miedź - złomiarze zabierają pierwsze; użytkownik 2026-11-23)
+bool
+wire_fitting( std::string const &Role ) {
+    return role_starts( Role, "messenger" ) || role_starts( Role, "cord" ) || role_starts( Role, "arms" ) || role_starts( Role, "second" )
+        || role_starts( Role, "contact" ) || role_starts( Role, "link" ) || role_starts( Role, "registration" ) || role_starts( Role, "wire" );
+}
+
+// odciąg pomocniczy bez przewodu: wisi pionowo w dół na uchwycie (obrót wokół osi wzdłuż toru, przez zaczep), kierunek rury - od zaczepu
+// do ramion (koniec odciągu)
+void
+hang_steady( catenary::cantilever_result &Result ) {
+    auto *steady { static_cast<catenary::cantilever_placement *>( nullptr ) };
+    catenary::cantilever_placement const *end { nullptr };
+    for( auto &placement : Result.parts ) {
+        if( placement.role == "steady" ) { steady = &placement; }
+        else if( end == nullptr && role_starts( placement.role, "arms" ) ) { end = &placement; }
+    }
+    if( steady == nullptr || end == nullptr ) { return; }
+    auto const dy { end->position[ 1 ] - steady->position[ 1 ] }, dz { end->position[ 2 ] - steady->position[ 2 ] };
+    if( std::hypot( dy, dz ) < 1e-3 ) { return; }
+    // oś rury w modelu: kolumna obrotu najbliższa kierunkowi zaczep - ramiona (ze znakiem w tę stronę)
+    auto const &rotation { steady->rotation };
+    auto best { 0 };
+    auto bestdot { 0.0 };
+    for( int column = 0; column < 3; ++column ) {
+        auto const dot { rotation[ 3 + column ] * dy + rotation[ 6 + column ] * dz };
+        if( std::abs( dot ) > std::abs( bestdot ) ) { bestdot = dot; best = column; }
+    }
+    auto const sign { bestdot < 0.0 ? -1.0 : 1.0 };
+    auto const angle { -0.5 * 3.14159265358979323846 - std::atan2( sign * rotation[ 6 + best ], sign * rotation[ 3 + best ] ) };
+    auto const c { std::cos( angle ) }, s { std::sin( angle ) };
+    auto &r { steady->rotation };
+    for( int column = 0; column < 3; ++column ) {
+        auto const y { r[ 3 + column ] }, z { r[ 6 + column ] };
+        r[ 3 + column ] = c * y - s * z;
+        r[ 6 + column ] = s * y + c * z;
+    }
+}
+
+// wysięgnik po rozbiórce: bez uchwytów drutów, odciąg pomocniczy zwisa; rozkradziony - losowo bez odciągu pomocniczego (60%) albo bez
+// całego wysięgnika (30%) i bez odgromnika; sam słup - tylko słup z mocowaniami. Zwraca obrót na zawiasach (stopnie, losowy, gdy wysięgnik
+// przechylny zostaje) - kołysze się luźno
+double
+dismantle( catenary::cantilever_result &Result, std::string const &Name, int const State, bool const Swinging ) {
+    if( State <= 0 ) { return 0.0; }
+    auto bare { State >= 3 };
+    auto nosteady { false };
+    if( State == 2 ) {
+        bare = dismantle_random( Name, 1 ) < 0.30;
+        nosteady = dismantle_random( Name, 2 ) < 0.60;
+    }
+    if( false == bare && false == nosteady ) { hang_steady( Result ); }
+    std::erase_if( Result.parts, [ & ]( catenary::cantilever_placement const &Placement ) {
+        auto const &role { Placement.role };
+        if( bare ) { return false == pole_fitting( role ); }
+        if( State >= 2 && role == "arrester" ) { return true; }
+        if( nosteady && ( role == "steady" || role == "steady_clamp" ) ) { return true; }
+        return wire_fitting( role ); } );
+    return bare || false == Swinging ? 0.0 : ( dismantle_random( Name, 3 ) * 2.0 - 1.0 ) * 75.0;
+}
+
 // Probe: tylko złożenie bez wstawiania części, wynik solvera trafia tam (zwraca 1, gdy się złożył)
 std::size_t
 assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Catalog, glm::dvec3 const &Wire, glm::dvec3 const *Rope, glm::dvec3 const &Attach,
@@ -719,10 +821,13 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         std::fill( std::begin( Suspension.swing_wire ), std::end( Suspension.swing_wire ), 0.0 );
         std::fill( std::begin( Suspension.swing_rope ), std::end( Suspension.swing_rope ), 0.0 );
     }
+    // rozbiórka: części zdjęte, wysięgnik przechylny obrócony luźno na zawiasach (bez drutu nic go nie trzyma)
+    auto const dismantled { solved ? suspension_dismantled( Suspension ) : 0 };
+    auto const loose { solved ? dismantle( result, data.name, dismantled, data.card / 100 != 12 ) : 0.0 };
     glm::dvec3 shift;
     auto const *hinge { solved && pole != nullptr ? result.find( "strut_hinge" ) : nullptr };
-    auto const bytemperature { hinge != nullptr && swing_shift( Suspension, shift ) && glm::length( shift ) > 1e-4 };
-    if( hinge != nullptr && ( bytemperature || data.turn_by_hand != 0.0 ) ) {
+    auto const bytemperature { hinge != nullptr && dismantled == 0 && swing_shift( Suspension, shift ) && glm::length( shift ) > 1e-4 };
+    if( hinge != nullptr && ( bytemperature || data.turn_by_hand != 0.0 || loose != 0.0 ) ) {
         // oś X wysięgnika w scenerii (wzdłuż toru)
         catenary::cantilever_placement unit;
         unit.position[ 0 ] = 1.0;
@@ -732,7 +837,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
         auto const radius { hinge->position[ 1 ] - ( clamp != nullptr ? clamp->position[ 1 ] : input.messenger.y ) };
         if( radius > 0.3 ) {
             // od temperatury (przesuw liny wzdłuż toru) plus ręczny obrót z wpisu (turn_by_hand)
-            auto const angle { std::asin( std::clamp( along / radius, -0.5, 0.5 ) ) + data.turn_by_hand * 3.14159265358979323846 / 180.0 };
+            auto const angle { std::asin( std::clamp( along / radius, -0.5, 0.5 ) ) + ( data.turn_by_hand + loose ) * 3.14159265358979323846 / 180.0 };
             swing[ 0 ] = std::sin( angle );
             swing[ 1 ] = std::cos( angle );
             swing[ 2 ] = hinge->position[ 0 ];
@@ -755,7 +860,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
             }
             auto const degrees { std::asin( swing[ 0 ] ) * 180.0 / 3.14159265358979323846 };
             // kontrola obrotu wysięgnika (Głowacki: najwyżej 12° na skrajnych słupach odcinka)
-            if( std::abs( degrees - data.turn_by_hand ) > 12.0 ) {
+            if( dismantled == 0 && std::abs( degrees - data.turn_by_hand ) > 12.0 ) {
                 result.warnings.push_back( "cantilever of suspension "" + data.name + "" swings " + text_number( std::abs( degrees ), 1 ) + " deg at " + text_number( Global.AirTemperature, 1 )
                     + " C, more than 12 deg allowed; the middle anchor is too far away" );
             }
@@ -1480,6 +1585,13 @@ assemble_anchor( scene_anchor &Anchor ) {
     Anchor.parts.clear();
     Anchor.solved = false;
     if( Anchor.removed ) { return 0; }
+    // kotwienie łańcucha rozebranej sieci: zabrane razem z drutami
+    for( auto const &chain : Chains ) {
+        if( chain.removed || chain.file != Anchor.file || chain.data.dismantled <= 0 ) { continue; }
+        for( auto const *name : { &chain.data.anchor_start, &chain.data.anchor_end, &chain.data.anchor_start_contact, &chain.data.anchor_end_contact } ) {
+            if( *name == Anchor.data.name ) { return 0; }
+        }
+    }
     auto const &data { Anchor.data };
     auto const label { "Bad scenario: anchor \"" + ( data.name.empty() ? std::string( "none" ) : data.name ) + "\" " };
     auto const *catalog { cantilevers() };
@@ -2570,7 +2682,7 @@ assemble_middle( scene_chain &Chain ) {
     Chain.middle_solid[ 1 ].clear();
     Chain.middle_span = static_cast<std::size_t>( -1 );
     auto const &data { Chain.data };
-    if( Chain.removed || data.middle.empty() ) { return; }
+    if( Chain.removed || data.middle.empty() || data.dismantled > 0 ) { return; }
     auto const label { "Bad scenario: chain \"" + ( data.name.empty() ? std::string( "none" ) : data.name ) + "\" " };
     auto const found { std::find( data.suspensions.begin(), data.suspensions.end(), data.middle ) };
     if( found == data.suspensions.end() ) { ErrorLog( label + "has its middle anchor at \"" + data.middle + "\", which isn't in the chain" ); return; }
@@ -4923,7 +5035,8 @@ make_span( scene_chain &Chain, std::size_t const Span ) {
     if( Chain.span_parts.size() < Chain.spans.size() ) { Chain.span_parts.resize( Chain.spans.size() ); }
     for( auto *part : Chain.span_parts[ Span ] ) { catenary_part_delete( part ); }
     Chain.span_parts[ Span ].clear();
-    auto const body { span_body( Chain, Span ) };
+    // rozebrana sieć: bez przęsła (ani drutów, ani styku, ani prądu)
+    auto const body { Chain.data.dismantled > 0 ? std::string() : span_body( Chain, Span ) };
     // przęsło już stoi (edytor): wczytane od nowa w miejscu, bez nowego fragmentu w banku geometrii sekcji
     // (to w GL 4.6 przesyłało całą sekcję na kartę co klatkę przy przeciąganiu suwaka - Jan 2026-11-06)
     auto const reloaded { Initialized && false == body.empty() && Chain.spans[ Span ] != nullptr
@@ -6345,7 +6458,9 @@ catenary_chain_update( std::size_t const Index, catenary::chain const &Data ) {
         for( auto const &pair : *pairs ) { if( pair.first != pair.second ) { held.insert( pair.first ); } }
     }
     // kotwienie środkowe przed albo po zmianie: wysięgniki łańcucha obracają się od temperatury inaczej (albo przestają)
-    if( false == chain.data.middle.empty() || false == Data.middle.empty() ) {
+    // rozbiórka zmieniona: wysięgniki od nowa (uchwyty drutów, zwisający odciąg), kotwienia też
+    auto const dismantling { chain.data.dismantled != Data.dismantled };
+    if( false == chain.data.middle.empty() || false == Data.middle.empty() || dismantling ) {
         held.insert( chain.data.suspensions.begin(), chain.data.suspensions.end() );
         held.insert( Data.suspensions.begin(), Data.suspensions.end() );
     }
@@ -6356,6 +6471,14 @@ catenary_chain_update( std::size_t const Index, catenary::chain const &Data ) {
         if( auto const index { suspension_named( chain.file, name ) }; index < Suspensions.size() ) { reassemble( index ); }
     }
     rebuild_chain( chain );
+    if( dismantling ) {
+        for( auto &anchor : Anchors ) {
+            if( anchor.removed || anchor.file != chain.file ) { continue; }
+            for( auto const *name : { &Data.anchor_start, &Data.anchor_end, &Data.anchor_start_contact, &Data.anchor_end_contact } ) {
+                if( false == name->empty() && *name == anchor.data.name ) { assemble_anchor( anchor ); }
+            }
+        }
+    }
     mark_changed( chain.file );
     refresh_earthings( chain.file, false );
     return true;

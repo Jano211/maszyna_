@@ -143,6 +143,38 @@ int main( int, char *argv[] ) {
         }
         catenary_scene_update( index, entry );
     }
+    // rozbiórka (2026-11-23): bez drutów - bez uchwytów liny i przewodów, odciąg pomocniczy pionowo w dół, wysięgnik przechylny obrócony
+    // na zawiasach; sam słup - słup z mocowaniami; zapis i odczyt
+    {
+        catenary::cantilever_result whole, wires, poles;
+        auto stripped { entry };
+        stripped.name = "rb1";
+        stripped.dismantled = 1;
+        auto bare { stripped };
+        bare.dismantled = 3;
+        auto const ok { catenary_scene_probe( entry, whole ) && catenary_scene_probe( stripped, wires ) && catenary_scene_probe( bare, poles ) };
+        auto const has = []( catenary::cantilever_result const &R, char const *Role ) { return R.find( Role ) != nullptr; };
+        auto const *steady { wires.find( "steady" ) };
+        // rura odciągu wzdłuż którejś osi modelu: kolumna obrotu, która w scenerii wyszła pionowo (jedna z trzech ma |z| ~ 1)
+        auto vertical { false };
+        if( steady != nullptr ) { for( int column = 0; column < 3; ++column ) { if( std::abs( steady->rotation[ 6 + column ] ) > 0.95 ) { vertical = true; } } }
+        auto const *strut0 { whole.find( "strut" ) }, *strut1 { wires.find( "strut" ) };
+        auto const turned { strut0 != nullptr && strut1 != nullptr && std::abs( strut0->position[ 0 ] - strut1->position[ 0 ] ) > 1e-3 };
+        auto onlypole { true };
+        for( auto const &part : poles.parts ) {
+            if( part.role != "pole" && part.role != "foundation" && part.role.find( "_mount" ) == std::string::npos && part.role.find( "_back" ) == std::string::npos
+             && part.role.find( "_rod" ) == std::string::npos && part.role.find( "_hinge" ) == std::string::npos ) { onlypole = false; }
+        }
+        auto const text { catenary::write_suspension( stripped ) };
+        std::vector<std::string> words; std::istringstream stream { text }; for( std::string w; stream >> w; ) { words.push_back( w ); }
+        catenary::suspension_file again; std::vector<std::string> trouble;
+        catenary::parse_suspensions( words, "rozbiorka", again, trouble, false );
+        std::printf( "  rozbiorka: czesci %zu -> bez drutow %zu, sam slup %zu; odciag pionowo %d, obrocony %d\n", whole.parts.size(), wires.parts.size(), poles.parts.size(), vertical ? 1 : 0, turned ? 1 : 0 );
+        check( ok && has( whole, "messenger_clamp" ) && false == has( wires, "messenger_clamp" ) && false == has( wires, "arms" ) && false == has( wires, "cord" )
+            && has( wires, "strut" ) && has( wires, "stay" ) && vertical && turned && onlypole && false == has( poles, "strut" )
+            && text.find( " dismantled wires" ) != std::string::npos && trouble.empty() && again.entries.size() == 1 && again.entries.front().dismantled == 1,
+            "rozbiorka: wysiegnik bez uchwytow drutow, odciag pomocniczy zwisa, obrot na zawiasach, sam slup; zapis i odczyt" );
+    }
     auto moved { entry };
     moved.pole[ 0 ] = -2.613; moved.card = 1125;   // słup 0,3 m dalej: A o 0,3 m większe, następna karta
     mock_deleted_parts = 0;
@@ -656,6 +688,21 @@ int main( int, char *argv[] ) {
             good = good && triangles > 0;
             joined.connections.clear();
             catenary_chain_update( 0, joined );
+        }
+        // łańcuch rozebrany (2026-11-23): bez przęseł, zapis i odczyt; z powrotem - przęsła wracają
+        {
+            auto stripped { *catenary_chain_get( 1 ) };
+            stripped.dismantled = 2;
+            mock_span_names.clear();
+            catenary_chain_update( 1, stripped );
+            auto const written { catenary::write_chain( stripped ) };
+            auto const none { std::none_of( mock_span_names.begin(), mock_span_names.end(), [ & ]( std::string const &N ) { return N.rfind( stripped.name + "_", 0 ) == 0; } ) };
+            stripped.dismantled = 0;
+            mock_span_names.clear();
+            catenary_chain_update( 1, stripped );
+            auto const back { std::any_of( mock_span_names.begin(), mock_span_names.end(), [ & ]( std::string const &N ) { return N.rfind( stripped.name + "_", 0 ) == 0; } ) };
+            std::printf( "  lancuch rozkradziony: bez przesel %d, po przywroceniu przesla %d; %s\n", none ? 1 : 0, back ? 1 : 0, written.substr( 0, 90 ).c_str() );
+            good = good && none && back && written.find( " dismantled looted" ) != std::string::npos;
         }
         std::remove( "tests/catenary/td_naprezenie_test.scm" );
         check( good, "przeslo naprezenia: wspolne przeslo wykryte, biezna wspolna po wczytaniu i w edytorze, izolowane / zwarte wg zasilacza, slup krzyzowy" );

@@ -92,7 +92,14 @@ struct suspension {
     // odgromnik na drugiej stronie słupa (od toru), razem z linką i przyłączem obrócony wokół osi słupa jak wysięgnik uszynienia "away"
     // (użytkownik 2026-11-22). Wpis "arrester_away" za "arrester"
     bool   arrester_away { false };
+    // rozbiórka sieci na tym słupie (użytkownik 2026-11-23): -1 - jak łańcuch, 0 - kompletny, 1 - bez drutów, 2 - rozkradziony,
+    // 3 - sam słup. Wpis "dismantled intact|wires|looted|poles"; bez wpisu - jak łańcuch
+    int    dismantled { -1 };
 };
+
+// rozbiórka: nazwy stanów w pliku (0..3) i odczyt; -1 - nie ma takiej nazwy
+char const *dismantled_name( int State );
+int dismantled_of( std::string const &Name );
 
 // łańcuch sieci: kolejne przęsła między podwieszeniami z listy (od kotwy do kotwy), wpis
 // "node <max> <min> <nazwa> chain ... suspensions <nazwy podwieszeń> endchain". Exe robi z niego zwykłe przęsła (TTraction):
@@ -164,6 +171,11 @@ struct chain {
         double at { -1.0 };
     };
     std::vector<connection> connections;
+    // rozbiórka (użytkownik 2026-11-23, linie z rozebraną siecią): 0 - sieć jest, 1 - bez drutów (wysięgniki zostały), 2 - rozkradziona
+    // (bez drutów, losowo bez odciągów pomocniczych albo całych wysięgników), 3 - same słupy. Bez drutów łańcuch nie ma przęseł: ani
+    // drutów, ani styku z pantografem, ani prądu; kotwienia i odciągi sieci też nie. Wpis "dismantled wires|looted|poles", przed
+    // "suspensions"; słup może mieć swój wyjątek
+    int dismantled { 0 };
     std::vector<std::string> suspensions;   // nazwy podwieszeń z tego samego pliku, po kolei
 };
 
