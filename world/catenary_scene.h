@@ -260,6 +260,10 @@ double catenary_scene_swing( std::size_t Index );
 std::size_t catenary_chain_connectors( std::size_t Index );
 // trójkąty połączeń 0642/0648 łańcucha (testy)
 std::size_t catenary_chain_connections( std::size_t Index );
+// trójkąty brył dołączonych do przęseł łańcucha (liny kotwień, uszynienia, łączniki; testy)
+std::size_t catenary_chain_span_solids( std::size_t Index );
+// kołysanie luźnych wysięgników rozebranej sieci na wietrze (Wind - wiatr scenerii, m/s), co klatkę; zwraca, ile się kołysze
+std::size_t catenary_scene_sway( double Dt, glm::dvec3 const &Camera, glm::dvec3 const &Wind );
 // trójkąty zaślepki odłącznika z kartą i jego linek (testy)
 std::size_t catenary_disconnector_solid_size( std::size_t Index );
 

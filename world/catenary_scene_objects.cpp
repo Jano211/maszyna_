@@ -19,6 +19,9 @@ http://mozilla.org/MPL/2.0/.
 #include "simulation/simulation.h"
 #include "utilities/Logs.h"
 #include "utilities/parser.h"
+#include "utilities/utilities.h"
+#include "audio/sound.h"
+#include <array>
 #include "world/Traction.h"
 #include "world/TractionPower.h"
 #include "world/catenary_span.h"
@@ -44,6 +47,41 @@ catenary_part_rail( TAnimModel *Model, double const Rail ) {
     if( Model == nullptr ) { return; }
     Model->m_dustrail = Rail;
     Model->m_hasdustrail = true;
+}
+
+// kołysanie luźnego wysięgnika: część w nowym miejscu; renderer odnawia kopie egzemplarzy po zmianie node_state_version
+void
+catenary_part_place( TAnimModel *Model, glm::dvec3 const &Location, glm::dvec3 const &Angles ) {
+
+    if( Model == nullptr ) { return; }
+    Model->location( Location );
+    Model->Angles( glm::vec3 { Angles } );
+    ++scene::node_state_version;
+}
+
+// skrzypienie zawiasu: plik sounds/siec_trakcyjna/skrzypienie (.ogg, .flac albo .wav) z danych gry; bez pliku - cisza (raz w logu)
+void
+catenary_part_creak( int const Slot, glm::dvec3 const &Where, float const Gain ) {
+
+    static std::array<sound_source, 2> creaks { sound_source { sound_placement::external, 60.f }, sound_source { sound_placement::external, 60.f } };
+    static int loaded { 0 };   // 0 - jeszcze nie szukano, 1 - jest, -1 - brak pliku
+    if( loaded == 0 ) {
+        auto const [ file, extension ] { FileExists( { std::string { paths::sounds } + "siec_trakcyjna/skrzypienie" }, { ".ogg", ".flac", ".wav" } ) };
+        if( file.empty() ) {
+            loaded = -1;
+            WriteLog( "Catenary: no sound sounds/siec_trakcyjna/skrzypienie (.ogg, .flac, .wav) - the loose cantilevers sway quietly" );
+        }
+        else {
+            for( auto &creak : creaks ) { creak.deserialize( file + extension, sound_type::single ); }
+            loaded = 1;
+        }
+    }
+    if( loaded < 0 || Slot < 0 || Slot >= static_cast<int>( creaks.size() ) ) { return; }
+    auto &creak { creaks[ static_cast<std::size_t>( Slot ) ] };
+    if( creak.is_playing() ) { return; }
+    creak.offset( glm::vec3 { Where } );
+    creak.gain( std::clamp( Gain, 0.2f, 1.0f ) );
+    creak.play();
 }
 
 void

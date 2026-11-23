@@ -12,6 +12,10 @@ std::vector<std::string> mock_span_names;
 void catenary_part_detach( TAnimModel * ) {}
 void catenary_part_delete( TAnimModel * ) { ++mock_deleted_parts; }
 void catenary_part_rail( TAnimModel *, double ) {}
+int mock_placed_parts { 0 };
+int mock_creaks { 0 };
+void catenary_part_place( TAnimModel *, glm::dvec3 const &, glm::dvec3 const & ) { ++mock_placed_parts; }
+void catenary_part_creak( int, glm::dvec3 const &, float ) { ++mock_creaks; }
 TTraction *catenary_span_create( std::string const &Name, double, double, std::string const &Body, bool ) {
     mock_span_bodies.push_back( Body );
     mock_span_names.push_back( Name );

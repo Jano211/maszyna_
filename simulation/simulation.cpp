@@ -144,6 +144,8 @@ state_manager::update( double const Deltatime, int Iterationcount ) {
     simulation::Powergrid.update( totaltime );
     // nowa sieć (łańcuchy): obwód prądu stałego z poborem pojazdów z poprzedniego kroku
     catenary_power_update( totaltime );
+    // rozebrana sieć: luźne wysięgniki przy kamerze kołyszą się na wietrze
+    catenary_scene_sway( totaltime, Global.pCamera.Pos, glm::dvec3 { simulation::Environment.wind() } );
     Timer::subsystem.sim_powergrid.stop();
     // road junctions, level crossings and the points road vehicles appear at; ahead of the vehicles, so the drivers act on what these decide
     Timer::subsystem.sim_roads.start();
