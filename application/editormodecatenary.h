@@ -177,6 +177,7 @@ struct catenary_editor
 		float voltage{3000.0f};
 		int material{0}; // 0 cu, 1 al
 		int state{0}; // 0 new, 1 worn, 2 tarnished (state 0, 2, 1 in the entry)
+		int dismantled{0}; // the catenary taken down: 0 intact, 1 without wires, 2 looted, 3 the poles only
 		std::map<std::size_t, catenary_spot> spots; // where the suspensions are by the track, by their numbers
 		std::vector<catenary_change> undo;
 		int group{0};

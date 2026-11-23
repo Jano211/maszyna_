@@ -296,6 +296,7 @@ void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data
 	Data.arrester = Current.arrester;     // and the lightning arrester on it
 	Data.arrester_drop = Current.arrester_drop;
 	Data.arrester_away = Current.arrester_away;
+	Data.dismantled = Current.dismantled; // and the dismantling of the pole
 	Data.stay_gap = Current.stay_gap;     // and the corrections from the ground (the user 2026-11-18)
 	Data.arms_spread = Current.arms_spread;
 	Data.rope_shift = Current.rope_shift;
@@ -677,6 +678,9 @@ constexpr unsigned kChainMaterial{1U << 1};
 constexpr unsigned kChainState{1U << 2};
 constexpr unsigned kChainPower{1U << 3};
 constexpr unsigned kChainVoltage{1U << 4};
+constexpr unsigned kChainDismantled{1U << 5};
+// the dismantling of a chain (the user 2026-11-23): 0 intact, 1 without wires, 2 looted, 3 the poles only
+char const *const kDismantled[] = {"intact", "without wires", "looted", "the poles only"};
 
 } // namespace
 
@@ -4943,6 +4947,7 @@ void catenary_editor::catenary_chain_take(std::size_t const Chain)
 	tool.voltage = static_cast<float>(chain->voltage);
 	tool.material = chain->material == "al" ? 1 : 0;
 	tool.state = chain_state_index(chain->state);
+	tool.dismantled = std::clamp(chain->dismantled, 0, 3);
 	if (auto const found{std::ranges::find(tool.networks, chain->type)}; found != tool.networks.end())
 		tool.network = static_cast<int>(found - tool.networks.begin());
 }
@@ -5026,6 +5031,8 @@ void catenary_editor::catenary_chain_apply(unsigned const Fields)
 		changed.material = kMaterials[std::clamp(tool.material, 0, 1)];
 	if ((Fields & kChainState) != 0)
 		changed.state = kStateValues[std::clamp(tool.state, 0, 3)];
+	if ((Fields & kChainDismantled) != 0)
+		changed.dismantled = std::clamp(tool.dismantled, 0, 3);
 	if ((Fields & kChainNetwork) != 0 && false == tool.networks.empty())
 		changed.type = tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
 	auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
@@ -6489,6 +6496,14 @@ void catenary_editor::render_catenary_chain_ui()
 		changed |= kChainPower;
 	if (ImGui::InputFloat(STR_C("Voltage (V)"), &tool.voltage, 0.0f, 0.0f, "%.0f"))
 		changed |= kChainVoltage;
+	{
+		std::string const names[] = {STR(kDismantled[0]), STR(kDismantled[1]), STR(kDismantled[2]), STR(kDismantled[3])};
+		char const *const items[] = {names[0].c_str(), names[1].c_str(), names[2].c_str(), names[3].c_str()};
+		if (ImGui::Combo(STR_C("Dismantled"), &tool.dismantled, items, 4))
+			changed |= kChainDismantled;
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s", STR_C("A line with its catenary taken down. Without wires: no spans (no wires, no pantograph contact, no current, no anchors), the cantilevers stay without the holders of the wires, the steady arm hangs down, a swinging cantilever stands turned loose on its hinges. Looted: also without the steady arm here and there or without the whole cantilever. The poles only: the poles with their mounts. A pole can have its own exception"));
+	}
 	ImGui::PopItemWidth();
 	if (changed != 0 && chain != nullptr)
 		catenary_chain_apply(changed);
@@ -9000,6 +9015,26 @@ void catenary_editor::render_catenary_cantilever_ui()
 					if (ImGui::IsItemHovered())
 						ImGui::SetTooltip("%s", STR_C("A pole is seldom quite upright: it leans a little, the mounts with it, the cantilever is assembled to them. + towards the track. Ctrl+click types a value"));
 				}
+			}
+			// the dismantling of this pole, an exception from its chain (the user 2026-11-23)
+			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole)
+			{
+				auto const index{static_cast<std::size_t>(tool.selected)};
+				std::string const names[] = {STR("as the chain"), STR(kDismantled[0]), STR(kDismantled[1]), STR(kDismantled[2]), STR(kDismantled[3])};
+				char const *const items[] = {names[0].c_str(), names[1].c_str(), names[2].c_str(), names[3].c_str(), names[4].c_str()};
+				auto choice{std::clamp(data->dismantled, -1, 3) + 1};
+				ImGui::PushItemWidth(160.0f);
+				if (ImGui::Combo(STR_C("Dismantled here"), &choice, items, 5))
+				{
+					auto changed{*data};
+					changed.dismantled = choice - 1;
+					tool.undo.push_back({++tool.group, false, index, *data, std::nullopt, false});
+					catenary_scene_update(index, changed);
+					tool.probed = false;
+				}
+				ImGui::PopItemWidth();
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("This pole otherwise than its chain: e.g. one cantilever left on a looted line, or one pole stripped. The wires go by the chain"));
 			}
 			// the lightning arrester 7310 (cards 0681/0683/0684, the user 2026-11-21): at the top of the pole towards the track, the lead 9812-6
 			// to the messenger; no effect on the current

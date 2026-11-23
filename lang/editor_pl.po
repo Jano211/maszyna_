@@ -17569,3 +17569,30 @@ msgstr "Odgromnik na drugą stronę słupa"
 
 msgid "The arrester with its lead turned round the axis of the pole: on the back wall, away from the track (or back to the track)"
 msgstr "Odgromnik z linką obrócony wokół osi słupa: na tylnej ścianie, od toru (albo z powrotem do toru)"
+
+msgid "intact"
+msgstr "kompletna"
+
+msgid "without wires"
+msgstr "bez drutów"
+
+msgid "looted"
+msgstr "rozkradziona"
+
+msgid "the poles only"
+msgstr "same słupy"
+
+msgid "as the chain"
+msgstr "jak łańcuch"
+
+msgid "Dismantled"
+msgstr "Rozbiórka"
+
+msgid "Dismantled here"
+msgstr "Rozbiórka tu"
+
+msgid "A line with its catenary taken down. Without wires: no spans (no wires, no pantograph contact, no current, no anchors), the cantilevers stay without the holders of the wires, the steady arm hangs down, a swinging cantilever stands turned loose on its hinges. Looted: also without the steady arm here and there or without the whole cantilever. The poles only: the poles with their mounts. A pole can have its own exception"
+msgstr "Linia z rozebraną siecią. Bez drutów: bez przęseł (bez drutów, styku z pantografem, prądu i kotwień), wysięgniki zostają bez uchwytów drutów, odciąg pomocniczy zwisa, wysięgnik przechylny stoi obrócony luźno na zawiasach. Rozkradziona: do tego miejscami bez odciągu pomocniczego albo bez całego wysięgnika. Same słupy: słupy z mocowaniami. Słup może mieć swój wyjątek"
+
+msgid "This pole otherwise than its chain: e.g. one cantilever left on a looted line, or one pole stripped. The wires go by the chain"
+msgstr "Ten słup inaczej niż jego łańcuch: np. jeden ocalały wysięgnik na rozkradzionej linii albo jeden ogołocony słup. Druty idą wg łańcucha"

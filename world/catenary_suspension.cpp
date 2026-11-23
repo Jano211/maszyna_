@@ -34,7 +34,7 @@ std::string normalize_path( std::string Path ) {
 
 // słowa kluczowe wewnątrz wpisu podwieszenia
 bool is_keyword( std::string const &Token ) {
-    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "strut_shift", "turn_by_hand", "lean", "pull_from", "stay_gap", "arms_spread", "rope_shift", "cord_shift", "cord_band", "stay_hole", "arrester", "arrester_away", "endsuspension" };
+    static std::set<std::string> const keywords { "support", "scheme", "messenger", "contact", "insulators", "override", "skin", "pole_skin", "at", "attach", "rope", "pole", "umbrella", "spread", "shared_pole", "above_pole", "stay_shift", "strut_shift", "turn_by_hand", "lean", "pull_from", "stay_gap", "arms_spread", "rope_shift", "cord_shift", "cord_band", "stay_hole", "arrester", "arrester_away", "dismantled", "endsuspension" };
     return keywords.find( Token ) != keywords.end();
 }
 
@@ -105,6 +105,14 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 else if( key == "anchor_start_contact" ) { one( line.anchor_start_contact ); }
                 else if( key == "anchor_end_contact" ) { one( line.anchor_end_contact ); }
                 else if( key == "middle" ) { one( line.middle ); }
+                else if( key == "dismantled" ) {
+                    std::string value;
+                    if( one( value ) ) {
+                        auto const state { dismantled_of( value ) };
+                        if( state >= 0 ) { line.dismantled = state; }
+                        else { report( line.name, "\"dismantled\" needs one of: intact, wires, looted, poles" ); good = false; }
+                    }
+                }
                 else if( key == "shared" ) {
                     std::string after, value;
                     if( one( after ) && one( value ) ) {
@@ -424,6 +432,11 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 if( list.size() == 1 && to_number( list[ 0 ], entry.arrester_drop ) && entry.arrester_drop >= 0.0 && entry.arrester_drop <= 5.0 ) { entry.arrester = true; }
                 else { report( entry.name, "\"arrester\" needs one number: metres below the default place, 0-5" ); entry.arrester_drop = 0.0; good = false; }
             }
+            else if( key == "dismantled" ) {
+                auto const state { list.size() == 1 ? dismantled_of( list[ 0 ] ) : -1 };
+                if( state >= 0 ) { entry.dismantled = state; }
+                else { report( entry.name, "\"dismantled\" needs one of: intact, wires, looted, poles" ); good = false; }
+            }
             else if( key == "arrester_away" ) {
                 if( list.empty() ) { entry.arrester_away = true; }
                 else { report( entry.name, "\"arrester_away\" takes no values" ); good = false; }
@@ -560,6 +573,7 @@ std::string write_suspension( suspension const &Entry ) {
     if( Entry.turn_by_hand != 0.0 ) { text += " turn_by_hand " + number( Entry.turn_by_hand, 2 ); }
     if( Entry.lean != 0.0 ) { text += " lean " + number( Entry.lean, 2 ); }
     if( Entry.arrester ) { text += " arrester " + number( Entry.arrester_drop, 2 ) + ( Entry.arrester_away ? " arrester_away" : "" ); }
+    if( Entry.dismantled >= 0 ) { text += std::string( " dismantled " ) + dismantled_name( Entry.dismantled ); }
     if( Entry.stay_gap != 0.0 ) { text += " stay_gap " + number( Entry.stay_gap, 3 ); }
     if( Entry.arms_spread != 0.0 ) { text += " arms_spread " + number( Entry.arms_spread, 3 ); }
     if( Entry.rope_shift != 0.0 ) { text += " rope_shift " + number( Entry.rope_shift, 3 ); }
@@ -595,6 +609,7 @@ std::string write_chain( chain const &Entry ) {
     if( false == Entry.anchor_end.empty() ) { text += " anchor_end " + Entry.anchor_end; }
     if( false == Entry.anchor_start_contact.empty() ) { text += " anchor_start_contact " + Entry.anchor_start_contact; }
     if( false == Entry.anchor_end_contact.empty() ) { text += " anchor_end_contact " + Entry.anchor_end_contact; }
+    if( Entry.dismantled > 0 ) { text += std::string( " dismantled " ) + dismantled_name( Entry.dismantled ); }
     if( false == Entry.middle.empty() ) {
         text += " middle " + Entry.middle + ( Entry.middle_device != "0406" ? " middle_device " + Entry.middle_device : std::string() );
         if( Entry.middle_heights[ 0 ] > 0.0 || Entry.middle_heights[ 1 ] > 0.0 ) { text += " middle_height " + number( Entry.middle_heights[ 0 ] ) + " " + number( Entry.middle_heights[ 1 ] ); }
@@ -618,6 +633,22 @@ std::string write_chain( chain const &Entry ) {
     text += " suspensions";
     for( auto const &name : Entry.suspensions ) { text += " " + name; }
     return text + " endchain";
+}
+
+char const *dismantled_name( int const State ) {
+    switch( State ) {
+    case 1: return "wires";
+    case 2: return "looted";
+    case 3: return "poles";
+    default: return "intact";
+    }
+}
+
+int dismantled_of( std::string const &Name ) {
+    if( Name == "intact" ) { return 0; }
+    if( Name == "wires" ) { return 1; }
+    if( Name == "looted" ) { return 2; }
+    return Name == "poles" ? 3 : -1;
 }
 
 char const *disconnector_state_name( int const State ) {
