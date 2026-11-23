@@ -172,7 +172,18 @@ std::vector<scene_gantry> Gantries;
 
 // tekstura części sieci (osprzęt, wysięgniki, urządzenia) z mapą -1, gdy wpis i plik nie podają własnej: ta sama, którą modele
 // miały na sztywno (Jan 2026-11-01: modele przerobione na wymienną teksturę, warianty brudu jako tekstury)
-std::string const kFittingSkin { "siec_trakcyjna/siec" };
+// tekstura osprzętu bez własnej we wpisie: wariant "nowy" z zestawu siec_new / _used / _old / _extreme (Jan 2026-11-24: tekstury
+// wymienne wysięgników), a bez niego w danych gry - dawna wspólna "siec" (sprawdzane raz, w katalogu tekstur gry)
+std::string const &
+fitting_default() {
+    static std::string const skin { [] {
+        std::error_code error;
+        for( auto const *extension : { ".mat", ".dds", ".tga", ".png" } ) {
+            if( std::filesystem::exists( std::string( "textures/siec_trakcyjna/siec_new" ) + extension, error ) ) { return std::string( "siec_trakcyjna/siec_new" ); }
+        }
+        return std::string( "siec_trakcyjna/siec" ); }() };
+    return skin;
+}
 
 // kotwienie ciężarowe z pliku: słup kotwowy i urządzenie naprężające; końce drutów dla łańcuchów
 struct scene_anchor {
@@ -989,7 +1000,7 @@ assemble( scene_suspension &Suspension, catenary::cantilever_catalog const &Cata
     // Jan 2026-11-01: wysięgnik (także na bramce) zawsze z tekstur siec_trakcyjna/siec*; dawne wpisy na bramkach mają w `skin`
     // teksturę bramki (dla zwisu) - taka idzie do zwisu, a wysięgnik dostaje domyślną
     auto const fitting_named = []( std::string const &Skin ) { return Skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0; };
-    auto const fittingskin { fitting_named( data.skin ) ? data.skin : kFittingSkin };
+    auto const fittingskin { fitting_named( data.skin ) ? data.skin : fitting_default() };
     auto const poleskin = [ & ]( std::string const &Pole ) -> std::string {
         if( false == data.pole_skin.empty() ) { return data.pole_skin; }
         auto const *pole { Catalog.pole( Pole ) };
@@ -1982,7 +1993,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     }
     Anchor.solved = true;
 
-    auto const fittingskin { data.skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0 ? data.skin : kFittingSkin };
+    auto const fittingskin { data.skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0 ? data.skin : fitting_default() };
     std::size_t count { 0 };
     auto const place = [ & ]( std::string const &Model, catenary::cantilever_placement const &Placement, double const Heading, glm::dvec3 const &Origin, std::string const &Skin = std::string() ) {
         auto const part { catenary::cantilever_to_scene( Placement, Heading ) };
@@ -2778,7 +2789,7 @@ assemble_middle( scene_chain &Chain ) {
                 placement.position[ 1 ] += beside;
                 auto const scened { catenary::cantilever_to_scene( placement, own.saddle_heading ) };
                 auto const entry {
-                    "node " + text_number( data.range_max > 0.0 ? data.range_max : 1000.0, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 " + own.saddle_model + ".t3d " + kFittingSkin
+                    "node " + text_number( data.range_max > 0.0 ? data.range_max : 1000.0, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 " + own.saddle_model + ".t3d " + fitting_default()
                     + " angles " + text_number( scened.angles[ 0 ] ) + " " + text_number( scened.angles[ 1 ] ) + " " + text_number( scened.angles[ 2 ] ) + " endmodel" };
                 glm::dvec3 const at { own.saddle_origin.x + scened.offset[ 0 ], own.saddle_origin.y + scened.offset[ 1 ], own.saddle_origin.z + scened.offset[ 2 ] };
                 if( auto *model3d { simulation::State.create_model( entry, "none", at ) }; model3d != nullptr ) {
@@ -2931,7 +2942,7 @@ assemble_middle( scene_chain &Chain ) {
                 catenary::tensioner_result result;
                 if( catenary::solve_tensioner( *devices, *device, input, result ) ) {
                     ropeend = toscene( result.messenger_end );
-                    auto const skin { kFittingSkin };
+                    auto const skin { fitting_default() };
                     for( auto const &item : result.parts ) {
                         catenary::cantilever_placement placement;
                         std::copy( std::begin( item.position ), std::end( item.position ), placement.position );
@@ -4418,7 +4429,7 @@ assemble_earthing( scene_earthing &Earthing ) {
     for( std::size_t k = 0; k + 1 < Earthing.path.size(); ++k ) { Earthing.length += earthing_plan_distance( Earthing.path[ k ], Earthing.path[ k + 1 ] ); }
     earthing_loose_pieces( Earthing );
     auto const *line { earthing_line_of( Earthing ) };
-    auto const skin { Earthing.data.skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0 ? Earthing.data.skin : kFittingSkin };
+    auto const skin { Earthing.data.skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0 ? Earthing.data.skin : fitting_default() };
     std::size_t count { 0 };
     auto const spawn = [ & ]( catenary::cantilever_placement const &Placement, earthing_place const &Place ) {
         if( Placement.part.empty() ) { return; }
@@ -4862,7 +4873,7 @@ span_part( scene_chain &Chain, std::size_t const Span, std::string const &Part, 
     auto const scened { catenary::cantilever_to_scene( placement, heading ) };
     auto const entry {
         "node " + text_number( data.range_max > 0.0 ? data.range_max : 1000.0, 1 ) + " " + text_number( data.range_min, 1 ) + " none model 0 0 0 0 "
-        + catalog->models() + Part + ".t3d " + kFittingSkin
+        + catalog->models() + Part + ".t3d " + fitting_default()
         + " angles " + text_number( scened.angles[ 0 ] ) + " " + text_number( scened.angles[ 1 ] ) + " " + text_number( scened.angles[ 2 ] ) + " endmodel" };
     glm::dvec3 const at { From.x + scened.offset[ 0 ], From.y + scened.offset[ 1 ], From.z + scened.offset[ 2 ] };
     if( auto *model { simulation::State.create_model( entry, "none", at ) }; model != nullptr ) {
@@ -7440,6 +7451,11 @@ catenary_disconnector_solid_size( std::size_t const Index ) {
     std::vector<catenary::solid_vertex> solid;
     disconnector_solid( Disconnectors[ Index ], solid );
     return solid.size() / 3;
+}
+
+std::string
+catenary_scene_fitting_skin() {
+    return fitting_default();
 }
 
 std::size_t

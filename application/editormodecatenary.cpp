@@ -638,7 +638,8 @@ bool grouped_items(std::vector<std::string> const &Names, int &Chosen, std::func
 }
 
 // textures of the catenary (textures/siec_trakcyjna) whose name starts with Prefix: the variants of a skin (new, used, old...), as the
-// skin of an entry names them (folder/stem, without the extension); read once a second at most
+// skin of an entry names them (folder/stem, without the extension); read once a second at most. Only the ones with a material (.mat):
+// the bare images beside them (siec_ao, copies) aren't skins (Jan 2026-11-24)
 std::vector<std::string> catenary_skins(std::string const &Prefix)
 {
 	static std::vector<std::string> names;
@@ -653,7 +654,7 @@ std::vector<std::string> catenary_skins(std::string const &Prefix)
 			if (error)
 				break;
 			auto const extension{file->path().extension().string()};
-			if (extension != ".mat" && extension != ".dds" && extension != ".tga" && extension != ".png")
+			if (extension != ".mat")
 				continue;
 			auto const name{"siec_trakcyjna/" + file->path().stem().string()};
 			if (std::find(names.begin(), names.end(), name) == names.end())
@@ -9226,7 +9227,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 				};
 				ImGui::PushItemWidth(220.0f);
 				std::string chosen;
-				if (skin_combo(STR_C("Cantilever skin"), data->skin.compare(0, 19, "siec_trakcyjna/siec") == 0 ? data->skin : std::string{}, "siec_trakcyjna/siec", catenary_skins("siec"), chosen))
+				if (skin_combo(STR_C("Cantilever skin"), data->skin.compare(0, 19, "siec_trakcyjna/siec") == 0 ? data->skin : std::string{}, catenary_scene_fitting_skin(), catenary_skins("siec"), chosen))
 				{
 					auto changed{*data};
 					changed.skin = chosen;
