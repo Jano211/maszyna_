@@ -103,6 +103,10 @@ struct suspension {
     int    dismantled_insulators { 0 };
     bool   has_dismantled_turn { false };
     double dismantled_turn { 0.0 };
+    // izolator ukośnika zwisający z zawiasu: odchylenie od pionu w płaszczyźnie zawiasu, + od słupa (użytkownik 2026-11-24: pionowo
+    // wchodził w mocowanie); ±75, bez wpisu 30 od słupa ("dismantled_tilt <st>")
+    bool   has_dismantled_tilt { false };
+    double dismantled_tilt { 30.0 };
 };
 
 // rozbiórka: nazwy stanów w pliku (0..3) i odczyt; -1 - nie ma takiej nazwy

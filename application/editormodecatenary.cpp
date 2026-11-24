@@ -301,6 +301,8 @@ void keep_lifted(catenary::suspension const &Current, catenary::suspension &Data
 	Data.dismantled_insulators = Current.dismantled_insulators;
 	Data.has_dismantled_turn = Current.has_dismantled_turn;
 	Data.dismantled_turn = Current.dismantled_turn;
+	Data.has_dismantled_tilt = Current.has_dismantled_tilt;
+	Data.dismantled_tilt = Current.dismantled_tilt;
 	Data.stay_gap = Current.stay_gap;     // and the corrections from the ground (the user 2026-11-18)
 	Data.arms_spread = Current.arms_spread;
 	Data.rope_shift = Current.rope_shift;
@@ -6499,6 +6501,26 @@ void catenary_editor::render_catenary_dismantled_ui(std::size_t const Index, cat
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", STR_C("Where the cantilever is gone (the poles only, or a looted pole without it): the insulator of the strut hangs down from the hinge, the one of the stay from its shackle"));
+		// the bottom one hangs loose on the hinge: its tilt from the vertical (the user 2026-11-24)
+		if ((Data.dismantled_insulators & 1) != 0)
+		{
+			auto tilt{static_cast<float>(Data.dismantled_tilt)};
+			if (ImGui::SliderFloat(STR_C("Tilt of the strut insulator"), &tilt, -75.0f, 75.0f, "%.0f deg"))
+			{
+				auto changed{Data};
+				changed.has_dismantled_tilt = true;
+				changed.dismantled_tilt = std::round(static_cast<double>(tilt));
+				if (tool.shift_group == 0 || tool.undo.empty() || tool.undo.back().group != tool.shift_group || tool.undo.back().index != Index || tool.undo.back().chain)
+				{
+					tool.shift_group = ++tool.group;
+					tool.undo.push_back({tool.shift_group, false, Index, Data, std::nullopt, false});
+				}
+				catenary_scene_update(Index, changed);
+				tool.probed = false;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("From the vertical on its hinge: + away from the pole, towards the track"));
+		}
 	}
 	{
 		auto byhand{Data.has_dismantled_turn};

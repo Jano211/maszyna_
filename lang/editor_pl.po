@@ -17632,3 +17632,9 @@ msgstr "Wysięgnik przechylny bez drutu stoi obrócony luźno na zawiasach; bez 
 
 msgid "Turn on the hinges"
 msgstr "Obrót na zawiasach"
+
+msgid "Tilt of the strut insulator"
+msgstr "Odchylenie izolatora ukośnika"
+
+msgid "From the vertical on its hinge: + away from the pole, towards the track"
+msgstr "Od pionu, na zawiasie: + od słupa, w stronę toru"
