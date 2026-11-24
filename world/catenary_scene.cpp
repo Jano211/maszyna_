@@ -571,7 +571,7 @@ wire_fitting( std::string const &Role ) {
 // część zwisająca pionowo w dół ze swojego zaczepu (zero modelu): obrót wokół osi wzdłuż toru, kierunek części - od jej zera do części
 // Toward (początek roli; odciąg pomocniczy -> ramiona na jego końcu, izolator ukośnika -> ukośnik, izolator odciągu -> odciąg)
 void
-hang_part( catenary::cantilever_result &Result, std::string const &Role, char const *Toward, char const *With = nullptr ) {
+hang_part( catenary::cantilever_result &Result, std::string const &Role, char const *Toward, char const *With = nullptr, double const Tilt = 0.0 ) {
     auto *steady { static_cast<catenary::cantilever_placement *>( nullptr ) };
     auto *head { static_cast<catenary::cantilever_placement *>( nullptr ) };
     catenary::cantilever_placement const *end { nullptr };
@@ -592,7 +592,8 @@ hang_part( catenary::cantilever_result &Result, std::string const &Role, char co
         if( std::abs( dot ) > std::abs( bestdot ) ) { bestdot = dot; best = column; }
     }
     auto const sign { bestdot < 0.0 ? -1.0 : 1.0 };
-    auto const angle { -0.5 * 3.14159265358979323846 - std::atan2( sign * rotation[ 6 + best ], sign * rotation[ 3 + best ] ) };
+    // pionowo w dół, odchylone o Tilt [stopnie] od słupa (Y układu wysięgnika idzie do słupa: od słupa to -Y)
+    auto const angle { -0.5 * 3.14159265358979323846 - Tilt * 3.14159265358979323846 / 180.0 - std::atan2( sign * rotation[ 6 + best ], sign * rotation[ 3 + best ] ) };
     auto const c { std::cos( angle ) }, s { std::sin( angle ) };
     // obrót wokół osi wzdłuż toru przez Pivot: zaczep części, a z głowicą (teowniki: odciąg pomocniczy na głowicy 4350-01 przypiętej do
     // opaski 4350-02 na ukośniku; użytkownik 2026-11-24) - zero głowicy, która obraca się razem z nim
@@ -631,7 +632,7 @@ dismantle( catenary::cantilever_result &Result, catenary::suspension const &Data
     auto const strut { bare && ( Data.dismantled_insulators & 1 ) != 0 };
     auto const stay { bare && ( Data.dismantled_insulators & 2 ) != 0 };
     if( false == bare && false == nosteady ) { hang_part( Result, "steady", "arms", "steady_head" ); }
-    if( strut ) { hang_part( Result, "strut_insulator", "strut" ); }
+    if( strut ) { hang_part( Result, "strut_insulator", "strut", nullptr, Data.dismantled_tilt ); }
     if( stay ) { hang_part( Result, "stay_insulator", "stay" ); }
     std::erase_if( Result.parts, [ & ]( catenary::cantilever_placement const &Placement ) {
         auto const &role { Placement.role };
