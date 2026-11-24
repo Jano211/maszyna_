@@ -287,6 +287,11 @@ world_environment::update_wind() {
             std::sin( polarangle ) * std::sin( azimuthalangle ) * -1,
             std::cos( polarangle ),
             std::sin( polarangle ) * std::cos( azimuthalangle ) );
+    // the wind of the weather (the panel, METAR) at the ground, the random one as the gusts on top of it (Global.weatherwind)
+    if( Global.weatherwind ) {
+        auto const clouds { m_weather.cloud_velocity() };
+        m_wind.vector += glm::vec3( clouds.x, 0.f, clouds.y ) / 1.5f;
+    }
 }
 
 void
