@@ -17674,3 +17674,18 @@ msgstr "Spadnięte ciężary"
 
 msgid "nothing"
 msgstr "nic"
+
+msgid "the rope left, hanging and on the ground"
+msgstr "lina została, zwisa i leży na ziemi"
+
+msgid "the rope cut at the device"
+msgstr "lina ucięta przy urządzeniu"
+
+msgid "being built: the devices only"
+msgstr "w budowie: same urządzenia"
+
+msgid "Middle anchor left"
+msgstr "Z kotwienia środkowego zostało"
+
+msgid "As the chain: wires taken - the rope left or cut at random, looted - the brackets bolted to the poles only, poles taken - nothing, being built - the devices without the rope"
+msgstr "Jak łańcuch: bez drutów - lina została albo ucięta (losowo), rozkradziona - tylko uchwyty przykręcone wprost do słupów, same słupy - nic, w budowie - urządzenia bez liny"

@@ -1741,15 +1741,20 @@ anchor_wreck_key( catenary::anchor const &Data ) {
 // co zostało z kotwienia: wpis kotwienia, a bez niego wg łańcucha (wires - całe albo ucięte losowo, looted - rozkradzione,
 // poles - nic, construction - w budowie); sieć cała - wreck_none
 int
-anchor_wreck_state( catenary::anchor const &Data, int const Chain ) {
+wreck_state( int const Explicit, int const Chain, std::string const &Key ) {
     if( Chain <= 0 ) { return wreck_none; }
-    if( Data.dismantled >= 0 ) { return Data.dismantled; }
+    if( Explicit >= 0 ) { return Explicit; }
     switch( Chain ) {
-    case 1: return dismantle_random( anchor_wreck_key( Data ), 6 ) < 0.5 ? wreck_intact : wreck_cut;
+    case 1: return dismantle_random( Key, 6 ) < 0.5 ? wreck_intact : wreck_cut;
     case 2: return wreck_looted;
     case 3: return wreck_gone;
     default: return wreck_construction;
     }
+}
+
+int
+anchor_wreck_state( catenary::anchor const &Data, int const Chain ) {
+    return wreck_state( Data.dismantled, Chain, anchor_wreck_key( Data ) );
 }
 
 // rola części bez przedrostka urządzenia przewodów (kotwienie rozdzielone)
@@ -1904,6 +1909,54 @@ anchor_wire_stubs( wire_stubs_input const &Input, std::vector<catenary::tensione
         glm::dvec3 const at { end[ 0 ], end[ 1 ], end[ 2 ] };
         stub( at, toward( Input.input.contact_target, at ), Input.sizes.contact, 0.3 );
     }
+}
+
+// lina kotwienia środkowego łańcucha rozebranego (Jan 2026-11-24), współrzędne scenerii (Y w górę). Została: lina przypięta tylko
+// na sąsiednim słupie zwisa z urządzenia pionowo i reszta długości leży na ziemi w stronę słupa środkowego; ucięta: krótka
+// końcówka zwisa z urządzenia; rozkradzione i w budowie - bez liny
+struct middle_wreck_input {
+    int wreck { wreck_none };
+    glm::dvec3 end;         // koniec liny na urządzeniu (sąsiedni słup)
+    glm::dvec3 clamp;       // gdzie była zaciśnięta na linie nośnej
+    double ground { 0.0 };
+    std::string key;
+};
+
+void
+middle_wreck_rope( middle_wreck_input const &Input, std::vector<catenary::solid_vertex> &Solid ) {
+    double const radius { 0.0045 };   // lina 9831-5 jak w assemble_middle
+    auto const &end { Input.end };
+    std::vector<glm::dvec3> points;
+    if( Input.wreck == wreck_cut ) {
+        auto const length { 0.25 + 0.45 * dismantle_random( Input.key, 9 ) };
+        for( int k = 0; k <= 4; ++k ) { points.push_back( end - glm::dvec3 { 0.0, length * k / 4.0, 0.0 } ); }
+        add_tube( Solid, points, radius );
+        return;
+    }
+    if( Input.wreck != wreck_intact ) { return; }
+    glm::dvec3 way { Input.clamp.x - end.x, 0.0, Input.clamp.z - end.z };
+    auto const along { glm::length( way ) };
+    if( along < 0.5 || end.y <= Input.ground + 0.1 ) { return; }
+    way = way / along;
+    auto const drop { end.y - Input.ground };
+    // pion do ziemi, łuk ok. 0,4 m przy ziemi, dalej po ziemi; całość tyle, ile lina miała do zacisku
+    auto const bend { std::min( 0.4, 0.5 * drop ) };
+    for( int k = 0; k <= 4; ++k ) { points.push_back( end - glm::dvec3 { 0.0, ( drop - bend ) * k / 4.0, 0.0 } ); }
+    for( int k = 1; k <= 4; ++k ) {
+        auto const a { 0.5 * std::numbers::pi * k / 4.0 };
+        points.push_back( glm::dvec3 { end.x, Input.ground + bend, end.z } + way * ( bend * ( 1.0 - std::cos( a ) ) ) - glm::dvec3 { 0.0, bend * std::sin( a ), 0.0 } );
+    }
+    auto const lying { std::max( 0.0, along - drop - bend ) };
+    auto const start { points.back() };
+    // leży nie całkiem prosto: lekkie fale w poprzek (ZAŁOŻENIE na oko)
+    glm::dvec3 const across { -way.z, 0.0, way.x };
+    int const steps { std::max( 2, static_cast<int>( lying / 2.0 ) ) };
+    auto const phase { dismantle_random( Input.key, 10 ) * 2.0 * std::numbers::pi };
+    for( int k = 1; k <= steps; ++k ) {
+        auto const t { lying * k / steps };
+        points.push_back( start + way * t + across * ( 0.3 * std::sin( phase + t / 3.0 ) * std::min( 1.0, t / 3.0 ) ) );
+    }
+    add_tube( Solid, points, radius );
 }
 
 // rozkradzione / nic / w budowie: części, których nie ma
@@ -3081,7 +3134,10 @@ assemble_middle( scene_chain &Chain ) {
     Chain.middle_solid[ 1 ].clear();
     Chain.middle_span = static_cast<std::size_t>( -1 );
     auto const &data { Chain.data };
-    if( Chain.removed || data.middle.empty() || data.dismantled > 0 ) { return; }
+    if( Chain.removed || data.middle.empty() ) { return; }
+    // łańcuch rozebrany (Jan 2026-11-24): co zostało z kotwienia środkowego - wpis "middle_dismantled", bez niego wg łańcucha
+    auto const wreck { wreck_state( data.middle_dismantled, data.dismantled, data.name + "/" + data.middle ) };
+    if( wreck == wreck_gone ) { return; }
     auto const label { "Bad scenario: chain \"" + ( data.name.empty() ? std::string( "none" ) : data.name ) + "\" " };
     auto const found { std::find( data.suspensions.begin(), data.suspensions.end(), data.middle ) };
     if( found == data.suspensions.end() ) { ErrorLog( label + "has its middle anchor at \"" + data.middle + "\", which isn't in the chain" ); return; }
@@ -3127,7 +3183,7 @@ assemble_middle( scene_chain &Chain ) {
             tee = scheme != nullptr && scheme->assembly.rfind( "tee_", 0 ) == 0;
             // obejma 4160 na teowniku obok siodła liny nośnej, w stronę słupa (Jan 2026-10-26: lina kotwienia ma swoje mocowanie
             // obok, nie w siodle liny); odstęp 0,15 m - ZAŁOŻENIE na oko
-            if( tee && own.has_saddle ) {
+            if( tee && own.has_saddle && wreck == wreck_none ) {
                 double const beside { 0.15 };
                 auto placement { own.saddle };
                 placement.position[ 1 ] += beside;
@@ -3286,6 +3342,8 @@ assemble_middle( scene_chain &Chain ) {
                 catenary::tensioner_result result;
                 if( catenary::solve_tensioner( *devices, *device, input, result ) ) {
                     ropeend = toscene( result.messenger_end );
+                    // rozkradzione / w budowie: tylko uchwyty do słupa / bez łańcucha do liny
+                    if( wreck == wreck_looted || wreck == wreck_construction ) { anchor_strip( result, wreck ); }
                     auto const skin { fitting_default() };
                     for( auto const &item : result.parts ) {
                         catenary::cantilever_placement placement;
@@ -3324,6 +3382,14 @@ assemble_middle( scene_chain &Chain ) {
             return points;
         };
         auto const flat = []( glm::dvec3 const &A, glm::dvec3 const &B ) { return glm::length( glm::dvec2 { A.x - B.x, A.z - B.z } ); };
+        if( wreck != wreck_none ) {
+            // grunt przy sąsiednim słupie: 0,50 pod główką szyny jak w kotwieniu (ZAŁOŻENIE); bez słupa - przewód 5,60 nad główką
+            auto const middle_ground = []( std::size_t const Index, double const Wire ) {
+                return ( Index < Suspensions.size() && Suspensions[ Index ].data.has_pole ? Suspensions[ Index ].data.pole[ 1 ] : Wire - 5.60 ) - 0.50;
+            };
+            middle_wreck_rope( middle_wreck_input { wreck, ropeend, clamp, middle_ground( index, wires[ neighbour ][ 1 ] ), data.name + "/" + data.middle + "/" + std::to_string( side ) }, solid );
+            continue;
+        }
         auto rope { hanging( ropeend, clamp, 0.5 * flat( ropeend, clamp ) / 60.0, 24 ) };
         if( tobeam ) {
             // od dźwigara: uchwyt 4590 i izolator 7150 (bryły zastępcze - wymiary izolatora jak model 7150-01, uchwyt ZAŁOŻENIE)

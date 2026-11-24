@@ -21,7 +21,14 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 - Edytor: panel kotwienia, gdy łańcuch rozebrany - „Z kotwienia zostało” + „Spadnięte ciężary” (przy uciętym, nie przy stałym).
   lang/editor_pl.po: nowe hasła na końcu - wgrać na G:.
 - Test te: „rozbiorka: kotwienie cale / uciete / ...” OK (67 części całe, 10 rozkradzione, 26 w budowie).
-- NIEZROBIONE: kotwienie środkowe i odciągi sieci na rozebranej linii (dziś znikają) - zapytać Jana, co z nich zostaje.
+- 22:30 kotwienie środkowe (Jan: „tak jak mówisz, ale z opcją wyboru”): wpis łańcucha `middle_dismantled intact|cut|looted|gone|
+  construction` (`chain::middle_dismantled`, -1 wg łańcucha jak kotwienia, klucz losowania `<łańcuch>/<middle>`). `assemble_middle`:
+  urządzenia na sąsiednich słupach zostają (looted/construction - `anchor_strip`, wychodzi to samo: same uchwyty), bez V, zacisków
+  i obejmy 4160; lina (`middle_wreck_rope`): intact - pionowo z urządzenia do gruntu (0,50 pod główką słupa sąsiada, ZAŁOŻENIE), łuk
+  i dalej po ziemi w stronę słupa środkowego (długość do zacisku minus spadek, lekkie fale); cut - końcówka 0,25–0,70 m pionowo.
+  Edytor: „Z kotwienia środkowego zostało” w sekcji kotwienia środkowego, gdy łańcuch rozebrany. Test te OK.
+- Odciągi sieci na rozebranej linii - NIEZROBIONE, Jan chce najpierw ogarnąć odciągi (kod z 01.11 jest, w exe niesprawdzony,
+  brak modeli 6303-7, 5270-3, 6301-3).
 
 ## START TUTAJ – 2026-11-22 17:15 – izolator sekcyjny: lina z Y sąsiada, Y wyłączane przy izolatorze (w exe NIESPRAWDZONE)
 

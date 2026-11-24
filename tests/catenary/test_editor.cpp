@@ -12,6 +12,7 @@
 #include "utilities/Logs.h"
 #include "utilities/parser.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
@@ -1446,6 +1447,39 @@ int main( int, char *argv[] ) {
         std::printf( "  kotwienie srodkowe %s%s: czesci %d, trojkaty %d\n", card, tee ? " (teownik)" : "", static_cast<int>( parts ), static_cast<int>( triangles ) );
         check( built && middleerrors == 0 && triangles > 200 && ( std::string( card ) == "0416" ? parts == 0 : parts >= 2 * 5 ),
             ( std::string( "kotwienie srodkowe " ) + card + ( std::string( card ) == "0416" ? ": liny od dzwigara, bez urzadzen na slupach" : ": urzadzenia na obu slupach (z izolatorem i ze sruba rzymska)" ) ).c_str() );
+        // rozbiórka (Jan 2026-11-24): lina została (zwisa i leży), ucięta, same uchwyty, nic, w budowie; zapis i odczyt
+        if( std::string( card ) == "0418" ) {
+            auto stripped { *catenary_chain_get( 0 ) };
+            stripped.dismantled = 1;
+            std::array<std::size_t, 5> wparts {};
+            std::array<std::size_t, 5> wtriangles {};
+            std::array<bool, 5> wbuilt {};
+            for( int wreck = 0; wreck < 5; ++wreck ) {
+                stripped.middle_dismantled = wreck;
+                catenary_chain_update( 0, stripped );
+                wbuilt[ wreck ] = catenary_chain_middle( 0, wparts[ wreck ], wtriangles[ wreck ] );
+            }
+            std::vector<std::string> words;
+            std::istringstream stream { catenary::write_chain( stripped ) };
+            for( std::string word; stream >> word; ) { words.push_back( word ); }
+            catenary::suspension_file again;
+            std::vector<std::string> trouble;
+            catenary::parse_suspensions( words, "rozbiorka", again, trouble, false );
+            auto const read { trouble.empty() && again.chains.size() == 1 && again.chains.front().middle_dismantled == 4 };
+            stripped.dismantled = 0;
+            stripped.middle_dismantled = -1;
+            catenary_chain_update( 0, stripped );
+            std::size_t backparts { 0 }, backtriangles { 0 };
+            catenary_chain_middle( 0, backparts, backtriangles );
+            std::printf( "  kotwienie srodkowe rozebrane: czesci/trojkaty zostala %d/%d ucieta %d/%d rozkradzione %d/%d nic %d/%d w budowie %d/%d, z powrotem %d/%d\n",
+                static_cast<int>( wparts[ 0 ] ), static_cast<int>( wtriangles[ 0 ] ), static_cast<int>( wparts[ 1 ] ), static_cast<int>( wtriangles[ 1 ] ),
+                static_cast<int>( wparts[ 2 ] ), static_cast<int>( wtriangles[ 2 ] ), static_cast<int>( wparts[ 3 ] ), static_cast<int>( wtriangles[ 3 ] ),
+                static_cast<int>( wparts[ 4 ] ), static_cast<int>( wtriangles[ 4 ] ), static_cast<int>( backparts ), static_cast<int>( backtriangles ) );
+            check( read && wparts[ 0 ] == parts && wparts[ 1 ] == parts && wtriangles[ 0 ] > wtriangles[ 1 ] && wtriangles[ 1 ] > 0 && wtriangles[ 2 ] == 0
+                && wparts[ 2 ] > 0 && wparts[ 2 ] < parts && wparts[ 3 ] == 0 && wtriangles[ 3 ] == 0 && wparts[ 4 ] < parts && wtriangles[ 4 ] == 0
+                && backparts == parts && backtriangles == triangles,
+                "kotwienie srodkowe rozebranego lancucha: lina zostala / ucieta / same uchwyty / nic / w budowie, zapis i odczyt" );
+        }
     }
     std::remove( "tests/catenary/td_srodek2_test.scm" );
 

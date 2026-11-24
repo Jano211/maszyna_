@@ -143,6 +143,10 @@ struct chain {
     std::string middle;
     std::string middle_device { "0406" };
     double      middle_heights[ 2 ] { 0.0, 0.0 };  // uchwyty liny kotwienia na słupach przed i za (nad główką); 0 = lina nośna sąsiada
+    // kotwienie środkowe łańcucha rozebranego (Jan 2026-11-24, "middle_dismantled intact|cut|looted|gone|construction", nazwy jak
+    // w kotwieniu): 0 lina została - zwisa z urządzenia na sąsiednim słupie i leży na ziemi, 1 ucięta przy urządzeniu (krótka
+    // końcówka), 2 same uchwyty do słupa, 3 nic, 4 w budowie (urządzenia bez łańcuchów do liny i bez liny); -1 wg łańcucha
+    int         middle_dismantled { -1 };
     // lina nośna z innego podwieszenia niż przewody jezdne (wysięgniki rozstawione na konsoli 4890, wysięgnik samej liny przy
     // odciągu przewodów): w punkcie łańcucha <podwieszenie z listy> przewody idą przez jego "at", lina przez "rope" podwieszenia
     // <trzymające linę>. Wpis "messenger_from <z listy> <trzymające linę>", przed "suspensions"
