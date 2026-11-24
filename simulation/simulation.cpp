@@ -144,8 +144,13 @@ state_manager::update( double const Deltatime, int Iterationcount ) {
     simulation::Powergrid.update( totaltime );
     // nowa sieć (łańcuchy): obwód prądu stałego z poborem pojazdów z poprzedniego kroku
     catenary_power_update( totaltime );
-    // rozebrana sieć: luźne wysięgniki przy kamerze kołyszą się na wietrze
-    catenary_scene_sway( totaltime, Global.pCamera.Pos, glm::dvec3 { simulation::Environment.wind() } );
+    // rozebrana sieć: luźne wysięgniki przy kamerze kołyszą się na wietrze. Wiatr przyziemny z pogody (panel pogody, METAR): wiatr chmur
+    // / 1,5 - odwrotnie niż METAR go ustawia (environment/weather.cpp); wiatr otoczenia (losowy, 0-4 m/s) dochodzi jako podmuchy
+    {
+        auto const clouds { simulation::Environment.weather().cloud_velocity() };
+        glm::dvec3 const surface { clouds.x / 1.5, 0.0, clouds.y / 1.5 };
+        catenary_scene_sway( totaltime, Global.pCamera.Pos, surface + glm::dvec3 { simulation::Environment.wind() } );
+    }
     Timer::subsystem.sim_powergrid.stop();
     // road junctions, level crossings and the points road vehicles appear at; ahead of the vehicles, so the drivers act on what these decide
     Timer::subsystem.sim_roads.start();
