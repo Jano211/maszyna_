@@ -343,4 +343,5 @@ ZACZYNAMY DOPIERO, GDY UŻYTKOWNIK DOSTARCZY MODELE (nadstawki, ew. słupy górn
 
 - [ ] Wyczyścić imiona i ścieżki prywatne w komentarzach: ok. 10 w `world/catenary_*`, ok. 150 w danych i generatorze
 - [ ] Zdecydować, czy PRZEKAZANIE.md idzie do mastera
+- [ ] `weatherwind` (wiatr przy ziemi z pogody, utilities/Globals.h) przełączyć na domyślnie wyłączony (Jan 2026-11-24: „przy PR-rze zmienimy na domyślnie wyłączony”) – zmienia wygląd istniejących scenerii
 - [x] Dopisać do PRZEKAZANIE.md stan kotwień z 23–24.10 (2026-10-24: krótki wpis w START TUTAJ, szczegóły w KOTWIENIA.md i tu)
