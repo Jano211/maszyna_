@@ -7383,6 +7383,21 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("0416: the middle pole is a drop of a gantry; the anchor ropes go from the beam above the messenger to clamps on it about 3 m on both sides, the poles next to it carry nothing"));
+			// a dismantled chain (the user 2026-11-24): what is left of the middle anchor
+			if (chain->dismantled > 0)
+			{
+				std::string const wrecknames[] = {STR("as the chain"), STR("the rope left, hanging and on the ground"), STR("the rope cut at the device"), STR("looted: the brackets only"),
+				                                  STR("nothing"), STR("being built: the devices only")};
+				char const *const wrecks[] = {wrecknames[0].c_str(), wrecknames[1].c_str(), wrecknames[2].c_str(), wrecknames[3].c_str(), wrecknames[4].c_str(), wrecknames[5].c_str()};
+				auto wreck{std::clamp(chain->middle_dismantled, -1, 4) + 1};
+				if (ImGui::Combo(STR_C("Middle anchor left"), &wreck, wrecks, 6))
+				{
+					changed.middle_dismantled = wreck - 1;
+					edited = true;
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("As the chain: wires taken - the rope left or cut at random, looted - the brackets bolted to the poles only, poles taken - nothing, being built - the devices without the rope"));
+			}
 			// heights of the anchor rope on the poles before and after (when the cantilever is in the way)
 			auto const where{std::find(chain->suspensions.begin(), chain->suspensions.end(), chain->middle) - chain->suspensions.begin()};
 			auto const members{catenary_chain_members(Chain)};

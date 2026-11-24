@@ -316,7 +316,8 @@ ZACZYNAMY DOPIERO, GDY UŻYTKOWNIK DOSTARCZY MODELE (nadstawki, ew. słupy górn
   - druty „jak nożem ucięte”, naprężacz spadł na ziemię: ciężary leżą na ziemi pod kółkiem / u stopy słupa, lina od kółka luźno zwisa (zwis do ziemi), końcówki drutów zwisają z przegubu,
   - rozkradzione: same uchwyty na słupie (bez ciężarów, kółek, lin – złom),
   - w budowie: kotwienie zamontowane bez drutów (ciężary podwiązane / na ziemi – do ustalenia z Janem)
-  - [ ] przy okazji kotwienie środkowe i odciągi sieci na rozebranej linii (dziś też znikają) - czeka na decyzję Jana, co z nich zostaje
+  - [x] kotwienie środkowe na rozebranej linii (2026-11-24, w exe NIESPRAWDZONE): `middle_dismantled intact|cut|looted|gone|construction` we wpisie łańcucha, bez wpisu wg łańcucha (Jan: „tak jak mówisz, ale z opcją wyboru”)
+  - [ ] odciągi sieci na rozebranej linii - razem z ogarnięciem odciągów (Jan 2026-11-24: „muszę je w końcu ogarnąć”); dziś na rozebranym łańcuchu znikają liny odciągu (przęsło-nosiciel nie ma dopisku `pull`)
 
 ## Do zrobienia – wysięgniki teowe: regulacje jak w rurowych (2026-11-24, niepilne)
 
