@@ -309,6 +309,15 @@ ZACZYNAMY DOPIERO, GDY UŻYTKOWNIK DOSTARCZY MODELE (nadstawki, ew. słupy górn
 - Do sprawdzenia: czy na terenach górniczych są jeszcze inne sposoby podnoszenia (przedłużki zwisów, przekładanie mocowań wyżej
   na tej samej konstrukcji) – zbierać ze zdjęć z terenu.
 
+## Do zrobienia – rozbiórka: kotwienia (2026-11-24, Jan: „na jutro”)
+
+- [ ] Kotwienia łańcucha rozebranej sieci: dziś `assemble_anchor` nie stawia nic (znika całe urządzenie). Jan: „jak nie ma nic, to też niedobrze”. Do wyboru na kotwieniu (wpis kotwienia, domyślnie wg stanu łańcucha):
+  - kotwienie zostało całe (ciężary wiszą, lina i przewody ucięte tuż za przegubem / izolatorami – krótkie końcówki zwisające),
+  - druty „jak nożem ucięte”, naprężacz spadł na ziemię: ciężary leżą na ziemi pod kółkiem / u stopy słupa, lina od kółka luźno zwisa (zwis do ziemi), końcówki drutów zwisają z przegubu,
+  - rozkradzione: same uchwyty na słupie (bez ciężarów, kółek, lin – złom),
+  - w budowie: kotwienie zamontowane bez drutów (ciężary podwiązane / na ziemi – do ustalenia z Janem)
+  - przy okazji kotwienie środkowe i odciągi sieci na rozebranej linii (dziś też znikają)
+
 ## Do zrobienia – wysięgniki teowe: regulacje jak w rurowych (2026-11-24, niepilne)
 
 - [ ] Zastrzały na teownikach (Jan 2026-11-24: „zastrzały na teownikach też są”; to chyba jedyny jeszcze niewykorzystany element) – karta, części i miejsce mocowania do ustalenia z katalogu (stary Kolprojekt, dział 0100), potem jak 6506 w rurowych (`link` w overrides, przełącznik w panelu)
