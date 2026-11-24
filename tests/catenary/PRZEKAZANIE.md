@@ -2,6 +2,27 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-24 22:30 – kotwienia rozebranej sieci (w exe NIESPRAWDZONE)
+
+- Jan (24.11): co zostaje z kotwienia łańcucha rozebranego. Wpis kotwienia `dismantled intact|cut|looted|gone|construction`
+  (`anchor::dismantled`, bez wpisu -1 = wg łańcucha) i `dismantled_weights guide|scattered`. Działa tylko, gdy łańcuch z tym
+  kotwieniem ma `dismantled` > 0 (`anchor_chain_dismantled`, najdalszy stan łańcuchów kotwienia).
+- Wg łańcucha (decyzja Jana): wires → całe albo ucięte LOSOWO (`dismantle_random`, klucz = nazwa + położenie słupa, sól 6),
+  looted → rozkradzione, poles → nic, construction → w budowie.
+- Całe: urządzenie jak zwykle (ciężary wiszą - ZAŁOŻENIE: łapie je zabezpieczenie 4600), końcówki lin i przewodów 0,25–0,70 m za
+  uchwytami krańcowymi, opadające (bryły w `Anchor.rope`, rysuje je przęsło-nosiciel do kotwienia; promienie z traction_<typ>.txt).
+- Ucięte: końcówki jak wyżej, stos na ziemi (`fallen_stack`): `guide` (domyślnie) - ciężary, pręt, łączniki i pierścień zsunięte
+  w pionie tak, że spód pręta = `ground` wpisu; `scattered` - ciężary i pierścień płasko po spirali wokół osi stosu (obrót i
+  przechył losowe), pręt i łączniki leżą obok; koniec liny urządzenia schodzi za stosem (na ziemię). ZAŁOŻENIE: rolki, dźwignia
+  i zabezpieczenie zostają, gdzie były - do oceny w exe.
+- Rozkradzione (Jan): tylko to, co przykręcone wprost do słupa = role `bracket_*` (z `.back`), bez liny. Nic: nic (słup własny
+  kotwienia zostaje, chyba że łańcuch ma `poles`). W budowie (Jan: „bez ciężarów”): bez ciężarów, pręta, łączników, pierścienia
+  i wszystkiego po stronie drutów (role messenger*/contact*/equalizer); lina urządzenia skrócona do 0,5 m za ostatnią rolką (ZAŁOŻENIE).
+- Edytor: panel kotwienia, gdy łańcuch rozebrany - „Z kotwienia zostało” + „Spadnięte ciężary” (przy uciętym, nie przy stałym).
+  lang/editor_pl.po: nowe hasła na końcu - wgrać na G:.
+- Test te: „rozbiorka: kotwienie cale / uciete / ...” OK (67 części całe, 10 rozkradzione, 26 w budowie).
+- NIEZROBIONE: kotwienie środkowe i odciągi sieci na rozebranej linii (dziś znikają) - zapytać Jana, co z nich zostaje.
+
 ## START TUTAJ – 2026-11-22 17:15 – izolator sekcyjny: lina z Y sąsiada, Y wyłączane przy izolatorze (w exe NIESPRAWDZONE)
 
 - Użytkownik: w YC120-2C150 góra izolatora sekcyjnego mija linę nośną. Przyczyna: kształt liny w sieciach z Y zależy od sąsiada

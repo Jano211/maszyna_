@@ -17584,5 +17584,35 @@ msgstr "Od pionu, na zawiasie: + od słupa, w stronę toru"
 msgid "under construction"
 msgstr "w budowie"
 
-msgid "A line with its catenary taken down, or not strung yet. Without wires: no spans (no wires, no pantograph contact, no current, no anchors), the cantilevers stay without the holders of the wires, the steady arm hangs down, a swinging cantilever stands turned loose on its hinges. Looted: also without the steady arm here and there or without the whole cantilever. The poles only: the poles with their mounts. Under construction: no wires yet, the cantilevers complete, the steady arm with its arms tied up under the strut. A pole can have its own exception"
-msgstr "Linia z rozebraną albo jeszcze niezawieszoną siecią. Bez drutów: bez przęseł (bez drutów, styku z pantografem, prądu i kotwień), wysięgniki zostają bez uchwytów drutów, odciąg pomocniczy zwisa, wysięgnik przechylny stoi obrócony luźno na zawiasach. Rozkradziona: do tego miejscami bez odciągu pomocniczego albo bez całego wysięgnika. Same słupy: słupy z mocowaniami. W budowie: drutów jeszcze nie ma, wysięgniki kompletne, odciąg pomocniczy z łapkami podwiązany pod ukośnikiem. Słup może mieć swój wyjątek"
+msgid "A line with its catenary taken down, or not strung yet. Without wires: no spans (no wires, no pantograph contact, no current), the anchors what is left of them (on the anchor panel), the cantilevers stay without the holders of the wires, the steady arm hangs down, a swinging cantilever stands turned loose on its hinges. Looted: also without the steady arm here and there or without the whole cantilever. The poles only: the poles with their mounts. Under construction: no wires yet, the cantilevers complete, the steady arm with its arms tied up under the strut. A pole can have its own exception"
+msgstr "Linia z rozebraną albo jeszcze niezawieszoną siecią. Bez drutów: bez przęseł (bez drutów, styku z pantografem i prądu), z kotwień to, co zostało (w panelu kotwienia), wysięgniki zostają bez uchwytów drutów, odciąg pomocniczy zwisa, wysięgnik przechylny stoi obrócony luźno na zawiasach. Rozkradziona: do tego miejscami bez odciągu pomocniczego albo bez całego wysięgnika. Same słupy: słupy z mocowaniami. W budowie: drutów jeszcze nie ma, wysięgniki kompletne, odciąg pomocniczy z łapkami podwiązany pod ukośnikiem. Słup może mieć swój wyjątek"
+
+msgid "whole, the wires cut off"
+msgstr "całe, druty ucięte"
+
+msgid "cut, the weights on the ground"
+msgstr "ucięte, ciężary na ziemi"
+
+msgid "looted: the brackets only"
+msgstr "rozkradzione: same uchwyty"
+
+msgid "being built: no weights"
+msgstr "w budowie: bez ciężarów"
+
+msgid "Anchor left"
+msgstr "Z kotwienia zostało"
+
+msgid "As the chain: wires taken - whole or cut at random, looted - the brackets bolted to the pole only, poles taken - nothing, being built - no weights and no links to the wires"
+msgstr "Jak łańcuch: bez drutów - całe albo ucięte (losowo), rozkradziona - tylko uchwyty przykręcone wprost do słupa, same słupy - nic, w budowie - bez ciężarów i bez łańcuchów do drutów"
+
+msgid "slid down the guide"
+msgstr "zsunięte po prowadnicy"
+
+msgid "scattered by the pole"
+msgstr "rozsypane przy słupie"
+
+msgid "Fallen weights"
+msgstr "Spadnięte ciężary"
+
+msgid "nothing"
+msgstr "nic"

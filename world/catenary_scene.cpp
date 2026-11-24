@@ -11,6 +11,7 @@ http://mozilla.org/MPL/2.0/.
 #include "world/catenary_scene.h"
 #include <cstring>
 #include <cstdint>
+#include <numbers>
 #include <array>
 
 #include "world/catenary_suspension.h"
@@ -1715,6 +1716,259 @@ tensioners() {
     return ( good ? &catalog : nullptr );
 }
 
+// ---- rozbiórka: kotwienia łańcuchów rozebranej sieci (Jan 2026-11-24) -----------------------------------------------------------
+namespace {
+
+enum anchor_wreck : int { wreck_none = -1, wreck_intact = 0, wreck_cut = 1, wreck_looted = 2, wreck_gone = 3, wreck_construction = 4 };
+
+// najdalej posunięty stan rozbiórki łańcuchów, które się na tym kotwieniu kończą (0 - sieć cała)
+int
+anchor_chain_dismantled( scene_anchor const &Anchor ) {
+    auto state { 0 };
+    for( auto const &chain : Chains ) {
+        if( chain.removed || chain.file != Anchor.file || false == anchors_chain( chain.data, Anchor.data.name ) ) { continue; }
+        state = std::max( state, chain.data.dismantled );
+    }
+    return state;
+}
+
+// klucz losowania kotwienia: nazwa i położenie słupa (kotwienia bez nazwy nie losują wszystkie tak samo)
+std::string
+anchor_wreck_key( catenary::anchor const &Data ) {
+    return Data.name + "@" + std::to_string( static_cast<long long>( std::floor( Data.pole[ 0 ] * 10.0 ) ) ) + " " + std::to_string( static_cast<long long>( std::floor( Data.pole[ 2 ] * 10.0 ) ) );
+}
+
+// co zostało z kotwienia: wpis kotwienia, a bez niego wg łańcucha (wires - całe albo ucięte losowo, looted - rozkradzione,
+// poles - nic, construction - w budowie); sieć cała - wreck_none
+int
+anchor_wreck_state( catenary::anchor const &Data, int const Chain ) {
+    if( Chain <= 0 ) { return wreck_none; }
+    if( Data.dismantled >= 0 ) { return Data.dismantled; }
+    switch( Chain ) {
+    case 1: return dismantle_random( anchor_wreck_key( Data ), 6 ) < 0.5 ? wreck_intact : wreck_cut;
+    case 2: return wreck_looted;
+    case 3: return wreck_gone;
+    default: return wreck_construction;
+    }
+}
+
+// rola części bez przedrostka urządzenia przewodów (kotwienie rozdzielone)
+std::string
+anchor_role_base( std::string const &Role ) {
+    static std::string const device { "contact_device." };
+    return Role.compare( 0, device.size(), device ) == 0 ? Role.substr( device.size() ) : Role;
+}
+
+bool
+role_starts( std::string const &Role, std::string const &Head ) {
+    return Role.compare( 0, Head.size(), Head ) == 0;
+}
+
+// część stosu: ciężary, pręt, łączniki z liną i pierścień prowadzący na stosie
+bool
+anchor_stack_part( std::string const &Base ) {
+    return role_starts( Base, "weight." ) || Base == "rod" || role_starts( Base, "hanger." ) || Base == "ring";
+}
+
+// część po stronie drutów: łańcuchy z izolatorami, wyrównywacze i uchwyty krańcowe (nie uchwyty do słupa "bracket_...")
+bool
+anchor_wire_part( std::string const &Base ) {
+    return role_starts( Base, "messenger" ) || role_starts( Base, "contact" ) || Base == "equalizer";
+}
+
+// osie części w macierzy obrotu (wierszami, kolumny to osie części)
+void
+anchor_set_axes( catenary::tensioner_placement &Part, glm::dvec3 const &X, glm::dvec3 const &Y, glm::dvec3 const &Z ) {
+    std::array<glm::dvec3, 3> const axes { X, Y, Z };
+    for( int column = 0; column < 3; ++column ) {
+        Part.rotation[ column ] = axes[ column ].x;
+        Part.rotation[ 3 + column ] = axes[ column ].y;
+        Part.rotation[ 6 + column ] = axes[ column ].z;
+    }
+}
+
+// stos jednego urządzenia (Prefix: "" albo "contact_device.") na ziemi: zsunięty po prowadnicy w dół albo rozsypany u stopy słupa;
+// lina urządzenia schodzi za nim (luźno, do ziemi). ZAŁOŻENIE: rolki, dźwignia i zabezpieczenie zostają tam, gdzie były
+struct fallen_stack {
+    catenary::tensioner_result &result;
+    std::vector<std::vector<double>> &rope;
+    std::string prefix;
+    double ground { -0.5 };
+    bool scattered { false };
+    std::string key;
+
+    void apply() const {
+        auto const rod { std::ranges::find_if( result.parts, [ this ]( catenary::tensioner_placement const &Part ) { return Part.role == prefix + "rod"; } ) };
+        if( rod == result.parts.end() ) { return; }
+        glm::dvec3 const column { rod->position[ 0 ], rod->position[ 1 ], rod->position[ 2 ] };
+        if( scattered ) { scatter( column ); }
+        else { slide( column.z - ground ); }
+    }
+
+    bool own( catenary::tensioner_placement const &Part ) const {
+        return role_starts( Part.role, prefix ) && ( prefix.empty() == false || false == role_starts( Part.role, "contact_device." ) )
+            && anchor_stack_part( Part.role.substr( prefix.size() ) );
+    }
+
+    void slide( double const Drop ) const {
+        if( Drop <= 0.0 ) { return; }
+        for( auto &part : result.parts ) {
+            if( own( part ) ) { part.position[ 2 ] -= Drop; }
+        }
+        if( false == rope.empty() && rope.back().size() >= 3 ) { rope.back()[ 2 ] -= Drop; }
+    }
+
+    void scatter( glm::dvec3 const &Column ) const {
+        auto const start { dismantle_random( key, 7 ) * 2.0 * std::numbers::pi };
+        auto const lying { start + 0.5 * std::numbers::pi + ( dismantle_random( key, 8 ) - 0.5 ) };
+        glm::dvec3 const along { std::cos( lying ), std::sin( lying ), 0.0 };
+        int count { 0 };
+        for( auto &part : result.parts ) {
+            if( false == own( part ) ) { continue; }
+            auto const base { part.role.substr( prefix.size() ) };
+            if( base == "rod" || role_starts( base, "hanger." ) ) {
+                // pręt i łączniki leżą na ziemi, wzdłuż jednego kierunku obok stosu
+                auto const at { Column + along * ( base == "rod" ? 0.0 : 0.9 ) + glm::dvec3 { 0.25 * std::cos( start ), 0.25 * std::sin( start ), 0.0 } };
+                part.position[ 0 ] = at.x; part.position[ 1 ] = at.y; part.position[ 2 ] = ground + 0.02;
+                anchor_set_axes( part, glm::dvec3 { 0.0, 0.0, 1.0 }, glm::dvec3 { along.y, -along.x, 0.0 }, along );
+                continue;
+            }
+            // ciężary i pierścień: płasko na ziemi po spirali wokół osi stosu, każdy obrócony i lekko przechylony
+            ++count;
+            auto const salt { static_cast<std::uint32_t>( 100 + count ) };
+            auto const angle { start + count * 2.39996 };
+            auto const reach { 0.30 + 0.24 * std::sqrt( static_cast<double>( count ) ) };
+            auto const yaw { dismantle_random( key, salt ) * 2.0 * std::numbers::pi };
+            auto const tilt { ( dismantle_random( key, salt + 1000 ) - 0.5 ) * 0.3 };
+            part.position[ 0 ] = Column.x + reach * std::cos( angle );
+            part.position[ 1 ] = Column.y + reach * std::sin( angle );
+            part.position[ 2 ] = ground + 0.03 * std::abs( std::sin( tilt ) ) * 10.0;
+            glm::dvec3 const x { std::cos( yaw ), std::sin( yaw ), 0.0 };
+            glm::dvec3 const y { -std::sin( yaw ) * std::cos( tilt ), std::cos( yaw ) * std::cos( tilt ), std::sin( tilt ) };
+            anchor_set_axes( part, x, y, glm::cross( x, y ) );
+        }
+        // koniec liny urządzenia leży na ziemi przy pręcie
+        if( false == rope.empty() && rope.back().size() >= 3 ) {
+            auto const end { Column + glm::dvec3 { 0.25 * std::cos( start ), 0.25 * std::sin( start ), 0.0 } };
+            rope.back() = { end.x, end.y, ground + 0.02 };
+        }
+    }
+};
+
+// końcówka drutu uciętego tuż za uchwytem krańcowym: krótki kawałek w stronę przęsła, opadający; współrzędne urządzenia
+void
+anchor_wire_stub( glm::dvec3 const &End, glm::dvec3 const &Toward, double const Radius, double const Length, double const Sag, std::vector<catenary::tensioner_vertex> &Tube ) {
+    catenary::tensioner_result stub;
+    auto way { Toward };
+    way.z = 0.0;
+    way = glm::length( way ) > 1e-6 ? glm::normalize( way ) : glm::dvec3 { 1.0, 0.0, 0.0 };
+    for( int k = 0; k <= 6; ++k ) {
+        auto const t { k / 6.0 };
+        auto const at { End + way * ( Length * t ) - glm::dvec3 { 0.0, 0.0, Sag * Length * t * t } };
+        stub.rope.push_back( { at.x, at.y, at.z } );
+    }
+    catenary::tensioner_rope_solid( stub, Radius, 6, std::string(), 0.0, Tube, std::string(), 0.0 );
+}
+
+// przekroje drutów kotwienia do końcówek (promienie, m) - z pliku typu sieci, bez niego zwykłe
+struct anchor_wire_sizes {
+    double messenger { 0.0070 };
+    double contact { 0.0060 };
+};
+
+// końcówki wszystkich lin i przewodów uciętych za kotwieniem
+struct wire_stubs_input {
+    catenary::tensioner_result const &result;
+    catenary::tensioner_input const &input;
+    anchor_wire_sizes sizes;
+    std::string key;
+};
+
+void
+anchor_wire_stubs( wire_stubs_input const &Input, std::vector<catenary::tensioner_vertex> &Tube ) {
+    auto const &result { Input.result };
+    auto const toward = [ &Input ]( double const *Target, glm::dvec3 const &From ) {
+        return Input.input.aimed ? glm::dvec3 { Target[ 0 ], Target[ 1 ], Target[ 2 ] } - From : glm::dvec3 { 1.0, 0.0, 0.0 };
+    };
+    auto salt { 200u };
+    auto const stub = [ &Input, &Tube, &salt ]( glm::dvec3 const &End, glm::dvec3 const &Way, double const Radius, double const Sag ) {
+        auto const length { 0.25 + 0.45 * dismantle_random( Input.key, salt++ ) };
+        anchor_wire_stub( End, Way, Radius, length, Sag, Tube );
+    };
+    glm::dvec3 const messenger { result.messenger_end[ 0 ], result.messenger_end[ 1 ], result.messenger_end[ 2 ] };
+    if( glm::length( messenger ) > 1e-6 ) { stub( messenger, toward( Input.input.messenger_target, messenger ), Input.sizes.messenger, 0.5 ); }
+    glm::dvec3 const second { result.messenger2_end[ 0 ], result.messenger2_end[ 1 ], result.messenger2_end[ 2 ] };
+    if( Input.input.messengers >= 2 && glm::length( second ) > 1e-6 ) { stub( second, toward( Input.input.messenger_target, second ), Input.sizes.messenger, 0.5 ); }
+    for( auto const &end : result.contact_ends ) {
+        if( end.size() < 3 ) { continue; }
+        glm::dvec3 const at { end[ 0 ], end[ 1 ], end[ 2 ] };
+        stub( at, toward( Input.input.contact_target, at ), Input.sizes.contact, 0.3 );
+    }
+}
+
+// rozkradzione / nic / w budowie: części, których nie ma
+void
+anchor_strip( catenary::tensioner_result &Result, int const Wreck ) {
+    std::erase_if( Result.parts, [ Wreck ]( catenary::tensioner_placement const &Part ) {
+        auto const base { anchor_role_base( Part.role ) };
+        if( Wreck == wreck_gone ) { return true; }
+        if( Wreck == wreck_looted ) { return false == role_starts( base, "bracket_" ); }
+        return anchor_stack_part( base ) || anchor_wire_part( base );
+    } );
+}
+
+// lina urządzenia w budowie: bez ciężarów zwisa z rolki pół metra (ZAŁOŻENIE)
+void
+anchor_rope_unloaded( std::vector<std::vector<double>> &Rope ) {
+    if( Rope.size() < 2 || Rope.back().size() < 3 || Rope[ Rope.size() - 2 ].size() < 3 ) { return; }
+    auto const &before { Rope[ Rope.size() - 2 ] };
+    glm::dvec3 const from { before[ 0 ], before[ 1 ], before[ 2 ] };
+    glm::dvec3 const to { Rope.back()[ 0 ], Rope.back()[ 1 ], Rope.back()[ 2 ] };
+    auto const span { glm::length( to - from ) };
+    if( span <= 0.5 ) { return; }
+    auto const end { from + ( to - from ) * ( 0.5 / span ) };
+    Rope.back() = { end.x, end.y, end.z };
+}
+
+// zmienia złożone urządzenie wg stanu rozbiórki; zwraca bryły końcówek drutów (układ urządzenia)
+struct anchor_wreck_input {
+    int wreck { wreck_none };
+    int weights { 0 };
+    double ground { -0.5 };
+    std::string key;
+    anchor_wire_sizes sizes;
+};
+
+void
+anchor_apply_wreck( anchor_wreck_input const &Wreck, catenary::tensioner_input const &Input, catenary::tensioner_result &Result, std::vector<catenary::tensioner_vertex> &Stubs ) {
+    switch( Wreck.wreck ) {
+    case wreck_intact:
+        anchor_wire_stubs( wire_stubs_input { Result, Input, Wreck.sizes, Wreck.key }, Stubs );
+        break;
+    case wreck_cut: {
+        fallen_stack { Result, Result.rope, "", Wreck.ground, Wreck.weights == 1, Wreck.key }.apply();
+        fallen_stack { Result, Result.rope2, "contact_device.", Wreck.ground, Wreck.weights == 1, Wreck.key + "/2" }.apply();
+        anchor_wire_stubs( wire_stubs_input { Result, Input, Wreck.sizes, Wreck.key }, Stubs );
+        break;
+    }
+    case wreck_looted:
+    case wreck_gone:
+        anchor_strip( Result, Wreck.wreck );
+        Result.rope.clear();
+        Result.rope2.clear();
+        break;
+    case wreck_construction:
+        anchor_strip( Result, Wreck.wreck );
+        anchor_rope_unloaded( Result.rope );
+        anchor_rope_unloaded( Result.rope2 );
+        break;
+    default:
+        break;
+    }
+}
+
+} // namespace
+
 // składa kotwienie: słup i urządzenie naprężające przy temperaturze powietrza; zapamiętuje końce drutów.
 // Układ urządzenia (X od słupa w stronę drutów, Y w lewo, Z w górę) to układ wysięgnika obrócony tak, że jego X leży
 // wzdłuż kierunku drutów - części eksportowane wzdłuż toru (Jan 2026-10-23) stoją wtedy w nim wprost
@@ -1724,14 +1978,11 @@ assemble_anchor( scene_anchor &Anchor ) {
     Anchor.parts.clear();
     Anchor.solved = false;
     if( Anchor.removed ) { return 0; }
-    // kotwienie łańcucha rozebranej sieci: zabrane razem z drutami
-    for( auto const &chain : Chains ) {
-        if( chain.removed || chain.file != Anchor.file || chain.data.dismantled <= 0 ) { continue; }
-        for( auto const *name : { &chain.data.anchor_start, &chain.data.anchor_end, &chain.data.anchor_start_contact, &chain.data.anchor_end_contact } ) {
-            if( *name == Anchor.data.name ) { return 0; }
-        }
-    }
     auto const &data { Anchor.data };
+    // kotwienie łańcucha rozebranej sieci (Jan 2026-11-24): co z niego zostało; "nic" na słupach zabranych albo cudzych - bez niczego
+    auto const chaindismantled { anchor_chain_dismantled( Anchor ) };
+    auto const wreck { anchor_wreck_state( data, chaindismantled ) };
+    if( wreck == wreck_gone && ( chaindismantled >= 3 || false == data.on.empty() || false == data.gantry.empty() ) ) { return 0; }
     auto const label { "Bad scenario: anchor \"" + ( data.name.empty() ? std::string( "none" ) : data.name ) + "\" " };
     auto const *catalog { cantilevers() };
     auto const *devices { tensioners() };
@@ -1780,6 +2031,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     auto const *pole { catalog->pole( poletype ) };
     if( pole == nullptr ) { ErrorLog( label + "uses pole \"" + poletype + "\" which isn't in the supports catalogue" ); return 0; }
     catenary::tensioner_input input;
+    anchor_wire_sizes wiresizes;
     // typ sieci: łańcucha, który się na tym kotwieniu kończy (zmiana typu w łańcuchu zmienia kotwienie), inaczej z wpisu
     auto network { data.network };
     for( auto const &chain : Chains ) {
@@ -1797,6 +2049,8 @@ assemble_anchor( scene_anchor &Anchor ) {
             input.messenger_stiffness = net.messenger_count * type->messenger_wire.area * type->messenger_wire.modulus * 0.1;
             input.contact_stiffness = net.contact_count * type->contact_wire.area * type->contact_wire.modulus * 0.1;
             input.load = ( net.messenger_count * net.messenger_mass + net.contact_count * net.contact_mass ) * input.gravity;
+            if( type->messenger_wire.diameter > 0.0 ) { wiresizes.messenger = 0.5 * type->messenger_wire.diameter; }
+            if( type->contact_wire.diameter > 0.0 ) { wiresizes.contact = 0.5 * type->contact_wire.diameter; }
             // urządzenie bez danych dla tego typu (np. 0461 dla dwóch lin nośnych, 0403 dla sieci 32): najpierw z tej samej karty
             // (nazwa do "-": 0461-2x2, 0403-32), potem dowolne tego samego rodzaju (ciężarowe / stałe)
             if( device->type( input.type ) == nullptr ) {
@@ -1996,6 +2250,11 @@ assemble_anchor( scene_anchor &Anchor ) {
     for( auto const &warning : result.warnings ) {
         if( Notes.insert( warning ).second ) { WriteLog( ( "Catenary: " + warning + " (first seen in anchor \"" + data.name + "\")" ).c_str() ); }
     }
+    // rozebrana sieć: końce drutów do końcówek zapamiętane przed zmianami (przęsło do kotwienia ich nie używa - nie ma drutów)
+    std::vector<catenary::tensioner_vertex> stubs;
+    if( wreck != wreck_none ) {
+        anchor_apply_wreck( anchor_wreck_input { wreck, data.dismantled_weights, input.ground, anchor_wreck_key( data ), wiresizes }, input, result, stubs );
+    }
     // lina: ucha jako części, reszta jedną bryłą proceduralną (bez łączeń na łukach rolek), przeliczoną na scenerię;
     // rysuje ją z bliska przęsło dochodzące do kotwienia (rebuild_span)
     {
@@ -2008,6 +2267,7 @@ assemble_anchor( scene_anchor &Anchor ) {
             catenary::tensioner_rope_solid( second, 0.5 * device->rope_diameter, 8, device->rope_eye, device->rope_eye_length, tube, device->rope_spacer, device->rope_spacer_length );
             for( auto part : second.parts ) { part.role = "contact_device." + part.role; result.parts.push_back( part ); }
         }
+        tube.insert( tube.end(), stubs.begin(), stubs.end() );
         double const zero[ 3 ] { 0.0, 0.0, 0.0 };
         auto const base { toscene( zero ) };
         glm::dvec3 axes[ 3 ];
