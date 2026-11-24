@@ -6597,7 +6597,7 @@ void catenary_editor::render_catenary_chain_ui()
 		if (ImGui::Combo(STR_C("Dismantled"), &tool.dismantled, items, 5))
 			changed |= kChainDismantled;
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("A line with its catenary taken down, or not strung yet. Without wires: no spans (no wires, no pantograph contact, no current, no anchors), the cantilevers stay without the holders of the wires, the steady arm hangs down, a swinging cantilever stands turned loose on its hinges. Looted: also without the steady arm here and there or without the whole cantilever. The poles only: the poles with their mounts. Under construction: no wires yet, the cantilevers complete, the steady arm with its arms tied up under the strut. A pole can have its own exception"));
+			ImGui::SetTooltip("%s", STR_C("A line with its catenary taken down, or not strung yet. Without wires: no spans (no wires, no pantograph contact, no current), the anchors what is left of them (on the anchor panel), the cantilevers stay without the holders of the wires, the steady arm hangs down, a swinging cantilever stands turned loose on its hinges. Looted: also without the steady arm here and there or without the whole cantilever. The poles only: the poles with their mounts. Under construction: no wires yet, the cantilevers complete, the steady arm with its arms tied up under the strut. A pole can have its own exception"));
 	}
 	ImGui::PopItemWidth();
 	if (changed != 0 && chain != nullptr)
@@ -7271,6 +7271,32 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 				{
 					data.height = 0.0;
 					data.rope_height = 0.0;
+					edited = true;
+				}
+			}
+		}
+		// a dismantled chain (the user 2026-11-24): what is left of the anchor
+		if (chain != nullptr && chain->dismantled > 0)
+		{
+			std::string const names[] = {STR("as the chain"), STR("whole, the wires cut off"), STR("cut, the weights on the ground"), STR("looted: the brackets only"), STR("nothing"),
+			                             STR("being built: no weights")};
+			char const *const items[] = {names[0].c_str(), names[1].c_str(), names[2].c_str(), names[3].c_str(), names[4].c_str(), names[5].c_str()};
+			auto wreck{std::clamp(data.dismantled, -1, 4) + 1};
+			if (ImGui::Combo(STR_C("Anchor left"), &wreck, items, 6))
+			{
+				data.dismantled = wreck - 1;
+				edited = true;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("As the chain: wires taken - whole or cut at random, looted - the brackets bolted to the pole only, poles taken - nothing, being built - no weights and no links to the wires"));
+			if (false == fixed && data.dismantled == 1)
+			{
+				std::string const fallen[] = {STR("slid down the guide"), STR("scattered by the pole")};
+				char const *const ways[] = {fallen[0].c_str(), fallen[1].c_str()};
+				auto way{data.dismantled_weights == 1 ? 1 : 0};
+				if (ImGui::Combo(STR_C("Fallen weights"), &way, ways, 2))
+				{
+					data.dismantled_weights = way;
 					edited = true;
 				}
 			}

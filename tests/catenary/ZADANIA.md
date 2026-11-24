@@ -311,12 +311,12 @@ ZACZYNAMY DOPIERO, GDY UŻYTKOWNIK DOSTARCZY MODELE (nadstawki, ew. słupy górn
 
 ## Do zrobienia – rozbiórka: kotwienia (2026-11-24, Jan: „na jutro”)
 
-- [ ] Kotwienia łańcucha rozebranej sieci: dziś `assemble_anchor` nie stawia nic (znika całe urządzenie). Jan: „jak nie ma nic, to też niedobrze”. Do wyboru na kotwieniu (wpis kotwienia, domyślnie wg stanu łańcucha):
+- [x] Kotwienia łańcucha rozebranej sieci (2026-11-24, w exe NIESPRAWDZONE; szczegóły w PRZEKAZANIE.md): wpis kotwienia `dismantled intact|cut|looted|gone|construction`, `dismantled_weights guide|scattered`; bez wpisu wg łańcucha (wires - całe/ucięte losowo, looted - same uchwyty, poles - nic, construction - bez ciężarów). Wcześniej: `assemble_anchor` nie stawiał nic (znikało całe urządzenie). Jan: „jak nie ma nic, to też niedobrze”. Do wyboru na kotwieniu (wpis kotwienia, domyślnie wg stanu łańcucha):
   - kotwienie zostało całe (ciężary wiszą, lina i przewody ucięte tuż za przegubem / izolatorami – krótkie końcówki zwisające),
   - druty „jak nożem ucięte”, naprężacz spadł na ziemię: ciężary leżą na ziemi pod kółkiem / u stopy słupa, lina od kółka luźno zwisa (zwis do ziemi), końcówki drutów zwisają z przegubu,
   - rozkradzione: same uchwyty na słupie (bez ciężarów, kółek, lin – złom),
   - w budowie: kotwienie zamontowane bez drutów (ciężary podwiązane / na ziemi – do ustalenia z Janem)
-  - przy okazji kotwienie środkowe i odciągi sieci na rozebranej linii (dziś też znikają)
+  - [ ] przy okazji kotwienie środkowe i odciągi sieci na rozebranej linii (dziś też znikają) - czeka na decyzję Jana, co z nich zostaje
 
 ## Do zrobienia – wysięgniki teowe: regulacje jak w rurowych (2026-11-24, niepilne)
 

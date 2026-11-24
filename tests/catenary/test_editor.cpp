@@ -1753,6 +1753,66 @@ int main( int, char *argv[] ) {
             data.device = "0461";
             catenary_anchor_update( 0, data );
             result = catenary_anchor_result( 0 );
+            // rozbiórka (Jan 2026-11-24): kotwienie łańcucha rozebranego - całe, ucięte (stos na ziemi), rozkradzione (same uchwyty
+            // do słupa), nic, w budowie (bez ciężarów i łańcuchów do drutów); zapis i odczyt wpisu
+            {
+                auto const whole { catenary_anchor_parts( 0 ) };
+                auto stripped { *catenary_chain_get( 0 ) };
+                stripped.dismantled = 1;
+                catenary_chain_update( 0, stripped );
+                auto const count = [ &data ]( int const Wreck, int const Weights ) {
+                    auto wrecked { data };
+                    wrecked.dismantled = Wreck;
+                    wrecked.dismantled_weights = Weights;
+                    catenary_anchor_update( 0, wrecked );
+                    return catenary_anchor_parts( 0 );
+                };
+                auto const roles = []( auto const Test ) {
+                    auto const *now { catenary_anchor_result( 0 ) };
+                    return now != nullptr && std::all_of( now->parts.begin(), now->parts.end(), Test );
+                };
+                auto const intact { count( 0, 0 ) };
+                auto const intactrope { catenary_anchor_result( 0 )->rope.size() };
+                auto const cut { count( 1, 0 ) };
+                auto const *fallen { catenary_anchor_result( 0 ) };
+                // stos zsunięty: najniższy ciężar na ziemi
+                auto const low { fallen != nullptr && std::any_of( fallen->parts.begin(), fallen->parts.end(), [ &data ]( catenary::tensioner_placement const &P ) {
+                    return P.role == "weight.1" && std::abs( P.position[ 2 ] - data.ground ) < 0.01; } ) };
+                auto const scattered { count( 1, 1 ) };
+                auto const looted { count( 2, 0 ) };
+                auto const onlybrackets { roles( []( catenary::tensioner_placement const &P ) { return P.role.find( "bracket_" ) != std::string::npos; } ) };
+                auto const lootedrope { catenary_anchor_result( 0 )->rope.empty() };
+                auto const gone { count( 3, 0 ) };
+                auto const building { count( 4, 0 ) };
+                auto const noweights { roles( []( catenary::tensioner_placement const &P ) { return P.role.find( "weight." ) == std::string::npos && P.role.find( "_clamp" ) == std::string::npos; } ) };
+                auto wrecked { data };
+                wrecked.dismantled = 1;
+                wrecked.dismantled_weights = 1;
+                auto const written { catenary::write_anchor( wrecked ) };
+                catenary::suspension_file again;
+                std::vector<std::string> trouble;
+                std::vector<std::string> words;
+                std::istringstream stream { written };
+                for( std::string word; stream >> word; ) { words.push_back( word ); }
+                catenary::parse_suspensions( words, "rozbiorka", again, trouble, false );
+                auto const read { trouble.empty() && again.anchors.size() == 1 && again.anchors.front().dismantled == 1 && again.anchors.front().dismantled_weights == 1 };
+                // wg łańcucha (bez wpisu): rozkradziony - same uchwyty
+                stripped.dismantled = 2;
+                catenary_chain_update( 0, stripped );
+                auto const bychain { count( -1, 0 ) };
+                stripped.dismantled = 0;
+                catenary_chain_update( 0, stripped );
+                auto const back { count( -1, 0 ) };
+                std::printf( "  rozbiorka kotwienia: cale %d (%d) uciete %d rozsypane %d rozkradzione %d nic %d w budowie %d, wg lancucha %d, z powrotem %d; %s\n",
+                    static_cast<int>( intact ), static_cast<int>( whole ), static_cast<int>( cut ), static_cast<int>( scattered ), static_cast<int>( looted ), static_cast<int>( gone ),
+                    static_cast<int>( building ), static_cast<int>( bychain ), static_cast<int>( back ), written.substr( written.find( " dismantled" ) ).c_str() );
+                check( intact == whole && intactrope > 0 && cut == whole && low && scattered == whole && looted > 1 && looted < whole / 3 && onlybrackets && lootedrope
+                    && gone <= 2 && building > looted && building < whole && noweights && read && bychain == looted && back == whole,
+                    "rozbiorka: kotwienie cale / uciete / rozsypane / rozkradzione / nic / w budowie, zapis i odczyt, wg lancucha" );
+                data.dismantled = -1;
+                catenary_anchor_update( 0, data );
+                result = catenary_anchor_result( 0 );
+            }
         }
         // obrys urządzenia dla edytora: czoło słupa w stronę s0002 na wysokości rolek, rolka ruchoma dalej, kolumna ciężarów pionowo;
         // kotwienie kończy łańcuch l1 (koniec)

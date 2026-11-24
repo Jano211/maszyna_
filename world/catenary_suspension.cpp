@@ -1,6 +1,7 @@
 #include <cmath>
 #include "world/catenary_suspension.h"
 
+#include <array>
 #include <algorithm>
 #include <cctype>
 #include <fstream>
@@ -349,6 +350,15 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                     else if( value == "new" ) { line.old_guide = false; }
                     else { report( line.name, "\"guide\" takes new or old" ); good = false; }
                 }
+                else if( key == "dismantled" ) {
+                    line.dismantled = anchor_wreck_of( one() );
+                    if( line.dismantled < 0 ) { report( line.name, "\"dismantled\" takes intact, cut, looted, gone or construction" ); good = false; }
+                }
+                else if( key == "dismantled_weights" ) {
+                    auto const value { one() };
+                    if( value == "guide" || value == "scattered" ) { line.dismantled_weights = ( value == "scattered" ? 1 : 0 ); }
+                    else { report( line.name, "\"dismantled_weights\" takes guide or scattered" ); good = false; }
+                }
                 else if( key == "skin" ) { line.skin = one(); }
                 else { report( line.name, "unexpected token \"" + key + "\" in an anchor" ); good = false; }
             }
@@ -675,6 +685,19 @@ int dismantled_of( std::string const &Name ) {
     return Name == "poles" ? 3 : -1;
 }
 
+namespace {
+constexpr std::array<char const *, 5> kAnchorWrecks { "intact", "cut", "looted", "gone", "construction" };
+}
+
+std::string anchor_wreck_name( int const State ) {
+    return ( State >= 0 && State < static_cast<int>( kAnchorWrecks.size() ) ) ? kAnchorWrecks[ State ] : kAnchorWrecks[ 0 ];
+}
+
+int anchor_wreck_of( std::string const &Name ) {
+    auto const found { std::ranges::find( kAnchorWrecks, Name ) };
+    return found == kAnchorWrecks.end() ? -1 : static_cast<int>( found - kAnchorWrecks.begin() );
+}
+
 char const *disconnector_state_name( int const State ) {
     return State == 1 ? "open" : State == 2 ? "earthed" : "closed";
 }
@@ -780,6 +803,8 @@ std::string write_anchor( anchor const &Entry ) {
     if( Entry.rope_height > 0.0 ) { text += " rope_height " + number( Entry.rope_height, 3 ); }
     if( false == Entry.insulators.empty() ) { text += " insulators " + Entry.insulators; }
     if( Entry.old_guide ) { text += " guide old"; }
+    if( Entry.dismantled >= 0 ) { text += " dismantled " + anchor_wreck_name( Entry.dismantled ); }
+    if( Entry.dismantled_weights == 1 ) { text += " dismantled_weights scattered"; }
     if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
     return text + " endanchor";
 }

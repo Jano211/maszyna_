@@ -113,6 +113,9 @@ struct suspension {
 // rozbiórka: nazwy stanów w pliku (0..3) i odczyt; -1 - nie ma takiej nazwy
 char const *dismantled_name( int State );
 int dismantled_of( std::string const &Name );
+// rozbiórka kotwienia (wpis "dismantled" kotwienia, 0..4): intact, cut, looted, gone, construction; -1 - nie ma takiej nazwy
+std::string anchor_wreck_name( int State );
+int anchor_wreck_of( std::string const &Name );
 
 // łańcuch sieci: kolejne przęsła między podwieszeniami z listy (od kotwy do kotwy), wpis
 // "node <max> <min> <nazwa> chain ... suspensions <nazwy podwieszeń> endchain". Exe robi z niego zwykłe przęsła (TTraction):
@@ -197,8 +200,8 @@ std::string const &messenger_holder( chain const &Chain, std::string const &List
 
 // kotwienie ciężarowe (urządzenie naprężające z pliku traction_tensioners.txt) na słupie kotwowym, wpis
 // "node <max> <min> <nazwa> anchor device <karta> network <symbol typu> pole <słup> x y z [on <podwieszenie>] toward x y z distance <m>
-//  [color <kolor>] [top_color <kolor>] [elongation <m>] [missing <n>] [ground <m>] [height <m>] [rope_height <m>] [insulators <rodzaj>] [guide new|old] [skin <tekstura>]
-//  endanchor".
+//  [color <kolor>] [top_color <kolor>] [elongation <m>] [missing <n>] [ground <m>] [height <m>] [rope_height <m>] [insulators <rodzaj>] [guide new|old]
+//  [dismantled intact|cut|looted|gone|construction] [dismantled_weights guide|scattered] [skin <tekstura>] endanchor".
 // pole: oś słupa na wysokości główki szyny; toward: punkt, z którego przychodzą druty (urządzenie leży w tym kierunku od
 // słupa); distance: odległość od kotwienia środkowego albo stałego. Łańcuch przypina się do niego "anchor_start/anchor_end",
 // a ostatnie przęsło (bez wieszaków) kończy się na uchwytach krańcowych urządzenia
@@ -227,6 +230,13 @@ struct anchor {
     std::string insulators;
     // prowadnica ciężarów: false = rurowa 5070 z pierścieniem na stosie, true ("guide old") = stara 0454 (pierścienie 5060, pręty 5050)
     bool        old_guide { false };
+    // rozbiórka (Jan 2026-11-24), tylko gdy łańcuch z tym kotwieniem jest rozebrany ("dismantled" > 0): "dismantled intact|cut|looted|gone|
+    // construction" - 0 całe (ciężary wiszą, druty ucięte tuż za uchwytami), 1 ucięte (stos ciężarów na ziemi, końcówki drutów),
+    // 2 rozkradzione (tylko to, co przykręcone wprost do słupa), 3 nic, 4 w budowie (uchwyty, rolki i dźwignia, bez ciężarów i łańcuchów
+    // do drutów); -1 (bez wpisu) - wg łańcucha: wires - całe albo ucięte losowo, looted - rozkradzione, poles - nic, construction - w budowie.
+    // Ciężary przy uciętym ("dismantled_weights guide|scattered"): 0 zsunięte po prowadnicy na ziemię, 1 rozsypane u stopy słupa
+    int         dismantled { -1 };
+    int         dismantled_weights { 0 };
     std::string skin;
 };
 
