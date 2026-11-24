@@ -93,7 +93,8 @@ struct suspension {
     // (użytkownik 2026-11-22). Wpis "arrester_away" za "arrester"
     bool   arrester_away { false };
     // rozbiórka sieci na tym słupie (użytkownik 2026-11-23): -1 - jak łańcuch, 0 - kompletny, 1 - bez drutów, 2 - rozkradziony,
-    // 3 - sam słup. Wpis "dismantled intact|wires|looted|poles"; bez wpisu - jak łańcuch
+    // 3 - sam słup, 4 - w budowie (wysięgnik kompletny, odciąg pomocniczy podwiązany pod ukośnikiem, drutów jeszcze nie ma). Wpis
+    // "dismantled intact|wires|looted|poles|construction"; bez wpisu - jak łańcuch
     int    dismantled { -1 };
     // ustawienia rozbiórki na tym słupie (użytkownik 2026-11-24): odciąg pomocniczy -1 - jak wypadnie (rozkradziona - losowo), 0 - zwisa,
     // 1 - zdjęty ("dismantled_steady hang|off"); izolatory zwisające z mocowań, gdy wysięgnik zdjęty: 0 - żadne, 1 - ukośnika, 2 - odciągu,

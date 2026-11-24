@@ -687,7 +687,7 @@ constexpr unsigned kChainPower{1U << 3};
 constexpr unsigned kChainVoltage{1U << 4};
 constexpr unsigned kChainDismantled{1U << 5};
 // the dismantling of a chain (the user 2026-11-23): 0 intact, 1 without wires, 2 looted, 3 the poles only
-char const *const kDismantled[] = {"intact", "without wires", "looted", "the poles only"};
+char const *const kDismantled[] = {"intact", "without wires", "looted", "the poles only", "under construction"};
 
 } // namespace
 
@@ -4954,7 +4954,7 @@ void catenary_editor::catenary_chain_take(std::size_t const Chain)
 	tool.voltage = static_cast<float>(chain->voltage);
 	tool.material = chain->material == "al" ? 1 : 0;
 	tool.state = chain_state_index(chain->state);
-	tool.dismantled = std::clamp(chain->dismantled, 0, 3);
+	tool.dismantled = std::clamp(chain->dismantled, 0, 4);
 	if (auto const found{std::ranges::find(tool.networks, chain->type)}; found != tool.networks.end())
 		tool.network = static_cast<int>(found - tool.networks.begin());
 }
@@ -5039,7 +5039,7 @@ void catenary_editor::catenary_chain_apply(unsigned const Fields)
 	if ((Fields & kChainState) != 0)
 		changed.state = kStateValues[std::clamp(tool.state, 0, 3)];
 	if ((Fields & kChainDismantled) != 0)
-		changed.dismantled = std::clamp(tool.dismantled, 0, 3);
+		changed.dismantled = std::clamp(tool.dismantled, 0, 4);
 	if ((Fields & kChainNetwork) != 0 && false == tool.networks.empty())
 		changed.type = tool.networks[std::clamp(tool.network, 0, static_cast<int>(tool.networks.size()) - 1)];
 	auto const &last{tool.undo.empty() ? catenary_change{} : tool.undo.back()};
@@ -6592,12 +6592,12 @@ void catenary_editor::render_catenary_chain_ui()
 	if (ImGui::InputFloat(STR_C("Voltage (V)"), &tool.voltage, 0.0f, 0.0f, "%.0f"))
 		changed |= kChainVoltage;
 	{
-		std::string const names[] = {STR(kDismantled[0]), STR(kDismantled[1]), STR(kDismantled[2]), STR(kDismantled[3])};
-		char const *const items[] = {names[0].c_str(), names[1].c_str(), names[2].c_str(), names[3].c_str()};
-		if (ImGui::Combo(STR_C("Dismantled"), &tool.dismantled, items, 4))
+		std::string const names[] = {STR(kDismantled[0]), STR(kDismantled[1]), STR(kDismantled[2]), STR(kDismantled[3]), STR(kDismantled[4])};
+		char const *const items[] = {names[0].c_str(), names[1].c_str(), names[2].c_str(), names[3].c_str(), names[4].c_str()};
+		if (ImGui::Combo(STR_C("Dismantled"), &tool.dismantled, items, 5))
 			changed |= kChainDismantled;
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s", STR_C("A line with its catenary taken down. Without wires: no spans (no wires, no pantograph contact, no current, no anchors), the cantilevers stay without the holders of the wires, the steady arm hangs down, a swinging cantilever stands turned loose on its hinges. Looted: also without the steady arm here and there or without the whole cantilever. The poles only: the poles with their mounts. A pole can have its own exception"));
+			ImGui::SetTooltip("%s", STR_C("A line with its catenary taken down, or not strung yet. Without wires: no spans (no wires, no pantograph contact, no current, no anchors), the cantilevers stay without the holders of the wires, the steady arm hangs down, a swinging cantilever stands turned loose on its hinges. Looted: also without the steady arm here and there or without the whole cantilever. The poles only: the poles with their mounts. Under construction: no wires yet, the cantilevers complete, the steady arm with its arms tied up under the strut. A pole can have its own exception"));
 	}
 	ImGui::PopItemWidth();
 	if (changed != 0 && chain != nullptr)
@@ -9117,11 +9117,11 @@ void catenary_editor::render_catenary_cantilever_ui()
 			if (auto const *data{catenary_scene_get(static_cast<std::size_t>(tool.selected))}; data != nullptr && data->has_pole)
 			{
 				auto const index{static_cast<std::size_t>(tool.selected)};
-				std::string const names[] = {STR("as the chain"), STR(kDismantled[0]), STR(kDismantled[1]), STR(kDismantled[2]), STR(kDismantled[3])};
-				char const *const items[] = {names[0].c_str(), names[1].c_str(), names[2].c_str(), names[3].c_str(), names[4].c_str()};
-				auto choice{std::clamp(data->dismantled, -1, 3) + 1};
+				std::string const names[] = {STR("as the chain"), STR(kDismantled[0]), STR(kDismantled[1]), STR(kDismantled[2]), STR(kDismantled[3]), STR(kDismantled[4])};
+				char const *const items[] = {names[0].c_str(), names[1].c_str(), names[2].c_str(), names[3].c_str(), names[4].c_str(), names[5].c_str()};
+				auto choice{std::clamp(data->dismantled, -1, 4) + 1};
 				ImGui::PushItemWidth(160.0f);
-				if (ImGui::Combo(STR_C("Dismantled here"), &choice, items, 5))
+				if (ImGui::Combo(STR_C("Dismantled here"), &choice, items, 6))
 				{
 					auto changed{*data};
 					changed.dismantled = choice - 1;
@@ -9133,7 +9133,7 @@ void catenary_editor::render_catenary_cantilever_ui()
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("%s", STR_C("This pole otherwise than its chain: e.g. one cantilever left on a looted line, or one pole stripped. The wires go by the chain"));
 				// what's left on a dismantled pole (the user 2026-11-24): the steady arm, the insulators on the mounts, the turn on the hinges
-				if (catenary_scene_dismantled(index) > 0)
+				if (auto const state{catenary_scene_dismantled(index)}; state > 0 && state != 4)
 					render_catenary_dismantled_ui(index, *data);
 			}
 			// the lightning arrester 7310 (cards 0681/0683/0684, the user 2026-11-21): at the top of the pole towards the track, the lead 9812-6

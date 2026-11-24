@@ -613,6 +613,61 @@ hang_part( catenary::cantilever_result &Result, std::string const &Role, char co
     }
 }
 
+// kąt (w płaszczyźnie Y-Z układu wysięgnika) osi modelu części: kolumna obrotu najbliższa kierunkowi (Dy, Dz), zwrócona w jego stronę
+double
+axis_angle( catenary::cantilever_placement const &Placement, double const Dy, double const Dz ) {
+    auto const &r { Placement.rotation };
+    auto best { 0 };
+    auto bestdot { 0.0 };
+    for( int column = 0; column < 3; ++column ) {
+        auto const dot { r[ 3 + column ] * Dy + r[ 6 + column ] * Dz };
+        if( std::abs( dot ) > std::abs( bestdot ) ) { bestdot = dot; best = column; }
+    }
+    auto const sign { bestdot < 0.0 ? -1.0 : 1.0 };
+    return std::atan2( sign * r[ 6 + best ], sign * r[ 3 + best ] );
+}
+
+// wysięgnik w budowie (użytkownik 2026-11-24: „typówka na budowach”): kompletny, ale drutów jeszcze nie ma, więc odciąg pomocniczy
+// z ramionami (łapkami) i ich uchwytami podwiązany pod ukośnikiem - obrócony wokół swojego zaczepu (teowniki: głowicy 4350-01)
+// równolegle do ukośnika i 6 cm pod nim; linki odciągu pomocniczego (do liny nośnej) zdjęte - nie mają do czego iść
+void
+construct( catenary::cantilever_result &Result ) {
+    auto const find = [ &Result ]( char const *Role ) -> catenary::cantilever_placement * {
+        for( auto &placement : Result.parts ) { if( placement.role == Role ) { return &placement; } }
+        return nullptr; };
+    // najpierw linki precz (wskaźniki na części dopiero potem - usuwanie przesuwa elementy)
+    std::erase_if( Result.parts, []( catenary::cantilever_placement const &Placement ) { return role_starts( Placement.role, "cord" ) && Placement.role != "cord_clamp"; } );
+    auto *steady { find( "steady" ) };
+    auto const *strut { find( "strut" ) };
+    auto const *clamp { find( "messenger_clamp" ) };
+    auto const *arms { find( "arms" ) };
+    if( steady == nullptr || strut == nullptr || clamp == nullptr || arms == nullptr ) { return; }
+    // kąty w płaszczyźnie Y-Z układu wysięgnika: ukośnik - od jego zera do uchwytu liny nośnej, który na nim siedzi (model teownika 6101
+    // jest wygięty, jego osie nie idą wzdłuż ukośnika); odciąg pomocniczy - oś rury modelu w stronę ramion (ramiona wiszą pod jego końcem)
+    auto const strutangle { std::atan2( clamp->position[ 2 ] - strut->position[ 2 ], clamp->position[ 1 ] - strut->position[ 1 ] ) };
+    auto const steadyangle { axis_angle( *steady, arms->position[ 1 ] - steady->position[ 1 ], arms->position[ 2 ] - steady->position[ 2 ] ) };
+    auto const angle { strutangle - steadyangle };
+    auto const *head { find( "steady_head" ) };
+    auto const pivoty { head != nullptr ? head->position[ 1 ] : steady->position[ 1 ] };
+    auto const pivotz { head != nullptr ? head->position[ 2 ] : steady->position[ 2 ] };
+    auto const c { std::cos( angle ) }, s { std::sin( angle ) };
+    // pod ukośnikiem: prostopadle do niego w dół
+    auto const belowy { std::sin( strutangle ) * 0.06 }, belowz { -std::cos( strutangle ) * 0.06 };
+    for( auto &placement : Result.parts ) {
+        auto const &role { placement.role };
+        if( role != "steady" && role != "steady_head" && false == role_starts( role, "arms" ) && role != "cord_clamp" && role != "second_clamp" ) { continue; }
+        auto &r { placement.rotation };
+        for( int column = 0; column < 3; ++column ) {
+            auto const y { r[ 3 + column ] }, z { r[ 6 + column ] };
+            r[ 3 + column ] = c * y - s * z;
+            r[ 6 + column ] = s * y + c * z;
+        }
+        auto const y { placement.position[ 1 ] - pivoty }, z { placement.position[ 2 ] - pivotz };
+        placement.position[ 1 ] = pivoty + c * y - s * z + ( role == "steady_head" ? 0.0 : belowy );
+        placement.position[ 2 ] = pivotz + s * y + c * z + ( role == "steady_head" ? 0.0 : belowz );
+    }
+}
+
 // wysięgnik po rozbiórce: bez uchwytów drutów, odciąg pomocniczy zwisa; rozkradziony - losowo bez odciągu pomocniczego (60%) albo bez
 // całego wysięgnika (30%) i bez odgromnika; sam słup - tylko słup z mocowaniami. Ustawienia słupa (użytkownik 2026-11-24): odciąg
 // pomocniczy zwisa / zdjęty, izolatory zwisające z mocowań przy zdjętym wysięgniku, obrót ręczny. Key: nazwa słupa z położeniem (losowanie
@@ -622,7 +677,8 @@ double
 dismantle( catenary::cantilever_result &Result, catenary::suspension const &Data, std::string const &Key, int const State ) {
     auto const none { std::numeric_limits<double>::quiet_NaN() };
     if( State <= 0 ) { return none; }
-    auto bare { State >= 3 };
+    if( State == 4 ) { construct( Result ); return none; }
+    auto bare { State == 3 };
     auto nosteady { false };
     if( State == 2 ) {
         bare = dismantle_random( Key, 1 ) < 0.30;
@@ -641,7 +697,7 @@ dismantle( catenary::cantilever_result &Result, catenary::suspension const &Data
             if( stay && ( role == "stay_insulator" || role == "stay_shackle" ) ) { return false; }
             return false == pole_fitting( role );
         }
-        if( State >= 2 && role == "arrester" ) { return true; }
+        if( State == 2 && role == "arrester" ) { return true; }
         if( nosteady && ( role == "steady" || role == "steady_clamp" || role == "steady_head" ) ) { return true; }
         return wire_fitting( role ); } );
     if( bare || Data.card / 100 == 12 ) { return none; }

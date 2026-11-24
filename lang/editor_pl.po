@@ -17638,3 +17638,9 @@ msgstr "Odchylenie izolatora ukośnika"
 
 msgid "From the vertical on its hinge: + away from the pole, towards the track"
 msgstr "Od pionu, na zawiasie: + od słupa, w stronę toru"
+
+msgid "under construction"
+msgstr "w budowie"
+
+msgid "A line with its catenary taken down, or not strung yet. Without wires: no spans (no wires, no pantograph contact, no current, no anchors), the cantilevers stay without the holders of the wires, the steady arm hangs down, a swinging cantilever stands turned loose on its hinges. Looted: also without the steady arm here and there or without the whole cantilever. The poles only: the poles with their mounts. Under construction: no wires yet, the cantilevers complete, the steady arm with its arms tied up under the strut. A pole can have its own exception"
+msgstr "Linia z rozebraną albo jeszcze niezawieszoną siecią. Bez drutów: bez przęseł (bez drutów, styku z pantografem, prądu i kotwień), wysięgniki zostają bez uchwytów drutów, odciąg pomocniczy zwisa, wysięgnik przechylny stoi obrócony luźno na zawiasach. Rozkradziona: do tego miejscami bez odciągu pomocniczego albo bez całego wysięgnika. Same słupy: słupy z mocowaniami. W budowie: drutów jeszcze nie ma, wysięgniki kompletne, odciąg pomocniczy z łapkami podwiązany pod ukośnikiem. Słup może mieć swój wyjątek"

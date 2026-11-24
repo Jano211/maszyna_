@@ -196,6 +196,11 @@ int main( int, char *argv[] ) {
                 if( P == nullptr ) { return false; }
                 for( int column = 0; column < 3; ++column ) { if( std::abs( P->rotation[ 6 + column ] ) > 0.95 ) { return true; } }
                 return false; };
+            // izolator ukośnika domyślnie odchylony o 30° od pionu (cos 30° = 0,866)
+            auto const tilted = []( catenary::cantilever_placement const *P ) {
+                if( P == nullptr ) { return false; }
+                for( int column = 0; column < 3; ++column ) { if( std::abs( std::abs( P->rotation[ 6 + column ] ) - 0.866 ) < 0.01 ) { return true; } }
+                return false; };
             auto const *sl { l.find( "strut" ) }, *sr { r.find( "strut" ) }, *s0 { whole.find( "strut" ) };
             auto const opposite { sl != nullptr && sr != nullptr && s0 != nullptr && ( sl->position[ 0 ] - s0->position[ 0 ] ) * ( sr->position[ 0 ] - s0->position[ 0 ] ) < 0.0 };
             auto const text2 { catenary::write_suspension( left ) + " " + catenary::write_suspension( insulators ) + " " + catenary::write_suspension( nosteady ) };
@@ -204,11 +209,40 @@ int main( int, char *argv[] ) {
             catenary::parse_suspensions( words2, "rozbiorka2", again2, trouble2, false );
             for( auto const &t : trouble2 ) { std::printf( "    %s\n", t.c_str() ); }
             std::printf( "  rozbiorka - slup: bez odciagu %d, izolatory zwisaja %d/%d, obrot -40/+40 w przeciwne strony %d\n", a.find( "steady" ) == nullptr ? 1 : 0,
-                hanging( b.find( "strut_insulator" ) ) ? 1 : 0, hanging( b.find( "stay_insulator" ) ) ? 1 : 0, opposite ? 1 : 0 );
-            check( solved && a.find( "steady" ) == nullptr && a.find( "strut" ) != nullptr && hanging( b.find( "strut_insulator" ) ) && hanging( b.find( "stay_insulator" ) )
+                tilted( b.find( "strut_insulator" ) ) ? 1 : 0, hanging( b.find( "stay_insulator" ) ) ? 1 : 0, opposite ? 1 : 0 );
+            check( solved && a.find( "steady" ) == nullptr && a.find( "strut" ) != nullptr && tilted( b.find( "strut_insulator" ) ) && hanging( b.find( "stay_insulator" ) )
                 && b.find( "strut" ) == nullptr && opposite && trouble2.empty() && again2.entries.size() == 3 && again2.entries[ 0 ].has_dismantled_turn
                 && again2.entries[ 0 ].dismantled_turn == -40.0 && again2.entries[ 1 ].dismantled_insulators == 3 && again2.entries[ 2 ].dismantled_steady == 1,
                 "rozbiorka: odciag pomocniczy zdjety, izolatory na mocowaniach, obrot recznie w obie strony; zapis i odczyt" );
+        }
+        // w budowie (2026-11-24): wysięgnik kompletny (uchwyt liny jest), linek odciągu pomocniczego nie ma, odciąg z ramionami równolegle
+        // do ukośnika, pod nim
+        {
+            auto built { stripped };
+            built.name = "rb6";
+            built.dismantled = 4;
+            catenary::cantilever_result r;
+            auto const solved { catenary_scene_probe( built, r ) };
+            auto const *strut { r.find( "strut" ) }, *clamp { r.find( "messenger_clamp" ) }, *steady { r.find( "steady" ) }, *arms { r.find( "arms" ) };
+            auto parallel { false }, below { false };
+            if( strut != nullptr && clamp != nullptr && steady != nullptr && arms != nullptr ) {
+                // osie rur (kolumna obrotu najbliższa kierunkowi do uchwytu liny / do ramion) równoległe
+                auto const axis = []( catenary::cantilever_placement const &P, double const Dy, double const Dz ) {
+                    auto best { 0 }; auto bestdot { 0.0 };
+                    for( int column = 0; column < 3; ++column ) { auto const dot { P.rotation[ 3 + column ] * Dy + P.rotation[ 6 + column ] * Dz }; if( std::abs( dot ) > std::abs( bestdot ) ) { bestdot = dot; best = column; } }
+                    auto const sign { bestdot < 0.0 ? -1.0 : 1.0 };
+                    return std::atan2( sign * P.rotation[ 6 + best ], sign * P.rotation[ 3 + best ] ); };
+                auto const a1 { std::atan2( clamp->position[ 2 ] - strut->position[ 2 ], clamp->position[ 1 ] - strut->position[ 1 ] ) };
+                auto const a2 { axis( *steady, arms->position[ 1 ] - steady->position[ 1 ], arms->position[ 2 ] - steady->position[ 2 ] ) };
+                parallel = std::abs( a1 - a2 ) < 1e-6;
+                // ramiona pod linią ukośnika (strona -Z względem niej)
+                auto const cross { ( clamp->position[ 1 ] - strut->position[ 1 ] ) * ( arms->position[ 2 ] - strut->position[ 2 ] ) - ( clamp->position[ 2 ] - strut->position[ 2 ] ) * ( arms->position[ 1 ] - strut->position[ 1 ] ) };
+                below = cross * ( clamp->position[ 1 ] - strut->position[ 1 ] < 0.0 ? -1.0 : 1.0 ) < 0.0;
+            }
+            auto const text3 { catenary::write_suspension( built ) };
+            std::printf( "  w budowie: rownolegle %d, pod ukosnikiem %d, linki %d\n", parallel ? 1 : 0, below ? 1 : 0, r.find( "cord" ) != nullptr ? 1 : 0 );
+            check( solved && clamp != nullptr && r.find( "cord" ) == nullptr && r.find( "cord_clamp" ) != nullptr && parallel && below && text3.find( " dismantled construction" ) != std::string::npos,
+                "rozbiorka: w budowie - wysiegnik kompletny, odciag pomocniczy z lapkami podwiazany pod ukosnikiem" );
         }
         // kołysanie na wietrze: wysięgnik postawiony w scenie, kamera obok; słaby wiatr - nic, silny - kołysze się i skrzypi, daleko - nic
         auto swinging { stripped };
