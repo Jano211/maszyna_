@@ -110,7 +110,7 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                     if( one( value ) ) {
                         auto const state { dismantled_of( value ) };
                         if( state >= 0 ) { line.dismantled = state; }
-                        else { report( line.name, "\"dismantled\" needs one of: intact, wires, looted, poles" ); good = false; }
+                        else { report( line.name, "\"dismantled\" needs one of: intact, wires, looted, poles, construction" ); good = false; }
                     }
                 }
                 else if( key == "shared" ) {
@@ -435,7 +435,7 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
             else if( key == "dismantled" ) {
                 auto const state { list.size() == 1 ? dismantled_of( list[ 0 ] ) : -1 };
                 if( state >= 0 ) { entry.dismantled = state; }
-                else { report( entry.name, "\"dismantled\" needs one of: intact, wires, looted, poles" ); good = false; }
+                else { report( entry.name, "\"dismantled\" needs one of: intact, wires, looted, poles, construction" ); good = false; }
             }
             else if( key == "dismantled_steady" ) {
                 if( list.size() == 1 && ( list[ 0 ] == "hang" || list[ 0 ] == "off" ) ) { entry.dismantled_steady = list[ 0 ] == "off" ? 1 : 0; }
@@ -662,6 +662,7 @@ char const *dismantled_name( int const State ) {
     case 1: return "wires";
     case 2: return "looted";
     case 3: return "poles";
+    case 4: return "construction";
     default: return "intact";
     }
 }
@@ -670,6 +671,7 @@ int dismantled_of( std::string const &Name ) {
     if( Name == "intact" ) { return 0; }
     if( Name == "wires" ) { return 1; }
     if( Name == "looted" ) { return 2; }
+    if( Name == "construction" ) { return 4; }
     return Name == "poles" ? 3 : -1;
 }
 
