@@ -17655,3 +17655,9 @@ msgstr "rozsypane, stal poszła na złom"
 
 msgid "Slid down: the stack rests at the bottom of the guide (the ring at its end), without a guide on the ground. Scattered: on the ground by the pole. The steel taken for scrap: the weights and the brackets bolted to the pole only"
 msgstr "Zsunięte: stos opiera się na dole prowadnicy (pierścień na jej końcu), bez prowadnicy na ziemi. Rozsypane: na ziemi przy słupie. Stal na złomie: zostają tylko ciężary i uchwyty przykręcone do słupa"
+
+msgid "Weights sunk in the ground (cm)"
+msgstr "Ciężary schowane w grunt (cm)"
+
+msgid "Lowers the scattered weights into the ground, where on a slope of an embankment some of them stick out"
+msgstr "Obniża rozsypane ciężary w grunt, gdy na skarpie nasypu część z nich wystaje"

@@ -1830,6 +1830,7 @@ int main( int, char *argv[] ) {
                 auto wrecked { data };
                 wrecked.dismantled = 1;
                 wrecked.dismantled_weights = 1;
+                wrecked.dismantled_sink = 0.12;
                 auto const written { catenary::write_anchor( wrecked ) };
                 catenary::suspension_file again;
                 std::vector<std::string> trouble;
@@ -1837,7 +1838,7 @@ int main( int, char *argv[] ) {
                 std::istringstream stream { written };
                 for( std::string word; stream >> word; ) { words.push_back( word ); }
                 catenary::parse_suspensions( words, "rozbiorka", again, trouble, false );
-                auto const read { trouble.empty() && again.anchors.size() == 1 && again.anchors.front().dismantled == 1 && again.anchors.front().dismantled_weights == 1 };
+                auto const read { trouble.empty() && again.anchors.size() == 1 && again.anchors.front().dismantled == 1 && again.anchors.front().dismantled_weights == 1 && std::abs( again.anchors.front().dismantled_sink - 0.12 ) < 1e-6 };
                 // wg łańcucha (bez wpisu): rozkradziony - same uchwyty
                 stripped.dismantled = 2;
                 catenary_chain_update( 0, stripped );

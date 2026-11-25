@@ -1801,13 +1801,14 @@ struct fallen_stack {
     double ground { -0.5 };
     bool scattered { false };
     std::string key;
+    double sink { 0.0 };        // rozsypane schowane o tyle w grunt
 
     // zsunięty: do najniższego położenia na prowadnicy (pierścień na jej dolnym końcu), bez prowadnicy do gruntu (Jan 2026-11-25)
     void apply() const {
         auto const rod { std::ranges::find_if( result.parts, [ this ]( catenary::tensioner_placement const &Part ) { return Part.role == prefix + "rod"; } ) };
         if( rod == result.parts.end() ) { return; }
         glm::dvec3 const column { rod->position[ 0 ], rod->position[ 1 ], rod->position[ 2 ] };
-        if( scattered ) { scatter( column ); }
+        if( scattered ) { scatter( column, ground - sink ); }
         else { slide( column.z - std::max( ground, result.lowest ) ); }
     }
 
@@ -1824,7 +1825,7 @@ struct fallen_stack {
         if( false == rope.empty() && rope.back().size() >= 3 ) { rope.back()[ 2 ] -= Drop; }
     }
 
-    void scatter( glm::dvec3 const &Column ) const {
+    void scatter( glm::dvec3 const &Column, double const Ground ) const {
         auto const start { dismantle_random( key, 7 ) * 2.0 * std::numbers::pi };
         auto const lying { start + 0.5 * std::numbers::pi + ( dismantle_random( key, 8 ) - 0.5 ) };
         glm::dvec3 const along { std::cos( lying ), std::sin( lying ), 0.0 };
@@ -1835,7 +1836,7 @@ struct fallen_stack {
             if( base == "rod" || role_starts( base, "hanger." ) ) {
                 // pręt i łączniki leżą na ziemi, wzdłuż jednego kierunku obok stosu
                 auto const at { Column + along * ( base == "rod" ? 0.0 : 0.9 ) + glm::dvec3 { 0.25 * std::cos( start ), 0.25 * std::sin( start ), 0.0 } };
-                part.position[ 0 ] = at.x; part.position[ 1 ] = at.y; part.position[ 2 ] = ground + 0.02;
+                part.position[ 0 ] = at.x; part.position[ 1 ] = at.y; part.position[ 2 ] = Ground + 0.02;
                 anchor_set_axes( part, glm::dvec3 { 0.0, 0.0, 1.0 }, glm::dvec3 { along.y, -along.x, 0.0 }, along );
                 continue;
             }
@@ -1848,7 +1849,7 @@ struct fallen_stack {
             auto const tilt { ( dismantle_random( key, salt + 1000 ) - 0.5 ) * 0.3 };
             part.position[ 0 ] = Column.x + reach * std::cos( angle );
             part.position[ 1 ] = Column.y + reach * std::sin( angle );
-            part.position[ 2 ] = ground + 0.03 * std::abs( std::sin( tilt ) ) * 10.0;
+            part.position[ 2 ] = Ground + 0.03 * std::abs( std::sin( tilt ) ) * 10.0;
             glm::dvec3 const x { std::cos( yaw ), std::sin( yaw ), 0.0 };
             glm::dvec3 const y { -std::sin( yaw ) * std::cos( tilt ), std::cos( yaw ) * std::cos( tilt ), std::sin( tilt ) };
             anchor_set_axes( part, x, y, glm::cross( x, y ) );
@@ -1856,7 +1857,7 @@ struct fallen_stack {
         // koniec liny urządzenia leży na ziemi przy pręcie
         if( false == rope.empty() && rope.back().size() >= 3 ) {
             auto const end { Column + glm::dvec3 { 0.25 * std::cos( start ), 0.25 * std::sin( start ), 0.0 } };
-            rope.back() = { end.x, end.y, ground + 0.02 };
+            rope.back() = { end.x, end.y, Ground + 0.02 };
         }
     }
 };
@@ -2126,6 +2127,7 @@ struct anchor_wreck_input {
     double ground { -0.5 };
     std::string key;
     anchor_wire_sizes sizes;
+    double sink { 0.0 };
 };
 
 void
@@ -2137,8 +2139,8 @@ anchor_apply_wreck( anchor_wreck_input const &Wreck, catenary::tensioner_input c
         anchor_wire_stubs( wire_stubs_input { Result, Input, Wreck.sizes, Wreck.key, true }, Stubs );
         break;
     case wreck_cut: {
-        fallen_stack { Result, Result.rope, "", Wreck.ground, Wreck.weights >= 1, Wreck.key }.apply();
-        fallen_stack { Result, Result.rope2, "contact_device.", Wreck.ground, Wreck.weights >= 1, Wreck.key + "/2" }.apply();
+        fallen_stack { Result, Result.rope, "", Wreck.ground, Wreck.weights >= 1, Wreck.key, Wreck.sink }.apply();
+        fallen_stack { Result, Result.rope2, "contact_device.", Wreck.ground, Wreck.weights >= 1, Wreck.key + "/2", Wreck.sink }.apply();
         if( Wreck.weights == 2 ) {
             // rozsypane, a stal poszła na złom (Jan 2026-11-25): zostają ciężary i uchwyty przykręcone do słupa, bez liny i drutów
             std::erase_if( Result.parts, []( catenary::tensioner_placement const &Part ) {
@@ -2453,7 +2455,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     // rozebrana sieć: końce drutów do końcówek zapamiętane przed zmianami (przęsło do kotwienia ich nie używa - nie ma drutów)
     std::vector<catenary::tensioner_vertex> stubs;
     if( wreck != wreck_none ) {
-        anchor_apply_wreck( anchor_wreck_input { wreck, data.dismantled_weights, input.ground, anchor_wreck_key( data ), wiresizes }, input, result, stubs );
+        anchor_apply_wreck( anchor_wreck_input { wreck, data.dismantled_weights, input.ground, anchor_wreck_key( data ), wiresizes, data.dismantled_sink }, input, result, stubs );
     }
     // lina: ucha jako części, reszta jedną bryłą proceduralną (bez łączeń na łukach rolek), przeliczoną na scenerię;
     // rysuje ją z bliska przęsło dochodzące do kotwienia (rebuild_span)
