@@ -1801,14 +1801,14 @@ struct fallen_stack {
     double ground { -0.5 };
     bool scattered { false };
     std::string key;
-    double sink { 0.0 };        // rozsypane schowane o tyle w grunt
+    double lift { 0.0 };        // rozsypane wyżej (+) / niżej (−) o tyle
 
     // zsunięty: do najniższego położenia na prowadnicy (pierścień na jej dolnym końcu), bez prowadnicy do gruntu (Jan 2026-11-25)
     void apply() const {
         auto const rod { std::ranges::find_if( result.parts, [ this ]( catenary::tensioner_placement const &Part ) { return Part.role == prefix + "rod"; } ) };
         if( rod == result.parts.end() ) { return; }
         glm::dvec3 const column { rod->position[ 0 ], rod->position[ 1 ], rod->position[ 2 ] };
-        if( scattered ) { scatter( column, ground - sink ); }
+        if( scattered ) { scatter( column, ground + lift ); }
         else { slide( column.z - std::max( ground, result.lowest ) ); }
     }
 
@@ -2127,7 +2127,7 @@ struct anchor_wreck_input {
     double ground { -0.5 };
     std::string key;
     anchor_wire_sizes sizes;
-    double sink { 0.0 };
+    double lift { 0.0 };
 };
 
 void
@@ -2139,8 +2139,8 @@ anchor_apply_wreck( anchor_wreck_input const &Wreck, catenary::tensioner_input c
         anchor_wire_stubs( wire_stubs_input { Result, Input, Wreck.sizes, Wreck.key, true }, Stubs );
         break;
     case wreck_cut: {
-        fallen_stack { Result, Result.rope, "", Wreck.ground, Wreck.weights >= 1, Wreck.key, Wreck.sink }.apply();
-        fallen_stack { Result, Result.rope2, "contact_device.", Wreck.ground, Wreck.weights >= 1, Wreck.key + "/2", Wreck.sink }.apply();
+        fallen_stack { Result, Result.rope, "", Wreck.ground, Wreck.weights >= 1, Wreck.key, Wreck.lift }.apply();
+        fallen_stack { Result, Result.rope2, "contact_device.", Wreck.ground, Wreck.weights >= 1, Wreck.key + "/2", Wreck.lift }.apply();
         if( Wreck.weights == 2 ) {
             // rozsypane, a stal poszła na złom (Jan 2026-11-25): zostają ciężary i uchwyty przykręcone do słupa, bez liny i drutów
             std::erase_if( Result.parts, []( catenary::tensioner_placement const &Part ) {
@@ -2455,7 +2455,7 @@ assemble_anchor( scene_anchor &Anchor ) {
     // rozebrana sieć: końce drutów do końcówek zapamiętane przed zmianami (przęsło do kotwienia ich nie używa - nie ma drutów)
     std::vector<catenary::tensioner_vertex> stubs;
     if( wreck != wreck_none ) {
-        anchor_apply_wreck( anchor_wreck_input { wreck, data.dismantled_weights, input.ground, anchor_wreck_key( data ), wiresizes, data.dismantled_sink }, input, result, stubs );
+        anchor_apply_wreck( anchor_wreck_input { wreck, data.dismantled_weights, input.ground, anchor_wreck_key( data ), wiresizes, data.dismantled_lift }, input, result, stubs );
     }
     // lina: ucha jako części, reszta jedną bryłą proceduralną (bez łączeń na łukach rolek), przeliczoną na scenerię;
     // rysuje ją z bliska przęsło dochodzące do kotwienia (rebuild_span)

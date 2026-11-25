@@ -21,7 +21,7 @@ Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod.
 - Jan 01:25: tekstury wymienne - kotwienie: combo „Tekstura kotwienia” (wpis `skin` już był), środkowe: nowy wpis łańcucha
   `middle_skin` + combo. Lista siec_trakcyjna/siec* z .mat.
 - Jan 01:34 (zrzut: rozsypane „akceptowalnie”): osobna wysokość pod każdym ciężarem odrzucona (przesada); dodany wpis
-  `dismantled_sink <m>` (0..0,30) i suwak „Ciężary schowane w grunt (cm)” - rozsypane (i pręt, koniec liny) niżej o tyle.
+  `dismantled_lift <m>` (±1, Jan 01:44: też na peron - model t3d edytor nie bierze za grunt) i suwak „Ciężary wyżej / niżej (m)” - rozsypane (i pręt, koniec liny) wyżej/niżej o tyle.
 - Testy: te OK; tt ma 2 BLAD także bez tych zmian (wczytanie traction_tensioners.txt, 0461 - argument/dane testu, nie ruszane).
 
 ## START TUTAJ – 2026-11-24 22:30 – kotwienia rozebranej sieci (w exe NIESPRAWDZONE)
