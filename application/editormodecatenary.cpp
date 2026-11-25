@@ -675,6 +675,33 @@ std::vector<std::string> catenary_skins(std::string const &Prefix)
 	return result;
 }
 
+// the skin of the fittings (textures/siec_trakcyjna/siec*: new, used, old, extreme) of an anchor or a middle anchor (the user 2026-11-25);
+// an empty one - the default. True when one was picked
+bool fitting_skin_combo(char const *Label, std::string const &Current, std::string &Chosen)
+{
+	auto picked{false};
+	auto const fallback{format(STR_C("default (%s)"), catenary_scene_fitting_skin().c_str())};
+	auto const shown{Current.compare(0, 19, "siec_trakcyjna/siec") == 0 ? Current : std::string{}};
+	if (ImGui::BeginCombo(Label, (shown.empty() ? fallback : shown).c_str()))
+	{
+		if (ImGui::Selectable(fallback.c_str(), shown.empty()))
+		{
+			Chosen.clear();
+			picked = true;
+		}
+		for (auto const &choice : catenary_skins("siec"))
+		{
+			if (ImGui::Selectable(choice.c_str(), choice == shown))
+			{
+				Chosen = choice;
+				picked = true;
+			}
+		}
+		ImGui::EndCombo();
+	}
+	return picked;
+}
+
 // the states of the wires in the panel, and as they're written in the entries
 // "black": czarne matowe druty, brudny osprzęt - między przejściowymi a zaśniedziałymi (Jan 2026-11-01: stare rurowe, świeże teowniki)
 char const *const kStates[] = {"new", "worn", "black", "tarnished"};
@@ -7275,6 +7302,16 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 				}
 			}
 		}
+		{
+			std::string chosen;
+			if (fitting_skin_combo(STR_C("Anchor skin"), data.skin, chosen))
+			{
+				data.skin = chosen;
+				edited = true;
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", STR_C("All the parts of the anchor device take this one texture (textures/siec_trakcyjna/siec*); the pole keeps its own"));
+		}
 		// a dismantled chain (the user 2026-11-24): what is left of the anchor
 		if (chain != nullptr && chain->dismantled > 0)
 		{
@@ -7291,14 +7328,31 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 				ImGui::SetTooltip("%s", STR_C("As the chain: wires taken - whole or cut at random, looted - the brackets bolted to the pole only, poles taken - nothing, being built - no weights and no links to the wires"));
 			if (false == fixed && data.dismantled == 1)
 			{
-				std::string const fallen[] = {STR("slid down the guide"), STR("scattered by the pole")};
-				char const *const ways[] = {fallen[0].c_str(), fallen[1].c_str()};
-				auto way{data.dismantled_weights == 1 ? 1 : 0};
-				if (ImGui::Combo(STR_C("Fallen weights"), &way, ways, 2))
+				std::string const fallen[] = {STR("slid down the guide"), STR("scattered by the pole"), STR("scattered, the steel taken for scrap")};
+				char const *const ways[] = {fallen[0].c_str(), fallen[1].c_str(), fallen[2].c_str()};
+				auto way{std::clamp(data.dismantled_weights, 0, 2)};
+				if (ImGui::Combo(STR_C("Fallen weights"), &way, ways, 3))
 				{
 					data.dismantled_weights = way;
 					edited = true;
 				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("Slid down: the stack rests at the bottom of the guide (the ring at its end), without a guide on the ground. Scattered: on the ground by the pole. The steel taken for scrap: the weights and the brackets bolted to the pole only"));
+				// the weights on the ground of the scenery (the user 2026-11-25): the ground under the stack, over the rail heads
+				double shape[4][3];
+				auto const *solved{catenary_anchor_result(index)};
+				if (data.dismantled_weights >= 1 && solved != nullptr && catenary_anchor_shape(index, shape) && ImGui::Button(STR_C("Weights on the ground")))
+				{
+					auto const rails{shape[0][1] - solved->height};
+					auto const ground{e.ground_at({shape[3][0], rails, shape[3][2]}).y};
+					if (std::isfinite(ground) && std::abs(ground - rails) < 10.0)
+					{
+						data.ground = ground - rails;
+						edited = true;
+					}
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("Puts the fallen weights on the ground of the scenery under the stack (the ground entry of the anchor, over the rail heads)"));
 			}
 		}
 		ImGui::PopItemWidth();
@@ -7383,6 +7437,16 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", STR_C("0416: the middle pole is a drop of a gantry; the anchor ropes go from the beam above the messenger to clamps on it about 3 m on both sides, the poles next to it carry nothing"));
+			{
+				std::string chosen;
+				if (fitting_skin_combo(STR_C("Middle anchor skin"), chain->middle_skin, chosen))
+				{
+					changed.middle_skin = chosen;
+					edited = true;
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", STR_C("The devices of the middle anchor on the poles next to it take this one texture (textures/siec_trakcyjna/siec*)"));
+			}
 			// a dismantled chain (the user 2026-11-24): what is left of the middle anchor
 			if (chain->dismantled > 0)
 			{

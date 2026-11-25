@@ -1802,12 +1802,13 @@ struct fallen_stack {
     bool scattered { false };
     std::string key;
 
+    // zsunięty: do najniższego położenia na prowadnicy (pierścień na jej dolnym końcu), bez prowadnicy do gruntu (Jan 2026-11-25)
     void apply() const {
         auto const rod { std::ranges::find_if( result.parts, [ this ]( catenary::tensioner_placement const &Part ) { return Part.role == prefix + "rod"; } ) };
         if( rod == result.parts.end() ) { return; }
         glm::dvec3 const column { rod->position[ 0 ], rod->position[ 1 ], rod->position[ 2 ] };
         if( scattered ) { scatter( column ); }
-        else { slide( column.z - ground ); }
+        else { slide( column.z - std::max( ground, result.lowest ) ); }
     }
 
     bool own( catenary::tensioner_placement const &Part ) const {
@@ -1865,11 +1866,12 @@ void
 anchor_wire_stub( glm::dvec3 const &End, glm::dvec3 const &Toward, double const Radius, double const Length, double const Sag, std::vector<catenary::tensioner_vertex> &Tube ) {
     catenary::tensioner_result stub;
     auto way { Toward };
-    way.z = 0.0;
+    // Sag < 0: końcówka zwisa pionowo (urządzenie zwisa z przegubu)
+    if( Sag >= 0.0 ) { way.z = 0.0; }
     way = glm::length( way ) > 1e-6 ? glm::normalize( way ) : glm::dvec3 { 1.0, 0.0, 0.0 };
     for( int k = 0; k <= 6; ++k ) {
         auto const t { k / 6.0 };
-        auto const at { End + way * ( Length * t ) - glm::dvec3 { 0.0, 0.0, Sag * Length * t * t } };
+        auto const at { End + way * ( Length * t ) - glm::dvec3 { 0.0, 0.0, std::max( Sag, 0.0 ) * Length * t * t } };
         stub.rope.push_back( { at.x, at.y, at.z } );
     }
     catenary::tensioner_rope_solid( stub, Radius, 6, std::string(), 0.0, Tube, std::string(), 0.0 );
@@ -1887,18 +1889,20 @@ struct wire_stubs_input {
     catenary::tensioner_input const &input;
     anchor_wire_sizes sizes;
     std::string key;
+    bool hanging { false };     // urządzenie zwisa z przegubu: końcówki pionowo w dół
 };
 
 void
 anchor_wire_stubs( wire_stubs_input const &Input, std::vector<catenary::tensioner_vertex> &Tube ) {
     auto const &result { Input.result };
     auto const toward = [ &Input ]( double const *Target, glm::dvec3 const &From ) {
+        if( Input.hanging ) { return glm::dvec3 { 0.0, 0.0, -1.0 }; }
         return Input.input.aimed ? glm::dvec3 { Target[ 0 ], Target[ 1 ], Target[ 2 ] } - From : glm::dvec3 { 1.0, 0.0, 0.0 };
     };
     auto salt { 200u };
     auto const stub = [ &Input, &Tube, &salt ]( glm::dvec3 const &End, glm::dvec3 const &Way, double const Radius, double const Sag ) {
         auto const length { 0.25 + 0.45 * dismantle_random( Input.key, salt++ ) };
-        anchor_wire_stub( End, Way, Radius, length, Sag, Tube );
+        anchor_wire_stub( End, Way, Radius, length, Input.hanging ? -1.0 : Sag, Tube );
     };
     glm::dvec3 const messenger { result.messenger_end[ 0 ], result.messenger_end[ 1 ], result.messenger_end[ 2 ] };
     if( glm::length( messenger ) > 1e-6 ) { stub( messenger, toward( Input.input.messenger_target, messenger ), Input.sizes.messenger, 0.5 ); }
@@ -1908,6 +1912,138 @@ anchor_wire_stubs( wire_stubs_input const &Input, std::vector<catenary::tensione
         if( end.size() < 3 ) { continue; }
         glm::dvec3 const at { end[ 0 ], end[ 1 ], end[ 2 ] };
         stub( at, toward( Input.input.contact_target, at ), Input.sizes.contact, 0.3 );
+    }
+}
+
+// część zwisająca z przegubu "*" urządzenia ciężarowego: wszystko poza uchwytami do konstrukcji, stosem i prowadnicą
+bool
+anchor_swinging_part( std::string const &Base ) {
+    return false == role_starts( Base, "bracket_" ) && false == anchor_stack_part( Base ) && Base != "guide"
+        && false == role_starts( Base, "old_ring." ) && false == role_starts( Base, "old_rod." );
+}
+
+// czy część należy do grupy przegubu (tensioner_hinge)
+bool
+anchor_hinge_member( std::string const &Group, std::string const &Role ) {
+    static std::string const device { "contact_device." };
+    auto const separate { role_starts( Group, device ) };
+    if( separate != role_starts( Role, device ) ) { return false; }
+    auto const group { separate ? Group.substr( device.size() ) : Group };
+    auto const base { separate ? Role.substr( device.size() ) : Role };
+    return group == "*" ? anchor_swinging_part( base ) : role_starts( base, group );
+}
+
+// obrót (macierz wierszami) przeprowadzający kierunek From na kierunek To (Rodrigues)
+std::array<double, 9>
+anchor_turn_down( glm::dvec3 const &From, glm::dvec3 const &To ) {
+    std::array<double, 9> turn { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 };
+    if( glm::length( From ) < 1e-6 || glm::length( To ) < 1e-6 ) { return turn; }
+    auto const u { glm::normalize( From ) };
+    auto const v { glm::normalize( To ) };
+    auto const k { glm::cross( u, v ) };
+    auto const s { glm::length( k ) };
+    auto const c { glm::dot( u, v ) };
+    if( s < 1e-9 ) {
+        if( c < 0.0 ) { turn = { -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0 }; }   // na wprost przeciwnie: pół obrotu wokół Y
+        return turn;
+    }
+    auto const n { k / s };
+    std::array<double, 9> const cross { 0.0, -n.z, n.y, n.z, 0.0, -n.x, -n.y, n.x, 0.0 };
+    std::array<double, 3> const axis { n.x, n.y, n.z };
+    for( int i = 0; i < 3; ++i ) {
+        for( int j = 0; j < 3; ++j ) { turn[ i * 3 + j ] = ( i == j ? c : 0.0 ) + s * cross[ i * 3 + j ] + ( 1.0 - c ) * axis[ i ] * axis[ j ]; }
+    }
+    return turn;
+}
+
+struct anchor_hinge_turn {
+    glm::dvec3 pivot;
+    std::array<double, 9> turn;
+
+    glm::dvec3 apply( glm::dvec3 const &V ) const {
+        return glm::dvec3 { turn[ 0 ] * V.x + turn[ 1 ] * V.y + turn[ 2 ] * V.z, turn[ 3 ] * V.x + turn[ 4 ] * V.y + turn[ 5 ] * V.z, turn[ 6 ] * V.x + turn[ 7 ] * V.y + turn[ 8 ] * V.z };
+    }
+    void point( double *P ) const {
+        auto const moved { pivot + apply( glm::dvec3 { P[ 0 ], P[ 1 ], P[ 2 ] } - pivot ) };
+        P[ 0 ] = moved.x; P[ 1 ] = moved.y; P[ 2 ] = moved.z;
+    }
+    void part( catenary::tensioner_placement &Part ) const {
+        point( Part.position );
+        std::array<double, 9> rotated {};
+        for( int row = 0; row < 3; ++row ) {
+            for( int column = 0; column < 3; ++column ) {
+                rotated[ row * 3 + column ] = turn[ row * 3 ] * Part.rotation[ column ] + turn[ row * 3 + 1 ] * Part.rotation[ 3 + column ] + turn[ row * 3 + 2 ] * Part.rotation[ 6 + column ];
+            }
+        }
+        std::ranges::copy( rotated, std::begin( Part.rotation ) );
+    }
+};
+
+// gdzie grupa przegubu kończy się przy drutach (średnia końców lin i przewodów, które do niej należą); false bez końców
+bool
+anchor_hinge_end( catenary::tensioner_result const &Result, std::string const &Group, glm::dvec3 &End ) {
+    static std::string const device { "contact_device." };
+    auto const separate { role_starts( Group, device ) };
+    auto const group { separate ? Group.substr( device.size() ) : Group };
+    glm::dvec3 sum { 0.0, 0.0, 0.0 };
+    int count { 0 };
+    auto const add = [ &sum, &count ]( double const *P ) {
+        if( std::abs( P[ 0 ] ) + std::abs( P[ 1 ] ) + std::abs( P[ 2 ] ) < 1e-9 ) { return; }
+        sum = sum + glm::dvec3 { P[ 0 ], P[ 1 ], P[ 2 ] };
+        ++count;
+    };
+    // urządzenie rozdzielone: lina na urządzeniu liny, przewody na urządzeniu przewodów
+    auto const messengers { false == separate && ( group == "*" || group == "messenger" ) };
+    auto const contacts { separate || group == "contact" || ( group == "*" && Result.rope2.empty() ) };
+    if( messengers ) {
+        add( Result.messenger_end );
+        add( Result.messenger2_end );
+    }
+    if( contacts ) {
+        for( auto const &end : Result.contact_ends ) {
+            if( end.size() >= 3 ) { add( end.data() ); }
+        }
+    }
+    if( count == 0 ) { return false; }
+    End = sum * ( 1.0 / count );
+    return true;
+}
+
+// druty ucięte (Jan 2026-11-25): urządzenie bez naciągu zwisa z przegubu przy słupie w dół - części grupy, końce drutów i lina
+// urządzenia (bez ostatniego punktu - ten zostaje przy stosie). Angle - kąt od poziomu w stronę, w którą szły druty (90 - pionowo;
+// kotwienie środkowe 75-80, Jan: lina jeszcze trochę ciągnie)
+void
+anchor_hang( catenary::tensioner_result &Result, double const Angle = 90.0 ) {
+    for( auto const &hinge : Result.hinges ) {
+        glm::dvec3 end;
+        if( false == anchor_hinge_end( Result, hinge.group, end ) ) { continue; }
+        glm::dvec3 const pivot { hinge.at[ 0 ], hinge.at[ 1 ], hinge.at[ 2 ] };
+        auto const from { end - pivot };
+        glm::dvec3 flat { from.x, from.y, 0.0 };
+        flat = glm::length( flat ) > 1e-6 ? glm::normalize( flat ) : glm::dvec3 { 1.0, 0.0, 0.0 };
+        auto const angle { Angle * std::numbers::pi / 180.0 };
+        anchor_hinge_turn const hang { pivot, anchor_turn_down( from, flat * std::cos( angle ) + glm::dvec3 { 0.0, 0.0, -std::sin( angle ) } ) };
+        for( auto &part : Result.parts ) {
+            if( anchor_hinge_member( hinge.group, part.role ) ) { hang.part( part ); }
+        }
+        auto const separate { role_starts( hinge.group, "contact_device." ) };
+        auto const group { separate ? hinge.group.substr( 15 ) : hinge.group };
+        if( group == "*" ) {
+            auto &rope { separate ? Result.rope2 : Result.rope };
+            for( std::size_t k = 0; k + 1 < rope.size(); ++k ) {
+                if( rope[ k ].size() >= 3 ) { hang.point( rope[ k ].data() ); }
+            }
+        }
+        auto const set = []( double const *P ) { return std::abs( P[ 0 ] ) + std::abs( P[ 1 ] ) + std::abs( P[ 2 ] ) > 1e-9; };
+        if( false == separate && ( group == "*" || group == "messenger" ) ) {
+            if( set( Result.messenger_end ) ) { hang.point( Result.messenger_end ); }
+            if( set( Result.messenger2_end ) ) { hang.point( Result.messenger2_end ); }
+        }
+        if( separate || group == "contact" || ( group == "*" && Result.rope2.empty() ) ) {
+            for( auto &item : Result.contact_ends ) {
+                if( item.size() >= 3 ) { hang.point( item.data() ); }
+            }
+        }
     }
 }
 
@@ -1994,14 +2130,25 @@ struct anchor_wreck_input {
 
 void
 anchor_apply_wreck( anchor_wreck_input const &Wreck, catenary::tensioner_input const &Input, catenary::tensioner_result &Result, std::vector<catenary::tensioner_vertex> &Stubs ) {
+    // druty ucięte: bez naciągu urządzenie zwisa z przegubu przy słupie (Jan 2026-11-25)
+    if( Wreck.wreck == wreck_intact || Wreck.wreck == wreck_cut || Wreck.wreck == wreck_construction ) { anchor_hang( Result ); }
     switch( Wreck.wreck ) {
     case wreck_intact:
-        anchor_wire_stubs( wire_stubs_input { Result, Input, Wreck.sizes, Wreck.key }, Stubs );
+        anchor_wire_stubs( wire_stubs_input { Result, Input, Wreck.sizes, Wreck.key, true }, Stubs );
         break;
     case wreck_cut: {
-        fallen_stack { Result, Result.rope, "", Wreck.ground, Wreck.weights == 1, Wreck.key }.apply();
-        fallen_stack { Result, Result.rope2, "contact_device.", Wreck.ground, Wreck.weights == 1, Wreck.key + "/2" }.apply();
-        anchor_wire_stubs( wire_stubs_input { Result, Input, Wreck.sizes, Wreck.key }, Stubs );
+        fallen_stack { Result, Result.rope, "", Wreck.ground, Wreck.weights >= 1, Wreck.key }.apply();
+        fallen_stack { Result, Result.rope2, "contact_device.", Wreck.ground, Wreck.weights >= 1, Wreck.key + "/2" }.apply();
+        if( Wreck.weights == 2 ) {
+            // rozsypane, a stal poszła na złom (Jan 2026-11-25): zostają ciężary i uchwyty przykręcone do słupa, bez liny i drutów
+            std::erase_if( Result.parts, []( catenary::tensioner_placement const &Part ) {
+                auto const base { anchor_role_base( Part.role ) };
+                return false == role_starts( base, "bracket_" ) && false == role_starts( base, "weight." ); } );
+            Result.rope.clear();
+            Result.rope2.clear();
+            break;
+        }
+        anchor_wire_stubs( wire_stubs_input { Result, Input, Wreck.sizes, Wreck.key, true }, Stubs );
         break;
     }
     case wreck_looted:
@@ -2312,12 +2459,15 @@ assemble_anchor( scene_anchor &Anchor ) {
     // rysuje ją z bliska przęsło dochodzące do kotwienia (rebuild_span)
     {
         std::vector<catenary::tensioner_vertex> tube;
-        catenary::tensioner_rope_solid( result, 0.5 * device->rope_diameter, 8, device->rope_eye, device->rope_eye_length, tube, device->rope_spacer, device->rope_spacer_length );
+        // rozebrana sieć: lina bez uch i przekładki (Jan 2026-11-25)
+        auto const eye { wreck == wreck_none ? device->rope_eye : std::string() };
+        auto const spacer { wreck == wreck_none ? device->rope_spacer : std::string() };
+        catenary::tensioner_rope_solid( result, 0.5 * device->rope_diameter, 8, eye, device->rope_eye_length, tube, spacer, device->rope_spacer_length );
         // kotwienie rozdzielone: druga lina (urządzenie przewodów), z uchami
         if( false == result.rope2.empty() ) {
             catenary::tensioner_result second;
             second.rope = result.rope2;
-            catenary::tensioner_rope_solid( second, 0.5 * device->rope_diameter, 8, device->rope_eye, device->rope_eye_length, tube, device->rope_spacer, device->rope_spacer_length );
+            catenary::tensioner_rope_solid( second, 0.5 * device->rope_diameter, 8, eye, device->rope_eye_length, tube, spacer, device->rope_spacer_length );
             for( auto part : second.parts ) { part.role = "contact_device." + part.role; result.parts.push_back( part ); }
         }
         tube.insert( tube.end(), stubs.begin(), stubs.end() );
@@ -3341,10 +3491,13 @@ assemble_middle( scene_chain &Chain ) {
                 input.height = wires[ neighbour ][ 1 ] - axis.y;
                 catenary::tensioner_result result;
                 if( catenary::solve_tensioner( *devices, *device, input, result ) ) {
-                    ropeend = toscene( result.messenger_end );
-                    // rozkradzione / w budowie: tylko uchwyty do słupa / bez łańcucha do liny
+                    // rozkradzione / w budowie: tylko uchwyty do słupa / bez łańcucha do liny; lina została albo ucięta - łańcuch bez
+                    // naciągu zwisa z przegubu (Jan 2026-11-25)
                     if( wreck == wreck_looted || wreck == wreck_construction ) { anchor_strip( result, wreck ); }
-                    auto const skin { fitting_default() };
+                    if( wreck == wreck_intact || wreck == wreck_cut ) { anchor_hang( result, 75.0 + 5.0 * dismantle_random( data.name + "/" + data.middle + "/" + std::to_string( side ), 11 ) ); }
+                    ropeend = toscene( result.messenger_end );
+                    // tekstura z wpisu łańcucha "middle_skin" (Jan 2026-11-25), bez niej domyślna osprzętu
+                    auto const skin { data.middle_skin.compare( 0, 19, "siec_trakcyjna/siec" ) == 0 ? data.middle_skin : fitting_default() };
                     for( auto const &item : result.parts ) {
                         catenary::cantilever_placement placement;
                         std::copy( std::begin( item.position ), std::end( item.position ), placement.position );

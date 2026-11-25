@@ -1809,10 +1809,18 @@ int main( int, char *argv[] ) {
                 auto const intactrope { catenary_anchor_result( 0 )->rope.size() };
                 auto const cut { count( 1, 0 ) };
                 auto const *fallen { catenary_anchor_result( 0 ) };
-                // stos zsunięty: najniższy ciężar na ziemi
-                auto const low { fallen != nullptr && std::any_of( fallen->parts.begin(), fallen->parts.end(), [ &data ]( catenary::tensioner_placement const &P ) {
-                    return P.role == "weight.1" && std::abs( P.position[ 2 ] - data.ground ) < 0.01; } ) };
+                // stos zsunięty: najniższy ciężar na dole prowadnicy (pierścień na jej końcu), nie niżej niż grunt; urządzenie zwisa
+                // z przegubu - dźwignia pod rolkami, lina i przewody kończą się nisko
+                auto const low { fallen != nullptr && fallen->lowest >= data.ground && std::any_of( fallen->parts.begin(), fallen->parts.end(), [ fallen ]( catenary::tensioner_placement const &P ) {
+                    return P.role == "weight.1" && std::abs( P.position[ 2 ] - fallen->lowest ) < 0.01; } ) };
+                auto const hanging { fallen != nullptr && fallen->messenger_end[ 2 ] < fallen->height - 2.0 && std::abs( fallen->messenger_end[ 0 ] ) < 1.0 };
+                std::printf( "  uciete: spod stosu %.2f (grunt %.2f), koniec liny %.2f %.2f %.2f\n", fallen != nullptr ? fallen->lowest : 0.0, data.ground,
+                    fallen != nullptr ? fallen->messenger_end[ 0 ] : 0.0, fallen != nullptr ? fallen->messenger_end[ 1 ] : 0.0, fallen != nullptr ? fallen->messenger_end[ 2 ] : 0.0 );
                 auto const scattered { count( 1, 1 ) };
+                auto const scrapped { count( 1, 2 ) };
+                auto const scrapok { catenary_anchor_result( 0 )->rope.empty() && roles( []( catenary::tensioner_placement const &P ) {
+                    return P.role.find( "bracket_" ) != std::string::npos || P.role.find( "weight." ) != std::string::npos; } ) };
+                std::printf( "  rozsypane, stal na zlomie: %d czesci\n", static_cast<int>( scrapped ) );
                 auto const looted { count( 2, 0 ) };
                 auto const onlybrackets { roles( []( catenary::tensioner_placement const &P ) { return P.role.find( "bracket_" ) != std::string::npos; } ) };
                 auto const lootedrope { catenary_anchor_result( 0 )->rope.empty() };
@@ -1840,7 +1848,8 @@ int main( int, char *argv[] ) {
                 std::printf( "  rozbiorka kotwienia: cale %d (%d) uciete %d rozsypane %d rozkradzione %d nic %d w budowie %d, wg lancucha %d, z powrotem %d; %s\n",
                     static_cast<int>( intact ), static_cast<int>( whole ), static_cast<int>( cut ), static_cast<int>( scattered ), static_cast<int>( looted ), static_cast<int>( gone ),
                     static_cast<int>( building ), static_cast<int>( bychain ), static_cast<int>( back ), written.substr( written.find( " dismantled" ) ).c_str() );
-                check( intact == whole && intactrope > 0 && cut == whole && low && scattered == whole && looted > 1 && looted < whole / 3 && onlybrackets && lootedrope
+                // ucha liny i przekładka nie powstają na rozebranej sieci (Jan 2026-11-25)
+                check( intact < whole && intact + 4 >= whole && intactrope > 0 && cut == intact && low && hanging && scattered == intact && scrapok && scrapped < scattered && looted > 1 && looted < whole / 3 && onlybrackets && lootedrope
                     && gone <= 2 && building > looted && building < whole && noweights && read && bychain == looted && back == whole,
                     "rozbiorka: kotwienie cale / uciete / rozsypane / rozkradzione / nic / w budowie, zapis i odczyt, wg lancucha" );
                 data.dismantled = -1;
