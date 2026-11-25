@@ -367,6 +367,10 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                     if( value == "guide" || value == "scattered" || value == "scrapped" ) { line.dismantled_weights = ( value == "scrapped" ? 2 : value == "scattered" ? 1 : 0 ); }
                     else { report( line.name, "\"dismantled_weights\" takes guide, scattered or scrapped" ); good = false; }
                 }
+                else if( key == "dismantled_sink" ) {
+                    number( line.dismantled_sink );
+                    line.dismantled_sink = std::clamp( line.dismantled_sink, 0.0, 0.30 );
+                }
                 else if( key == "skin" ) { line.skin = one(); }
                 else { report( line.name, "unexpected token \"" + key + "\" in an anchor" ); good = false; }
             }
@@ -816,6 +820,7 @@ std::string write_anchor( anchor const &Entry ) {
     if( Entry.dismantled >= 0 ) { text += " dismantled " + anchor_wreck_name( Entry.dismantled ); }
     if( Entry.dismantled_weights == 1 ) { text += " dismantled_weights scattered"; }
     if( Entry.dismantled_weights == 2 ) { text += " dismantled_weights scrapped"; }
+    if( Entry.dismantled_sink > 0.0 ) { text += " dismantled_sink " + number( Entry.dismantled_sink, 3 ); }
     if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
     return text + " endanchor";
 }

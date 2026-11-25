@@ -7353,6 +7353,17 @@ void catenary_editor::render_catenary_anchor_ui(std::size_t const Chain)
 				}
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("%s", STR_C("Puts the fallen weights on the ground of the scenery under the stack (the ground entry of the anchor, over the rail heads)"));
+				if (data.dismantled_weights >= 1)
+				{
+					auto sink{static_cast<float>(data.dismantled_sink * 100.0)};
+					if (ImGui::SliderFloat(STR_C("Weights sunk in the ground (cm)"), &sink, 0.0f, 30.0f, "%.0f"))
+					{
+						data.dismantled_sink = std::round(static_cast<double>(sink)) / 100.0;
+						edited = true;
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", STR_C("Lowers the scattered weights into the ground, where on a slope of an embankment some of them stick out"));
+				}
 			}
 		}
 		ImGui::PopItemWidth();
