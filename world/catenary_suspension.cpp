@@ -131,6 +131,7 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 }
                 else if( key == "middle_device" ) { one( line.middle_device ); }
                 else if( key == "middle_height" ) { number( line.middle_heights[ 0 ] ); number( line.middle_heights[ 1 ] ); }
+                else if( key == "middle_skin" ) { one( line.middle_skin ); }
                 else if( key == "middle_dismantled" ) {
                     std::string value;
                     if( one( value ) ) {
@@ -363,8 +364,8 @@ void parse_suspensions( std::vector<std::string> const &Tokens, std::string cons
                 }
                 else if( key == "dismantled_weights" ) {
                     auto const value { one() };
-                    if( value == "guide" || value == "scattered" ) { line.dismantled_weights = ( value == "scattered" ? 1 : 0 ); }
-                    else { report( line.name, "\"dismantled_weights\" takes guide or scattered" ); good = false; }
+                    if( value == "guide" || value == "scattered" || value == "scrapped" ) { line.dismantled_weights = ( value == "scrapped" ? 2 : value == "scattered" ? 1 : 0 ); }
+                    else { report( line.name, "\"dismantled_weights\" takes guide, scattered or scrapped" ); good = false; }
                 }
                 else if( key == "skin" ) { line.skin = one(); }
                 else { report( line.name, "unexpected token \"" + key + "\" in an anchor" ); good = false; }
@@ -653,6 +654,7 @@ std::string write_chain( chain const &Entry ) {
         text += " middle " + Entry.middle + ( Entry.middle_device != "0406" ? " middle_device " + Entry.middle_device : std::string() );
         if( Entry.middle_heights[ 0 ] > 0.0 || Entry.middle_heights[ 1 ] > 0.0 ) { text += " middle_height " + number( Entry.middle_heights[ 0 ] ) + " " + number( Entry.middle_heights[ 1 ] ); }
         if( Entry.middle_dismantled >= 0 ) { text += " middle_dismantled " + anchor_wreck_name( Entry.middle_dismantled ); }
+        if( false == Entry.middle_skin.empty() ) { text += " middle_skin " + Entry.middle_skin; }
     }
     for( auto const &pair : Entry.messenger_from ) { text += " messenger_from " + pair.first + " " + pair.second; }
     for( auto const &listed : Entry.second_net ) { text += " second_net " + listed; }
@@ -813,6 +815,7 @@ std::string write_anchor( anchor const &Entry ) {
     if( Entry.old_guide ) { text += " guide old"; }
     if( Entry.dismantled >= 0 ) { text += " dismantled " + anchor_wreck_name( Entry.dismantled ); }
     if( Entry.dismantled_weights == 1 ) { text += " dismantled_weights scattered"; }
+    if( Entry.dismantled_weights == 2 ) { text += " dismantled_weights scrapped"; }
     if( false == Entry.skin.empty() ) { text += " skin " + Entry.skin; }
     return text + " endanchor";
 }

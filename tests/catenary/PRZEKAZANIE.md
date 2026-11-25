@@ -2,6 +2,26 @@
 
 Ten plik jest dla Claude'a w nowym czacie. Jan robi modele 3D, Claude pisze kod. Zasada: wszystko jak w rzeczywistości, chyba że się nie da. Odpowiadać po polsku; gdy czegoś nie wiadomo, pytać Jana, nie zakładać.
 
+## START TUTAJ – 2026-11-25 01:40 – rozbiórka kotwień: zwisanie z przegubu, stos na dole prowadnicy, tekstury (w exe NIESPRAWDZONE)
+
+- Jan (01:20, po pierwszym teście): ucha liny (kausze) przy pręcie i na końcu martwym nie rysować; urządzenie z dźwignią i
+  izolatorami ma zwisać w dół, nie stać jak przy naciągniętych drutach - wybrał „z przegubu przy słupie”.
+  Solver zapisuje przeguby (`tensioner_result::hinges`): ciężarowe "*" w 4450 (otwory uchwytów), stałe "messenger"/"contact"
+  w punkcie startu łańcucha; rozdzielone z przedrostkiem "contact_device.". `anchor_hang` obraca części grupy (ciężarowe: wszystko
+  poza bracket_*, stosem, prowadnicą, old_ring/old_rod), końce drutów i linę urządzenia (bez ostatniego punktu - przy stosie),
+  tak że kierunek przegub→końce drutów idzie w dół pod kątem (90 kotwienia; środkowe 75-80 losowo, Jan 01:25). Stany: całe, ucięte,
+  w budowie; środkowe: lina została / ucięta. Końcówki drutów pionowo. Lina na rozebranej bez uch i przekładki.
+- Jan 01:26: stos opiera się o najniższe położenie na prowadnicy, nie o ziemię - „to samo przy normalnych kotwieniach”. Solver:
+  `lowest` = max(ground, guide_bottom − wysokość pierścienia nad spodem stosu) przy prowadnicy rurowej na uchwytach (bez niej i przy
+  starej 0454 - grunt); dla 0461: −0,20. Nowa uwaga "the weights rest on the bottom of the guide". `dismantled_weights guide` zsuwa do
+  `lowest`.
+- Jan 01:28: `dismantled_weights scrapped` - rozsypane, a stal na złom: zostają ciężary i uchwyty do słupa, bez liny i drutów.
+- Jan 01:23: przycisk „Ciężary na grunt” (rozsypane): `ground` kotwienia z `editor_mode::ground_at` pod stosem względem główki
+  (jedna wysokość dla wszystkich ciężarów). Lina kotwienia środkowego leży dalej na 0,50 pod główką (bez gruntu scenerii) - DO ZROBIENIA.
+- Jan 01:25: tekstury wymienne - kotwienie: combo „Tekstura kotwienia” (wpis `skin` już był), środkowe: nowy wpis łańcucha
+  `middle_skin` + combo. Lista siec_trakcyjna/siec* z .mat.
+- Testy: te OK; tt ma 2 BLAD także bez tych zmian (wczytanie traction_tensioners.txt, 0461 - argument/dane testu, nie ruszane).
+
 ## START TUTAJ – 2026-11-24 22:30 – kotwienia rozebranej sieci (w exe NIESPRAWDZONE)
 
 - Jan (24.11): co zostaje z kotwienia łańcucha rozebranego. Wpis kotwienia `dismantled intact|cut|looted|gone|construction`

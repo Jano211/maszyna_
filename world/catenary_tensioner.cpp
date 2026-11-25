@@ -702,6 +702,7 @@ bool solve_fixed( tensioner_device const &Device, tensioner_type const &Type, te
                               tensioner_link const &Clamp, bool const Vertical, std::vector<vec> &Ends ) {
         pair( "bracket_" + Role, Height );
         auto const start { onstructure( vec { pivotx, 0.0, Height } ) };
+        Result.hinges.push_back( tensioner_hinge { Role, { start.x, start.y, start.z } } );
         auto const way { aimed( start, Target ) };
         std::vector<tensioner_link> chain { Device.mount.empty() ? std::vector<tensioner_link> {} : std::vector<tensioner_link> { Device.mount.front() } };
         chain.insert( chain.end(), Links.begin(), Links.end() );
@@ -790,6 +791,7 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         Result = rope;
         for( auto part : wires.parts ) { part.role = "contact_device." + part.role; Result.parts.push_back( part ); }
         Result.rope2 = wires.rope;
+        for( auto hinge : wires.hinges ) { hinge.group = "contact_device." + hinge.group; Result.hinges.push_back( hinge ); }
         Result.contact_ends = wires.contact_ends;
         Result.contact_tension = wires.contact_tension;
         Result.tension = rope.tension + wires.tension;
@@ -920,13 +922,20 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
         s += 4.0 * Result.shortening;
     }
 
-    // ciężary nie zejdą niżej niż grunt: lina nie puści rolki bliżej konstrukcji, sieć traci naciąg
-    if( s < Input.ground ) {
-        b += ( Input.ground - s ) / 4.0;
-        s = Input.ground;
+    // ciężary nie zejdą niżej niż grunt, a z prowadnicą rurową na uchwytach - niż pierścień na dolnym końcu prowadnicy (Jan 2026-11-25:
+    // stos opiera się o najniższe położenie na prowadnicy, nie o ziemię): lina nie puści rolki bliżej konstrukcji, sieć traci naciąg
+    auto const onguide { false == Input.old_guide && false == Input.pole.empty() && Device.brackets_for( Input.pole ) != nullptr
+                         && false == Device.guide.empty() && false == Device.ring.empty() };
+    auto const ringoffset { Device.ring_at < 0.0 ? stackheight : std::min( Device.ring_at, stackheight ) };
+    auto const lowest { onguide ? std::max( Input.ground, Device.guide_bottom - ringoffset ) : Input.ground };
+    Result.lowest = lowest;
+    if( s < lowest ) {
+        b += ( lowest - s ) / 4.0;
+        s = lowest;
         Result.grounded = true;
         Result.tension = 0.0;
-        Result.warnings.push_back( "the weights rest on the ground: the network has no tension from the device" );
+        Result.warnings.push_back( onguide && lowest > Input.ground ? "the weights rest on the bottom of the guide: the network has no tension from the device"
+                                                                     : "the weights rest on the ground: the network has no tension from the device" );
     }
     Result.b = b;
     Result.s = s;
@@ -987,7 +996,9 @@ bool solve_tensioner( tensioner_catalog const &Catalog, tensioner_device const &
     fix( bracketsfrom );
     // przegub 4450 w otworach uchwytów (przy konstrukcji), dalej urządzenie w stronę drutów
     // uchwyt z otworem rolki nad zerem (5040) zaczyna się niżej, rolka zostaje na wysokości z tablicy
-    auto const fixedaxle { place_chain( Device.mount, "mount", onstructure( vec { pivotx, 0.0, height - Device.mount_rise } ), out, Result ) + vec { 0.0, 0.0, Device.mount_rise } };
+    auto const pivot { onstructure( vec { pivotx, 0.0, height - Device.mount_rise } ) };
+    Result.hinges.push_back( tensioner_hinge { "*", { pivot.x, pivot.y, pivot.z } } );
+    auto const fixedaxle { place_chain( Device.mount, "mount", pivot, out, Result ) + vec { 0.0, 0.0, Device.mount_rise } };
     // rolki szeregowe: b to oś dużej ruchomej (skrajnej), uchwyt dźwigni zaczyna się na małej ruchomej
     auto const *smallpulley { series ? Catalog.pulley( Device.small_pulley ) : nullptr };
     if( series && smallpulley == nullptr ) { return fail( "no pulley " + Device.small_pulley ); }

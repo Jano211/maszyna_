@@ -147,6 +147,8 @@ struct chain {
     // w kotwieniu): 0 lina została - zwisa z urządzenia na sąsiednim słupie i leży na ziemi, 1 ucięta przy urządzeniu (krótka
     // końcówka), 2 same uchwyty do słupa, 3 nic, 4 w budowie (urządzenia bez łańcuchów do liny i bez liny); -1 wg łańcucha
     int         middle_dismantled { -1 };
+    // tekstura urządzeń kotwienia środkowego (Jan 2026-11-25, "middle_skin <tekstura>", siec_trakcyjna/siec*); pusta - domyślna osprzętu
+    std::string middle_skin;
     // lina nośna z innego podwieszenia niż przewody jezdne (wysięgniki rozstawione na konsoli 4890, wysięgnik samej liny przy
     // odciągu przewodów): w punkcie łańcucha <podwieszenie z listy> przewody idą przez jego "at", lina przez "rope" podwieszenia
     // <trzymające linę>. Wpis "messenger_from <z listy> <trzymające linę>", przed "suspensions"
@@ -205,7 +207,7 @@ std::string const &messenger_holder( chain const &Chain, std::string const &List
 // kotwienie ciężarowe (urządzenie naprężające z pliku traction_tensioners.txt) na słupie kotwowym, wpis
 // "node <max> <min> <nazwa> anchor device <karta> network <symbol typu> pole <słup> x y z [on <podwieszenie>] toward x y z distance <m>
 //  [color <kolor>] [top_color <kolor>] [elongation <m>] [missing <n>] [ground <m>] [height <m>] [rope_height <m>] [insulators <rodzaj>] [guide new|old]
-//  [dismantled intact|cut|looted|gone|construction] [dismantled_weights guide|scattered] [skin <tekstura>] endanchor".
+//  [dismantled intact|cut|looted|gone|construction] [dismantled_weights guide|scattered|scrapped] [skin <tekstura>] endanchor".
 // pole: oś słupa na wysokości główki szyny; toward: punkt, z którego przychodzą druty (urządzenie leży w tym kierunku od
 // słupa); distance: odległość od kotwienia środkowego albo stałego. Łańcuch przypina się do niego "anchor_start/anchor_end",
 // a ostatnie przęsło (bez wieszaków) kończy się na uchwytach krańcowych urządzenia
@@ -238,7 +240,8 @@ struct anchor {
     // construction" - 0 całe (ciężary wiszą, druty ucięte tuż za uchwytami), 1 ucięte (stos ciężarów na ziemi, końcówki drutów),
     // 2 rozkradzione (tylko to, co przykręcone wprost do słupa), 3 nic, 4 w budowie (uchwyty, rolki i dźwignia, bez ciężarów i łańcuchów
     // do drutów); -1 (bez wpisu) - wg łańcucha: wires - całe albo ucięte losowo, looted - rozkradzione, poles - nic, construction - w budowie.
-    // Ciężary przy uciętym ("dismantled_weights guide|scattered"): 0 zsunięte po prowadnicy na ziemię, 1 rozsypane u stopy słupa
+    // Ciężary przy uciętym ("dismantled_weights guide|scattered|scrapped"): 0 zsunięte po prowadnicy do jej dołu (bez niej na ziemię),
+    // 1 rozsypane u stopy słupa, 2 rozsypane, a stal na złomie (zostają ciężary i uchwyty do słupa)
     int         dismantled { -1 };
     int         dismantled_weights { 0 };
     std::string skin;

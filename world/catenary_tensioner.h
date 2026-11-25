@@ -293,10 +293,20 @@ struct tensioner_placement {
     double scale[ 3 ] { 1.0, 1.0, 1.0 };
 };
 
+// przegub urządzenia (rozbiórka, Jan 2026-11-25): po ucięciu drutów części grupy zwisają z niego swobodnie w dół. Grupa: "*" - całe
+// urządzenie ciężarowe poza uchwytami do konstrukcji, stosem i prowadnicą (przegub 4450 w otworach uchwytów); "messenger" /
+// "contact" - łańcuch kotwienia stałego od jego przegubu; z przedrostkiem "contact_device." - urządzenie przewodów kotwienia rozdzielonego
+struct tensioner_hinge {
+    std::string group;
+    double at[ 3 ] { 0.0, 0.0, 0.0 };
+};
+
 struct tensioner_result {
     std::vector<tensioner_placement> parts;
+    std::vector<tensioner_hinge> hinges;
     std::vector<std::vector<double>> rope;  // punkty liny (x, y, z) po kolei, od zaczepu przy rolce stałej do pręta
     double b { 0.0 }, s { 0.0 };            // położenie rolki ruchomej i spodu ciężarów
+    double lowest { -0.5 };                 // najniższe możliwe położenie spodu ciężarów: grunt albo dół prowadnicy (pierścień na jej końcu)
     double stack_height { 0.0 };
     double height { 0.0 };                  // oś rolek nad główką szyny
     double lever_tilt { 0.0 };              // radiany: odchylenie uchwytu dźwigni od poziomu w dół (dźwignia od pionu w stronę konstrukcji u góry)

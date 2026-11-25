@@ -17689,3 +17689,27 @@ msgstr "Z kotwienia środkowego zostało"
 
 msgid "As the chain: wires taken - the rope left or cut at random, looted - the brackets bolted to the poles only, poles taken - nothing, being built - the devices without the rope"
 msgstr "Jak łańcuch: bez drutów - lina została albo ucięta (losowo), rozkradziona - tylko uchwyty przykręcone wprost do słupów, same słupy - nic, w budowie - urządzenia bez liny"
+
+msgid "Weights on the ground"
+msgstr "Ciężary na grunt"
+
+msgid "Puts the fallen weights on the ground of the scenery under the stack (the ground entry of the anchor, over the rail heads)"
+msgstr "Kładzie spadnięte ciężary na grunt scenerii pod stosem (wpis ground kotwienia, względem główki szyny)"
+
+msgid "Anchor skin"
+msgstr "Tekstura kotwienia"
+
+msgid "All the parts of the anchor device take this one texture (textures/siec_trakcyjna/siec*); the pole keeps its own"
+msgstr "Wszystkie części urządzenia kotwienia biorą tę jedną teksturę (textures/siec_trakcyjna/siec*); słup ma swoją"
+
+msgid "Middle anchor skin"
+msgstr "Tekstura kotwienia środkowego"
+
+msgid "The devices of the middle anchor on the poles next to it take this one texture (textures/siec_trakcyjna/siec*)"
+msgstr "Urządzenia kotwienia środkowego na sąsiednich słupach biorą tę jedną teksturę (textures/siec_trakcyjna/siec*)"
+
+msgid "scattered, the steel taken for scrap"
+msgstr "rozsypane, stal poszła na złom"
+
+msgid "Slid down: the stack rests at the bottom of the guide (the ring at its end), without a guide on the ground. Scattered: on the ground by the pole. The steel taken for scrap: the weights and the brackets bolted to the pole only"
+msgstr "Zsunięte: stos opiera się na dole prowadnicy (pierścień na jej końcu), bez prowadnicy na ziemi. Rozsypane: na ziemi przy słupie. Stal na złomie: zostają tylko ciężary i uchwyty przykręcone do słupa"
